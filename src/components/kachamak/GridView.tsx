@@ -30,7 +30,7 @@ function LeafCard({ node, section }: { node: NoteNode; section: SectionKey }) {
         useKachamak.getState().setView("split");
       }}
       aria-pressed={selected}
-      className={`group w-60 shrink-0 text-left rounded-xl border p-4 transition-all cursor-pointer ${
+      className={`group relative w-60 shrink-0 text-left rounded-xl border p-4 transition-all cursor-pointer ${
         selected
           ? "border-green-500/60 bg-green-500/10 shadow-[0_0_0_1px_rgba(34,197,94,0.25)]"
           : "border-white/10 bg-white/[0.03] hover:border-orange-400/50 hover:bg-white/[0.06]"

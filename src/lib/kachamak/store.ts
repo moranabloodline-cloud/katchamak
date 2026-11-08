@@ -195,7 +195,7 @@ export const useKachamak = create<KachamakState>()(
       leftPanelWidth: 256,
       rightPanelWidth: 288,
       setLeftPanelWidth: (px) =>
-        set({ leftPanelWidth: Math.round(Math.min(560, Math.max(170, px))) }),
+        set({ leftPanelWidth: Math.round(Math.min(560, Math.max(240, px))) }),
       setRightPanelWidth: (px) =>
         set({ rightPanelWidth: Math.round(Math.min(680, Math.max(190, px))) }),
 

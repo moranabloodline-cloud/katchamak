@@ -68,7 +68,7 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-foreground">
+    <div className="h-screen overflow-y-auto kachamak-scroll bg-[#0d0d0d] text-foreground">
       {/* top bar */}
       <header className="flex items-center gap-3 border-b border-white/10 px-6 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/15 text-lg">
@@ -96,7 +96,7 @@ export function Home() {
           Choose a world. Pick up where you left off.
         </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="relative mt-6 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => {

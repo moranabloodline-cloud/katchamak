@@ -292,7 +292,7 @@ function EntryEditor({ entryId }: { entryId: string }) {
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <TabsContent value="details" className="mt-3 space-y-4">
+          <TabsContent value="details" className="relative mt-3 space-y-4">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}

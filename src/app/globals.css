@@ -173,3 +173,11 @@
 [data-overlay="destructive"] {
   background: rgba(0, 0, 0, 0.7);
 }
+
+/* App shell: the page itself never scrolls — every panel scrolls inside its own
+   container, so the bottom bars stay fixed in their corners. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}

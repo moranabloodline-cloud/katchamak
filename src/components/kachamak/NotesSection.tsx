@@ -9,7 +9,7 @@ import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
-import { findNode, nodeWords } from "@/lib/kachamak/utils";
+import { findNode } from "@/lib/kachamak/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
@@ -123,14 +123,14 @@ function SaveInfoButton() {
           type="button"
           aria-label="Save information"
           title="Save information"
-          className="rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          className="rounded-full p-1 text-amber-400/90 hover:bg-amber-400/10 hover:text-amber-300"
         >
-          <Info className="h-4 w-4" />
+          <Info className="h-[18px] w-[18px]" />
         </button>
       </PopoverTrigger>
       <PopoverContent
         side="top"
-        align="end"
+        align="start"
         className="w-64 border-white/10 bg-[#1b1b1b] p-3 text-xs"
       >
         <p className="mb-2 font-semibold text-foreground">Save information</p>
@@ -340,20 +340,21 @@ export function NotesSection({ section }: { section: SectionKey }) {
             <div className="min-h-0 flex-1">
               <NoteTree section={section} label={section} rootKinds={ROOT_KINDS[section]} />
             </div>
-            {/* bottom of the left panel: circled "i" + Split Write Grid List at the right edge */}
-            <div className="flex items-center justify-end gap-1.5 px-2 py-1">
+            {/* bottom of the left panel: circled "i" pinned to the bottom-left corner and
+                Split / Write / Grid / List at the right edge — both fixed, never scroll with the tree */}
+            <div className="flex shrink-0 items-center justify-between border-t border-amber-500/25 px-2 py-1.5">
               <SaveInfoButton />
-              <div role="toolbar" aria-label="View mode" className="flex items-center gap-0.5">
+              <div role="toolbar" aria-label="View mode" className="flex shrink-0 items-center gap-0.5">
                 {VIEW_BTNS.map((b) => (
                   <button
                     key={b.key}
                     type="button"
                     onClick={() => setView(b.key)}
                     aria-pressed={view === b.key}
-                    className={`rounded-md px-2 py-0.5 text-xs transition-colors ${
+                    className={`rounded-lg px-2 py-1 text-[13px] transition-colors ${
                       view === b.key
-                        ? "border border-orange-400/60 bg-orange-400/15 text-orange-200"
-                        : "border border-transparent text-orange-200/50 hover:text-orange-100"
+                        ? "border border-amber-400/70 bg-amber-400/15 text-amber-300"
+                        : "border border-transparent text-zinc-300 hover:text-white"
                     }`}
                   >
                     {b.label}
@@ -403,15 +404,6 @@ export function NotesSection({ section }: { section: SectionKey }) {
                 </button>
               </div>
             ))}
-        </div>
-
-        {/* bottom of the work surface: word count centred, like the original */}
-        <div className="flex items-center justify-center px-3 py-1.5">
-          <span className="truncate text-xs text-muted-foreground">
-            {selected
-              ? `${nodeWords(selected).toLocaleString()} words in “${selected.title}”`
-              : `${roots.reduce((a, r) => a + nodeWords(r), 0).toLocaleString()} words total`}
-          </span>
         </div>
       </main>
 
