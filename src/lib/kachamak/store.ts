@@ -7,6 +7,7 @@ import type {
   Novel,
   SectionKey,
   TabKey,
+  TreeScope,
   ViewMode,
 } from "./types";
 import { SECTION_KEYS } from "./types";
@@ -21,6 +22,8 @@ interface KachamakState {
   /* the note currently being renamed inline in the tree (also set right after create) */
   renamingNodeId: string | null;
   view: ViewMode;
+  /* top-bar dropdown — which level of the tree is shown */
+  treeScope: TreeScope;
   defaultAuthor: string;
 
   /* panel visibility (user-controlled, like the original) */
@@ -49,6 +52,7 @@ interface KachamakState {
   /* workspace */
   setTab: (tab: TabKey) => void;
   setView: (v: ViewMode) => void;
+  setTreeScope: (s: TreeScope) => void;
   select: (id: string | null) => void;
   setRenamingNode: (id: string | null) => void;
   renameNovel: (title: string) => void;
@@ -227,6 +231,7 @@ export const useKachamak = create<KachamakState>()(
       selectedNodeId: null,
       renamingNodeId: null,
       view: "split",
+      treeScope: "all",
       defaultAuthor: "Nikola Djokovic",
 
       leftPanelOpen: true,
@@ -347,6 +352,8 @@ export const useKachamak = create<KachamakState>()(
         set({ activeTab: tab, selectedNodeId: null, renamingNodeId: null }),
 
       setView: (v) => set({ view: v }),
+
+      setTreeScope: (s) => set({ treeScope: s }),
 
       select: (id) => set({ selectedNodeId: id }),
 

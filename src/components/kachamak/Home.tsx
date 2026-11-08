@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import {
   BookOpen,
   Download,
-  Lock,
   Plus,
   Search,
   Trash2,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 import { exportNovelJson, useKachamak } from "@/lib/kachamak/store";
 import { novelScenes, novelWords } from "@/lib/kachamak/utils";
+import { AccountDialog } from "./AccountDialog";
 import {
   Dialog,
   DialogContent,
@@ -41,14 +41,12 @@ export function Home() {
   const deleteNovel = useKachamak((s) => s.deleteNovel);
   const openNovel = useKachamak((s) => s.openNovel);
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
-  const setDefaultAuthor = useKachamak((s) => s.setDefaultAuthor);
 
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAuthor, setNewAuthor] = useState(defaultAuthor);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [authorDraft, setAuthorDraft] = useState(defaultAuthor);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -75,15 +73,9 @@ export function Home() {
           🍲
         </span>
         <span className="text-lg font-bold tracking-tight">Kachamak</span>
-        <span className="ml-2 hidden items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1 text-[10px] font-semibold tracking-widest text-muted-foreground sm:flex">
-          <Lock className="h-3 w-3" /> PRIVATE WORKSPACE
-        </span>
         <button
           type="button"
-          onClick={() => {
-            setAuthorDraft(defaultAuthor);
-            setAccountOpen(true);
-          }}
+          onClick={() => setAccountOpen(true)}
           className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
         >
           <UserCircle2 className="h-4 w-4" /> My Account
@@ -267,42 +259,8 @@ export function Home() {
         </DialogContent>
       </Dialog>
 
-      {/* account dialog */}
-      <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
-        <DialogContent className="border-white/10 bg-[#1b1b1b]">
-          <DialogHeader>
-            <DialogTitle>My Account</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="acc-author">Author name (used on new novels)</Label>
-              <Input
-                id="acc-author"
-                value={authorDraft}
-                onChange={(e) => setAuthorDraft(e.target.value)}
-                className="bg-black/30"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {novels.length} novels · {totalWords.toLocaleString()} words · saved in this
-              browser
-            </p>
-          </div>
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => {
-                setDefaultAuthor(authorDraft.trim() || defaultAuthor);
-                setAccountOpen(false);
-                toast.success("Account updated.");
-              }}
-              className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-500"
-            >
-              Save
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* account dialog (shared with the workspace top bar) */}
+      <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
 
       {/* delete confirm */}
       <AlertDialog

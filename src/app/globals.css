@@ -181,3 +181,10 @@ body {
   height: 100%;
   overflow: hidden;
 }
+
+/* Kachamak — the original app is set in a serif face everywhere
+   (tabs, search, tree, menus, bottom bar), so the whole UI inherits it;
+   portal'd Radix popovers/dialogs are children of body and inherit too. */
+body {
+  font-family: Georgia, "Times New Roman", serif;
+}

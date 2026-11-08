@@ -72,3 +72,12 @@ export interface Novel {
 }
 
 export type ViewMode = "split" | "write" | "grid" | "list";
+
+/* the top-bar dropdown: which level of the tree the panel shows */
+export type TreeScope = "all" | "folders" | "top";
+
+export const SCOPE_LABELS: Record<TreeScope, string> = {
+  all: "Everything · Full manuscript",
+  folders: "Folders only",
+  top: "Top level only",
+};

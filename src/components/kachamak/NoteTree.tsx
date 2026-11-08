@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -479,8 +479,21 @@ export function NoteTree({ section }: { section: SectionKey }) {
   const addNode = useKachamak((s) => s.addNode);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
+  const treeScope = useKachamak((s) => s.treeScope);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
+
+  /* the top-bar dropdown: which level of the tree the panel shows */
+  const visibleRoots = useMemo(() => {
+    if (treeScope === "all") return roots;
+    if (treeScope === "top") return roots.map((n) => ({ ...n, children: [] }));
+    /* folders only — containers at every depth, leaf notes hidden */
+    const keep = (nodes: NoteNode[]): NoteNode[] =>
+      nodes
+        .filter((n) => n.children.length > 0)
+        .map((n) => ({ ...n, children: keep(n.children) }));
+    return keep(roots);
+  }, [roots, treeScope]);
 
   const capLabel =
     TABS.find((t) => t.key === section)?.label ?? section.charAt(0).toUpperCase() + section.slice(1);
@@ -550,10 +563,10 @@ export function NoteTree({ section }: { section: SectionKey }) {
       </div>
 
       <div className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2" role="tree" aria-label={capLabel}>
-        {roots.map((r) => (
+        {visibleRoots.map((r) => (
           <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} />
         ))}
-        {roots.length === 0 && (
+        {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
             Empty. Use + above to create your first note.
           </p>
