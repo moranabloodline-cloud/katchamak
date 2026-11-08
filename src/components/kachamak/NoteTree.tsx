@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
   FileText,
   Folder,
   FolderOpen,
@@ -12,7 +13,6 @@ import {
   Library,
   MoreHorizontal,
   MoreVertical,
-  Plus,
   ScrollText,
   SquarePlus,
   BookText,
@@ -26,10 +26,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -82,7 +80,6 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
   const moveNodeTo = useKachamak((s) => s.moveNodeTo);
   const duplicateNode = useKachamak((s) => s.duplicateNode);
   const sortChildren = useKachamak((s) => s.sortChildren);
-  const setSubtreeCollapsed = useKachamak((s) => s.setSubtreeCollapsed);
   const renamingNodeId = useKachamak((s) => s.renamingNodeId);
   const setRenamingNode = useKachamak((s) => s.setRenamingNode);
   const novels = useKachamak((s) => s.novels);
@@ -91,7 +88,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
   const [draft, setDraft] = useState(node.title);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
-  const [permOpen, setPermOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const renaming = renamingNodeId === node.id;
@@ -99,9 +96,29 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
   const open = !node.collapsed;
   const hasChildren = node.children.length > 0;
 
-  /* sync the draft every time the rename starts (menu or right after create) */
+  /* sync the draft every time the rename starts (menu or right after create)
+     and grab the caret — closing the dropdown menu steals focus for a moment,
+     so retry briefly (but only while nothing else holds the focus) */
+  const renameRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (renaming) setDraft(node.title);
+    if (!renaming) return;
+    setDraft(node.title);
+    let tries = 0;
+    const grab = () => {
+      tries += 1;
+      const el = renameRef.current;
+      if (!el || tries > 12) return;
+      if (document.activeElement === el) {
+        el.select();
+        return;
+      }
+      if (document.activeElement === document.body) {
+        el.focus();
+        el.select();
+      }
+      setTimeout(grab, 50);
+    };
+    grab();
   }, [renaming, node.title]);
 
   const commitRename = () => {
@@ -165,6 +182,11 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
         onClick={() => select(node.id)}
         onKeyDown={(e) => {
           if (e.key === "Enter") select(node.id);
+          /* Delete key deletes the selected note (goes to Trash) */
+          if (e.key === "Delete" && selected && !renaming) {
+            e.stopPropagation();
+            deleteNode(section, node.id);
+          }
         }}
         className={`group flex items-center gap-1.5 rounded-md px-2 py-1.5 cursor-pointer text-sm select-none ${
           node.hidden ? "opacity-50" : ""
@@ -268,7 +290,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
         </Popover>
         {renaming ? (
           <input
-            autoFocus
+            ref={renameRef}
             onFocus={(e) => e.currentTarget.select()}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -282,21 +304,14 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
         ) : (
           <span className="flex-1 min-w-0 truncate">{node.title}</span>
         )}
-        <span className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-          <button
-            type="button"
-            aria-label="Create sub-page"
-            title="Create sub-page"
-            onClick={(e) => {
-              e.stopPropagation();
-              addNode(section, node.id, "doc");
-            }}
-            className="p-0.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-          {/* the note menu — same structure as the original app */}
-          <DropdownMenu>
+        {/* three-dot menu at the END of the row — exact structure from the
+            documentation; the dots stay visible while a menu/picker is open */}
+        <span
+          className={`${
+            menuOpen || pickerOpen ? "flex" : "hidden group-hover:flex"
+          } shrink-0 items-center`}
+        >
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
@@ -308,12 +323,14 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
+              sideOffset={4}
               className="w-52 bg-[#1b1b1b] border-white/10 font-serif"
+              /* don't yank focus back to the dots on close — it would dismiss the
+                 icon picker that "Change icon" just opened */
+              onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              <DropdownMenuItem
-                onSelect={() => addNode(section, node.id, "doc")}
-              >
-                Create sub-page
+              <DropdownMenuItem onSelect={() => addNode(section, node.id, "doc")}>
+                Create note
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem onSelect={() => setRenamingNode(node.id)}>
@@ -335,36 +352,11 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
                 Delete
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger disabled={!hasChildren}>
-                  Sort sub-pages
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-[#1b1b1b] border-white/10 font-serif">
-                  <DropdownMenuItem
-                    onSelect={() => sortChildren(section, node.id, "title-asc")}
-                  >
-                    Title A → Z
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => sortChildren(section, node.id, "title-desc")}
-                  >
-                    Title Z → A
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => sortChildren(section, node.id, "created-asc")}
-                  >
-                    Oldest first
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => sortChildren(section, node.id, "created-desc")}
-                  >
-                    Newest first
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem onSelect={() => setPermOpen(true)}>
-                Edit permissions
+              <DropdownMenuItem
+                disabled={!hasChildren}
+                onSelect={() => sortChildren(section, node.id, "title-asc")}
+              >
+                Sort sub-pages
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
@@ -375,19 +367,23 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
                 disabled={!hasChildren}
-                onSelect={() => setSubtreeCollapsed(section, node.id, true)}
+                onSelect={() => updateNode(section, node.id, { collapsed: true })}
               >
-                Collapse all
+                Collapse
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!hasChildren}
-                onSelect={() => setSubtreeCollapsed(section, node.id, false)}
+                onSelect={() => updateNode(section, node.id, { collapsed: false })}
               >
-                Expand all
+                Expand
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
-                onSelect={() => setTimeout(() => setPickerOpen(true), 0)}
+                onSelect={() =>
+                  /* small delay: the closing dropdown menu dismisses a popover
+                     opened in the same tick — wait for its cleanup to finish */
+                  setTimeout(() => setPickerOpen(true), 100)
+                }
               >
                 Change icon
               </DropdownMenuItem>
@@ -436,25 +432,6 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Edit permissions — Kachamak is a private, single-user workspace */}
-      <Dialog open={permOpen} onOpenChange={setPermOpen}>
-        <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Edit permissions</DialogTitle>
-          </DialogHeader>
-          <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Owner</span>
-              <span className="font-medium">You</span>
-            </div>
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Kachamak is your private, local workspace — everything is saved only in this
-            browser, so nobody else has access and no sharing permissions are needed.
-          </p>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -477,23 +454,43 @@ export function NoteTree({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
+  const updateNode = useKachamak((s) => s.updateNode);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
   const treeScope = useKachamak((s) => s.treeScope);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
 
+  /* Hide — hidden notes (and everything inside them) leave the navigation tree.
+     NOTE: computed on every render on purpose — store actions push into the same
+     arrays (mutation), so a useMemo keyed on them would serve stale trees. */
+  const dropHidden = (nodes: NoteNode[]): NoteNode[] =>
+    nodes
+      .filter((n) => !n.hidden)
+      .map((n) => ({ ...n, children: dropHidden(n.children) }));
+
+  const shown = dropHidden(roots);
+
   /* the top-bar dropdown: which level of the tree the panel shows */
-  const visibleRoots = useMemo(() => {
-    if (treeScope === "all") return roots;
-    if (treeScope === "top") return roots.map((n) => ({ ...n, children: [] }));
+  const visibleRoots = (() => {
+    if (treeScope === "all") return shown;
+    if (treeScope === "top") return shown.map((n) => ({ ...n, children: [] }));
     /* folders only — containers at every depth, leaf notes hidden */
     const keep = (nodes: NoteNode[]): NoteNode[] =>
       nodes
         .filter((n) => n.children.length > 0)
         .map((n) => ({ ...n, children: keep(n.children) }));
-    return keep(roots);
-  }, [roots, treeScope]);
+    return keep(shown);
+  })();
+
+  /* every hidden note in this section — "Show" them from the section ••• menu */
+  const hiddenNotes: NoteNode[] = [];
+  const collectHidden = (nodes: NoteNode[]) =>
+    nodes.forEach((n) => {
+      if (n.hidden) hiddenNotes.push(n);
+      collectHidden(n.children);
+    });
+  collectHidden(roots);
 
   const capLabel =
     TABS.find((t) => t.key === section)?.label ?? section.charAt(0).toUpperCase() + section.slice(1);
@@ -541,6 +538,23 @@ export function NoteTree({ section }: { section: SectionKey }) {
             <DropdownMenuItem onClick={() => setAllNodesCollapsed(section, true)}>
               Collapse all
             </DropdownMenuItem>
+            {hiddenNotes.length > 0 && (
+              <>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Hidden notes
+                </DropdownMenuLabel>
+                {hiddenNotes.map((hn) => (
+                  <DropdownMenuItem
+                    key={hn.id}
+                    onSelect={() => updateNode(section, hn.id, { hidden: false })}
+                  >
+                    <Eye className="mr-2 h-3.5 w-3.5" />
+                    <span className="truncate">{hn.title}</span>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
