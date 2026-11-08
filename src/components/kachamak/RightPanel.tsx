@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AtSign, CalendarDays, Hash, Info, Settings2 } from "lucide-react";
+import { AtSign, CalendarDays, ChevronRight, Hash, Info, Settings2 } from "lucide-react";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -10,7 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-export function RightPanel({ node, section }: { node: NoteNode; section: SectionKey }) {
+export function RightPanel({
+  node,
+  section,
+  onHide,
+}: {
+  node: NoteNode;
+  section: SectionKey;
+  onHide?: () => void;
+}) {
   const updateNode = useKachamak((s) => s.updateNode);
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
@@ -44,17 +52,30 @@ export function RightPanel({ node, section }: { node: NoteNode; section: Section
 
   return (
     <Tabs defaultValue="info" className="flex h-full flex-col gap-0">
-      <TabsList className="mx-3 mt-3 grid w-auto grid-cols-3 bg-white/5">
-        <TabsTrigger value="info" className="text-xs">
-          <Info className="mr-1 h-3.5 w-3.5" /> Info
-        </TabsTrigger>
-        <TabsTrigger value="details" className="text-xs">
-          <Settings2 className="mr-1 h-3.5 w-3.5" /> Details
-        </TabsTrigger>
-        <TabsTrigger value="mentions" className="text-xs">
-          <AtSign className="mr-1 h-3.5 w-3.5" /> Mentions
-        </TabsTrigger>
-      </TabsList>
+      <div className="flex items-center gap-1 pl-3 pr-2 pt-3">
+        <TabsList className="grid flex-1 grid-cols-3 bg-white/5">
+          <TabsTrigger value="info" className="text-xs">
+            <Info className="mr-1 h-3.5 w-3.5" /> Info
+          </TabsTrigger>
+          <TabsTrigger value="details" className="text-xs">
+            <Settings2 className="mr-1 h-3.5 w-3.5" /> Details
+          </TabsTrigger>
+          <TabsTrigger value="mentions" className="text-xs">
+            <AtSign className="mr-1 h-3.5 w-3.5" /> Mentions
+          </TabsTrigger>
+        </TabsList>
+        {onHide && (
+          <button
+            type="button"
+            aria-label="Hide panel"
+            title="Hide panel"
+            onClick={onHide}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
+      </div>
 
       <div className="flex-1 overflow-y-auto kachamak-scroll p-3">
         <TabsContent value="info" className="mt-0 space-y-4">

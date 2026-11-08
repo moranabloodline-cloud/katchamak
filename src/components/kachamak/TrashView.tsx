@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, RotateCcw, Trash2, FileText } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, RotateCcw, Trash2, FileText } from "lucide-react";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
 import { formatDate } from "@/lib/kachamak/utils";
@@ -31,6 +31,10 @@ export function TrashView() {
   const restoreFromTrash = useKachamak((s) => s.restoreFromTrash);
   const deleteForever = useKachamak((s) => s.deleteForever);
   const emptyTrash = useKachamak((s) => s.emptyTrash);
+  const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
+  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
+  const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
+  const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
   const novel = novels.find((n) => n.id === activeNovelId);
   const [filter, setFilter] = useState("");
 
@@ -42,14 +46,35 @@ export function TrashView() {
 
   return (
     <div className="flex min-h-0 flex-1">
+      {/* reopen left panel when hidden */}
+      {!leftPanelOpen && (
+        <button
+          type="button"
+          aria-label="Show panel"
+          title="Show panel"
+          onClick={toggleLeftPanel}
+          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground md:flex"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+
+      {leftPanelOpen && (
       <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/20 md:block">
-        <div className="px-3 pt-3 pb-2">
-          <div className="flex items-center gap-2">
-            <Trash2 className="h-4 w-4 text-orange-400" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {novel.title}
-            </span>
-          </div>
+        <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
+          <button
+            type="button"
+            aria-label="Hide panel"
+            title="Hide panel"
+            onClick={toggleLeftPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <Trash2 className="h-4 w-4 text-orange-400" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {novel.title}
+          </span>
         </div>
         <div className="space-y-1 px-2 pb-3">
           {(Object.keys(SECTION_NAMES) as SectionKey[]).map((k) => {
@@ -67,6 +92,7 @@ export function TrashView() {
           })}
         </div>
       </aside>
+      )}
 
       <main className="min-w-0 flex-1 overflow-y-auto kachamak-scroll">
         <div className="mx-auto max-w-2xl p-8">
@@ -169,10 +195,22 @@ export function TrashView() {
         </div>
       </main>
 
+      {rightPanelOpen ? (
       <aside className="hidden w-72 shrink-0 border-l border-white/10 bg-black/20 p-4 lg:block">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          About restoring
-        </h4>
+        <div className="flex items-center justify-between gap-1">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            About restoring
+          </h4>
+          <button
+            type="button"
+            aria-label="Hide panel"
+            title="Hide panel"
+            onClick={toggleRightPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Restoring a note keeps its text, formatting, synopsis, status and metadata. If
           its original parent folder was also deleted, the note returns to the top of its
@@ -182,6 +220,17 @@ export function TrashView() {
           Deleted items never expire — they stay here until you remove them.
         </p>
       </aside>
+      ) : (
+        <button
+          type="button"
+          aria-label="Show panel"
+          title="Show panel"
+          onClick={toggleRightPanel}
+          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-l-md border border-r-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground lg:flex"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }

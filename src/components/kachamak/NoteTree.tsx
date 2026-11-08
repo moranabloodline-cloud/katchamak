@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   FileText,
   Folder,
@@ -205,12 +206,22 @@ export function NoteTree({
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
+  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+      <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
+        <button
+          type="button"
+          aria-label="Hide panel"
+          title="Hide panel"
+          onClick={toggleLeftPanel}
+          className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
         <Library className="h-4 w-4 text-orange-400" />
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {label}

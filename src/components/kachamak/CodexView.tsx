@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Folder,
   FolderOpen,
@@ -213,6 +214,8 @@ function EntryEditor({ entryId }: { entryId: string }) {
   const deleteEntry = useKachamak((s) => s.deleteEntry);
   const findEntryCategory = useKachamak((s) => s.findEntryCategory);
   const selectCodex = useKachamak((s) => s.selectCodex);
+  const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
+  const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
   const novel = novels.find((n) => n.id === activeNovelId);
   const entry = novel ? findNodeSafe(novel.codex, entryId) : null;
   const category = findEntryCategory(entryId);
@@ -263,16 +266,28 @@ function EntryEditor({ entryId }: { entryId: string }) {
       </div>
 
       {/* details panel */}
+      {rightPanelOpen && (
       <aside className="hidden w-72 shrink-0 overflow-y-auto kachamak-scroll border-l border-white/10 bg-black/20 p-3 lg:block">
         <Tabs defaultValue="details">
-          <TabsList className="grid w-full grid-cols-2 bg-white/5">
-            <TabsTrigger value="details" className="text-xs">
-              Details
-            </TabsTrigger>
-            <TabsTrigger value="tags" className="text-xs">
-              Tags
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-1">
+            <TabsList className="grid flex-1 grid-cols-2 bg-white/5">
+              <TabsTrigger value="details" className="text-xs">
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="tags" className="text-xs">
+                Tags
+              </TabsTrigger>
+            </TabsList>
+            <button
+              type="button"
+              aria-label="Hide panel"
+              title="Hide panel"
+              onClick={toggleRightPanel}
+              className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
           <TabsContent value="details" className="mt-3 space-y-4">
             <button
               type="button"
@@ -435,6 +450,20 @@ function EntryEditor({ entryId }: { entryId: string }) {
           </TabsContent>
         </Tabs>
       </aside>
+      )}
+
+      {/* reopen right panel when hidden */}
+      {!rightPanelOpen && (
+        <button
+          type="button"
+          aria-label="Show panel"
+          title="Show panel"
+          onClick={toggleRightPanel}
+          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-l-md border border-r-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground lg:flex"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
@@ -448,6 +477,8 @@ export function CodexView() {
   const addEntry = useKachamak((s) => s.addEntry);
   const addCategory = useKachamak((s) => s.addCategory);
   const selectCodex = useKachamak((s) => s.selectCodex);
+  const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
+  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const novel = novels.find((n) => n.id === activeNovelId);
 
   const selectedIsEntry = useMemo(() => {
@@ -467,8 +498,31 @@ export function CodexView() {
 
   return (
     <div className="flex min-h-0 flex-1">
+      {/* reopen left panel when hidden */}
+      {!leftPanelOpen && (
+        <button
+          type="button"
+          aria-label="Show panel"
+          title="Show panel"
+          onClick={toggleLeftPanel}
+          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground md:flex"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+
+      {leftPanelOpen && (
       <aside className="hidden w-64 shrink-0 overflow-y-auto kachamak-scroll border-r border-white/10 bg-black/20 md:block">
-        <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+        <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
+          <button
+            type="button"
+            aria-label="Hide panel"
+            title="Hide panel"
+            onClick={toggleLeftPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
           <ScrollText className="h-4 w-4 text-orange-400" />
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Codex
@@ -496,6 +550,7 @@ export function CodexView() {
           </button>
         </div>
       </aside>
+      )}
 
       <main className="min-w-0 flex-1">
         {selectedCodexId && selectedIsEntry ? (

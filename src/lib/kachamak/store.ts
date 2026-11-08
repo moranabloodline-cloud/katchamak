@@ -23,6 +23,12 @@ interface KachamakState {
   view: ViewMode;
   defaultAuthor: string;
 
+  /* panel visibility (user-controlled, like the original) */
+  leftPanelOpen: boolean;
+  rightPanelOpen: boolean;
+  toggleLeftPanel: () => void;
+  toggleRightPanel: () => void;
+
   /* library */
   createNovel: (title: string, author: string) => void;
   importNovel: (json: string) => { ok: boolean; error?: string };
@@ -166,6 +172,12 @@ export const useKachamak = create<KachamakState>()(
       selectedCodexId: null,
       view: "split",
       defaultAuthor: "Nikola Djokovic",
+
+      leftPanelOpen: true,
+      rightPanelOpen: true,
+
+      toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
+      toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
 
       /* ---------- library ---------- */
 

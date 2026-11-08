@@ -1,14 +1,14 @@
 "use client";
 
 
-import { LayoutGrid, List as ListIcon, PenLine, Columns2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, PenLine, Columns2 } from "lucide-react";
 import { NoteTree } from "./NoteTree";
 import { GridView } from "./GridView";
 import { WriteArea } from "./WriteArea";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
-import type { SectionKey, ViewMode } from "@/lib/kachamak/types";
+import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNode, nodeWords } from "@/lib/kachamak/utils";
 import {
   Select,
@@ -53,18 +53,34 @@ export function NotesSection({ section }: { section: SectionKey }) {
   const view = useKachamak((s) => s.view);
   const setView = useKachamak((s) => s.setView);
   const updateNode = useKachamak((s) => s.updateNode);
+  const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
+  const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
+  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
+  const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
   const selected = selectedNodeId ? findNode(roots, selectedNodeId) : null;
 
-  const showTree = view === "split" || view === "grid" || view === "list";
   const showEditor = view === "split" || view === "write";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1">
-        {showTree && (
+        {/* reopen left panel when hidden */}
+        {!leftPanelOpen && (
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleLeftPanel}
+            className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground md:flex"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
+
+        {leftPanelOpen && (
           <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/20 md:block">
             <NoteTree section={section} label={section} rootKinds={ROOT_KINDS[section]} />
           </aside>
@@ -93,10 +109,43 @@ export function NotesSection({ section }: { section: SectionKey }) {
             ))}
         </main>
 
-        {showEditor && selected && (
+        {rightPanelOpen ? (
           <aside className="hidden w-72 shrink-0 border-l border-white/10 bg-black/20 lg:block">
-            <RightPanel node={selected} section={section} />
+            {selected ? (
+              <RightPanel node={selected} section={section} onHide={toggleRightPanel} />
+            ) : (
+              <div className="flex h-full flex-col">
+                <div className="flex items-center justify-between gap-1 pl-3 pr-2 pt-3">
+                  <span className="flex-1 rounded-md bg-white/5 px-2.5 py-1.5 text-center text-xs text-muted-foreground">
+                    Info
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Hide panel"
+                    title="Hide panel"
+                    onClick={toggleRightPanel}
+                    className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="p-4 text-xs leading-relaxed text-muted-foreground">
+                  Select a note in the tree or a card in the Grid to see its synopsis,
+                  notes and details here.
+                </p>
+              </div>
+            )}
           </aside>
+        ) : (
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleRightPanel}
+            className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-l-md border border-r-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground lg:flex"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
         )}
       </div>
 
