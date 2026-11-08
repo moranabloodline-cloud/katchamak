@@ -1,5 +1,7 @@
+/* every tab is the same note system — Codex included */
 export type SectionKey =
   | "binder"
+  | "codex"
   | "planning"
   | "research"
   | "templates"
@@ -7,13 +9,14 @@ export type SectionKey =
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
+  "codex",
   "planning",
   "research",
   "templates",
   "prompts",
 ];
 
-export type TabKey = SectionKey | "codex" | "trash";
+export type TabKey = SectionKey | "trash";
 
 export const TABS: { key: TabKey; label: string }[] = [
   { key: "binder", label: "Binder" },
@@ -25,6 +28,8 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "trash", label: "Trash" },
 ];
 
+/* legacy kinds kept only for old data — new notes are always "doc" and the user
+   decides the name, icon and colour themselves (free hierarchy) */
 export type NodeKind = "act" | "chapter" | "scene" | "folder" | "doc";
 
 export interface NoteNode {
@@ -45,25 +50,6 @@ export interface NoteNode {
   children: NoteNode[];
 }
 
-export interface CodexEntry {
-  id: string;
-  title: string;
-  content: string;
-  aliases: string[];
-  entryType: string;
-  status: string;
-  image?: string; // dataURL
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface CodexCategory {
-  id: string;
-  name: string;
-  children: CodexCategory[];
-  entries: CodexEntry[];
-}
-
 export interface TrashItem {
   id: string;
   parentId: string | null; // restore target (null = section root)
@@ -78,7 +64,6 @@ export interface Novel {
   author: string;
   cover: { bg: string; icon: string };
   sections: Record<SectionKey, NoteNode[]>;
-  codex: CodexCategory[];
   trash: TrashItem[];
   statuses: string[];
   labels: { id: string; name: string; color: string }[];

@@ -313,7 +313,7 @@ export function Home() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this novel?</AlertDialogTitle>
             <AlertDialogDescription>
-              It and all its notes, codex entries and trash will be removed from this
+              It and all its notes and trash will be removed from this
               browser. Export a backup first if you want to keep it.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -3,9 +3,8 @@
 import { ArrowLeft, Download, Lock } from "lucide-react";
 import { exportNovelJson, useKachamak } from "@/lib/kachamak/store";
 import { TABS } from "@/lib/kachamak/types";
-import type { TabKey } from "@/lib/kachamak/types";
+import type { SectionKey, TabKey } from "@/lib/kachamak/types";
 import { NotesSection } from "./NotesSection";
-import { CodexView } from "./CodexView";
 import { TrashView } from "./TrashView";
 import { novelWords } from "@/lib/kachamak/utils";
 import { toast } from "sonner";
@@ -92,13 +91,11 @@ export function Workspace() {
         </div>
       </header>
 
-      {/* body */}
-      {activeTab === "codex" ? (
-        <CodexView />
-      ) : activeTab === "trash" ? (
+      {/* body — every tab is the same note system; only Trash is different */}
+      {activeTab === "trash" ? (
         <TrashView />
       ) : (
-        <NotesSection section={activeTab as Parameters<typeof NotesSection>[0]["section"]} />
+        <NotesSection section={activeTab as SectionKey} />
       )}
     </div>
   );

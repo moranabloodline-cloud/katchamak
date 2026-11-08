@@ -10,6 +10,7 @@ import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNode, novelWords } from "@/lib/kachamak/utils";
+import { NOTE_COLORS } from "@/lib/kachamak/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
@@ -26,26 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const ROOT_KINDS: Record<SectionKey, { kind: NoteNode["kind"]; label: string }[]> = {
-  binder: [{ kind: "act", label: "Act" }],
-  planning: [
-    { kind: "folder", label: "Folder" },
-    { kind: "doc", label: "Note" },
-  ],
-  research: [
-    { kind: "folder", label: "Folder" },
-    { kind: "doc", label: "Note" },
-  ],
-  templates: [
-    { kind: "folder", label: "Folder" },
-    { kind: "doc", label: "Note" },
-  ],
-  prompts: [
-    { kind: "folder", label: "Folder" },
-    { kind: "doc", label: "Note" },
-  ],
-};
-
 const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "split", label: "Split" },
   { key: "write", label: "Write" },
@@ -53,19 +34,8 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "list", label: "List" },
 ];
 
-/* kužić — document colour palette */
-const DOC_COLORS = [
-  "#e3c567",
-  "#3fb950",
-  "#f0883e",
-  "#f85149",
-  "#a371f7",
-  "#58a6ff",
-  "#39c5cf",
-  "#f472b6",
-  "#a3e635",
-  "#8b949e",
-];
+/* kužić — document colour palette (shared with the tree icon picker) */
+const DOC_COLORS = NOTE_COLORS;
 
 /* vertical line between the panels — drag it to widen / narrow a panel */
 function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" | "right" }) {
@@ -338,7 +308,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
             className="hidden shrink-0 flex-col bg-black/20 md:flex"
           >
             <div className="min-h-0 flex-1">
-              <NoteTree section={section} label={section} rootKinds={ROOT_KINDS[section]} />
+              <NoteTree section={section} />
             </div>
             {/* bottom of the left panel: circled "i" pinned to the bottom-left corner and
                 Split / Write / Grid / List at the right edge — both fixed, never scroll with the tree */}

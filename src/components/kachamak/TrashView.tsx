@@ -19,6 +19,7 @@ import {
 
 const SECTION_NAMES: Record<SectionKey, string> = {
   binder: "Binder",
+  codex: "Codex",
   planning: "Planning",
   research: "Research",
   templates: "Templates",

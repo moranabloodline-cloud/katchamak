@@ -3,14 +3,13 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
-  CodexCategory,
-  CodexEntry,
   NoteNode,
   Novel,
   SectionKey,
   TabKey,
   ViewMode,
 } from "./types";
+import { SECTION_KEYS } from "./types";
 import { newNovel, seedNovels, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode } from "./utils";
 
@@ -19,7 +18,8 @@ interface KachamakState {
   activeNovelId: string | null;
   activeTab: TabKey;
   selectedNodeId: string | null;
-  selectedCodexId: string | null;
+  /* the note currently being renamed inline in the tree (also set right after create) */
+  renamingNodeId: string | null;
   view: ViewMode;
   defaultAuthor: string;
 
@@ -37,9 +37,7 @@ interface KachamakState {
 
   /* tree expand / collapse (persisted) */
   setAllNodesCollapsed: (section: SectionKey, collapsed: boolean) => void;
-  codexCollapsed: Record<string, boolean>;
-  toggleCodexCat: (id: string) => void;
-  setAllCodexCollapsed: (collapsed: boolean) => void;
+  setSubtreeCollapsed: (section: SectionKey, id: string, collapsed: boolean) => void;
 
   /* library */
   createNovel: (title: string, author: string) => void;
@@ -52,7 +50,7 @@ interface KachamakState {
   setTab: (tab: TabKey) => void;
   setView: (v: ViewMode) => void;
   select: (id: string | null) => void;
-  selectCodex: (id: string | null) => void;
+  setRenamingNode: (id: string | null) => void;
   renameNovel: (title: string) => void;
   setDefaultAuthor: (a: string) => void;
 
@@ -64,28 +62,107 @@ interface KachamakState {
   addNode: (
     section: SectionKey,
     parentId: string | null,
-    kind: NoteNode["kind"],
+    kind?: NoteNode["kind"],
     title?: string
   ) => string | null;
   updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>) => void;
   deleteNode: (section: SectionKey, id: string) => void;
   moveNode: (section: SectionKey, id: string, dir: "up" | "down") => void;
+  moveNodeTo: (
+    fromSection: SectionKey,
+    id: string,
+    destSection: SectionKey,
+    destParentId: string | null
+  ) => void;
   duplicateNode: (section: SectionKey, id: string) => void;
-  sortChildren: (section: SectionKey, id: string) => void;
+  sortChildren: (
+    section: SectionKey,
+    id: string,
+    mode: "title-asc" | "title-desc" | "created-asc" | "created-desc"
+  ) => void;
 
   /* trash */
   restoreFromTrash: (trashId: string) => void;
   deleteForever: (trashId: string) => void;
   emptyTrash: () => void;
+}
 
-  /* codex */
-  addCategory: (parentId: string | null, name: string) => void;
-  renameCategory: (id: string, name: string) => void;
-  deleteCategory: (id: string) => void;
-  addEntry: (categoryId: string, title: string) => string | null;
-  updateEntry: (id: string, patch: Partial<CodexEntry>) => void;
-  deleteEntry: (id: string) => void;
-  findEntryCategory: (entryId: string) => CodexCategory | null;
+/* ---------- legacy codex (pre-unification data) ---------- */
+
+interface LegacyCodexEntry {
+  id: string;
+  title: string;
+  content: string;
+  aliases: string[];
+  entryType: string;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface LegacyCodexCategory {
+  id: string;
+  name: string;
+  children: LegacyCodexCategory[];
+  entries: LegacyCodexEntry[];
+}
+
+type LegacyNovel = Novel & { codex?: LegacyCodexCategory[] };
+
+const LEGACY_CAT_ICONS: [RegExp, string][] = [
+  [/^char/i, "users"],
+  [/^loc/i, "map-pin"],
+  [/^thing/i, "diamond"],
+  [/^lore/i, "scroll"],
+];
+
+/* turn an old codex category (with its entries) into a plain note subtree */
+function legacyCatToNode(cat: LegacyCodexCategory): NoteNode {
+  const now = Date.now();
+  const icon = LEGACY_CAT_ICONS.find(([re]) => re.test(cat.name))?.[1] ?? "folder";
+  return {
+    id: uid(),
+    title: cat.name,
+    kind: "folder",
+    synopsis: "",
+    content: "",
+    notes: "",
+    status: "",
+    label: "",
+    icon,
+    createdAt: now,
+    updatedAt: now,
+    children: [
+      ...cat.children.map(legacyCatToNode),
+      ...cat.entries.map((e) => ({
+        id: uid(),
+        title: e.title,
+        kind: "doc" as const,
+        synopsis: "",
+        content: e.content ?? "",
+        notes: "",
+        status: e.status ?? "",
+        label: e.entryType ?? "",
+        createdAt: e.createdAt ?? now,
+        updatedAt: e.updatedAt ?? now,
+        children: [] as NoteNode[],
+      })),
+    ],
+  };
+}
+
+/* make sure a novel has every section (older backups may miss keys) and convert
+   its legacy codex array into plain notes in the Codex section */
+function normalizeNovelSections(n: LegacyNovel): void {
+  const secs: Record<string, NoteNode[] | undefined> = { ...(n.sections ?? {}) };
+  for (const k of SECTION_KEYS) {
+    if (!Array.isArray(secs[k])) secs[k] = [];
+  }
+  if (secs.codex!.length === 0 && Array.isArray(n.codex) && n.codex.length > 0) {
+    secs.codex = n.codex.map(legacyCatToNode);
+  }
+  n.sections = secs as Novel["sections"];
+  delete n.codex;
 }
 
 /* ---------- immutable helpers ---------- */
@@ -118,45 +195,6 @@ function removeFromNodes(
   return { nodes: nodes2, removed: found.removed, parentId: found.parentId };
 }
 
-function mapCategories(
-  cats: CodexCategory[],
-  fn: (c: CodexCategory) => CodexCategory
-): CodexCategory[] {
-  return cats.map((c) => ({ ...fn(c), children: mapCategories(c.children, fn) }));
-}
-
-function removeFromCategories(
-  cats: CodexCategory[],
-  id: string
-): { cats: CodexCategory[]; removed: CodexCategory | null } {
-  const found: { removed: CodexCategory | null } = { removed: null };
-  const walk = (list: CodexCategory[]): CodexCategory[] => {
-    const out: CodexCategory[] = [];
-    for (const c of list) {
-      if (c.id === id) {
-        found.removed = c;
-        continue;
-      }
-      out.push({ ...c, children: walk(c.children) });
-    }
-    return out;
-  };
-  const cats2 = walk(cats);
-  return { cats: cats2, removed: found.removed };
-}
-
-function findCategory(
-  cats: CodexCategory[],
-  id: string
-): CodexCategory | null {
-  for (const c of cats) {
-    if (c.id === id) return c;
-    const hit = findCategory(c.children, id);
-    if (hit) return hit;
-  }
-  return null;
-}
-
 function touch(novel: Novel): Novel {
   return { ...novel, updatedAt: Date.now() };
 }
@@ -187,7 +225,7 @@ export const useKachamak = create<KachamakState>()(
       activeNovelId: null,
       activeTab: "binder",
       selectedNodeId: null,
-      selectedCodexId: null,
+      renamingNodeId: null,
       view: "split",
       defaultAuthor: "Nikola Djokovic",
 
@@ -236,23 +274,20 @@ export const useKachamak = create<KachamakState>()(
         }));
       },
 
-      codexCollapsed: {},
-      toggleCodexCat: (id) =>
-        set((s) => ({
-          codexCollapsed: { ...s.codexCollapsed, [id]: !s.codexCollapsed[id] },
-        })),
-      setAllCodexCollapsed: (collapsed) => {
+      /* Collapse all / Expand all in the note menu — the note and every descendant */
+      setSubtreeCollapsed: (section, id, collapsed) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
-        const next: Record<string, boolean> = {};
-        const walk = (cats: CodexCategory[]) => {
-          for (const c of cats) {
-            next[c.id] = collapsed;
-            walk(c.children);
-          }
+        const target = findNode(novel.sections[section], id);
+        if (!target) return;
+        const apply = (n: NoteNode) => {
+          n.collapsed = collapsed;
+          n.children.forEach(apply);
         };
-        walk(novel.codex);
-        set({ codexCollapsed: next });
+        apply(target);
+        set((s) => ({
+          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+        }));
       },
 
       /* ---------- library ---------- */
@@ -270,19 +305,20 @@ export const useKachamak = create<KachamakState>()(
 
       importNovel: (json) => {
         try {
-          const parsed = JSON.parse(json) as Novel;
+          const parsed = JSON.parse(json) as LegacyNovel;
           if (!parsed || typeof parsed !== "object" || !parsed.title) {
             return { ok: false, error: "Not a Kachamak novel backup." };
           }
-          const n: Novel = {
+          const n: LegacyNovel = {
             ...parsed,
             id: uid(), // never collide with existing ids
             trash: parsed.trash ?? [],
             statuses: parsed.statuses ?? [],
             labels: parsed.labels ?? [],
           };
+          normalizeNovelSections(n);
           set((s) => ({
-            novels: [...s.novels, n],
+            novels: [...s.novels, n as Novel],
             activeNovelId: n.id,
             activeTab: "binder",
             selectedNodeId: null,
@@ -308,13 +344,13 @@ export const useKachamak = create<KachamakState>()(
       /* ---------- workspace ---------- */
 
       setTab: (tab) =>
-        set({ activeTab: tab, selectedNodeId: null, selectedCodexId: null }),
+        set({ activeTab: tab, selectedNodeId: null, renamingNodeId: null }),
 
       setView: (v) => set({ view: v }),
 
       select: (id) => set({ selectedNodeId: id }),
 
-      selectCodex: (id) => set({ selectedCodexId: id }),
+      setRenamingNode: (id) => set({ renamingNodeId: id }),
 
       renameNovel: (title) =>
         set((s) => ({
@@ -333,31 +369,22 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         let created: NoteNode | null = null;
 
-        const fallbackTitle =
-          kind === "act"
-            ? "New Act"
-            : kind === "chapter"
-              ? "New Chapter"
-              : kind === "scene"
-                ? "New Scene"
-                : kind === "folder"
-                  ? "New Folder"
-                  : "New Note";
-
+        /* free hierarchy — every new note is the same thing; the user names it
+           (inline rename opens right away), picks its icon and its colour */
+        const n = makeNode(kind ?? "doc", title ?? "Untitled");
         if (parentId === null) {
-          const n = makeNode(kind, title ?? fallbackTitle);
           created = n;
           roots.push(n);
         } else {
           const parent = findNode(roots, parentId);
           if (!parent) return null;
-          const n = makeNode(kind, title ?? fallbackTitle);
           created = n;
           parent.children.push(n);
           parent.collapsed = false;
         }
         set((s) => ({
           selectedNodeId: created?.id ?? null,
+          renamingNodeId: created?.id ?? null,
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
         return created?.id ?? null;
@@ -395,6 +422,11 @@ export const useKachamak = create<KachamakState>()(
             findNode([removedNode], s.selectedNodeId ?? "")
               ? null
               : s.selectedNodeId,
+          renamingNodeId:
+            s.renamingNodeId &&
+            (s.renamingNodeId === id || findNode([removedNode], s.renamingNodeId))
+              ? null
+              : s.renamingNodeId,
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
       },
@@ -418,6 +450,39 @@ export const useKachamak = create<KachamakState>()(
           return list.some((n) => swap(n.children));
         };
         swap(roots);
+        set((s) => ({
+          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+        }));
+      },
+
+      /* Move — the note becomes the last child of the destination (or a section root) */
+      moveNodeTo: (fromSection, id, destSection, destParentId) => {
+        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+        if (!novel) return;
+        const fromRoots = novel.sections[fromSection];
+        const moving = findNode(fromRoots, id);
+        if (!moving) return;
+        /* never move a note into itself or one of its own sub-pages */
+        if (
+          destSection === fromSection &&
+          destParentId &&
+          (destParentId === id || findNode([moving], destParentId))
+        )
+          return;
+        const { nodes, removed } = removeFromNodes(fromRoots, id);
+        if (!removed) return;
+        novel.sections = { ...novel.sections, [fromSection]: nodes };
+        if (destParentId) {
+          const parent = findNode(novel.sections[destSection], destParentId);
+          if (parent) {
+            parent.children.push(removed);
+            parent.collapsed = false;
+          } else {
+            novel.sections[destSection].push(removed);
+          }
+        } else {
+          novel.sections[destSection].push(removed);
+        }
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
@@ -450,20 +515,31 @@ export const useKachamak = create<KachamakState>()(
         }));
       },
 
-      /* sort sub-pages of a note alphabetically (A→Z) */
-      sortChildren: (section, id) => {
+      /* sort sub-pages of a note — title A→Z / Z→A, oldest or newest first */
+      sortChildren: (section, id, mode) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         const list = target ? target.children : roots;
         if (!target || list.length === 0) return;
-        list.sort((a, b) =>
+        const byTitle = (a: NoteNode, b: NoteNode) =>
           a.title.localeCompare(b.title, undefined, {
             sensitivity: "base",
             numeric: true,
-          })
-        );
+          });
+        list.sort((a, b) => {
+          switch (mode) {
+            case "title-desc":
+              return byTitle(b, a);
+            case "created-asc":
+              return a.createdAt - b.createdAt;
+            case "created-desc":
+              return b.createdAt - a.createdAt;
+            default:
+              return byTitle(a, b);
+          }
+        });
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
@@ -510,143 +586,16 @@ export const useKachamak = create<KachamakState>()(
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
       },
-
-      /* ---------- codex ---------- */
-
-      addCategory: (parentId, name) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
-        const cat: CodexCategory = {
-          id: uid(),
-          name: name.trim() || "New Folder",
-          children: [],
-          entries: [],
-        };
-        if (parentId === null) {
-          novel.codex.push(cat);
-        } else {
-          const parent = findCategory(novel.codex, parentId);
-          if (parent) {
-            parent.children.push(cat);
-          } else {
-            novel.codex.push(cat);
-          }
-        }
-        set((s) => ({
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-        }));
-      },
-
-      renameCategory: (id, name) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
-        const cat = findCategory(novel.codex, id);
-        if (cat) cat.name = name.trim() || cat.name;
-        set((s) => ({
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-        }));
-      },
-
-      deleteCategory: (id) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
-        const { cats, removed } = removeFromCategories(novel.codex, id);
-        if (!removed) return;
-        novel.codex = cats;
-        // deleted entries' ids no longer selected
-        const entryIds = new Set<string>();
-        const collect = (c: CodexCategory) => {
-          c.entries.forEach((e) => entryIds.add(e.id));
-          c.children.forEach(collect);
-        };
-        collect(removed);
-        set((s) => ({
-          selectedCodexId: s.selectedCodexId && entryIds.has(s.selectedCodexId) ? null : s.selectedCodexId,
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-        }));
-      },
-
-      addEntry: (categoryId, title) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return null;
-        const cat = findCategory(novel.codex, categoryId);
-        if (!cat) return null;
-        const e: CodexEntry = {
-          id: uid(),
-          title: title.trim() || "New Entry",
-          content: "",
-          aliases: [],
-          entryType: "Human",
-          status: "To Do",
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        cat.entries.push(e);
-        set((s) => ({
-          selectedCodexId: e.id,
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-        }));
-        return e.id;
-      },
-
-      updateEntry: (id, patch) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
-        const found: { hit: boolean } = { hit: false };
-        novel.codex = mapCategories(novel.codex, (c) => ({
-          ...c,
-          entries: c.entries.map((e) => {
-            if (e.id === id) {
-              found.hit = true;
-              return { ...e, ...patch, updatedAt: Date.now() };
-            }
-            return e;
-          }),
-        }));
-        if (found.hit) {
-          set((s) => ({
-            novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-          }));
-        }
-      },
-
-      deleteEntry: (id) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
-        mapCategories(novel.codex, (c) => {
-          c.entries = c.entries.filter((e) => e.id !== id);
-          return c;
-        });
-        set((s) => ({
-          selectedCodexId: s.selectedCodexId === id ? null : s.selectedCodexId,
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-        }));
-      },
-
-      findEntryCategory: (entryId) => {
-        const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return null;
-        let found: CodexCategory | null = null;
-        const walk = (cats: CodexCategory[]) => {
-          for (const c of cats) {
-            if (c.entries.some((e) => e.id === entryId)) {
-              found = c;
-              return;
-            }
-            walk(c.children);
-          }
-        };
-        walk(novel.codex);
-        return found;
-      },
     }),
     {
       name: STORAGE_KEY,
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
-         acts and chapters as solid coloured folders) */
+         acts and chapters as solid coloured folders)
+         v3 → v4: everything is a NOTE on every tab — the old Codex
+         categories/entries become plain notes in the Codex section */
       migrate: (persisted) => {
         const s = persisted as KachamakState;
         const OLD_DEFAULT_STATUSES = [
@@ -661,7 +610,7 @@ export const useKachamak = create<KachamakState>()(
           Revised: "Revised Draft",
           Final: "Final Draft",
         };
-        for (const n of s.novels ?? []) {
+        for (const n of (s.novels ?? []) as LegacyNovel[]) {
           let upgraded = false;
           if ((n.statuses ?? []).join("|") === OLD_DEFAULT_STATUSES.join("|")) {
             n.statuses = [...DEFAULT_STATUSES];
@@ -700,7 +649,8 @@ export const useKachamak = create<KachamakState>()(
               walk(nd.children, nd.kind === "act" ? chColor : undefined);
             }
           };
-          for (const roots of Object.values(n.sections ?? {})) {
+          normalizeNovelSections(n);
+          for (const roots of Object.values(n.sections)) {
             actIndex = -1;
             walk(roots);
           }

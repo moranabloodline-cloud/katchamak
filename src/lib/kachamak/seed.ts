@@ -1,4 +1,4 @@
-import type { CodexCategory, NoteNode, Novel } from "./types";
+import type { NoteNode, Novel } from "./types";
 import { SECTION_KEYS } from "./types";
 import { uid } from "./utils";
 
@@ -19,30 +19,10 @@ export const DEFAULT_LABELS = [
   { id: "lbl-yellow", name: "Research", color: "#d29922" },
 ];
 
-export const CODEX_TYPES = [
-  "Human",
-  "God/Deity",
-  "Fae",
-  "Creature",
-  "Location",
-  "Thing",
-  "Lore",
-  "Faction",
-];
-
 export function emptySections(): Record<string, NoteNode[]> {
   const o: Record<string, NoteNode[]> = {};
   for (const k of SECTION_KEYS) o[k] = [];
   return o;
-}
-
-export function defaultCodex(): CodexCategory[] {
-  return [
-    { id: uid(), name: "Characters", children: [], entries: [] },
-    { id: uid(), name: "Locations", children: [], entries: [] },
-    { id: uid(), name: "Things", children: [], entries: [] },
-    { id: uid(), name: "Lore", children: [], entries: [] },
-  ];
 }
 
 function node(
@@ -148,80 +128,46 @@ function morrigansOcean(): Novel {
     node("Blog", "folder", {}, [node("10/30/2026 - Blog 1", "doc")]),
   ];
 
-  const codex: CodexCategory[] = [
-    {
-      id: uid(),
-      name: "Characters",
-      children: [
-        {
-          id: uid(),
-          name: "Deity",
-          children: [],
-          entries: [
-            {
-              id: uid(),
-              title: "Syntax",
-              content: "",
-              aliases: ["Nuada"],
-              entryType: "God/Deity",
-              status: "To Do",
-              createdAt: now,
-              updatedAt: now,
-            },
-            {
-              id: uid(),
-              title: "Declan",
-              content: "",
-              aliases: [],
-              entryType: "God/Deity",
-              status: "To Do",
-              createdAt: now,
-              updatedAt: now,
-            },
-          ],
-        },
-        {
-          id: uid(),
-          name: "Individuals",
-          children: [],
-          entries: [
+  const codexSection: NoteNode[] = [
+    node(
+      "Characters",
+      "folder",
+      { icon: "users" },
+      [
+        node(
+          "Deity",
+          "folder",
+          {},
+          [
+            node("Syntax", "doc", { label: "God/Deity", status: "To Do" }),
+            node("Declan", "doc", { label: "God/Deity", status: "To Do" }),
+          ]
+        ),
+        node(
+          "Individuals",
+          "folder",
+          {},
+          [
             "Aunt Mairead",
             "Aisling",
             "Ciarán",
             "Dr. Brendan Gantz",
             "Darragh",
-          ].map((t) => ({
-            id: uid(),
-            title: t,
-            content: "",
-            aliases: [],
-            entryType: "Human",
-            status: "To Do",
-            createdAt: now,
-            updatedAt: now,
-          })),
-        },
-      ],
-      entries: [],
-    },
-    { id: uid(), name: "Locations", children: [], entries: [] },
-    { id: uid(), name: "Things", children: [], entries: [] },
-    { id: uid(), name: "Lore", children: [], entries: [] },
-    {
-      id: uid(),
-      name: "Uncategorized",
-      children: [],
-      entries: ["Braindump", "Story Genre", "Style", "Synopsis"].map((t) => ({
-        id: uid(),
-        title: t,
-        content: "",
-        aliases: [],
-        entryType: "Lore",
-        status: "To Do",
-        createdAt: now,
-        updatedAt: now,
-      })),
-    },
+          ].map((t) => node(t, "doc", { label: "Human", status: "To Do" }))
+        ),
+      ]
+    ),
+    node("Locations", "folder", { icon: "map-pin" }),
+    node("Things", "folder", { icon: "diamond" }),
+    node("Lore", "folder", { icon: "scroll" }),
+    node(
+      "Uncategorized",
+      "folder",
+      {},
+      ["Braindump", "Story Genre", "Style", "Synopsis"].map((t) =>
+        node(t, "doc", { label: "Lore", status: "To Do" })
+      )
+    ),
   ];
 
   return {
@@ -234,12 +180,12 @@ function morrigansOcean(): Novel {
     },
     sections: {
       binder,
+      codex: codexSection,
       planning,
       research: [],
       templates: [],
       prompts: [],
     },
-    codex,
     trash: [],
     statuses: DEFAULT_STATUSES,
     labels: DEFAULT_LABELS,
@@ -259,7 +205,6 @@ function cashablanca(): Novel {
       icon: "◆",
     },
     sections: emptySections() as Novel["sections"],
-    codex: defaultCodex(),
     trash: [],
     statuses: DEFAULT_STATUSES,
     labels: DEFAULT_LABELS,
@@ -287,7 +232,6 @@ export function newNovel(title: string, author: string): Novel {
     author: author.trim() || "Unknown Author",
     cover: { bg: palettes[Math.floor(Math.random() * palettes.length)], icon: "✦" },
     sections: emptySections() as Novel["sections"],
-    codex: defaultCodex(),
     trash: [],
     statuses: DEFAULT_STATUSES,
     labels: DEFAULT_LABELS,

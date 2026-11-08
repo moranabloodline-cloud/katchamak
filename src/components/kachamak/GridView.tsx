@@ -161,9 +161,6 @@ export function GridView({ section }: { section: SectionKey }) {
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
 
-  const rootLabel = section === "binder" ? "Act" : "Folder";
-  const rootKind = section === "binder" ? "act" : "folder";
-
   return (
     <div className="flex flex-wrap items-start gap-4 p-6">
       {roots.map((r) =>
@@ -176,11 +173,11 @@ export function GridView({ section }: { section: SectionKey }) {
 
       <button
         type="button"
-        onClick={() => addNode(section, null, rootKind as NoteNode["kind"])}
+        onClick={() => addNode(section, null, "doc")}
         className="flex h-auto min-h-24 w-60 shrink-0 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/15 p-6 text-muted-foreground hover:border-orange-400/50 hover:text-foreground cursor-pointer"
       >
         <span className="text-lg leading-none">+</span>
-        <span className="text-xs">New {rootLabel}</span>
+        <span className="text-xs">New note</span>
       </button>
 
       {roots.length === 0 && (

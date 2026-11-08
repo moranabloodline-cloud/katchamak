@@ -27,23 +27,17 @@ export function RightPanel({
     if (!novel) return [];
     const text = stripHtml(node.content).toLowerCase();
     const found: { id: string; title: string; alias: string }[] = [];
-    const walk = (
-      cats: typeof novel.codex
-    ) => {
-      for (const c of cats) {
-        for (const e of c.entries) {
-          const names = [e.title, ...e.aliases].filter(Boolean);
-          for (const nm of names) {
-            if (nm.length >= 3 && text.includes(nm.toLowerCase())) {
-              found.push({ id: e.id, title: e.title, alias: nm });
-              break;
-            }
-          }
+    /* every note in the Codex tab is a mention source — titles (3+ letters) */
+    const walk = (nodes: NoteNode[]) => {
+      for (const nd of nodes) {
+        const nm = nd.title.trim();
+        if (nm.length >= 3 && text.includes(nm.toLowerCase())) {
+          found.push({ id: nd.id, title: nd.title, alias: nm });
         }
-        walk(c.children);
+        walk(nd.children);
       }
     };
-    walk(novel.codex);
+    walk(novel.sections.codex ?? []);
     return found;
   }, [node.content, novel]);
 
@@ -102,7 +96,11 @@ export function RightPanel({
           <dl className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Type</dt>
-              <dd className="capitalize">{node.kind}</dd>
+              <dd>
+                {node.kind === "doc"
+                  ? "Note"
+                  : node.kind.charAt(0).toUpperCase() + node.kind.slice(1)}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Words</dt>
@@ -132,8 +130,8 @@ export function RightPanel({
         <TabsContent value="mentions" className="mt-0">
           {mentions.length === 0 ? (
             <p className="pt-2 text-xs text-muted-foreground">
-              No Codex entries mentioned in this text yet. Names of characters, places and
-              things (3+ letters) appear here automatically.
+              No Codex notes mentioned in this text yet. Names of characters, places and
+              things (3+ letters) from the Codex tab appear here automatically.
             </p>
           ) : (
             <ul className="space-y-1.5 pt-2">
