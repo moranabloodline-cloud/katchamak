@@ -7,7 +7,6 @@ import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { countWords, stripHtml } from "@/lib/kachamak/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
 export function RightPanel({
@@ -100,54 +99,6 @@ export function RightPanel({
         </TabsContent>
 
         <TabsContent value="details" className="mt-0 space-y-4">
-          <div>
-            <Label className="text-xs text-muted-foreground">Status</Label>
-            <Select
-              value={node.status || "none"}
-              onValueChange={(v) =>
-                updateNode(section, node.id, { status: v === "none" ? "" : v })
-              }
-            >
-              <SelectTrigger className="mt-1 w-full bg-black/20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1b1b1b] border-white/10">
-                <SelectItem value="none">No Status</SelectItem>
-                {(novel?.statuses ?? []).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">Label</Label>
-            <Select
-              value={node.label || "none"}
-              onValueChange={(v) =>
-                updateNode(section, node.id, { label: v === "none" ? "" : v })
-              }
-            >
-              <SelectTrigger className="mt-1 w-full bg-black/20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1b1b1b] border-white/10">
-                <SelectItem value="none">No Label</SelectItem>
-                {(novel?.labels ?? []).map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: l.color }}
-                      />
-                      {l.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <dl className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Type</dt>

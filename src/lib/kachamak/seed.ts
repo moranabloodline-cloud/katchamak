@@ -3,11 +3,12 @@ import { SECTION_KEYS } from "./types";
 import { uid } from "./utils";
 
 export const DEFAULT_STATUSES = [
+  "N/A",
   "To Do",
   "First Draft",
-  "Second Draft",
-  "Revised",
-  "Final",
+  "Revised Draft",
+  "Final Draft",
+  "Done",
 ];
 
 export const DEFAULT_LABELS = [

@@ -1,7 +1,7 @@
 "use client";
 
-
-import { ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, PenLine, Columns2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Info, PenLine, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
 import { GridView } from "./GridView";
 import { WriteArea } from "./WriteArea";
@@ -10,6 +10,14 @@ import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNode, nodeWords } from "@/lib/kachamak/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -38,12 +46,216 @@ const ROOT_KINDS: Record<SectionKey, { kind: NoteNode["kind"]; label: string }[]
   ],
 };
 
-const VIEW_BTNS: { key: ViewMode; icon: React.ReactNode; label: string }[] = [
-  { key: "split", icon: <Columns2 className="h-3.5 w-3.5" />, label: "Split" },
-  { key: "write", icon: <PenLine className="h-3.5 w-3.5" />, label: "Write" },
-  { key: "grid", icon: <LayoutGrid className="h-3.5 w-3.5" />, label: "Grid" },
-  { key: "list", icon: <ListIcon className="h-3.5 w-3.5" />, label: "List" },
+const VIEW_BTNS: { key: ViewMode; label: string }[] = [
+  { key: "split", label: "Split" },
+  { key: "write", label: "Write" },
+  { key: "grid", label: "Grid" },
+  { key: "list", label: "List" },
 ];
+
+/* vertical line between the panels — drag it to widen / narrow a panel */
+function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" | "right" }) {
+  const [dragging, setDragging] = useState(false);
+  const lastX = useRef(0);
+
+  useEffect(() => {
+    if (!dragging) return;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [dragging]);
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${side} panel`}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        lastX.current = e.clientX;
+        setDragging(true);
+      }}
+      onPointerMove={(e) => {
+        if (!dragging) return;
+        onMove(e.clientX - lastX.current);
+        lastX.current = e.clientX;
+      }}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+      className={`relative hidden w-px shrink-0 cursor-col-resize bg-white/10 after:absolute after:inset-y-0 after:-left-1.5 after:-right-1.5 after:content-[''] after:hover:bg-orange-500/10 md:block ${
+        dragging ? "bg-orange-500/70" : "hover:bg-orange-500/40"
+      }`}
+    />
+  );
+}
+
+/* bottom of the left panel: circled "i" on the right, opens save information */
+function SaveInfoButton() {
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setLastSaved(new Date());
+    return useKachamak.subscribe(() => setLastSaved(new Date()));
+  }, []);
+
+  return (
+    <div className="flex items-center justify-end px-2 py-1">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Save information"
+            title="Save information"
+            className="rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <Info className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          align="end"
+          className="w-64 border-white/10 bg-[#1b1b1b] p-3 text-xs"
+        >
+          <p className="mb-2 font-semibold text-foreground">Save information</p>
+          <dl className="space-y-1 text-muted-foreground">
+            <div className="flex justify-between gap-2">
+              <dt>Recovery copy:</dt>
+              <dd className="text-foreground">
+                {lastSaved
+                  ? `saved ${lastSaved.toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}`
+                  : "not saved"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>JSON:</dt>
+              <dd>not saved this session</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Vault:</dt>
+              <dd>not saved this session</dd>
+            </div>
+          </dl>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+/* bottom of the right panel: label box (type it in) + status dropdown with Edit… */
+function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode }) {
+  const updateNode = useKachamak((s) => s.updateNode);
+  const statuses = useKachamak(
+    (s) => s.novels.find((n) => n.id === s.activeNovelId)?.statuses ?? []
+  );
+  const addStatus = useKachamak((s) => s.addStatus);
+  const removeStatus = useKachamak((s) => s.removeStatus);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  return (
+    <div className="space-y-2 border-t border-white/10 p-2">
+      <Input
+        value={node.label}
+        onChange={(e) => updateNode(section, node.id, { label: e.target.value })}
+        placeholder="Label"
+        aria-label="Label"
+        className="h-7 border-white/10 bg-black/20 text-xs"
+      />
+      <Select
+        value={node.status || "none"}
+        onValueChange={(v) => {
+          if (v === "__edit") {
+            setEditOpen(true);
+            return;
+          }
+          updateNode(section, node.id, { status: v === "none" ? "" : v });
+        }}
+      >
+        <SelectTrigger
+          className="h-7 w-full border-white/10 bg-black/20 text-xs"
+          aria-label="Status"
+        >
+          <SelectValue placeholder="No Status" />
+        </SelectTrigger>
+        <SelectContent className="border-white/10 bg-[#1b1b1b]">
+          <SelectItem value="none">No Status</SelectItem>
+          {statuses.map((s) => (
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
+          ))}
+          <SelectItem value="__edit" className="text-orange-300">
+            Edit…
+          </SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit statuses</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <ul className="max-h-48 space-y-1 overflow-y-auto kachamak-scroll">
+              {statuses.map((s) => (
+                <li
+                  key={s}
+                  className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2.5 py-1.5 text-sm"
+                >
+                  <span>{s}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${s}`}
+                    title={`Remove ${s}`}
+                    onClick={() => removeStatus(s)}
+                    className="rounded p-0.5 text-muted-foreground hover:bg-white/10 hover:text-red-400"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+              {statuses.length === 0 && (
+                <li className="px-2 py-3 text-center text-xs text-muted-foreground">
+                  No statuses yet.
+                </li>
+              )}
+            </ul>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!draft.trim()) return;
+                addStatus(draft);
+                setDraft("");
+              }}
+            >
+              <Input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="New status name"
+                className="h-8 text-sm"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-md border border-orange-500/40 px-3 text-xs text-orange-300 hover:bg-orange-500/10"
+              >
+                Add
+              </button>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 export function NotesSection({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
@@ -52,11 +264,14 @@ export function NotesSection({ section }: { section: SectionKey }) {
   const select = useKachamak((s) => s.select);
   const view = useKachamak((s) => s.view);
   const setView = useKachamak((s) => s.setView);
-  const updateNode = useKachamak((s) => s.updateNode);
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
   const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
+  const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
+  const rightPanelWidth = useKachamak((s) => s.rightPanelWidth);
+  const setLeftPanelWidth = useKachamak((s) => s.setLeftPanelWidth);
+  const setRightPanelWidth = useKachamak((s) => s.setRightPanelWidth);
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
@@ -65,30 +280,39 @@ export function NotesSection({ section }: { section: SectionKey }) {
   const showEditor = view === "split" || view === "write";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1">
-        {/* reopen left panel — full-height rail with the vertical line */}
-        {!leftPanelOpen && (
-          <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 pt-2 md:flex">
-            <button
-              type="button"
-              aria-label="Show panel"
-              title="Show panel"
-              onClick={toggleLeftPanel}
-              className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {leftPanelOpen && (
-          <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/20 md:block">
-            <NoteTree section={section} label={section} rootKinds={ROOT_KINDS[section]} />
+    <div className="flex min-h-0 flex-1">
+      {leftPanelOpen ? (
+        <>
+          <aside
+            style={{ width: leftPanelWidth }}
+            className="hidden shrink-0 flex-col bg-black/20 md:flex"
+          >
+            <div className="min-h-0 flex-1">
+              <NoteTree section={section} label={section} rootKinds={ROOT_KINDS[section]} />
+            </div>
+            <SaveInfoButton />
           </aside>
-        )}
+          <Resizer
+            side="left"
+            onMove={(dx) => setLeftPanelWidth(useKachamak.getState().leftPanelWidth + dx)}
+          />
+        </>
+      ) : (
+        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 pt-2 md:flex">
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleLeftPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-        <main className="min-w-0 flex-1 overflow-y-auto kachamak-scroll">
+      <main className="flex min-w-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "grid" && <GridView section={section} />}
           {view === "list" && <ListView section={section} />}
           {showEditor &&
@@ -109,12 +333,57 @@ export function NotesSection({ section }: { section: SectionKey }) {
                 </button>
               </div>
             ))}
-        </main>
+        </div>
 
-        {rightPanelOpen ? (
-          <aside className="hidden w-72 shrink-0 border-l border-white/10 bg-black/20 lg:block">
+        {/* bottom of the center panel: words left, plain-text view switcher right */}
+        <div className="flex items-center justify-end gap-2 px-3 py-1.5">
+          <span className="mr-auto truncate text-xs text-muted-foreground">
+            {selected
+              ? `${nodeWords(selected).toLocaleString()} words in “${selected.title}”`
+              : `${roots.reduce((a, r) => a + nodeWords(r), 0).toLocaleString()} words total`}
+          </span>
+          <div role="toolbar" aria-label="View mode" className="flex items-center gap-1">
+            {VIEW_BTNS.map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                onClick={() => setView(b.key)}
+                aria-pressed={view === b.key}
+                className={`rounded px-1.5 py-0.5 text-xs transition-colors ${
+                  view === b.key
+                    ? "text-orange-300"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                style={
+                  view === b.key
+                    ? { textShadow: "0 0 10px rgba(251,146,60,0.7)" }
+                    : undefined
+                }
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {rightPanelOpen ? (
+        <>
+          <Resizer
+            side="right"
+            onMove={(dx) => setRightPanelWidth(useKachamak.getState().rightPanelWidth - dx)}
+          />
+          <aside
+            style={{ width: rightPanelWidth }}
+            className="hidden shrink-0 flex-col bg-black/20 lg:flex"
+          >
             {selected ? (
-              <RightPanel node={selected} section={section} onHide={toggleRightPanel} />
+              <>
+                <div className="min-h-0 flex-1">
+                  <RightPanel node={selected} section={section} onHide={toggleRightPanel} />
+                </div>
+                <NoteMetaBar section={section} node={selected} />
+              </>
             ) : (
               <div className="flex h-full flex-col">
                 <div className="flex items-center justify-between gap-1 pl-3 pr-2 pt-3">
@@ -138,98 +407,20 @@ export function NotesSection({ section }: { section: SectionKey }) {
               </div>
             )}
           </aside>
-        ) : (
-          <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 pt-2 lg:flex">
-            <button
-              type="button"
-              aria-label="Show panel"
-              title="Show panel"
-              onClick={toggleRightPanel}
-              className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* status bar */}
-      <footer className="flex items-center gap-3 border-t border-white/10 bg-black/30 px-4 py-1.5">
-        <div
-          role="toolbar"
-          aria-label="View mode"
-          className="flex overflow-hidden rounded-lg border border-white/10"
-        >
-          {VIEW_BTNS.map((b) => (
-            <button
-              key={b.key}
-              type="button"
-              onClick={() => setView(b.key)}
-              aria-pressed={view === b.key}
-              className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors ${
-                view === b.key
-                  ? "bg-orange-500/20 text-orange-300"
-                  : "text-muted-foreground hover:bg-white/5"
-              }`}
-            >
-              {b.icon} {b.label}
-            </button>
-          ))}
+        </>
+      ) : (
+        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 pt-2 lg:flex">
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleRightPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
         </div>
-
-        <span className="ml-auto text-xs text-muted-foreground">
-          {selected
-            ? `${nodeWords(selected).toLocaleString()} words in “${selected.title}”`
-            : `${roots.reduce((a, r) => a + nodeWords(r), 0).toLocaleString()} words total`}
-        </span>
-
-        {selected && (
-          <div className="flex items-center gap-2">
-            <Select
-              value={selected.label || "none"}
-              onValueChange={(v) =>
-                updateNode(section, selected.id, { label: v === "none" ? "" : v })
-              }
-            >
-              <SelectTrigger className="h-7 w-[110px] bg-black/20 text-xs" aria-label="Label">
-                <SelectValue placeholder="No Label" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1b1b1b] border-white/10">
-                <SelectItem value="none">No Label</SelectItem>
-                {(novel?.labels ?? []).map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: l.color }}
-                      />
-                      {l.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={selected.status || "none"}
-              onValueChange={(v) =>
-                updateNode(section, selected.id, { status: v === "none" ? "" : v })
-              }
-            >
-              <SelectTrigger className="h-7 w-[120px] bg-black/20 text-xs" aria-label="Status">
-                <SelectValue placeholder="No Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1b1b1b] border-white/10">
-                <SelectItem value="none">No Status</SelectItem>
-                {(novel?.statuses ?? []).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </footer>
+      )}
     </div>
   );
 }

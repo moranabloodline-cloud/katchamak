@@ -11,7 +11,7 @@ import type {
   TabKey,
   ViewMode,
 } from "./types";
-import { newNovel, seedNovels } from "./seed";
+import { newNovel, seedNovels, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode } from "./utils";
 
 interface KachamakState {
@@ -28,6 +28,12 @@ interface KachamakState {
   rightPanelOpen: boolean;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
+
+  /* panel sizes in px (drag the vertical line to widen / narrow) */
+  leftPanelWidth: number;
+  rightPanelWidth: number;
+  setLeftPanelWidth: (px: number) => void;
+  setRightPanelWidth: (px: number) => void;
 
   /* tree expand / collapse (persisted) */
   setAllNodesCollapsed: (section: SectionKey, collapsed: boolean) => void;
@@ -49,6 +55,10 @@ interface KachamakState {
   selectCodex: (id: string | null) => void;
   renameNovel: (title: string) => void;
   setDefaultAuthor: (a: string) => void;
+
+  /* status list (per novel, edited via the status dropdown "Edit…") */
+  addStatus: (name: string) => void;
+  removeStatus: (name: string) => void;
 
   /* notes */
   addNode: (
@@ -182,8 +192,36 @@ export const useKachamak = create<KachamakState>()(
       leftPanelOpen: true,
       rightPanelOpen: true,
 
+      leftPanelWidth: 256,
+      rightPanelWidth: 288,
+      setLeftPanelWidth: (px) =>
+        set({ leftPanelWidth: Math.round(Math.min(560, Math.max(170, px))) }),
+      setRightPanelWidth: (px) =>
+        set({ rightPanelWidth: Math.round(Math.min(680, Math.max(190, px))) }),
+
       toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+
+      addStatus: (name) => {
+        const v = name.trim();
+        if (!v) return;
+        set((s) => ({
+          novels: s.novels.map((n) =>
+            n.id === s.activeNovelId && !n.statuses.includes(v)
+              ? touch({ ...n, statuses: [...n.statuses, v] })
+              : n
+          ),
+        }));
+      },
+
+      removeStatus: (name) =>
+        set((s) => ({
+          novels: s.novels.map((n) =>
+            n.id === s.activeNovelId
+              ? touch({ ...n, statuses: n.statuses.filter((x) => x !== name) })
+              : n
+          ),
+        })),
 
       setAllNodesCollapsed: (section, collapsed) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
@@ -556,7 +594,42 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
+      version: 1,
       storage: createJSONStorage(() => localStorage),
+      /* v0 → v1: original-style statuses, free-text labels instead of label ids */
+      migrate: (persisted) => {
+        const s = persisted as KachamakState;
+        const OLD_DEFAULT_STATUSES = [
+          "To Do",
+          "First Draft",
+          "Second Draft",
+          "Revised",
+          "Final",
+        ];
+        const RENAMES: Record<string, string> = {
+          "Second Draft": "Revised Draft",
+          Revised: "Revised Draft",
+          Final: "Final Draft",
+        };
+        for (const n of s.novels ?? []) {
+          let upgraded = false;
+          if ((n.statuses ?? []).join("|") === OLD_DEFAULT_STATUSES.join("|")) {
+            n.statuses = [...DEFAULT_STATUSES];
+            upgraded = true;
+          }
+          const idToName = new Map((n.labels ?? []).map((l) => [l.id, l.name]));
+          const walk = (nodes: NoteNode[]) => {
+            for (const nd of nodes) {
+              if (nd.label && idToName.has(nd.label)) nd.label = idToName.get(nd.label)!;
+              if (upgraded && RENAMES[nd.status]) nd.status = RENAMES[nd.status];
+              walk(nd.children);
+            }
+          };
+          for (const roots of Object.values(n.sections ?? {})) walk(roots);
+          for (const t of n.trash ?? []) walk([t.node]);
+        }
+        return s;
+      },
       onRehydrateStorage: () => (state) => {
         // first run: seed with the demo novels
         if (state && state.novels.length === 0) {
