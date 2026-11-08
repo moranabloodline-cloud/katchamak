@@ -53,6 +53,20 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "list", label: "List" },
 ];
 
+/* kužić — document colour palette */
+const DOC_COLORS = [
+  "#e3c567",
+  "#3fb950",
+  "#f0883e",
+  "#f85149",
+  "#a371f7",
+  "#58a6ff",
+  "#39c5cf",
+  "#f472b6",
+  "#a3e635",
+  "#8b949e",
+];
+
 /* vertical line between the panels — drag it to widen / narrow a panel */
 function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" | "right" }) {
   const [dragging, setDragging] = useState(false);
@@ -93,7 +107,7 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
   );
 }
 
-/* bottom of the left panel: circled "i" on the right, opens save information */
+/* bottom of the left panel: circled "i" opens save information */
 function SaveInfoButton() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
@@ -103,53 +117,51 @@ function SaveInfoButton() {
   }, []);
 
   return (
-    <div className="flex items-center justify-end px-2 py-1">
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label="Save information"
-            title="Save information"
-            className="rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-          >
-            <Info className="h-4 w-4" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          side="top"
-          align="end"
-          className="w-64 border-white/10 bg-[#1b1b1b] p-3 text-xs"
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Save information"
+          title="Save information"
+          className="rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
         >
-          <p className="mb-2 font-semibold text-foreground">Save information</p>
-          <dl className="space-y-1 text-muted-foreground">
-            <div className="flex justify-between gap-2">
-              <dt>Recovery copy:</dt>
-              <dd className="text-foreground">
-                {lastSaved
-                  ? `saved ${lastSaved.toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}`
-                  : "not saved"}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt>JSON:</dt>
-              <dd>not saved this session</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt>Vault:</dt>
-              <dd>not saved this session</dd>
-            </div>
-          </dl>
-        </PopoverContent>
-      </Popover>
-    </div>
+          <Info className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        className="w-64 border-white/10 bg-[#1b1b1b] p-3 text-xs"
+      >
+        <p className="mb-2 font-semibold text-foreground">Save information</p>
+        <dl className="space-y-1 text-muted-foreground">
+          <div className="flex justify-between gap-2">
+            <dt>Recovery copy:</dt>
+            <dd className="text-foreground">
+              {lastSaved
+                ? `saved ${lastSaved.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}`
+                : "not saved"}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt>JSON:</dt>
+            <dd>not saved this session</dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt>Vault:</dt>
+            <dd>not saved this session</dd>
+          </div>
+        </dl>
+      </PopoverContent>
+    </Popover>
   );
 }
 
-/* bottom of the right panel: label box (type it in) + status dropdown with Edit… */
+/* bottom of the right panel, one line: label box + status dropdown + colour dot */
 function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const statuses = useKachamak(
@@ -161,13 +173,13 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   const [draft, setDraft] = useState("");
 
   return (
-    <div className="space-y-2 border-t border-white/10 p-2">
+    <div className="flex items-center gap-2 border-t border-white/10 p-2">
       <Input
         value={node.label}
         onChange={(e) => updateNode(section, node.id, { label: e.target.value })}
-        placeholder="Label"
+        placeholder="No Label"
         aria-label="Label"
-        className="h-7 border-white/10 bg-black/20 text-xs"
+        className="h-7 min-w-0 flex-1 border-white/10 bg-black/20 text-xs"
       />
       <Select
         value={node.status || "none"}
@@ -180,7 +192,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
         }}
       >
         <SelectTrigger
-          className="h-7 w-full border-white/10 bg-black/20 text-xs"
+          className="h-7 w-[110px] shrink-0 border-white/10 bg-black/20 text-xs"
           aria-label="Status"
         >
           <SelectValue placeholder="No Status" />
@@ -197,6 +209,44 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
           </SelectItem>
         </SelectContent>
       </Select>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Document colour"
+            title="Document colour"
+            className="flex h-7 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20 hover:bg-white/5"
+          >
+            <span
+              className="h-4 w-4 rounded-full border border-white/20"
+              style={{ backgroundColor: node.color || "transparent" }}
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="end" className="w-52 border-white/10 bg-[#1b1b1b] p-2.5">
+          <div className="grid grid-cols-5 gap-1.5">
+            {DOC_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Colour ${c}`}
+                onClick={() => updateNode(section, node.id, { color: c })}
+                className={`mx-auto h-6 w-6 rounded-full border hover:scale-110 transition-transform ${
+                  node.color === c ? "border-foreground" : "border-transparent"
+                }`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => updateNode(section, node.id, { color: "" })}
+            className="mt-2 w-full rounded-md border border-white/10 py-1 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          >
+            No colour
+          </button>
+        </PopoverContent>
+      </Popover>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-sm">
@@ -290,7 +340,27 @@ export function NotesSection({ section }: { section: SectionKey }) {
             <div className="min-h-0 flex-1">
               <NoteTree section={section} label={section} rootKinds={ROOT_KINDS[section]} />
             </div>
-            <SaveInfoButton />
+            {/* bottom of the left panel: circled "i" + Split Write Grid List at the right edge */}
+            <div className="flex items-center justify-end gap-1.5 px-2 py-1">
+              <SaveInfoButton />
+              <div role="toolbar" aria-label="View mode" className="flex items-center gap-0.5">
+                {VIEW_BTNS.map((b) => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    onClick={() => setView(b.key)}
+                    aria-pressed={view === b.key}
+                    className={`rounded-md px-2 py-0.5 text-xs transition-colors ${
+                      view === b.key
+                        ? "border border-orange-400/60 bg-orange-400/15 text-orange-200"
+                        : "border border-transparent text-orange-200/50 hover:text-orange-100"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </aside>
           <Resizer
             side="left"
@@ -335,35 +405,13 @@ export function NotesSection({ section }: { section: SectionKey }) {
             ))}
         </div>
 
-        {/* bottom of the center panel: words left, plain-text view switcher right */}
-        <div className="flex items-center justify-end gap-2 px-3 py-1.5">
-          <span className="mr-auto truncate text-xs text-muted-foreground">
+        {/* bottom of the work surface: word count centred, like the original */}
+        <div className="flex items-center justify-center px-3 py-1.5">
+          <span className="truncate text-xs text-muted-foreground">
             {selected
               ? `${nodeWords(selected).toLocaleString()} words in “${selected.title}”`
               : `${roots.reduce((a, r) => a + nodeWords(r), 0).toLocaleString()} words total`}
           </span>
-          <div role="toolbar" aria-label="View mode" className="flex items-center gap-1">
-            {VIEW_BTNS.map((b) => (
-              <button
-                key={b.key}
-                type="button"
-                onClick={() => setView(b.key)}
-                aria-pressed={view === b.key}
-                className={`rounded px-1.5 py-0.5 text-xs transition-colors ${
-                  view === b.key
-                    ? "text-orange-300"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                style={
-                  view === b.key
-                    ? { textShadow: "0 0 10px rgba(251,146,60,0.7)" }
-                    : undefined
-                }
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
         </div>
       </main>
 

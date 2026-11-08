@@ -40,7 +40,13 @@ function LeafCard({ node, section }: { node: NoteNode; section: SectionKey }) {
         <span className="text-[10px] font-semibold tracking-widest text-orange-400/90">
           {kindLabel[node.kind] ?? "NOTE"}
         </span>
-        {node.label && <DotLabel id={node.label} />}
+        {node.color && (
+          <span
+            aria-label="Document colour"
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: node.color }}
+          />
+        )}
       </div>
       <h4 className="mt-1.5 font-semibold text-sm leading-snug text-foreground line-clamp-2">
         {node.title}
@@ -58,19 +64,6 @@ function LeafCard({ node, section }: { node: NoteNode; section: SectionKey }) {
       </div>
       <span className="sr-only">Open {node.title} in section {section}</span>
     </button>
-  );
-}
-
-function DotLabel({ id }: { id: string }) {
-  const novel = useKachamak((s) => s.novels.find((n) => n.id === s.activeNovelId));
-  const lbl = novel?.labels.find((l) => l.id === id);
-  if (!lbl) return null;
-  return (
-    <span
-      aria-label={`Label: ${lbl.name}`}
-      className="h-2.5 w-2.5 rounded-full"
-      style={{ backgroundColor: lbl.color }}
-    />
   );
 }
 

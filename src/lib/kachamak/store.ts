@@ -594,7 +594,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids */
       migrate: (persisted) => {
@@ -618,9 +618,13 @@ export const useKachamak = create<KachamakState>()(
             upgraded = true;
           }
           const idToName = new Map((n.labels ?? []).map((l) => [l.id, l.name]));
+          const nameToColor = new Map((n.labels ?? []).map((l) => [l.name, l.color]));
           const walk = (nodes: NoteNode[]) => {
             for (const nd of nodes) {
               if (nd.label && idToName.has(nd.label)) nd.label = idToName.get(nd.label)!;
+              if (!nd.color && nd.label && nameToColor.has(nd.label)) {
+                nd.color = nameToColor.get(nd.label)!;
+              }
               if (upgraded && RENAMES[nd.status]) nd.status = RENAMES[nd.status];
               walk(nd.children);
             }

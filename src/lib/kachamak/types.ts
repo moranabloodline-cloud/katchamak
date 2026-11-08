@@ -35,7 +35,8 @@ export interface NoteNode {
   content: string; // rich text (HTML)
   notes: string;
   status: string; // "" = none
-  label: string; // "" = none, else label id
+  label: string; // free text, "" = no label
+  color?: string; // document colour (the dot in the right panel), "" = none
   collapsed?: boolean;
   createdAt: number;
   updatedAt: number;
