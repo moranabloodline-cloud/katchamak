@@ -37,6 +37,8 @@ export interface NoteNode {
   status: string; // "" = none
   label: string; // free text, "" = no label
   color?: string; // document colour (the dot in the right panel), "" = none
+  icon?: string; // note icon, chosen by the user (see NOTE_ICONS)
+  hidden?: boolean; // "Hide" in the note menu — hidden from the tree
   collapsed?: boolean;
   createdAt: number;
   updatedAt: number;

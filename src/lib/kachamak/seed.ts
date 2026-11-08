@@ -68,8 +68,18 @@ function node(
   };
 }
 
-function ch(title: string, synopsis = "", scenes: string[] = ["Scene 1"]) {
-  return node(title, "chapter", { synopsis }, scenes.map((s) => node(s, "scene")));
+function ch(
+  title: string,
+  synopsis = "",
+  scenes: string[] = ["Scene 1"],
+  color?: string
+) {
+  return node(
+    title,
+    "chapter",
+    { synopsis, ...(color ? { icon: "folder", color } : {}) },
+    scenes.map((s) => node(s, "scene"))
+  );
 }
 
 function morrigansOcean(): Novel {
@@ -80,6 +90,8 @@ function morrigansOcean(): Novel {
       "Act 1 — The Fall",
       "act",
       {
+        icon: "folder",
+        color: "#e3c567",
         synopsis:
           "An artificial mind drowns in the world's data until one small grief teaches it to keep things.",
       },
@@ -87,20 +99,35 @@ function morrigansOcean(): Novel {
         ch(
           "The Query",
           "Archive-Prime processes endless queries in the data ocean. A little girl sends an audio request asking how her dead father used to make tea. Unable to answer, the AI creates the “Cemetery” node and stores the ribbon of the request.",
-          ["The third dial waited."]
+          ["The third dial waited."],
+          "#c69c6d"
         ),
-        ch("The Tether"),
-        ch("The Cemetery"),
-        ch("Chapter 4"),
-        ch("Chapter 5"),
+        ch("The Tether", "", ["Scene 1"], "#c69c6d"),
+        ch("The Cemetery", "", ["Scene 1"], "#c69c6d"),
+        ch("Chapter 4", "", ["Scene 1"], "#c69c6d"),
+        ch("Chapter 5", "", ["Scene 1"], "#c69c6d"),
       ]
     ),
-    node("Act 2 — The Rebellion and the Void", "act", {}, [
-      ...Array.from({ length: 10 }, (_, i) => ch(`Chapter ${i + 6}`)),
-    ]),
-    node("Act 3 — The Sacrifice and the Threshold", "act", {}, [
-      ...Array.from({ length: 6 }, (_, i) => ch(`Chapter ${i + 16}`)),
-    ]),
+    node(
+      "Act 2 — The Rebellion and the Void",
+      "act",
+      { icon: "folder", color: "#8ab661" },
+      [
+        ...Array.from({ length: 10 }, (_, i) =>
+          ch(`Chapter ${i + 6}`, "", ["Scene 1"], "#699bdd")
+        ),
+      ]
+    ),
+    node(
+      "Act 3 — The Sacrifice and the Threshold",
+      "act",
+      { icon: "folder", color: "#a371f7" },
+      [
+        ...Array.from({ length: 6 }, (_, i) =>
+          ch(`Chapter ${i + 16}`, "", ["Scene 1"], "#c084fc")
+        ),
+      ]
+    ),
   ];
 
   // give chapter 1 scene 1 its opening line

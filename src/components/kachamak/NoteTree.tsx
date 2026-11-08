@@ -21,14 +21,20 @@ import {
 } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
+import { exportNoteJson } from "@/lib/kachamak/store";
 import { nodeWords } from "@/lib/kachamak/utils";
+import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const kindIcon = (n: NoteNode, open: boolean) => {
   if (n.kind === "act") return <Landmark className="h-3.5 w-3.5 text-orange-400/80" />;
@@ -46,6 +52,15 @@ const kindIcon = (n: NoteNode, open: boolean) => {
     );
   if (n.kind === "doc") return <BookText className="h-3.5 w-3.5 text-muted-foreground" />;
   return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
+};
+
+/* the note's own icon (user-chosen) tinted with its colour, or the kind fallback */
+const rowIcon = (n: NoteNode, open: boolean) => {
+  const Cmp = iconByName(n.icon);
+  if (Cmp) {
+    return <Cmp className="h-3.5 w-3.5" style={{ color: n.color || "#a1a1aa" }} />;
+  }
+  return kindIcon(n, open);
 };
 
 const childKind = (parent: NoteNode | null, section: SectionKey) => {
@@ -66,16 +81,20 @@ interface TreeRowProps {
   node: NoteNode;
   section: SectionKey;
   depth: number;
+  novelTitle: string;
 }
 
-function TreeRow({ node, section, depth }: TreeRowProps) {
+function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const updateNode = useKachamak((s) => s.updateNode);
   const addNode = useKachamak((s) => s.addNode);
   const deleteNode = useKachamak((s) => s.deleteNode);
   const moveNode = useKachamak((s) => s.moveNode);
+  const duplicateNode = useKachamak((s) => s.duplicateNode);
+  const sortChildren = useKachamak((s) => s.sortChildren);
   const [renaming, setRenaming] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState(node.title);
 
   const selected = selectedNodeId === node.id;
@@ -100,6 +119,8 @@ function TreeRow({ node, section, depth }: TreeRowProps) {
           if (e.key === "Enter") select(node.id);
         }}
         className={`group flex items-center gap-1.5 rounded-md px-2 py-1.5 cursor-pointer text-sm select-none ${
+          node.hidden ? "opacity-50" : ""
+        } ${
           selected
             ? "bg-green-500/20 text-green-100 border border-green-500/40"
             : "border border-transparent hover:bg-white/5 text-foreground/90"
@@ -121,7 +142,57 @@ function TreeRow({ node, section, depth }: TreeRowProps) {
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           )}
         </button>
-        {kindIcon(node, open)}
+        {/* note icon — click it to pick a different one */}
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Change icon"
+              title="Change icon"
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 rounded p-0.5 hover:bg-white/10"
+            >
+              {rowIcon(node, open)}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="bottom"
+            align="start"
+            className="w-64 border-white/10 bg-[#1b1b1b] p-2.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-2 text-[11px] font-semibold tracking-wide text-muted-foreground">
+              Icon
+            </p>
+            <div className="grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto kachamak-scroll">
+              {NOTE_ICONS.map(({ key, label, Cmp }) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-label={label}
+                  title={label}
+                  onClick={() => {
+                    updateNode(section, node.id, { icon: key });
+                    setPickerOpen(false);
+                  }}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md hover:bg-white/10 ${
+                    node.icon === key ? "bg-white/15" : ""
+                  }`}
+                >
+                  <Cmp
+                    className="h-4 w-4"
+                    style={{
+                      color:
+                      node.icon === key && node.color
+                        ? node.color
+                        : "#a1a1aa",
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
         {renaming ? (
           <input
             autoFocus
@@ -160,35 +231,71 @@ function TreeRow({ node, section, depth }: TreeRowProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#1b1b1b] border-white/10">
-              <DropdownMenuItem onClick={() => setRenaming(true)}>
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => addNode(section, node.id, childKind(node, section))}
-              >
-                Add {childLabel(node, section)}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => moveNode(section, node.id, "up")}>
-                <ArrowUp className="h-3.5 w-3.5" /> Move up
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => moveNode(section, node.id, "down")}>
-                <ArrowDown className="h-3.5 w-3.5" /> Move down
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem
-                onClick={() => deleteNode(section, node.id)}
-                className="text-red-400 focus:text-red-300"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+            <DropdownMenuItem
+              onClick={() => addNode(section, node.id, "doc")}
+            >
+              Create note
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem onClick={() => setRenaming(true)}>
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => duplicateNode(section, node.id)}>
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportNoteJson(novelTitle, node)}>
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-[#1b1b1b] border-white/10">
+                <DropdownMenuItem onClick={() => moveNode(section, node.id, "up")}>
+                  <ArrowUp className="h-3.5 w-3.5" /> Move up
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => moveNode(section, node.id, "down")}>
+                  <ArrowDown className="h-3.5 w-3.5" /> Move down
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem
+              onClick={() => deleteNode(section, node.id)}
+              className="text-red-400 focus:text-red-300"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem onClick={() => sortChildren(section, node.id)}>
+              Sort sub-pages
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem
+              onClick={() => updateNode(section, node.id, { hidden: !node.hidden })}
+            >
+              {node.hidden ? "Show" : "Hide"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem
+              onClick={() => updateNode(section, node.id, { collapsed: true })}
+            >
+              Collapse
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => updateNode(section, node.id, { collapsed: false })}
+            >
+              Expand
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem onSelect={() => setPickerOpen(true)}>
+              Change icon
+            </DropdownMenuItem>
+          </DropdownMenuContent>
           </DropdownMenu>
         </span>
       </div>
       {open && hasChildren && (
         <div role="group">
           {node.children.map((c) => (
-            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} />
+            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} />
           ))}
         </div>
       )}
@@ -288,7 +395,7 @@ export function NoteTree({
 
       <div className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2" role="tree" aria-label={label}>
         {roots.map((r) => (
-          <TreeRow key={r.id} node={r} section={section} depth={0} />
+          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} />
         ))}
         {roots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">

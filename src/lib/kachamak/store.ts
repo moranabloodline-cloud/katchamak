@@ -70,6 +70,8 @@ interface KachamakState {
   updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>) => void;
   deleteNode: (section: SectionKey, id: string) => void;
   moveNode: (section: SectionKey, id: string, dir: "up" | "down") => void;
+  duplicateNode: (section: SectionKey, id: string) => void;
+  sortChildren: (section: SectionKey, id: string) => void;
 
   /* trash */
   restoreFromTrash: (trashId: string) => void;
@@ -421,6 +423,52 @@ export const useKachamak = create<KachamakState>()(
         }));
       },
 
+      /* deep-copy the note (with all sub-pages) right below the original */
+      duplicateNode: (section, id) => {
+        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+        if (!novel) return;
+        const roots = novel.sections[section];
+        if (!findNode(roots, id)) return;
+        const deep = (n: NoteNode): NoteNode => ({
+          ...n,
+          id: uid(),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          children: n.children.map(deep),
+        });
+        const insertAfter = (list: NoteNode[]): boolean => {
+          const i = list.findIndex((n) => n.id === id);
+          if (i >= 0) {
+            list.splice(i + 1, 0, deep(list[i]));
+            return true;
+          }
+          return list.some((n) => insertAfter(n.children));
+        };
+        insertAfter(roots);
+        set((s) => ({
+          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+        }));
+      },
+
+      /* sort sub-pages of a note alphabetically (A→Z) */
+      sortChildren: (section, id) => {
+        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+        if (!novel) return;
+        const roots = novel.sections[section];
+        const target = findNode(roots, id);
+        const list = target ? target.children : roots;
+        if (!target || list.length === 0) return;
+        list.sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, {
+            sensitivity: "base",
+            numeric: true,
+          })
+        );
+        set((s) => ({
+          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+        }));
+      },
+
       /* ---------- trash ---------- */
 
       restoreFromTrash: (trashId) => {
@@ -594,9 +642,11 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
-      /* v0 → v1: original-style statuses, free-text labels instead of label ids */
+      /* v0 → v1: original-style statuses, free-text labels instead of label ids
+         v2 → v3: every note gets its icon + colour (like the original app —
+         acts and chapters as solid coloured folders) */
       migrate: (persisted) => {
         const s = persisted as KachamakState;
         const OLD_DEFAULT_STATUSES = [
@@ -619,17 +669,41 @@ export const useKachamak = create<KachamakState>()(
           }
           const idToName = new Map((n.labels ?? []).map((l) => [l.id, l.name]));
           const nameToColor = new Map((n.labels ?? []).map((l) => [l.name, l.color]));
-          const walk = (nodes: NoteNode[]) => {
+          /* act palette like the original screenshot: gold / green / purple … */
+          const ACT_PALETTE = [
+            { act: "#e3c567", chapter: "#c69c6d" },
+            { act: "#8ab661", chapter: "#699bdd" },
+            { act: "#a371f7", chapter: "#c084fc" },
+          ];
+          let actIndex = -1;
+          const walk = (nodes: NoteNode[], chapterColor?: string) => {
             for (const nd of nodes) {
               if (nd.label && idToName.has(nd.label)) nd.label = idToName.get(nd.label)!;
               if (!nd.color && nd.label && nameToColor.has(nd.label)) {
                 nd.color = nameToColor.get(nd.label)!;
               }
               if (upgraded && RENAMES[nd.status]) nd.status = RENAMES[nd.status];
-              walk(nd.children);
+              /* give every container-like note the solid folder icon + colours */
+              if (!nd.icon && (nd.kind === "act" || nd.kind === "chapter" || nd.kind === "folder")) {
+                nd.icon = "folder";
+              }
+              let chColor: string | undefined;
+              if (!nd.color && nd.kind === "act") {
+                actIndex += 1;
+                const pal = ACT_PALETTE[actIndex % ACT_PALETTE.length];
+                nd.color = pal.act;
+                chColor = pal.chapter;
+              }
+              if (!nd.color && nd.kind === "chapter" && chapterColor) {
+                nd.color = chapterColor;
+              }
+              walk(nd.children, nd.kind === "act" ? chColor : undefined);
             }
           };
-          for (const roots of Object.values(n.sections ?? {})) walk(roots);
+          for (const roots of Object.values(n.sections ?? {})) {
+            actIndex = -1;
+            walk(roots);
+          }
           for (const t of n.trash ?? []) walk([t.node]);
         }
         return s;
@@ -654,6 +728,25 @@ export function exportNovelJson(novel: Novel): void {
   const a = document.createElement("a");
   a.href = url;
   a.download = `${novel.title.replace(/[^\w\d-]+/g, "_")}-kachamak-backup.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* export a single note (with its sub-pages) from the 3-dots menu */
+export function exportNoteJson(novelTitle: string, node: NoteNode): void {
+  const payload = {
+    type: "kachamak-note",
+    novel: novelTitle,
+    exportedAt: new Date().toISOString(),
+    note: node,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${node.title.replace(/[^\w\d-]+/g, "_")}-note.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

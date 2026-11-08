@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, PenLine, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, PenLine, Target, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
 import { GridView } from "./GridView";
 import { WriteArea } from "./WriteArea";
@@ -9,7 +9,7 @@ import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
-import { findNode } from "@/lib/kachamak/utils";
+import { findNode, novelWords } from "@/lib/kachamak/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
@@ -173,7 +173,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   const [draft, setDraft] = useState("");
 
   return (
-    <div className="flex items-center gap-2 border-t border-white/10 p-2">
+    <div className="flex h-10 items-center gap-2 border-t border-amber-500/25 px-2">
       <Input
         value={node.label}
         onChange={(e) => updateNode(section, node.id, { label: e.target.value })}
@@ -342,7 +342,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
             </div>
             {/* bottom of the left panel: circled "i" pinned to the bottom-left corner and
                 Split / Write / Grid / List at the right edge — both fixed, never scroll with the tree */}
-            <div className="flex shrink-0 items-center justify-between border-t border-amber-500/25 px-2 py-1.5">
+            <div className="flex h-10 shrink-0 items-center justify-between border-t border-amber-500/25 px-2">
               <SaveInfoButton />
               <div role="toolbar" aria-label="View mode" className="flex shrink-0 items-center gap-0.5">
                 {VIEW_BTNS.map((b) => (
@@ -405,6 +405,14 @@ export function NotesSection({ section }: { section: SectionKey }) {
               </div>
             ))}
         </div>
+
+        {/* bottom bar, whole window width: target icon on the left, word count in the middle */}
+        <div className="relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
+          <Target className="absolute left-3 h-4 w-4 text-amber-400/90" aria-hidden="true" />
+          <span className="mx-auto text-xs text-muted-foreground">
+            {novel ? `${novelWords(novel).toLocaleString("en-US")} words` : "0 words"}
+          </span>
+        </div>
       </main>
 
       {rightPanelOpen ? (
@@ -444,6 +452,8 @@ export function NotesSection({ section }: { section: SectionKey }) {
                   Select a note in the tree or a card in the Grid to see its synopsis,
                   notes and details here.
                 </p>
+                {/* keep the full-width bottom bar continuous */}
+                <div className="h-10 shrink-0 border-t border-amber-500/25" />
               </div>
             )}
           </aside>
