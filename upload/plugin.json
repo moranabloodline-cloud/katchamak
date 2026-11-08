@@ -1,0 +1,19 @@
+{
+  "apps": "./.app.json",
+  "author": {
+    "name": "App developer"
+  },
+  "description": "Nikola's private writing workspace",
+  "interface": {
+    "capabilities": [],
+    "category": "Other",
+    "defaultPrompt": null,
+    "developerName": "App developer",
+    "displayName": "Kachamak",
+    "longDescription": "Nikola's private writing workspace",
+    "shortDescription": "Nikola's private writing workspace",
+    "websiteURL": "https://nikola-novel-studio.morana-bloodline.chatgpt.site"
+  },
+  "name": "dev-4f587c10a7748191b994b7e55b02828c",
+  "version": "1.0.0"
+}
