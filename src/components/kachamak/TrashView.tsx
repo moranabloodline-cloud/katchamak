@@ -46,17 +46,19 @@ export function TrashView() {
 
   return (
     <div className="flex min-h-0 flex-1">
-      {/* reopen left panel when hidden */}
+      {/* reopen left panel — full-height rail with the vertical line */}
       {!leftPanelOpen && (
-        <button
-          type="button"
-          aria-label="Show panel"
-          title="Show panel"
-          onClick={toggleLeftPanel}
-          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground md:flex"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 pt-2 md:flex">
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleLeftPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       {leftPanelOpen && (
@@ -71,8 +73,8 @@ export function TrashView() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <Trash2 className="h-4 w-4 text-orange-400" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Trash2 className="h-4 w-4 shrink-0 text-orange-400" />
+          <span className="min-w-0 truncate text-sm font-bold text-foreground">
             {novel.title}
           </span>
         </div>
@@ -221,15 +223,17 @@ export function TrashView() {
         </p>
       </aside>
       ) : (
-        <button
-          type="button"
-          aria-label="Show panel"
-          title="Show panel"
-          onClick={toggleRightPanel}
-          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-l-md border border-r-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground lg:flex"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 pt-2 lg:flex">
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleRightPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -29,6 +29,12 @@ interface KachamakState {
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
 
+  /* tree expand / collapse (persisted) */
+  setAllNodesCollapsed: (section: SectionKey, collapsed: boolean) => void;
+  codexCollapsed: Record<string, boolean>;
+  toggleCodexCat: (id: string) => void;
+  setAllCodexCollapsed: (collapsed: boolean) => void;
+
   /* library */
   createNovel: (title: string, author: string) => void;
   importNovel: (json: string) => { ok: boolean; error?: string };
@@ -178,6 +184,36 @@ export const useKachamak = create<KachamakState>()(
 
       toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+
+      setAllNodesCollapsed: (section, collapsed) => {
+        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+        if (!novel) return;
+        const map = (nodes: NoteNode[]): NoteNode[] =>
+          nodes.map((n) => ({ ...n, collapsed, children: map(n.children) }));
+        novel.sections = { ...novel.sections, [section]: map(novel.sections[section]) };
+        set((s) => ({
+          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+        }));
+      },
+
+      codexCollapsed: {},
+      toggleCodexCat: (id) =>
+        set((s) => ({
+          codexCollapsed: { ...s.codexCollapsed, [id]: !s.codexCollapsed[id] },
+        })),
+      setAllCodexCollapsed: (collapsed) => {
+        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+        if (!novel) return;
+        const next: Record<string, boolean> = {};
+        const walk = (cats: CodexCategory[]) => {
+          for (const c of cats) {
+            next[c.id] = collapsed;
+            walk(c.children);
+          }
+        };
+        walk(novel.codex);
+        set({ codexCollapsed: next });
+      },
 
       /* ---------- library ---------- */
 

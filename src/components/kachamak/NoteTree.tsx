@@ -9,8 +9,10 @@ import {
   Folder,
   FolderOpen,
   Landmark,
+  MoreHorizontal,
   MoreVertical,
   Plus,
+  SquarePlus,
   Trash2,
   ArrowUp,
   ArrowDown,
@@ -207,8 +209,13 @@ export function NoteTree({
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
+  const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
+
+  const capLabel = label.charAt(0).toUpperCase() + label.slice(1);
+  const primary = rootKinds[0];
+  const extras = rootKinds.slice(1);
 
   return (
     <div className="flex h-full flex-col">
@@ -222,32 +229,72 @@ export function NoteTree({
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <Library className="h-4 w-4 text-orange-400" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
+        <Library className="h-4 w-4 shrink-0 text-orange-400" />
+        <span className="min-w-0 truncate text-sm font-bold text-foreground">{capLabel}</span>
+        <span className="ml-auto" />
+        <button
+          type="button"
+          aria-label={`Add ${primary.label}`}
+          title={`Add ${primary.label}`}
+          onClick={() => addNode(section, null, primary.kind)}
+          className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+        >
+          <SquarePlus className="h-4 w-4" />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Section actions"
+              title="More actions"
+              className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-[#1b1b1b] border-white/10">
+            {extras.map((rk) => (
+              <DropdownMenuItem key={rk.kind} onClick={() => addNode(section, null, rk.kind)}>
+                Add {rk.label}
+              </DropdownMenuItem>
+            ))}
+            {extras.length > 0 && <DropdownMenuSeparator className="bg-white/10" />}
+            <DropdownMenuItem onClick={() => setAllNodesCollapsed(section, false)}>
+              Expand all
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAllNodesCollapsed(section, true)}>
+              Collapse all
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <div className="flex items-center gap-1.5 px-2 pb-2">
+        <button
+          type="button"
+          onClick={() => setAllNodesCollapsed(section, false)}
+          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+        >
+          Expand all
+        </button>
+        <button
+          type="button"
+          onClick={() => setAllNodesCollapsed(section, true)}
+          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+        >
+          Collapse all
+        </button>
+      </div>
+
       <div className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2" role="tree" aria-label={label}>
         {roots.map((r) => (
           <TreeRow key={r.id} node={r} section={section} depth={0} />
         ))}
         {roots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
-            Empty. Create your first item below.
+            Empty. Use + above to create your first item.
           </p>
         )}
-      </div>
-      <div className="border-t border-white/10 p-2 flex flex-wrap gap-1.5">
-        {rootKinds.map((rk) => (
-          <button
-            key={rk.kind}
-            type="button"
-            onClick={() => addNode(section, null, rk.kind)}
-            className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
-          >
-            <Plus className="h-3 w-3" /> {rk.label}
-          </button>
-        ))}
       </div>
     </div>
   );

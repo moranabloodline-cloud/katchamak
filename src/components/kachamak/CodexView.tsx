@@ -13,6 +13,8 @@ import {
   Trash2,
   Users,
   Plus,
+  SquarePlus,
+  MoreHorizontal,
   ImagePlus,
   X,
   AtSign,
@@ -26,6 +28,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -80,11 +83,12 @@ function CatRow({ cat, depth }: CatRowProps) {
   const renameCategory = useKachamak((s) => s.renameCategory);
   const deleteCategory = useKachamak((s) => s.deleteCategory);
   const addEntry = useKachamak((s) => s.addEntry);
-  const [collapsed, setCollapsed] = useState(false);
+  const codexCollapsed = useKachamak((s) => s.codexCollapsed);
+  const toggleCodexCat = useKachamak((s) => s.toggleCodexCat);
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(cat.name);
 
-  const open = !collapsed;
+  const open = !codexCollapsed[cat.id];
   const entryCount = useMemo(() => {
     let k = cat.entries.length;
     const walk = (c: CodexCategory) => {
@@ -113,7 +117,7 @@ function CatRow({ cat, depth }: CatRowProps) {
           aria-label={open ? "Collapse" : "Expand"}
           onClick={(e) => {
             e.stopPropagation();
-            setCollapsed(!collapsed);
+            toggleCodexCat(cat.id);
           }}
           className="shrink-0"
         >
@@ -452,17 +456,19 @@ function EntryEditor({ entryId }: { entryId: string }) {
       </aside>
       )}
 
-      {/* reopen right panel when hidden */}
+      {/* reopen right panel when hidden — full-height rail with the vertical line */}
       {!rightPanelOpen && (
-        <button
-          type="button"
-          aria-label="Show panel"
-          title="Show panel"
-          onClick={toggleRightPanel}
-          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-l-md border border-r-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground lg:flex"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 pt-2 lg:flex">
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleRightPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -479,6 +485,7 @@ export function CodexView() {
   const selectCodex = useKachamak((s) => s.selectCodex);
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
+  const setAllCodexCollapsed = useKachamak((s) => s.setAllCodexCollapsed);
   const novel = novels.find((n) => n.id === activeNovelId);
 
   const selectedIsEntry = useMemo(() => {
@@ -498,21 +505,23 @@ export function CodexView() {
 
   return (
     <div className="flex min-h-0 flex-1">
-      {/* reopen left panel when hidden */}
+      {/* reopen left panel when hidden — full-height rail with the vertical line */}
       {!leftPanelOpen && (
-        <button
-          type="button"
-          aria-label="Show panel"
-          title="Show panel"
-          onClick={toggleLeftPanel}
-          className="hidden mt-2 h-6 w-5 shrink-0 self-start items-center justify-center rounded-r-md border border-l-0 border-white/10 bg-black/40 text-muted-foreground hover:text-foreground md:flex"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 pt-2 md:flex">
+          <button
+            type="button"
+            aria-label="Show panel"
+            title="Show panel"
+            onClick={toggleLeftPanel}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       {leftPanelOpen && (
-      <aside className="hidden w-64 shrink-0 overflow-y-auto kachamak-scroll border-r border-white/10 bg-black/20 md:block">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-white/10 bg-black/20 md:flex">
         <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
           <button
             type="button"
@@ -523,31 +532,65 @@ export function CodexView() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <ScrollText className="h-4 w-4 text-orange-400" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Codex
-          </span>
+          <ScrollText className="h-4 w-4 shrink-0 text-orange-400" />
+          <span className="min-w-0 truncate text-sm font-bold text-foreground">Codex</span>
+          <span className="ml-auto" />
+          <button
+            type="button"
+            aria-label="Add entry"
+            title="Add entry"
+            onClick={() => addEntry(novel.codex[0]?.id ?? "", "New Entry")}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          >
+            <SquarePlus className="h-4 w-4" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Section actions"
+                title="More actions"
+                className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-[#1b1b1b] border-white/10">
+              <DropdownMenuItem onClick={() => addCategory(null, "New Folder")}>
+                Add folder
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => setAllCodexCollapsed(false)}>
+                Expand all
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAllCodexCollapsed(true)}>
+                Collapse all
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="px-2 pb-2">
+
+        <div className="flex items-center gap-1.5 px-2 pb-2">
+          <button
+            type="button"
+            onClick={() => setAllCodexCollapsed(false)}
+            className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          >
+            Expand all
+          </button>
+          <button
+            type="button"
+            onClick={() => setAllCodexCollapsed(true)}
+            className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          >
+            Collapse all
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2">
           {novel.codex.map((c) => (
             <CatRow key={c.id} cat={c} depth={0} />
           ))}
-        </div>
-        <div className="flex gap-1.5 border-t border-white/10 p-2">
-          <button
-            type="button"
-            onClick={() => addEntry(novel.codex[0]?.id ?? "", "New Entry")}
-            className="flex flex-1 items-center justify-center gap-1 rounded-md border border-white/10 px-2 py-1 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
-          >
-            <Plus className="h-3 w-3" /> Entry
-          </button>
-          <button
-            type="button"
-            onClick={() => addCategory(null, "New Folder")}
-            className="flex flex-1 items-center justify-center gap-1 rounded-md border border-white/10 px-2 py-1 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
-          >
-            <Plus className="h-3 w-3" /> Folder
-          </button>
         </div>
       </aside>
       )}
