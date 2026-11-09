@@ -56,6 +56,21 @@ screenshotovima i arhitektura dokumentu.
    **`git push origin main`** (Nikolina naredba 10.11.2026; bez force-pusha,
    bez brisanja remote commitova).
 
+
+10. **Obavezna predaja rada: ChatGPT Sites → GitHub → GLM.** Kad ChatGPT/Work
+    izmeni Katchamak u Sites radnom prostoru, mora **u istom zadatku, pre
+    prijave da je posao završen**, preneti SVAKU odobrenu izmenu izvornog koda
+    (uključujući Sites adapter i relevantne assete) u ovaj GitHub repozitorijum:
+    proveri najnoviji `origin/main`, uskladi izmene bez gubitka tuđeg rada,
+    napravi commit i push na `main`, pa proveri da je remote ažuriran i
+    prijavi commit SHA Nikoli. **Lokalni Sites save/publish nije zamena za
+    GitHub push.** Ako push ne uspe ili platforma blokira izmenu, to jasno
+    prijavi; **ne tvrdi da je GLM može preuzeti** dok kod nije na GitHubu.
+    GLM **ne upravlja ChatGPT Sites-om**; on preuzima poslednji GitHub commit
+    pre početka rada i radi na tom kodu. GLM takođe po završetku svakog
+    uspešno testiranog zadatka radi commit + push, uz proveru najnovijeg
+    `main`. Ne raditi dva nepovezana zadatka paralelno na `main`.
+
 ## 4. Backup i kontinuitet (kratko; detalji: PROJEKT-KONTEKST §0, PROJECT_STATUS §6)
 
 - **Ručno / posle zadatka:** `bash scripts/backup.sh` — kreira
@@ -87,4 +102,5 @@ screenshotovima i arhitektura dokumentu.
 - [ ] `PROJECT_STATUS.md` ažuriran (status, dnevnik, odluke ako ih ima)
 - [ ] `bash scripts/backup.sh` odrađen (ili barem git commit)
 - [ ] `git push origin main` uspešan (posle završenog i testiranog zadatka)
+- [ ] Kod iz ChatGPT Sites-a, ako je menjan, prenet na GitHub i proverena remote commit SHA
 - [ ] prijava Nikoli na srpskom, sa čekanjem potvrde
