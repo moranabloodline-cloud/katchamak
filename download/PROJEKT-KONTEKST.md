@@ -7,6 +7,37 @@
 
 ---
 
+## 0. RESTORE U NOVOJ SESIJI — uradi ovo prvo ako ti projekat fascikla ne sadrži kod
+
+Svaka sesija ima svoju kopiju okruženja — kod NE dolazi automatski. Backup
+uvek postoji na dva mesta:
+
+1. **Cloud link (probaj prvo)** — aplikacija je javno dostupna i backup je
+   njen statički fajl:
+   ```
+   https://preview-dev-4f587c10a7748191b994b7e55b02828c.space-z.ai/kachamak-aplikacija.zip
+   ```
+   ```bash
+   cd /home/z/my-project
+   curl -o backup.zip "https://preview-dev-4f587c10a7748191b994b7e55b02828c.space-z.ai/kachamak-aplikacija.zip"
+   unzip -o backup.zip -d .        # kod + oba dokumenta (PROJEKT-KONTEKST.md, KACHAMAK-ARHITEKTURA.md)
+   bun install && bun run build    # node_modules/.next nisu u zipu
+   ```
+   Dokumenti direktno: `.../PROJEKT-KONTEKST.md` i `.../KACHAMAK-ARHITEKTURA.md`
+   (isti prefiks URL-a). Ako curl radi — nastavi iz tačke 3 dole.
+   Napomena: ovaj URL je zabeležen iz konfiguracije; ako ne radi, otvori
+   **preview link aplikacije koji platforma prikazuje Nikoli** (njegov UI zna
+   tačan URL) i dodaj `/kachamak-aplikacija.zip` — fajlovi su verifikovano
+   servisirani od strane aplikacije (localhost 200 proveren).
+2. **Nikola otpremi zip** (ako link ne radi): `download/kachamak-aplikacija.zip`
+   je uvek najnoviji; Nikola ga skine iz prethodne sesije i otpremi ovde;
+   `unzip -o` u koren projekta.
+
+Posle restora: pročitaj ostatak ovog fajla (§3 status, §4 šta je sledeće,
+§5 otvorena pitanja) i **nastavi od tačke koja je prva nerealizovana**.
+
+---
+
 ## 1. Šta je ovo projekat
 
 **Kachamak** — privatna pisalačka radionica u Next.js-u za roman
