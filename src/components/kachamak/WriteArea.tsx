@@ -7,6 +7,8 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  Eye,
+  EyeOff,
   Highlighter,
   Italic,
   List,
@@ -53,8 +55,55 @@ const cmd = (command: string, value?: string) => {
   document.execCommand(command, false, value);
 };
 
+/* Scrivener-style ruler — tick marks with numbers and shaded margin zones.
+   Serves every page (WriteArea is the only page editor). The eye at its end
+   (right margin) hides it or shows it again — persisted in the store. */
+function RulerStrip() {
+  return (
+    <div className="relative h-5 w-full overflow-hidden rounded-[3px] border border-white/10 bg-white/[0.04]">
+      {/* shaded margin zones, like the paper margins in Scrivener */}
+      <div className="absolute inset-y-0 left-0 w-12 bg-black/25" />
+      <div className="absolute inset-y-0 right-0 w-12 bg-black/25" />
+      <div className="absolute inset-y-0 left-12 w-px bg-white/15" />
+      <div className="absolute inset-y-0 right-12 w-px bg-white/15" />
+      {/* small ticks every 8px, tall ticks every 40px (1 unit) */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[6px]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(to right, transparent 0, transparent 7px, rgba(255,255,255,0.22) 7px, rgba(255,255,255,0.22) 8px)",
+        }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-[11px]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(to right, transparent 0, transparent 39px, rgba(255,255,255,0.32) 39px, rgba(255,255,255,0.32) 40px)",
+        }}
+      />
+      {/* numbers above the tall ticks (clipped by overflow-hidden) */}
+      {Array.from({ length: 24 }, (_, i) => (
+        <span
+          key={i}
+          className="absolute top-0.5 text-[9px] leading-none text-white/45"
+          style={{ left: 48 + i * 40 + 3 }}
+        >
+          {i + 1}
+        </span>
+      ))}
+      {/* margin markers — small triangular handles, like in Scrivener */}
+      <div className="absolute left-12 top-0 -translate-x-1/2 border-x-4 border-t-[5px] border-x-transparent border-t-white/50" />
+      <div className="absolute right-12 top-0 -translate-x-1/2 border-x-4 border-t-[5px] border-x-transparent border-t-white/50" />
+    </div>
+  );
+}
+
 export function WriteArea({ node, section }: { node: NoteNode; section: SectionKey }) {
   const updateNode = useKachamak((s) => s.updateNode);
+  /* ruler pref — „?? true“ jer stari sačuvani store nema ovaj ključ
+     (persist je ceo state, verzija se ne menja; šema podataka ista) */
+  const rulerVisible = useKachamak((s) => s.rulerVisible ?? true);
+  const setRulerVisible = useKachamak((s) => s.setRulerVisible);
   // prefs reset naturally because NotesSection mounts this with key={node.id}
   const [font, setFont] = useState("Segoe UI");
   const [size, setSize] = useState(16);
@@ -160,6 +209,23 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
         <ToolBtn title="Clear formatting" onClick={() => cmd("removeFormat")}>
           <RemoveFormatting className="h-4 w-4" />
         </ToolBtn>
+      </div>
+
+      {/* ruler — iznad naslova, u sirini tekuceg stubca (kao u Scriveneru);
+          oko na kraju ga sakriva i ponovo prikazuje (po Nikoli) */}
+      <div className="flex h-7 shrink-0 items-center px-6">
+        <div className="relative mx-auto h-5 w-full max-w-3xl">
+          {rulerVisible && <RulerStrip />}
+          <button
+            type="button"
+            title={rulerVisible ? "Hide ruler" : "Show ruler"}
+            aria-label={rulerVisible ? "Hide ruler" : "Show ruler"}
+            onClick={() => setRulerVisible(!rulerVisible)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+          >
+            {rulerVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          </button>
+        </div>
       </div>
 
       {/* the page */}

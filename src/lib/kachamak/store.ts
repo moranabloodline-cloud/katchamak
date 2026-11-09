@@ -32,6 +32,11 @@ interface KachamakState {
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
 
+  /* Scrivener-style ruler above the title in the editor — the eye at its end
+     hides it or shows it again (persisted preference) */
+  rulerVisible: boolean;
+  setRulerVisible: (v: boolean) => void;
+
   /* panel sizes in px (drag the vertical line to widen / narrow) */
   leftPanelWidth: number;
   rightPanelWidth: number;
@@ -237,6 +242,7 @@ export const useKachamak = create<KachamakState>()(
 
       leftPanelOpen: true,
       rightPanelOpen: true,
+      rulerVisible: true,
 
       leftPanelWidth: 256,
       rightPanelWidth: 288,
@@ -247,6 +253,8 @@ export const useKachamak = create<KachamakState>()(
 
       toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+
+      setRulerVisible: (v) => set({ rulerVisible: v }),
 
       addStatus: (name) => {
         const v = name.trim();

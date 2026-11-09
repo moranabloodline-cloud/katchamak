@@ -2,9 +2,9 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: skinut label iznad naslova u editoru;
-> brojač reči na dnu sada pokazuje tačan ukupan broj — sve sekcije + Synopsis +
-> Notes; verifikovano nezavisnim izračunom 61).
+> **Zadnja izmena:** 2026-11-09 (sesija: ruler kao u Scriveneru iznad naslova
+> na svakoj strani — oko na kraju ga sakriva i ponovo prikazuje, preferenca se
+> čuva; prethodno: skinut label iznad naslova, brojač reči tačan — 61).
 
 ---
 
@@ -95,6 +95,27 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (ruler kao u Scriveneru iznad naslova) — ZAVRŠENO:** po Nikolinoj
+  naredbi „svaka strana treba da ima ruler kao u Scriveneru iznad naslova koji
+  na kraju ima oko da se sakrije ili pojavi ponovo“: (1) **novi `RulerStrip` u
+  `WriteArea`** — horizontalni lineal u širini stubca teksta (`max-w-3xl`,
+  poravnat tačno sa naslovom i tekstom ispod), sa sitnim podelacima na svakih
+  8px, većim na svakih 40px, brojevima iznad velikih podelaka, zasenjenim
+  zonama margina (48px levo/desno) i trouglastim markerima margina — izgled
+  Scrivener lineala prilagođen tamnoj temi; (2) **oko na kraju lineala**
+  (lucide `Eye`/`EyeOff`, smešteno u desnoj margini lineala) ga sakriva i
+  ponovo prikazuje — kad je sakriven, ostaje samo oko na istom mestu; (3)
+  **nova preferenca `rulerVisible` u store-u** (persist u localStorage; čita
+  se sa `?? true` da stari sačuvani store ne bi sakrio lineal posle update-a;
+  verzija šeme se NE menja — nema nove migracione grane, šema podataka ista).
+  Ruler je na SVAKOJ strani: `WriteArea` je jedini page editor (Split/Write,
+  sve sekcije i tabovi); Grid/List ga nemaju jer tamo nema strane. Testirano
+  u browseru: The Query → lineal iznad naslova; klik na oko → nestaje, EyeOff
+  ostaje; ponovni klik → vraća se; reload → stanje sačuvano (ostao sakriven);
+  Scene 1 i Codex tab → lineal tu; 1100px → skuplja se sa stubcem, poravnato.
+  `tsc` (src: 0) + `build` čisti; konzola bez grešaka; linija trake 2 i dalje
+  100% kontinuirana (piksel-provera 1440/1440 na y=79).
 
 - **2026-11-09 (label iznad prozora + tačan brojač reči) — ZAVRŠENO:** po
   Nikolinoj naredbi: (1) **uklonjen narandžasti natpis vrste** („Act“ /
