@@ -86,14 +86,16 @@ Dodatno već postoje:
 
 - **Trash tab** sa restore-om (`TrashView.tsx`, `TrashItem` sa parentId/section,
   `deleteNode` → Trash, restore vraća na mesto; Delete taster na tastaturi radi).
-- **Top bar (jedna traka)**: Home+Search levo (zona levog panela), tabovi
+- **Top bar (jedna traka, h-10)**: Home+Search levo (zona levog panela), tabovi
   Binder/Codex/Planning/Research/Templates/Prompts/Trash u sredini, svi u
   jednom redu (zlatna aktivna: `border-[#ad7e2e]/80 bg-[#3a2c18]
   text-[#fbe4a6]`), Tree Scope dropdown (All/Folders only/Top level only) +
   Save (toast „Saved locally · vreme") + Account avatar (inijali →
   `AccountDialog`) + Settings (→ `SettingsDialog`) desno (zona desnog
-  panela). **Druga traka** ispod: header levog panela | editor toolbar |
-  Info/Details/Mentions desno — ukupno dve trake od vrha.
+  panela). **Druga traka (h-10, poravnata)** ispod: header levog panela |
+  editor toolbar (jedan red, px-4) | Info/Details/Mentions tabovi desno —
+  bez ikonica i bez okvira, svetli samo selektovani zlatnom pilulom; ukupno
+  dve trake od vrha.
 - **Levi panel**: header sa tab imenom, +(add), •••, Expand/Collapse all; stablo
   sa strelicom+ikonom+naslovom+tri-dot; **levo-donja traka**: ⓘ dugme
   (Popover: Save/Recovery/Copy feedback) — fiksno, ne skroluje sa stablom.

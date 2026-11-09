@@ -416,10 +416,8 @@ export function NotesSection({ section }: { section: SectionKey }) {
               </>
             ) : (
               <div className="flex h-full flex-col">
-                <div className="flex items-center justify-between gap-1 pl-3 pr-2 pt-3">
-                  <span className="flex-1 rounded-md bg-white/5 px-2.5 py-1.5 text-center text-xs text-muted-foreground">
-                    Info
-                  </span>
+                <div className="flex h-10 shrink-0 items-center justify-between gap-1 pl-3.5 pr-3.5">
+                  <span className="text-xs text-muted-foreground">Info</span>
                   <button
                     type="button"
                     aria-label="Hide panel"

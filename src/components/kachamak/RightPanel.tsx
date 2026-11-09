@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AtSign, CalendarDays, ChevronRight, Hash, Info, Settings2 } from "lucide-react";
+import { AtSign, CalendarDays, ChevronRight, Hash } from "lucide-react";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -43,18 +43,24 @@ export function RightPanel({
 
   const words = countWords(node.content);
 
+  /* tabovi bez ikonica i bez okvira — svetli samo selektovani (zlatna pilula,
+     isti aktivni jezik kao tabovi u topbaru); po Nikoli. dark: parnjaci su
+     nužni jer dark:data-... varijante iz ui/tabs.tsx inače pobeđuju */
+  const tabCls =
+    "h-8 flex-none rounded-lg border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors data-[state=active]:border-[#ad7e2e]/80 dark:data-[state=active]:border-[#ad7e2e]/80 data-[state=active]:bg-[#3a2c18] dark:data-[state=active]:bg-[#3a2c18] data-[state=active]:text-[#fbe4a6] dark:data-[state=active]:text-[#fbe4a6] data-[state=active]:shadow-none dark:data-[state=active]:shadow-none";
+
   return (
     <Tabs defaultValue="info" className="flex h-full flex-col gap-0">
-      <div className="flex items-center gap-1 pl-3 pr-2 pt-3">
-        <TabsList className="grid flex-1 grid-cols-3 bg-white/5">
-          <TabsTrigger value="info" className="text-xs">
-            <Info className="mr-1 h-3.5 w-3.5" /> Info
+      <div className="flex h-10 shrink-0 items-center pl-3.5 pr-3.5">
+        <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
+          <TabsTrigger value="info" className={tabCls}>
+            Info
           </TabsTrigger>
-          <TabsTrigger value="details" className="text-xs">
-            <Settings2 className="mr-1 h-3.5 w-3.5" /> Details
+          <TabsTrigger value="details" className={tabCls}>
+            Details
           </TabsTrigger>
-          <TabsTrigger value="mentions" className="text-xs">
-            <AtSign className="mr-1 h-3.5 w-3.5" /> Mentions
+          <TabsTrigger value="mentions" className={tabCls}>
+            Mentions
           </TabsTrigger>
         </TabsList>
         {onHide && (

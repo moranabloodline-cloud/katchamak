@@ -62,8 +62,8 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* toolbar */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-white/10 px-3 py-1.5">
+      {/* toolbar — track 2: ista visina i poravnanje kao header stabla i Info tabovi */}
+      <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
         <select
           aria-label="Font"
           value={font}

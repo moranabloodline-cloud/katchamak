@@ -498,7 +498,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
+      <div className="flex h-10 shrink-0 items-center gap-1.5 pl-3 pr-2">
         <button
           type="button"
           aria-label="Hide panel"

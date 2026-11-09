@@ -220,7 +220,7 @@ export function Workspace() {
           headers + editor toolbar) the top of the app has TWO tracks. The vertical
           dividers line up with the panel edges below and run to the very top
           (the +1 covers the 1px resizer column so the lines are never bent) */}
-      <header className="flex shrink-0 items-stretch border-b border-white/10">
+      <header className="flex h-10 shrink-0 items-stretch border-b border-white/10">
         {/* left panel zone: home icon pinned to the corner + project search */}
         <div
           className="flex shrink-0 items-center gap-2.5 border-r border-white/10 bg-black/20 px-3"
