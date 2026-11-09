@@ -2,7 +2,8 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: raspored view dugmića + dvoredni top bar).
+> **Zadnja izmena:** 2026-11-09 (sesija: raspored view dugmića, dvoredni top
+> bar, Label/Status wrap oko teksta).
 
 ---
 
@@ -94,6 +95,17 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-09 (Label i Status — wrap oko teksta) — ZAVRŠENO:** po Nikolinoj
+  naredbi u `NoteMetaBar` (dno desnog panela): Label input više nije `flex-1`
+  (razvlačio se preko celog panela) ni Status fiksiran na 110px — sada **oba
+  „wrap“ oko svog teksta** (Label: `size` po broju znakova, min 8 = dužina
+  „No Label“; Status: `w-fit` iz baze, bez fiksne širine) i stoje **uz levu
+  ivicu desnog panela**, prazno desno kad je panel širok. Na uzom panelu se
+  oba proporcionalno skupljaju i čisto seku (`overflow-hidden` na traci) —
+  po Nikolinoj reči „izgubiće se“ ako se panel suzi. Boja-dot ostaje odmah
+  iza. Testirano u browseru: kucan dug label (raste sa tekstom), sužen i
+  raširen panel, label vraćen na prazno. `tsc`+`build` čisti; store/schema
+  netaknuti (samo klase + `size` atribut).
 - **2026-11-09 (raspored dugmića + dvoredni top bar) — ZAVRŠENO:** po Nikolinoj
   naredbi dve izmene rasporeda, bez diranja funkcionalnosti i podataka:
   (1) **Split/Write/Grid/List premešteni** — bili su u donjoj traci levog panela

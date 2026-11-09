@@ -145,13 +145,17 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   const [draft, setDraft] = useState("");
 
   return (
-    <div className="flex h-10 items-center gap-2 border-t border-amber-500/25 px-2">
+    <div className="flex h-10 items-center gap-2 overflow-hidden border-t border-amber-500/25 px-2">
+      {/* Label i Status „wrap“ oko svog teksta (size po broju znakova / w-fit)
+          i stoje uz levu ivicu panela — na širokom panelu ostaje prazno desno,
+          na uzom se seku (overflow-hidden), po Nikolinoj odluci */}
       <Input
         value={node.label}
         onChange={(e) => updateNode(section, node.id, { label: e.target.value })}
         placeholder="No Label"
         aria-label="Label"
-        className="h-7 min-w-0 flex-1 border-white/10 bg-black/20 text-xs"
+        size={Math.max(8, node.label.length + 1)}
+        className="h-7 w-auto max-w-full min-w-0 border-white/10 bg-black/20 text-xs"
       />
       <Select
         value={node.status || "none"}
@@ -164,7 +168,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
         }}
       >
         <SelectTrigger
-          className="h-7 w-[110px] shrink-0 border-white/10 bg-black/20 text-xs"
+          className="h-7 max-w-full min-w-0 border-white/10 bg-black/20 text-xs"
           aria-label="Status"
         >
           <SelectValue placeholder="No Status" />

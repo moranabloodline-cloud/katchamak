@@ -100,7 +100,9 @@ Dodatno već postoje:
   sredini, **Split | Write | Grid | List uz desnu ivicu srednjeg panela**
   (09.11. premešteno iz levog panela po Nikoli).
 - **Desni panel**: Label + Status + boja u istom redu (`RightPanel.tsx`),
-  Synopsis/Notes, hide dugme; `NoteMetaBar` dole.
+  Synopsis/Notes, hide dugme; `NoteMetaBar` dole — Label i Status „wrap“ oko
+  svog teksta, uz levu ivicu panela (na uzom panelu se skupljaju/seku,
+  `overflow-hidden`).
 - **Corkboard / ListView / WriteArea** (rich editor), `NoteMetaBar`, resizer-i
   za oba panela (levi 240–560px, desni 190–680px, persistovano).
 - Fix od ranije: `sr-only` span leak (svugde `relative` roditelji) +
