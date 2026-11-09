@@ -2,8 +2,8 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: donja linija trake 2 od ivice do ivice,
-> „Hide panel“ skroz desno, Expand/Collapse all u dno levog panela).
+> **Zadnja izmena:** 2026-11-09 (sesija: selekcija preživi prelazak na tab —
+> editor i radna površina se ne menjaju dok se ne klikne note u levom panelu).
 
 ---
 
@@ -94,6 +94,25 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (selekcija preživi prelazak na tab) — ZAVRŠENO:** po Nikolinoj
+  prijavi „tekst editor iz druge trake ne treba da nestaje kada nešto nije
+  selektovano prelaskom na novi tab; radna površina se ne menja dok se ne
+  klikne na levi panel gde biramo novu“: (1) **`setTab` više NE briše
+  `selectedNodeId`** (briše samo inline preimenovanje) — prelazak na drugi tab
+  ne menja radnu površinu; (2) **nova util `findNodeInNovel(novel, id)`** —
+  nota se traži u celom romanu, ne samo u tekućoj sekciji, i vraća njenu
+  **matičnu sekciju**; `NotesSection` prosleđuje tu matičnu sekciju
+  (`selectedSection`) u WriteArea / RightPanel / NoteMetaBar, pa izmene uvek
+  pogađaju sekciju gde nota stvarno živi (ranije bi update na „tuđoj“ noti
+  bio tih no-op). Editor toolbar (traka 2) tako ostaje vertikalan kroz sve
+  tabove. Grid/List ostaju sekciski pregledi (nivo Grid-a prati selekciju
+  samo unutar tekućeg taba). Testirano u browseru: The Query (Binder) →
+  prelazak na Codex → editor i desni panel NEIZMENJENI, Codex stablo ništa ne
+  ističe; klik na Codex notu „Syntax“ → editor prelazi na nju; izmena naslova
+  na Codex tabu → sačuvana u Codex sekciji (stablo pokazuje izmenu); povratak
+  na Binder → editor i dalje drži istu notu. `tsc` (src: 0) + `build` čisti;
+  piksel-provera donje linije trake 2 i dalje 1440/1440.
 
 - **2026-11-09 (linija trake 2 + dno levog panela) — ZAVRŠENO:** po Nikolinoj
   prijavi „donja linija treba da bude u jednoj ravni od početka do kraja“ i

@@ -1,4 +1,5 @@
 import type { NoteNode, Novel, SectionKey } from "./types";
+import { SECTION_KEYS } from "./types";
 
 export function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -45,6 +46,21 @@ export function findNode(
     if (n.id === id) return n;
     const hit = findNode(n.children, id);
     if (hit) return hit;
+  }
+  return null;
+}
+
+/* nađe note u BILO KOJOJ sekciji romana i vrati je sa njenom matičnom sekcijom —
+   selekcija tako preživi prelazak na drugi tab (editor i desni panel drže istu
+   notu dok korisnik ne klikne novu u levom panelu), a izmene uvek idu u
+   sekciju gde nota stvarno živi */
+export function findNodeInNovel(
+  novel: Novel,
+  id: string
+): { node: NoteNode; section: SectionKey } | null {
+  for (const key of SECTION_KEYS) {
+    const node = findNode(novel.sections[key], id);
+    if (node) return { node, section: key };
   }
   return null;
 }

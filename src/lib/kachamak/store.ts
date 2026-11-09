@@ -349,8 +349,10 @@ export const useKachamak = create<KachamakState>()(
 
       /* ---------- workspace ---------- */
 
-      setTab: (tab) =>
-        set({ activeTab: tab, selectedNodeId: null, renamingNodeId: null }),
+      /* prelazak na drugi tab NE menja radnu površinu — selekcija ostaje
+         (editor toolbar i desni panel drže tekuću notu) dok korisnik ne klikne
+         novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
+      setTab: (tab) => set({ activeTab: tab, renamingNodeId: null }),
 
       setView: (v) => set({ view: v }),
 

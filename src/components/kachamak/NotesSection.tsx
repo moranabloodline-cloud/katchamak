@@ -9,7 +9,7 @@ import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
-import { findNode, novelWords } from "@/lib/kachamak/utils";
+import { findNodeInNovel, novelWords } from "@/lib/kachamak/utils";
 import { NOTE_COLORS } from "@/lib/kachamak/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -301,8 +301,14 @@ export function NotesSection({ section }: { section: SectionKey }) {
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
 
   const novel = novels.find((n) => n.id === activeNovelId);
-  const roots = novel?.sections[section] ?? [];
-  const selected = selectedNodeId ? findNode(roots, selectedNodeId) : null;
+  /* selekcija preživi prelazak na drugi tab: nota se traži u celom romanu, ne
+     samo u tekućoj sekciji — editor toolbar, editor i desni panel drže istu
+     notu dok korisnik ne klikne novu u levom panelu (po Nikoli). Izmene idu u
+     matičnu sekciju note (selectedSection), ne u tekući tab. */
+  const hit =
+    selectedNodeId && novel ? findNodeInNovel(novel, selectedNodeId) : null;
+  const selected = hit?.node ?? null;
+  const selectedSection = hit?.section ?? section;
 
   const showEditor = view === "split" || view === "write";
 
@@ -373,7 +379,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
           {view === "list" && <ListView section={section} />}
           {showEditor &&
             (selected ? (
-              <WriteArea key={selected.id} node={selected} section={section} />
+              <WriteArea key={selected.id} node={selected} section={selectedSection} />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
                 <PenLine className="h-8 w-8 text-muted-foreground/50" />
@@ -436,9 +442,9 @@ export function NotesSection({ section }: { section: SectionKey }) {
             {selected ? (
               <>
                 <div className="min-h-0 flex-1">
-                  <RightPanel node={selected} section={section} onHide={toggleRightPanel} />
+                  <RightPanel node={selected} section={selectedSection} onHide={toggleRightPanel} />
                 </div>
-                <NoteMetaBar section={section} node={selected} />
+                <NoteMetaBar section={selectedSection} node={selected} />
               </>
             ) : (
               <div className="flex h-full flex-col">
