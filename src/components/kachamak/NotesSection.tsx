@@ -298,6 +298,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
   const rightPanelWidth = useKachamak((s) => s.rightPanelWidth);
   const setLeftPanelWidth = useKachamak((s) => s.setLeftPanelWidth);
   const setRightPanelWidth = useKachamak((s) => s.setRightPanelWidth);
+  const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
@@ -316,10 +317,25 @@ export function NotesSection({ section }: { section: SectionKey }) {
             <div className="min-h-0 flex-1">
               <NoteTree section={section} />
             </div>
-            {/* bottom of the left panel: circled "i" pinned to the bottom-left corner —
-                fixed, never scrolls with the tree (view modes live on the main bottom bar) */}
-            <div className="flex h-10 shrink-0 items-center border-t border-amber-500/25 px-2">
+            {/* dno levog panela: ⓘ levo (ostaje left align), Expand all i
+                Collapse all skroz desno u istom redu — po Nikoli */}
+            <div className="flex h-10 shrink-0 items-center gap-1.5 border-t border-amber-500/25 px-2">
               <SaveInfoButton />
+              <span className="ml-auto" />
+              <button
+                type="button"
+                onClick={() => setAllNodesCollapsed(section, false)}
+                className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+              >
+                Expand all
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllNodesCollapsed(section, true)}
+                className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+              >
+                Collapse all
+              </button>
             </div>
           </aside>
           <Resizer

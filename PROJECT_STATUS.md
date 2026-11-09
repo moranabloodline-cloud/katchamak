@@ -2,8 +2,8 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: raspored view dugmića, dvoredni top
-> bar, Label/Status wrap oko teksta).
+> **Zadnja izmena:** 2026-11-09 (sesija: donja linija trake 2 od ivice do ivice,
+> „Hide panel“ skroz desno, Expand/Collapse all u dno levog panela).
 
 ---
 
@@ -95,6 +95,25 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-09 (linija trake 2 + dno levog panela) — ZAVRŠENO:** po Nikolinoj
+  prijavi „donja linija treba da bude u jednoj ravni od početka do kraja“ i
+  „desni hide panel ne treba da bude zalepljen uz ove“: (1) **donja linija
+  trake 2 sada ide od leve do desne ivice ekrana bez prekida** — `border-b
+  border-white/10` dodat na header stabla (NoteTree) i na Info/Details/Mentions
+  red (RightPanel) i na prazno stanje desnog panela; editor toolbar ju je već
+  imao; u srednjoj zoni se kad toolbar nije prikazan (Grid / List / bez
+  selekcije) crta prazan h-10 red sa istom linijom; zatvoreni paneli dobili
+  h-10 red sa border-b u uskoj traci (chevron sada centriran u traci 2).
+  **Piksel-verifikovano:** na y=79 svetli 1440/1440 px (i 1100/1100 na užem
+  ekranu), u sva četri stanja (Write, Grid, desni zatvoren, levi zatvoren).
+  (2) **„Hide panel“ desnog panela skroz desno** u istom redu sa tabovima
+  (`ml-auto`; box x=1402, 14px od desne ivice, ista y-visina) — više nije
+  zalepljen uz „Mentions“. (3) **Expand all / Collapse all premešteni** iz reda
+  ispod headera stabla u **donju traku levog panela**: ⓘ ostaje levo (left
+  align), dugmad idu skroz desno u istom redu (ml-auto); red ispod headera
+  uklonjen, stablo počinje direktno ispod trake 2; meni „⋯“ zadržava iste
+  stavke. Funkcionalnost testirana: Collapse all → 3 vidljiva root-a, Expand
+  all → 45 redova. `tsc` (src: 0 grešaka) + `build` čisti.
 - **2026-11-09 (poravnanje trake 2 + Info/Details/Mentions tabovi) — ZAVRŠENO:**
   po Nikolinoj prijavi „nisu dve poravnane trake“ + screenshot: (1) **obe trake
   sada h-10 (40px)** — header (Workspace), header stabla (NoteTree, pl-3 da se

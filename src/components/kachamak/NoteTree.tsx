@@ -561,23 +561,6 @@ export function NoteTree({ section }: { section: SectionKey }) {
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-1.5 px-2 pb-2">
-        <button
-          type="button"
-          onClick={() => setAllNodesCollapsed(section, false)}
-          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-        >
-          Expand all
-        </button>
-        <button
-          type="button"
-          onClick={() => setAllNodesCollapsed(section, true)}
-          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-        >
-          Collapse all
-        </button>
-      </div>
-
       <div className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2" role="tree" aria-label={capLabel}>
         {visibleRoots.map((r) => (
           <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} />
