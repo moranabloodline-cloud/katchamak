@@ -111,107 +111,111 @@ export function Dashboard() {
             draggable={false}
           />
           <span className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-[#0b0806] to-transparent" />
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#17110b] to-transparent" />
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#0a0c10] to-transparent" />
         </div>
       </section>
 
-      {/* ── donji deo: stablo kolekcija (levo) + projekti (desno) ── */}
-      <div className="flex min-h-0 flex-1">
+      {/* ── donji deo: stablo kolekcija (levo) + projekti (desno) ──
+          boje i proporcije po referenci: skoro-crna pozadina #0a0c10,
+          sidebar ~19% širine, krupnija tipografija i zlatni detalji */}
+      <div className="flex min-h-0 flex-1 bg-[#0a0c10]">
         {/* sidebar: collections */}
-        <aside className="flex w-[280px] shrink-0 flex-col border-r border-white/5 bg-[#17110b] px-4 pb-4 pt-4">
-          <div className="flex items-center gap-2">
-            <Folder className="h-5 w-5 fill-amber-400/80 text-amber-400" />
-            <span className="font-serif text-[15px] font-semibold text-[#f2ead9]">
+        <aside className="flex w-[19%] min-w-[230px] shrink-0 flex-col border-r border-white/[0.07] bg-[#090b0f] px-5 pb-5 pt-5">
+          <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+            <Folder className="h-6 w-6 fill-amber-400/90 text-amber-400" />
+            <span className="font-serif text-[19px] font-semibold text-[#f2ead9]">
               Collections
             </span>
             <button
               type="button"
               aria-label="New collection"
-              className="ml-auto flex h-7 w-7 items-center justify-center rounded-md border border-white/15 text-[#e8c265] transition-colors hover:bg-white/5"
+              className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg border border-[#c9973c]/70 text-[#e8c265] transition-colors hover:bg-white/5"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
             </button>
           </div>
 
           {/* faza 1: stablo je prazno dok ne nastanu kolekcije (bez demo
               podataka); kod za prikaz hijerarhije i izbora je spreman za
               fazu 2, kada kolekcije dobiju model */}
-          <div className="mt-3 flex-1 overflow-y-auto kachamak-scroll">
-            <p className="mt-2 px-2 text-xs leading-relaxed text-muted-foreground/70">
+          <div className="mt-4 flex-1 overflow-y-auto kachamak-scroll">
+            <p className="mt-1 px-1 text-sm leading-relaxed text-muted-foreground/70">
               No collections yet.
             </p>
           </div>
         </aside>
 
         {/* glavni panel */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto kachamak-scroll px-6 pb-5 pt-4">
-          <div className="flex items-center gap-3">
-            <BookOpen className="h-6 w-6 text-[#e8c265]" />
-            <h2 className="font-serif text-2xl font-bold text-[#f2ead9]">
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto kachamak-scroll px-9 pb-6 pt-5">
+          <div className="flex items-center gap-3.5">
+            <BookOpen className="h-8 w-8 text-[#e8c265]" />
+            <h2 className="font-serif text-3xl font-bold text-[#f2ead9]">
               All Projects
             </h2>
           </div>
 
-          {/* toolbar */}
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          {/* toolbar: levo akcije, desno pretraga/sort/group/grid-list */}
+          <div className="mt-5 flex flex-wrap items-center gap-3.5">
             <button
               type="button"
-              className="flex h-9 items-center gap-1.5 rounded-md bg-[#f0b018] px-3.5 text-sm font-semibold text-[#221503] transition-colors hover:bg-[#ffc233]"
+              className="flex h-11 items-center gap-2 rounded-lg bg-[#f3b64e] px-5 text-base font-semibold text-[#221503] transition-colors hover:bg-[#ffc36a]"
             >
-              <Plus className="h-4 w-4" /> Collection
+              <Plus className="h-5 w-5" /> Collection
             </button>
             <button
               type="button"
-              className="flex h-9 items-center gap-1.5 rounded-md bg-[#f0b018] px-3.5 text-sm font-semibold text-[#221503] transition-colors hover:bg-[#ffc233]"
+              className="flex h-11 items-center gap-2 rounded-lg bg-[#f3b64e] px-5 text-base font-semibold text-[#221503] transition-colors hover:bg-[#ffc36a]"
             >
-              <Plus className="h-4 w-4" /> Project
+              <Plus className="h-5 w-5" /> Project
             </button>
             <button
               type="button"
-              className="flex h-9 items-center gap-1.5 rounded-md border border-white/15 px-3.5 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+              className="flex h-11 items-center gap-2 rounded-lg border border-white/20 px-5 text-base text-[#cfd2d6] transition-colors hover:bg-white/5 hover:text-foreground"
             >
-              <Download className="h-4 w-4" /> Import
+              <Download className="h-5 w-5" /> Import
             </button>
-            <span className="mx-1 h-6 w-px bg-white/10" />
-            <div className="relative w-[260px] max-w-full">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search projects…"
-                aria-label="Search projects"
-                className="h-9 w-full rounded-md border border-white/10 bg-black/30 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-[#f0b018]/50"
-              />
-            </div>
-            <button
-              type="button"
-              className="flex h-9 items-center gap-1.5 rounded-md border border-white/15 px-3 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-            >
-              <ArrowUpDown className="h-4 w-4" /> Sort
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              className="flex h-9 items-center gap-1.5 rounded-md border border-white/15 px-3 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-            >
-              <Layers className="h-4 w-4" /> Group
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-            <div className="ml-auto flex overflow-hidden rounded-md border border-white/15">
+            <span className="mx-1 hidden h-7 w-px bg-white/10 md:block" />
+            <div className="ml-auto flex flex-wrap items-center gap-3.5">
+              <div className="relative w-[310px] max-w-full">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Search projects…"
+                  aria-label="Search projects"
+                  className="h-11 w-full rounded-lg border border-white/15 bg-black/30 pl-10 pr-3 text-base text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-[#f0b018]/50"
+                />
+              </div>
               <button
                 type="button"
-                aria-label="Grid view"
-                className="flex h-9 w-10 items-center justify-center bg-white/10 text-foreground"
+                className="flex h-11 items-center gap-2 rounded-lg border border-white/20 px-4 text-base text-[#cfd2d6] transition-colors hover:bg-white/5 hover:text-foreground"
               >
-                <LayoutGrid className="h-4 w-4" />
+                <ArrowUpDown className="h-5 w-5" /> Sort
+                <ChevronDown className="h-4 w-4" />
               </button>
               <button
                 type="button"
-                aria-label="List view"
-                className="flex h-9 w-10 items-center justify-center border-l border-white/15 text-muted-foreground transition-colors hover:bg-white/5"
+                className="flex h-11 items-center gap-2 rounded-lg border border-white/20 px-4 text-base text-[#cfd2d6] transition-colors hover:bg-white/5 hover:text-foreground"
               >
-                <List className="h-4 w-4" />
+                <Layers className="h-5 w-5" /> Group
+                <ChevronDown className="h-4 w-4" />
               </button>
+              <div className="ml-1 flex h-11 shrink-0 overflow-hidden rounded-lg border border-[#c9973c]/70">
+                <button
+                  type="button"
+                  aria-label="Grid view"
+                  className="flex h-full w-[52px] items-center justify-center bg-[#f3b64e] text-[#221503]"
+                >
+                  <LayoutGrid className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="List view"
+                  className="flex h-full w-[52px] items-center justify-center border-l border-[#c9973c]/60 text-[#e8c265] transition-colors hover:bg-white/5"
+                >
+                  <List className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -221,7 +225,7 @@ export function Dashboard() {
               No projects yet.
             </p>
           ) : (
-            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3">
               {sortedNovels.map((n) => (
                 <ProjectCard
                   key={n.id}
@@ -244,33 +248,33 @@ function ProjectCard({ novel, onOpen }: { novel: Novel; onOpen: () => void }) {
       type="button"
       onClick={onOpen}
       aria-label={`Open ${novel.title}`}
-      className="group relative flex h-[172px] cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] text-left transition-colors hover:border-amber-400/40"
+      className="group relative flex h-[230px] cursor-pointer overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] text-left transition-colors hover:border-[#f0b018]"
     >
       {/* cover */}
       <span
-        className="flex w-[150px] shrink-0 items-center justify-center text-5xl"
+        className="flex w-[44%] min-w-[160px] max-w-[250px] shrink-0 items-center justify-center border-r border-[#a97f33]/40 text-6xl"
         style={{ background: novel.cover.bg }}
       >
         <span className="drop-shadow-lg">{novel.cover.icon}</span>
       </span>
       {/* info */}
-      <span className="flex min-w-0 flex-1 flex-col p-4">
-        <span className="truncate font-serif text-xl font-semibold text-[#f2ead9]">
+      <span className="flex min-w-0 flex-1 flex-col px-6 pt-7">
+        <span className="truncate font-serif text-2xl font-bold text-white">
           {novel.title}
         </span>
-        <span className="mt-2.5 flex items-center gap-2 text-sm text-muted-foreground">
-          <BookOpen className="h-3.5 w-3.5 shrink-0 text-[#e8c265]" />
+        <span className="mt-6 flex items-center gap-3 text-base text-[#d4d1c9]">
+          <BookOpen className="h-5 w-5 shrink-0 text-[#e8c265]" />
           Novel
         </span>
-        <span className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-          <FileText className="h-3.5 w-3.5 shrink-0 text-[#e8c265]" />
+        <span className="mt-5 flex items-center gap-3 text-base text-[#d4d1c9]">
+          <FileText className="h-5 w-5 shrink-0 text-[#e8c265]" />
           {novelWords(novel).toLocaleString()} words
         </span>
-        <span className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-3.5 w-3.5 shrink-0 text-[#e8c265]" />
+        <span className="mt-5 flex items-center gap-3 text-base text-[#d4d1c9]">
+          <Calendar className="h-5 w-5 shrink-0 text-[#e8c265]" />
           Modified {relativeTime(novel.updatedAt)}
         </span>
-        <MoreVertical className="absolute bottom-2.5 right-2.5 h-4 w-4 text-muted-foreground/60" />
+        <MoreVertical className="absolute bottom-3.5 right-3.5 h-5 w-5 text-muted-foreground/60" />
       </span>
     </button>
   );

@@ -2,11 +2,12 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-10 (sesija: **Dashboard — faza 1** — novi početni
-> ekran po Nikolinoj referenci: logo/Help/Account, „My Collections“, AI banner
-> 2880x640 u `public/dashboard-banner.png`, stablo kolekcija (prazno, bez demo
-> podataka), horizontalne kartice postojećih projekata, otvaranje u Workspace +
-> povratak; ostale kontrole samo vizuelno. Store/schema/Workspace NIJE diran).
+> **Zadnja izmena:** 2026-11-10 (sesija: **Dashboard — ispravka proporcija**
+> — donji deo po referenci: sidebar ~19% širine, skoro-crna pozadina
+> #0a0c10 umesto toplo braon, krupniji toolbar (h-11) i pretraga 310px,
+> Grid/List zlatni segmented skroz desno, kartice 230px sa coverom ~44%
+> širine i krupnijom tipografijom. Banner, funkcije, Workspace i podaci
+> NIJE diran — samo klasa boje gradijenta ispod bannera (bez šava).
 
 ---
 
@@ -99,6 +100,31 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-10 (Dashboard — ispravka proporcija) — ZAVRŠENO:** Nikola uporedio
+  fazu 1 sa referencom i tražio ispravke SAMO donjeg dela. Izmereno sa
+  reference (piksel-analiza, referenca 1672px vs ekran 1920px → sve ×1.148):
+  sidebar `w-[280px]` → **`w-[19%]`** (min 230px); pozadina donjeg dela
+  `#17110b` → **`#0a0c10`** + sidebar `#090b0f` (referenca je skoro-crna,
+  ne toplo-braon — boje merene: #080b0f/#0b0c0e); header stabla krupniji
+  (serif 19px, folder 24px, + dugme 40x40, separator linija ispod);
+  „All Projects“ serif **30px** + ikona 32px; toolbar **h-11** dugmad (text-
+  base, ikone 20px), pretraga **310px**, Sort/Group u desnoj grupi,
+  **Grid/List zlatni segmented** (aktivni zlatni fill + tamna ikona, zlatni
+  obrub, 52px segmenti) **skroz desno**; kartice **h-230px** (ref ~200px na
+  1672 → ×1.148), cover **44%** širine (min 160/max 250) sa zlatnim
+  separatorom, naslov **serif 24px bijel**, redovi **16px** skoro-bijeli
+  (#d4d1c9) sa zlatnim ikonama 20px, zlatni obrub #a97f33/60 + hover
+  #f0b018. JEDINA izmena iznad bannera: donji gradijent prelaza
+  `from-[#17110b]` → `from-[#0a0c10]` (da nema šava prema novoj pozadini —
+  banner slika netaknuta). Bez izmišljenih kolekcija/projekata — i dalje
+  „No collections yet.“ + postojeća 2 projekta. **Turbopack/Tailwind v4 dev
+  keš podmukao:** nove Tailwind klase nisu ulazile u CSS ni posle restarta
+  dev servera (DOM imao klasu, CSS pravilo nedostajalo, kartice 170px);
+  rešeno **`rm -rf .next`** + restart — zapisati ako se ponovi. Verifikacija:
+  navigacija kartica→Workspace→„Back to dashboard“ radi, konzola bez
+  grešaka; `tsc` čist (samo 3 poznate greške u examples/ i skills/);
+  `build` čist; screenshot 1920x1080 + side-by-side poređenje sa referencom
+  u `/tmp/render/compare-final.png` (proporcije poklapaju se).
 - **2026-11-10 (Dashboard — faza 1) — ZAVRŠENO:** po Nikolinoj referenci
   (screenshot) napravljen Dashboard kao **početni ekran**. NOVO:
   `src/components/kachamak/Dashboard.tsx`; `page.tsx` renderuje Dashboard
