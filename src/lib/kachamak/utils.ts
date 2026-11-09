@@ -113,7 +113,7 @@ export function ancestorIds(roots: NoteNode[], id: string): string[] {
   return path;
 }
 
-/** Leaf notes = notes without children (they are the cards in Grid). */
+/** Leaf notes = notes without children (they are the cards in Corkboard). */
 export function isLeaf(n: NoteNode): boolean {
   return n.children.length === 0;
 }

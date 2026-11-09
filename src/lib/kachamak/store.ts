@@ -76,7 +76,8 @@ interface KachamakState {
     fromSection: SectionKey,
     id: string,
     destSection: SectionKey,
-    destParentId: string | null
+    destParentId: string | null,
+    destIndex?: number
   ) => void;
   duplicateNode: (section: SectionKey, id: string) => void;
   sortChildren: (
@@ -304,7 +305,7 @@ export const useKachamak = create<KachamakState>()(
           activeNovelId: n.id,
           activeTab: "binder",
           selectedNodeId: null,
-          view: "grid",
+          view: "corkboard",
         }));
       },
 
@@ -327,7 +328,7 @@ export const useKachamak = create<KachamakState>()(
             activeNovelId: n.id,
             activeTab: "binder",
             selectedNodeId: null,
-            view: "grid",
+            view: "corkboard",
           }));
           return { ok: true };
         } catch {
@@ -342,7 +343,7 @@ export const useKachamak = create<KachamakState>()(
         })),
 
       openNovel: (id) =>
-        set({ activeNovelId: id, activeTab: "binder", selectedNodeId: null, view: "grid" }),
+        set({ activeNovelId: id, activeTab: "binder", selectedNodeId: null, view: "corkboard" }),
 
       closeNovel: () => set({ activeNovelId: null, selectedNodeId: null }),
 
@@ -463,7 +464,7 @@ export const useKachamak = create<KachamakState>()(
       },
 
       /* Move — the note becomes the last child of the destination (or a section root) */
-      moveNodeTo: (fromSection, id, destSection, destParentId) => {
+      moveNodeTo: (fromSection, id, destSection, destParentId, destIndex) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
         const fromRoots = novel.sections[fromSection];
@@ -479,16 +480,26 @@ export const useKachamak = create<KachamakState>()(
         const { nodes, removed } = removeFromNodes(fromRoots, id);
         if (!removed) return;
         novel.sections = { ...novel.sections, [fromSection]: nodes };
+        /* destIndex (optional): insertion position in the post-removal list —
+           the Corkboard computes it against the array without the dragged note */
+        const spliceOrPush = (list: NoteNode[]) => {
+          if (typeof destIndex === "number") {
+            const idx = Math.max(0, Math.min(destIndex, list.length));
+            list.splice(idx, 0, removed);
+          } else {
+            list.push(removed);
+          }
+        };
         if (destParentId) {
           const parent = findNode(novel.sections[destSection], destParentId);
           if (parent) {
-            parent.children.push(removed);
+            spliceOrPush(parent.children);
             parent.collapsed = false;
           } else {
-            novel.sections[destSection].push(removed);
+            spliceOrPush(novel.sections[destSection]);
           }
         } else {
-          novel.sections[destSection].push(removed);
+          spliceOrPush(novel.sections[destSection]);
         }
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
@@ -596,15 +607,17 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
          acts and chapters as solid coloured folders)
          v3 → v4: everything is a NOTE on every tab — the old Codex
-         categories/entries become plain notes in the Codex section */
+         categories/entries become plain notes in the Codex section
+         v4 → v5: the Grid view becomes the Corkboard (Scrivener index cards) */
       migrate: (persisted) => {
         const s = persisted as KachamakState;
+        if ((s as { view?: string }).view === "grid") s.view = "corkboard";
         const OLD_DEFAULT_STATUSES = [
           "To Do",
           "First Draft",

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, PenLine, Target, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
-import { GridView } from "./GridView";
+import { Corkboard } from "./Corkboard";
 import { WriteArea } from "./WriteArea";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
@@ -30,7 +30,7 @@ import {
 const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "split", label: "Split" },
   { key: "write", label: "Write" },
-  { key: "grid", label: "Grid" },
+  { key: "corkboard", label: "Corkboard" },
   { key: "list", label: "List" },
 ];
 
@@ -311,7 +311,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
               <NoteTree section={section} />
             </div>
             {/* bottom of the left panel: circled "i" pinned to the bottom-left corner and
-                Split / Write / Grid / List at the right edge — both fixed, never scroll with the tree */}
+                Split / Write / Corkboard / List at the right edge — both fixed, never scroll with the tree */}
             <div className="flex h-10 shrink-0 items-center justify-between border-t border-amber-500/25 px-2">
               <SaveInfoButton />
               <div role="toolbar" aria-label="View mode" className="flex shrink-0 items-center gap-0.5">
@@ -354,7 +354,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
 
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
-          {view === "grid" && <GridView section={section} />}
+          {view === "corkboard" && <Corkboard section={section} />}
           {view === "list" && <ListView section={section} />}
           {showEditor &&
             (selected ? (
@@ -367,10 +367,10 @@ export function NotesSection({ section }: { section: SectionKey }) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setView("grid")}
+                  onClick={() => setView("corkboard")}
                   className="mt-2 rounded-lg border border-orange-500/40 px-3 py-1.5 text-xs text-orange-300 hover:bg-orange-500/10"
                 >
-                  Browse Grid view instead
+                  Browse Corkboard instead
                 </button>
               </div>
             ))}
@@ -419,7 +419,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
                   </button>
                 </div>
                 <p className="p-4 text-xs leading-relaxed text-muted-foreground">
-                  Select a note in the tree or a card in the Grid to see its synopsis,
+                  Select a note in the tree or a card in the Corkboard to see its synopsis,
                   notes and details here.
                 </p>
                 {/* keep the full-width bottom bar continuous */}

@@ -91,26 +91,30 @@ Dodatno već postoje:
   (→ `SettingsDialog`).
 - **Levi panel**: header sa tab imenom, +(add), •••, Expand/Collapse all; stablo
   sa strelicom+ikonom+naslovom+tri-dot; **levo-donja traka**: ⓘ dugme
-  (Popover: Save/Recovery/Copy feedback) + **Split | Write | Grid | List**
+  (Popover: Save/Recovery/Copy feedback) + **Split | Write | Corkboard | List**
   dugmad uz desnu ivicu levog panela — fiksno, ne skroluje sa stablom.
 - **Desni panel**: Label + Status + boja u istom redu (`RightPanel.tsx`),
   Synopsis/Notes, hide dugme; `NoteMetaBar` dole.
-- **GridView / ListView / WriteArea** (rich editor), `NoteMetaBar`, resizer-i
+- **Corkboard / ListView / WriteArea** (rich editor), `NoteMetaBar`, resizer-i
   za oba panela (levi 240–560px, desni 190–680px, persistovano).
 - Fix od ranije: `sr-only` span leak (svugde `relative` roditelji) +
   `html,body{overflow:hidden}` u `globals.css` — stranica se više ne pomera.
+- **✅ Tačka 6 — CORKBOARD (uradjeno 09.11.):** `Corkboard.tsx` zamenio
+  GridView (obrisan). Klasične Scrivener index kartice: **ikona + naslov +
+  Synopsis**, papir boje `#efe6cf` na tamnoj pluti `#241c12`, caption
+  „CORKBOARD · <nivo>“ zlatno. **Jedan nivo hijerarhije**: deca selektovanog
+  kontejnera / sama leaf nota / top nivo sekcije kad ništa nije selektovano.
+  **Dupli klik** otvara notu u Write modu. **Drag & drop reorder** (HTML5 DnD,
+  zlatna ivica-ubacivač pre/posle, drop na plutu = na kraj) preko novog
+  opcionog `destIndex` parametra u `moveNodeTo`. Store **v5** (migracija:
+  sačuvani `view:"grid"` → `"corkboard"`). „+ New note“ dodaje u otvoreni nivo.
+  Testirano: render, nivoi, dupli klik, drag reorder + persistencija posle
+  reload-a, build + tsc čisti.
 
-## 4. Šta je SLEDEĆE (po redu — iz arhitektura dokumenta, §5 i dalje)
+## 4. Šta je SLEDEĆE (po redu — iz arhitektura dokumenta)
 
-**Nije započeto nijedno.** Nikola je rekao „ajmo redom" — prvo pitanje novoj
-sesiji: nastaviti sa tačkom 6.
+**Tačke 1–6 završene.** Sledeća je tačka 7.
 
-6. **Corkboard umesto Grid** — klasične Scrivener index kartice: ikona+naslov+
-   **Synopsis** na kartici; prikazuje **samo jedan nivo hijerarhije** odjednom;
-   **dupli klik** otvara note; **drag** za premeštanje/redosled. NEMA: infinite
-   canvas, nested frames, auto-proširivanje parent okvira, podesive veličine
-   kartica. (Dugme „Grid" u levom panelu postaje „Corkboard"; ViewMode `grid`→
-   preimenovati/prepakovati, GridView.tsx → Corkboard.)
 7. **Inspector reorg** — desni panel u 3 taba: **Info** (Synopsis + Notes
    vertikalno, **draggable razdelnik** između njih), **Details** (povezivanje
    sa Codex notama, pretraživo), **Mentions** (ko pominje ovu notu); panel ostaje
