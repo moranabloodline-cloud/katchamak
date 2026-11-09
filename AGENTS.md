@@ -51,8 +51,10 @@ screenshotovima i arhitektura dokumentu.
    — ne u git, ne u backup zipove, ne u javni folder `public/`. Backup skript
    ih automatski isključuje i proverava (`secrets-guard`); ovo je dodatna
    garantovana linija, ne izgovor.
-9. **Posle SVAKOG završenog zadatka:** ažuriraj `PROJECT_STATUS.md`
-   (status + „Dnevnik izmena") i uradi git commit sa smislenom porukom.
+9. **Posle SVAKOG završenog i testiranog zadatka:** ažuriraj `PROJECT_STATUS.md`
+   (status + „Dnevnik izmena"), uradi git commit sa smislenom porukom i
+   **`git push origin main`** (Nikolina naredba 10.11.2026; bez force-pusha,
+   bez brisanja remote commitova).
 
 ## 4. Backup i kontinuitet (kratko; detalji: PROJEKT-KONTEKST §0, PROJECT_STATUS §6)
 
@@ -66,7 +68,15 @@ screenshotovima i arhitektura dokumentu.
 - **Automatski:** cron zadatak „Kachamak — dnevni backup" poziva isti skript
   **svaki dan u 03:00 (Europe/Belgrade)**.
 - **Git:** platforma sama radi checkpoint commitove; uz to se posle svakog
-  zadatka radi commit sa smislenom porukom (pravilo §3.9).
+  zadatka radi commit sa smislenom porukom i push (pravilo §3.9).
+- **GitHub veza (10.11.2026):** remote `origin` =
+  `https://github.com/moranabloodline-cloud/katchamak.git` (privatan);
+  kredencijal = fine-grained PAT (samo repo `katchamak`, Contents: Read and
+  write) čuva se **ISKLUČIVO u `~/.git-credentials`** (dozvole 0600, IZVAN
+  projektnog foldera — nikad u repo, nikad u fajlove projekta, nikad u git
+  istoriju, nikad u izveštaje). Token menja/regeneriše samo Nikola na GitHubu
+  (Settings → Developer settings → Fine-grained tokens). Push je uvek
+  fast-forward na `main`; bez force-pusha; bez rewrite-a istorije (§3.7).
 - **Restore u novoj sesiji:** postupak je u `PROJEKT-KONTEKST.md` §0
   (cloud link → zip → `bun install && bun run build`), a rezervni put je
   Nikolaov zip iz `download/`.
@@ -76,4 +86,5 @@ screenshotovima i arhitektura dokumentu.
 - [ ] `bun run build` + `bunx tsc --noEmit` čisti
 - [ ] `PROJECT_STATUS.md` ažuriran (status, dnevnik, odluke ako ih ima)
 - [ ] `bash scripts/backup.sh` odrađen (ili barem git commit)
+- [ ] `git push origin main` uspešan (posle završenog i testiranog zadatka)
 - [ ] prijava Nikoli na srpskom, sa čekanjem potvrde

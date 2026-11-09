@@ -2,10 +2,10 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-10 (sesija: **GitHub push — opcija A + ZIP
-> fallback** — trenutna verzija `53af13c` spakovana u ZIP za ručni upload jer
-> GitHub auth nije dostupna u sandboxu; `backups/` izbačen iz git praćenja;
-> aplikativni kod NIJE diran).
+> **Zadnja izmena:** 2026-11-10 (sesija: **trajna GitHub veza uspostavljena** —
+> fine-grained PAT u `~/.git-credentials` (van repoa); merge unrelated histories
+> (README) + **push cele istorije uspeo bez force-pusha**; AGENTS.md dopunjen
+> push pravilom; aplikativni kod NIJE diran).
 
 ---
 
@@ -98,6 +98,23 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-10 (trajna GitHub veza — merge + push cele istorije) — ZAVRŠENO:**
+  Nikola napravio fine-grained PAT (samo repo `katchamak`, Contents: Read and
+  write) i poslao ga u chatu. Token upisan **isključivo u `~/.git-credentials`**
+  (IZVAN projektnog foldera, dozvole 0600) + `credential.helper store` globalno;
+  remote URL čist (bez tokena). Provereno pre pusha: **`.env` u git istoriji**
+  (bio u Initial commit `dd8b046`, izbačen u `11b00a2`) sadrži **SAMO lokalnu
+  putanju** `DATABASE_URL=file:…/db/custom.db` — bez mrežnog kredencijala, bez
+  lozinke → bezbedno, bez prepisivanja istorije. Spajanje: `git fetch` →
+  `merge origin/main --allow-unrelated-histories` (README commit `4366e1e`; merge
+  `6243ecb`, obe istorije sačuvane, README dodata lokalno bez konflikta) →
+  **`git push origin main` uspeo: `4366e1e..6243ecb`, fast-forward, BEZ
+  force-pusha**. Verifikacija na remote: 57 commitova; `src/` 74 fajla;
+  `PROJECT_STATUS.md`, `AGENTS.md`, `db/`, `prisma/`, `README.md` prisutni;
+  remote hash == lokalni HEAD. AGENTS.md dopunjen po Nikolinoj naredbi (tačka
+  5): posle svakog završenog i testiranog zadatka → commit **+ push origin
+  main** (§3.9, §4 GitHub veza, §5 checklist). Kredencijal nikad u repo/istoriju;
+  token može regenerisati samo Nikola. Aplikativni kod NIJE diran.
 - **2026-11-10 (GitHub push — opcija A, ZIP fallback) — ZAVRŠENO:** Nikola:
   „Sačuvaj trenutnu verziju aplikacije na GitHub takvu kakva jeste; izostavi
   nepotrebne ZIP arhive i tajne, ali sačuvaj kompletan izvorni kod; ako auth
