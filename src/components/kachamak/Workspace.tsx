@@ -214,150 +214,135 @@ export function Workspace() {
 
   return (
     <div className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
-      {/* top bar — two tracks, identical on every tab. Track 1: home + search over
-          the left panel, scope/save/account/settings over the right panel. Track 2:
-          the section tabs, always in a single line. The vertical dividers line up
-          with the panel edges below and run through both tracks to the very top
+      {/* top bar — ONE strip, identical on every tab: home + search over the left
+          panel, then the section tabs (all in one row), then scope/save/account/
+          settings over the right panel. Together with the strip below it (panel
+          headers + editor toolbar) the top of the app has TWO tracks. The vertical
+          dividers line up with the panel edges below and run to the very top
           (the +1 covers the 1px resizer column so the lines are never bent) */}
-      <header className="shrink-0">
-        {/* track 1 — utilities */}
-        <div className="flex h-10 shrink-0 items-stretch border-b border-white/10">
-          {/* left panel zone: home icon pinned to the corner + project search */}
-          <div
-            className="flex shrink-0 items-center gap-2.5 border-r border-white/10 bg-black/20 px-3"
-            style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
+      <header className="flex shrink-0 items-stretch border-b border-white/10">
+        {/* left panel zone: home icon pinned to the corner + project search */}
+        <div
+          className="flex shrink-0 items-center gap-2.5 border-r border-white/10 bg-black/20 px-3"
+          style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
+        >
+          <button
+            type="button"
+            aria-label="Back to dashboard"
+            title="Dashboard"
+            onClick={closeNovel}
+            className="shrink-0 rounded-md p-1 text-stone-200 hover:bg-white/10 hover:text-white"
           >
+            <House className="h-5 w-5" />
+          </button>
+          {leftPanelOpen && <ProjectSearch />}
+        </div>
+
+        {/* tabs start at the left edge of the workspace, always in a single line */}
+        <nav
+          aria-label="Workspace sections"
+          className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-4"
+        >
+          {TABS.map((t) => (
             <button
+              key={t.key}
               type="button"
-              aria-label="Back to dashboard"
-              title="Dashboard"
-              onClick={closeNovel}
-              className="shrink-0 rounded-md p-1 text-stone-200 hover:bg-white/10 hover:text-white"
+              onClick={() => setTab(t.key as TabKey)}
+              aria-current={activeTab === t.key ? "page" : undefined}
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1 text-base transition-colors ${
+                activeTab === t.key
+                  ? "border border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]"
+                  : "border border-transparent text-stone-300 hover:text-white"
+              }`}
             >
-              <House className="h-5 w-5" />
+              {t.label}
             </button>
-            {leftPanelOpen && <ProjectSearch />}
-          </div>
+          ))}
+        </nav>
 
-          {/* middle stays clear on the utility track */}
-          <div className="min-w-0 flex-1" />
-
-          {/* right panel zone: folder-level dropdown, save, account, settings */}
-          <div
-            className="flex shrink-0 items-center gap-3 border-l border-white/10 bg-black/20 px-3.5"
-            style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
-          >
-            {rightPanelOpen ? (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Tree level"
-                      title="Which level of the tree to show"
-                      className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/15 px-3.5 text-[15px] text-stone-100 transition-colors hover:bg-white/5"
-                    >
-                      <span className="truncate">{SCOPE_LABELS[treeScope]}</span>
-                      <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-64 border-white/10 bg-[#1b1b1b]"
+        {/* right panel zone: folder-level dropdown, save, account, settings */}
+        <div
+          className="flex shrink-0 items-center gap-3 border-l border-white/10 bg-black/20 px-3.5"
+          style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
+        >
+          {rightPanelOpen ? (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Tree level"
+                    title="Which level of the tree to show"
+                    className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/15 px-3.5 text-[15px] text-stone-100 transition-colors hover:bg-white/5"
                   >
-                    {(Object.keys(SCOPE_LABELS) as TreeScope[]).map((s) => (
-                      <DropdownMenuItem
-                        key={s}
-                        onSelect={() => setTreeScope(s)}
-                        className={treeScope === s ? "bg-white/10" : ""}
-                      >
-                        {SCOPE_LABELS[s]}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    <span className="truncate">{SCOPE_LABELS[treeScope]}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-64 border-white/10 bg-[#1b1b1b]"
+                >
+                  {(Object.keys(SCOPE_LABELS) as TreeScope[]).map((s) => (
+                    <DropdownMenuItem
+                      key={s}
+                      onSelect={() => setTreeScope(s)}
+                      className={treeScope === s ? "bg-white/10" : ""}
+                    >
+                      {SCOPE_LABELS[s]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-                <span className="ml-auto" />
+              <span className="ml-auto" />
 
-                <button
-                  type="button"
-                  aria-label="Save"
-                  title="Save"
-                  onClick={() =>
-                    toast.success(
-                      `Saved locally · ${new Date().toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}`
-                    )
-                  }
-                  className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  <Save className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="My account"
-                  title="My account"
-                  onClick={() => setAccountOpen(true)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-[11px] font-bold text-stone-200 transition-colors hover:border-white/50"
-                >
-                  {initials}
-                </button>
-                <button
-                  type="button"
-                  aria-label="Settings"
-                  title="Settings"
-                  onClick={() => setSettingsOpen(true)}
-                  className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  <Settings className="h-5 w-5" />
-                </button>
-              </>
-            ) : (
+              <button
+                type="button"
+                aria-label="Save"
+                title="Save"
+                onClick={() =>
+                  toast.success(
+                    `Saved locally · ${new Date().toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}`
+                  )
+                }
+                className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Save className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="My account"
+                title="My account"
+                onClick={() => setAccountOpen(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-[11px] font-bold text-stone-200 transition-colors hover:border-white/50"
+              >
+                {initials}
+              </button>
               <button
                 type="button"
                 aria-label="Settings"
                 title="Settings"
                 onClick={() => setSettingsOpen(true)}
-                className="mx-auto rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Settings className="h-5 w-5" />
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* track 2 — section tabs, all in one row (scrolls only if ever too narrow) */}
-        <div className="flex h-10 shrink-0 items-stretch border-b border-white/10">
-          <div
-            className="shrink-0 border-r border-white/10 bg-black/20"
-            style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
-          />
-          <nav
-            aria-label="Workspace sections"
-            className="kachamak-scroll flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-4"
-          >
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key as TabKey)}
-                aria-current={activeTab === t.key ? "page" : undefined}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1 text-base transition-colors ${
-                  activeTab === t.key
-                    ? "border border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]"
-                    : "border border-transparent text-stone-300 hover:text-white"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
-          <div
-            className="shrink-0 border-l border-white/10 bg-black/20"
-            style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
-          />
+            </>
+          ) : (
+            <button
+              type="button"
+              aria-label="Settings"
+              title="Settings"
+              onClick={() => setSettingsOpen(true)}
+              className="mx-auto rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </header>
 

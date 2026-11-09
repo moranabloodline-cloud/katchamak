@@ -20,7 +20,7 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 | 5 | Tri-dot meni (tačna struktura iz dokumenta) + Move dijalog (izbor bilo kog root-a/note-a za parenta) | `NoteTree.tsx` |
 | 6 | **Grid** (zadata 09.11.): Scrivener index kartice (ikona + naslov + Synopsis), papir `#efe6cf` na pluti `#241c12`, caption „GRID · <nivo>", jedan nivo hijerarhije, dupli klik → Write, drag & drop reorder (`destIndex` u `moveNodeTo`), „+ New note" u otvoreni nivo; **store v5** (migracija `view:"grid"`→interno `"corkboard"`) | `Corkboard.tsx` |
 | 7 | Ispravke 09.11.: header linije piksel-poravnate (header = panelWidth+1); **mod prikaza se više ne resetuje** (ostaje poslednji aktivan kroz tabove/otvaranje/izlaz) | `NotesSection.tsx`, `store.ts` |
-| + | Već postoje: Trash sa restore-om, **top bar u dve trake (09.11. po Nikoli)** — traka 1: Home+Search levo / Tree Scope+Save+Account+Settings desno, traka 2: tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash svi u jednom redu; levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `PROJEKT-KONTEKST.md` §3 |
+| + | Već postoje: Trash sa restore-om, **top bar u JEDNOJ traci** — Home+Search levo, tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash u sredini (svi u jednom redu), Tree Scope+Save+Account+Settings desno; **druga traka** = red panela + editor toolbar (levo header stabla, sredina toolbar, desno Info/Details/Mentions); levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `PROJEKT-KONTEKST.md` §3 |
 
 ## 2. Šta je U TOKU
 
@@ -95,6 +95,19 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-09 (ISUPRAVKA — top bar vraćen u jednu traku) — ZAVRŠENO:** moja
+  prethodna izmena je pogrešno podelila top bar u dve posebne trake (pa je
+  sa editor toolbar-om ukupno bilo 3 trake). Nikola poslao screenshot kao
+  cilj: **tabovi idu na najvišu traku**, zajedno sa Home+Search levo i
+  Scope+Save+Account+Settings desno — sve u jednom redu; **druga traka je
+  red panela + editor toolbar** (već postoji: header stabla | Normal/Segoe
+  UI/BIUS/align/liste | Info/Details/Mentions). Vraćen header iz commit-a
+  `224b376` u jednoredni oblik (novi commit), zadržan `whitespace-nowrap`+
+  horizontalni skrol da tabovi nikad ne prelome u dva reda. Ukupno: **2
+  trake**. Na Nikolovom screenshotu se vidé i „Chapter 2 - The Tether“
+  dropdown umesto Tree Scope (= tačka 10, Current Note) i „Normal“+copy/
+  delete/link u toolbaru (= tačka 8) — NIJE rađeno bez njegove reči, čeka
+  red (“ajmo redom”).
 - **2026-11-09 (Label i Status — wrap oko teksta) — ZAVRŠENO:** po Nikolinoj
   naredbi u `NoteMetaBar` (dno desnog panela): Label input više nije `flex-1`
   (razvlačio se preko celog panela) ni Status fiksiran na 110px — sada **oba
