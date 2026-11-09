@@ -1,0 +1,756 @@
+     1→"use client";
+     2→
+     3→import { create } from "zustand";
+     4→import { persist, createJSONStorage } from "zustand/middleware";
+     5→import type {
+     6→  NoteNode,
+     7→  Novel,
+     8→  SectionKey,
+     9→  TabKey,
+    10→  TreeScope,
+    11→  ViewMode,
+    12→} from "./types";
+    13→import { SECTION_KEYS } from "./types";
+    14→import { newNovel, seedNovels, DEFAULT_STATUSES } from "./seed";
+    15→import { uid, findNode } from "./utils";
+    16→
+    17→interface KachamakState {
+    18→  novels: Novel[];
+    19→  activeNovelId: string | null;
+    20→  activeTab: TabKey;
+    21→  selectedNodeId: string | null;
+    22→  /* the note currently being renamed inline in the tree (also set right after create) */
+    23→  renamingNodeId: string | null;
+    24→  view: ViewMode;
+    25→  /* top-bar dropdown — which level of the tree is shown */
+    26→  treeScope: TreeScope;
+    27→  defaultAuthor: string;
+    28→
+    29→  /* panel visibility (user-controlled, like the original) */
+    30→  leftPanelOpen: boolean;
+    31→  rightPanelOpen: boolean;
+    32→  toggleLeftPanel: () => void;
+    33→  toggleRightPanel: () => void;
+    34→
+    35→  /* Scrivener-style ruler above the title in the editor — the eye at its end
+    36→     hides it or shows it again (persisted preference) */
+    37→  rulerVisible: boolean;
+    38→  setRulerVisible: (v: boolean) => void;
+    39→
+    40→  /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
+    41→     uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
+    42→     da linije trake 2 ostaju poravnate (persisted preference) */
+    43→  leftZoom: number;
+    44→  midZoom: number;
+    45→  rightZoom: number;
+    46→  setPanelZoom: (panel: "left" | "mid" | "right", v: number) => void;
+    47→
+    48→  /* panel sizes in px (drag the vertical line to widen / narrow) */
+    49→  leftPanelWidth: number;
+    50→  rightPanelWidth: number;
+    51→  setLeftPanelWidth: (px: number) => void;
+    52→  setRightPanelWidth: (px: number) => void;
+    53→
+    54→  /* tree expand / collapse (persisted) */
+    55→  setAllNodesCollapsed: (section: SectionKey, collapsed: boolean) => void;
+    56→  setSubtreeCollapsed: (section: SectionKey, id: string, collapsed: boolean) => void;
+    57→
+    58→  /* library */
+    59→  createNovel: (title: string, author: string) => void;
+    60→  importNovel: (json: string) => { ok: boolean; error?: string };
+    61→  deleteNovel: (id: string) => void;
+    62→  openNovel: (id: string) => void;
+    63→  closeNovel: () => void;
+    64→
+    65→  /* workspace */
+    66→  setTab: (tab: TabKey) => void;
+    67→  setView: (v: ViewMode) => void;
+    68→  setTreeScope: (s: TreeScope) => void;
+    69→  select: (id: string | null) => void;
+    70→  setRenamingNode: (id: string | null) => void;
+    71→  renameNovel: (title: string) => void;
+    72→  setDefaultAuthor: (a: string) => void;
+    73→
+    74→  /* status list (per novel, edited via the status dropdown "Edit…") */
+    75→  addStatus: (name: string) => void;
+    76→  removeStatus: (name: string) => void;
+    77→
+    78→  /* notes */
+    79→  addNode: (
+    80→    section: SectionKey,
+    81→    parentId: string | null,
+    82→    kind?: NoteNode["kind"],
+    83→    title?: string
+    84→  ) => string | null;
+    85→  updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>) => void;
+    86→  deleteNode: (section: SectionKey, id: string) => void;
+    87→  moveNode: (section: SectionKey, id: string, dir: "up" | "down") => void;
+    88→  moveNodeTo: (
+    89→    fromSection: SectionKey,
+    90→    id: string,
+    91→    destSection: SectionKey,
+    92→    destParentId: string | null,
+    93→    destIndex?: number
+    94→  ) => void;
+    95→  duplicateNode: (section: SectionKey, id: string) => void;
+    96→  sortChildren: (
+    97→    section: SectionKey,
+    98→    id: string,
+    99→    mode: "title-asc" | "title-desc" | "created-asc" | "created-desc"
+   100→  ) => void;
+   101→
+   102→  /* trash */
+   103→  restoreFromTrash: (trashId: string) => void;
+   104→  deleteForever: (trashId: string) => void;
+   105→  emptyTrash: () => void;
+   106→}
+   107→
+   108→/* ---------- legacy codex (pre-unification data) ---------- */
+   109→
+   110→interface LegacyCodexEntry {
+   111→  id: string;
+   112→  title: string;
+   113→  content: string;
+   114→  aliases: string[];
+   115→  entryType: string;
+   116→  status: string;
+   117→  createdAt: number;
+   118→  updatedAt: number;
+   119→}
+   120→
+   121→interface LegacyCodexCategory {
+   122→  id: string;
+   123→  name: string;
+   124→  children: LegacyCodexCategory[];
+   125→  entries: LegacyCodexEntry[];
+   126→}
+   127→
+   128→type LegacyNovel = Novel & { codex?: LegacyCodexCategory[] };
+   129→
+   130→const LEGACY_CAT_ICONS: [RegExp, string][] = [
+   131→  [/^char/i, "users"],
+   132→  [/^loc/i, "map-pin"],
+   133→  [/^thing/i, "diamond"],
+   134→  [/^lore/i, "scroll"],
+   135→];
+   136→
+   137→/* turn an old codex category (with its entries) into a plain note subtree */
+   138→function legacyCatToNode(cat: LegacyCodexCategory): NoteNode {
+   139→  const now = Date.now();
+   140→  const icon = LEGACY_CAT_ICONS.find(([re]) => re.test(cat.name))?.[1] ?? "folder";
+   141→  return {
+   142→    id: uid(),
+   143→    title: cat.name,
+   144→    kind: "folder",
+   145→    synopsis: "",
+   146→    content: "",
+   147→    notes: "",
+   148→    status: "",
+   149→    label: "",
+   150→    icon,
+   151→    createdAt: now,
+   152→    updatedAt: now,
+   153→    children: [
+   154→      ...cat.children.map(legacyCatToNode),
+   155→      ...cat.entries.map((e) => ({
+   156→        id: uid(),
+   157→        title: e.title,
+   158→        kind: "doc" as const,
+   159→        synopsis: "",
+   160→        content: e.content ?? "",
+   161→        notes: "",
+   162→        status: e.status ?? "",
+   163→        label: e.entryType ?? "",
+   164→        createdAt: e.createdAt ?? now,
+   165→        updatedAt: e.updatedAt ?? now,
+   166→        children: [] as NoteNode[],
+   167→      })),
+   168→    ],
+   169→  };
+   170→}
+   171→
+   172→/* make sure a novel has every section (older backups may miss keys) and convert
+   173→   its legacy codex array into plain notes in the Codex section */
+   174→function normalizeNovelSections(n: LegacyNovel): void {
+   175→  const secs: Record<string, NoteNode[] | undefined> = { ...(n.sections ?? {}) };
+   176→  for (const k of SECTION_KEYS) {
+   177→    if (!Array.isArray(secs[k])) secs[k] = [];
+   178→  }
+   179→  if (secs.codex!.length === 0 && Array.isArray(n.codex) && n.codex.length > 0) {
+   180→    secs.codex = n.codex.map(legacyCatToNode);
+   181→  }
+   182→  n.sections = secs as Novel["sections"];
+   183→  delete n.codex;
+   184→}
+   185→
+   186→/* ---------- immutable helpers ---------- */
+   187→
+   188→function mapNodes(nodes: NoteNode[], fn: (n: NoteNode) => NoteNode): NoteNode[] {
+   189→  return nodes.map((n) => ({ ...fn(n), children: mapNodes(n.children, fn) }));
+   190→}
+   191→
+   192→function removeFromNodes(
+   193→  nodes: NoteNode[],
+   194→  id: string
+   195→): { nodes: NoteNode[]; removed: NoteNode | null; parentId: string | null } {
+   196→  const found: { removed: NoteNode | null; parentId: string | null } = {
+   197→    removed: null,
+   198→    parentId: null,
+   199→  };
+   200→  const walk = (list: NoteNode[], pid: string | null): NoteNode[] => {
+   201→    const out: NoteNode[] = [];
+   202→    for (const n of list) {
+   203→      if (n.id === id) {
+   204→        found.removed = n;
+   205→        found.parentId = pid;
+   206→        continue;
+   207→      }
+   208→      out.push({ ...n, children: walk(n.children, n.id) });
+   209→    }
+   210→    return out;
+   211→  };
+   212→  const nodes2 = walk(nodes, null);
+   213→  return { nodes: nodes2, removed: found.removed, parentId: found.parentId };
+   214→}
+   215→
+   216→function touch(novel: Novel): Novel {
+   217→  return { ...novel, updatedAt: Date.now() };
+   218→}
+   219→
+   220→function makeNode(kind: NoteNode["kind"], title: string): NoteNode {
+   221→  const now = Date.now();
+   222→  return {
+   223→    id: uid(),
+   224→    title,
+   225→    kind,
+   226→    synopsis: "",
+   227→    content: "",
+   228→    notes: "",
+   229→    status: "",
+   230→    label: "",
+   231→    createdAt: now,
+   232→    updatedAt: now,
+   233→    children: [],
+   234→  };
+   235→}
+   236→
+   237→const STORAGE_KEY = "kachamak-store-v1";
+   238→
+   239→export const useKachamak = create<KachamakState>()(
+   240→  persist(
+   241→    (set, get) => ({
+   242→      novels: [],
+   243→      activeNovelId: null,
+   244→      activeTab: "binder",
+   245→      selectedNodeId: null,
+   246→      renamingNodeId: null,
+   247→      view: "split",
+   248→      treeScope: "all",
+   249→      defaultAuthor: "Nikola Djokovic",
+   250→
+   251→      leftPanelOpen: true,
+   252→      rightPanelOpen: true,
+   253→      rulerVisible: true,
+   254→
+   255→      leftZoom: 1,
+   256→      midZoom: 1,
+   257→      rightZoom: 1,
+   258→
+   259→      leftPanelWidth: 256,
+   260→      rightPanelWidth: 288,
+   261→      setLeftPanelWidth: (px) =>
+   262→        set({ leftPanelWidth: Math.round(Math.min(560, Math.max(240, px))) }),
+   263→      setRightPanelWidth: (px) =>
+   264→        set({ rightPanelWidth: Math.round(Math.min(680, Math.max(190, px))) }),
+   265→
+   266→      toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
+   267→      toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+   268→
+   269→      setRulerVisible: (v) => set({ rulerVisible: v }),
+   270→
+   271→      setPanelZoom: (panel, v) => {
+   272→        const z = Math.round(Math.min(2, Math.max(0.5, v)) * 100) / 100;
+   273→        set(
+   274→          panel === "left"
+   275→            ? { leftZoom: z }
+   276→            : panel === "mid"
+   277→              ? { midZoom: z }
+   278→              : { rightZoom: z }
+   279→        );
+   280→      },
+   281→
+   282→      addStatus: (name) => {
+   283→        const v = name.trim();
+   284→        if (!v) return;
+   285→        set((s) => ({
+   286→          novels: s.novels.map((n) =>
+   287→            n.id === s.activeNovelId && !n.statuses.includes(v)
+   288→              ? touch({ ...n, statuses: [...n.statuses, v] })
+   289→              : n
+   290→          ),
+   291→        }));
+   292→      },
+   293→
+   294→      removeStatus: (name) =>
+   295→        set((s) => ({
+   296→          novels: s.novels.map((n) =>
+   297→            n.id === s.activeNovelId
+   298→              ? touch({ ...n, statuses: n.statuses.filter((x) => x !== name) })
+   299→              : n
+   300→          ),
+   301→        })),
+   302→
+   303→      setAllNodesCollapsed: (section, collapsed) => {
+   304→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   305→        if (!novel) return;
+   306→        const map = (nodes: NoteNode[]): NoteNode[] =>
+   307→          nodes.map((n) => ({ ...n, collapsed, children: map(n.children) }));
+   308→        novel.sections = { ...novel.sections, [section]: map(novel.sections[section]) };
+   309→        set((s) => ({
+   310→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   311→        }));
+   312→      },
+   313→
+   314→      /* Collapse all / Expand all in the note menu — the note and every descendant */
+   315→      setSubtreeCollapsed: (section, id, collapsed) => {
+   316→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   317→        if (!novel) return;
+   318→        const target = findNode(novel.sections[section], id);
+   319→        if (!target) return;
+   320→        const apply = (n: NoteNode) => {
+   321→          n.collapsed = collapsed;
+   322→          n.children.forEach(apply);
+   323→        };
+   324→        apply(target);
+   325→        set((s) => ({
+   326→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   327→        }));
+   328→      },
+   329→
+   330→      /* ---------- library ---------- */
+   331→
+   332→      createNovel: (title, author) => {
+   333→        const n = newNovel(title, author || get().defaultAuthor);
+   334→        set((s) => ({
+   335→          novels: [...s.novels, n],
+   336→          activeNovelId: n.id,
+   337→          activeTab: "binder",
+   338→          selectedNodeId: null,
+   339→          /* view stays on the last active mode — never reset it */
+   340→        }));
+   341→      },
+   342→
+   343→      importNovel: (json) => {
+   344→        try {
+   345→          const parsed = JSON.parse(json) as LegacyNovel;
+   346→          if (!parsed || typeof parsed !== "object" || !parsed.title) {
+   347→            return { ok: false, error: "Not a Kachamak novel backup." };
+   348→          }
+   349→          const n: LegacyNovel = {
+   350→            ...parsed,
+   351→            id: uid(), // never collide with existing ids
+   352→            trash: parsed.trash ?? [],
+   353→            statuses: parsed.statuses ?? [],
+   354→            labels: parsed.labels ?? [],
+   355→          };
+   356→          normalizeNovelSections(n);
+   357→          set((s) => ({
+   358→            novels: [...s.novels, n as Novel],
+   359→            activeNovelId: n.id,
+   360→            activeTab: "binder",
+   361→            selectedNodeId: null,
+   362→            /* view stays on the last active mode — never reset it */
+   363→          }));
+   364→          return { ok: true };
+   365→        } catch {
+   366→          return { ok: false, error: "Could not read that JSON file." };
+   367→        }
+   368→      },
+   369→
+   370→      deleteNovel: (id) =>
+   371→        set((s) => ({
+   372→          novels: s.novels.filter((n) => n.id !== id),
+   373→          activeNovelId: s.activeNovelId === id ? null : s.activeNovelId,
+   374→        })),
+   375→
+   376→      openNovel: (id) =>
+   377→        set({ activeNovelId: id, activeTab: "binder", selectedNodeId: null }),
+   378→
+   379→      closeNovel: () => set({ activeNovelId: null, selectedNodeId: null }),
+   380→
+   381→      /* ---------- workspace ---------- */
+   382→
+   383→      /* prelazak na drugi tab NE menja radnu površinu — selekcija ostaje
+   384→         (editor toolbar i desni panel drže tekuću notu) dok korisnik ne klikne
+   385→         novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
+   386→      setTab: (tab) => set({ activeTab: tab, renamingNodeId: null }),
+   387→
+   388→      setView: (v) => set({ view: v }),
+   389→
+   390→      setTreeScope: (s) => set({ treeScope: s }),
+   391→
+   392→      select: (id) => set({ selectedNodeId: id }),
+   393→
+   394→      setRenamingNode: (id) => set({ renamingNodeId: id }),
+   395→
+   396→      renameNovel: (title) =>
+   397→        set((s) => ({
+   398→          novels: s.novels.map((n) =>
+   399→            n.id === s.activeNovelId ? touch({ ...n, title: title.trim() || n.title }) : n
+   400→          ),
+   401→        })),
+   402→
+   403→      setDefaultAuthor: (a) => set({ defaultAuthor: a }),
+   404→
+   405→      /* ---------- notes ---------- */
+   406→
+   407→      addNode: (section, parentId, kind, title) => {
+   408→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   409→        if (!novel) return null;
+   410→        const roots = novel.sections[section];
+   411→        let created: NoteNode | null = null;
+   412→
+   413→        /* free hierarchy — every new note is the same thing; the user names it
+   414→           (inline rename opens right away), picks its icon and its colour */
+   415→        const n = makeNode(kind ?? "doc", title ?? "Untitled");
+   416→        if (parentId === null) {
+   417→          created = n;
+   418→          roots.push(n);
+   419→        } else {
+   420→          const parent = findNode(roots, parentId);
+   421→          if (!parent) return null;
+   422→          created = n;
+   423→          parent.children.push(n);
+   424→          parent.collapsed = false;
+   425→        }
+   426→        set((s) => ({
+   427→          selectedNodeId: created?.id ?? null,
+   428→          renamingNodeId: created?.id ?? null,
+   429→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   430→        }));
+   431→        return created?.id ?? null;
+   432→      },
+   433→
+   434→      updateNode: (section, id, patch) => {
+   435→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   436→        if (!novel) return;
+   437→        const roots = novel.sections[section];
+   438→        const target = findNode(roots, id);
+   439→        if (!target) return;
+   440→        Object.assign(target, patch, { updatedAt: Date.now() });
+   441→        set((s) => ({
+   442→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   443→        }));
+   444→      },
+   445→
+   446→      deleteNode: (section, id) => {
+   447→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   448→        if (!novel) return;
+   449→        const { nodes, removed, parentId } = removeFromNodes(
+   450→          novel.sections[section],
+   451→          id
+   452→        );
+   453→        if (!removed) return;
+   454→        novel.sections = { ...novel.sections, [section]: nodes };
+   455→        novel.trash = [
+   456→          { id: uid(), parentId, section, node: removed, deletedAt: Date.now() },
+   457→          ...novel.trash,
+   458→        ];
+   459→        const removedNode: NoteNode = removed;
+   460→        set((s) => ({
+   461→          selectedNodeId:
+   462→            s.selectedNodeId === id ||
+   463→            findNode([removedNode], s.selectedNodeId ?? "")
+   464→              ? null
+   465→              : s.selectedNodeId,
+   466→          renamingNodeId:
+   467→            s.renamingNodeId &&
+   468→            (s.renamingNodeId === id || findNode([removedNode], s.renamingNodeId))
+   469→              ? null
+   470→              : s.renamingNodeId,
+   471→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   472→        }));
+   473→      },
+   474→
+   475→      moveNode: (section, id, dir) => {
+   476→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   477→        if (!novel) return;
+   478→        const roots = novel.sections[section];
+   479→
+   480→        const swap = (list: NoteNode[]): boolean => {
+   481→          const i = list.findIndex((n) => n.id === id);
+   482→          if (i >= 0) {
+   483→            const j = dir === "up" ? i - 1 : i + 1;
+   484→            if (j < 0 || j >= list.length) return false;
+   485→            const copy = [...list];
+   486→            [copy[i], copy[j]] = [copy[j], copy[i]];
+   487→            list.length = 0;
+   488→            list.push(...copy);
+   489→            return true;
+   490→          }
+   491→          return list.some((n) => swap(n.children));
+   492→        };
+   493→        swap(roots);
+   494→        set((s) => ({
+   495→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   496→        }));
+   497→      },
+   498→
+   499→      /* Move — the note becomes the last child of the destination (or a section root) */
+   500→      moveNodeTo: (fromSection, id, destSection, destParentId, destIndex) => {
+   501→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   502→        if (!novel) return;
+   503→        const fromRoots = novel.sections[fromSection];
+   504→        const moving = findNode(fromRoots, id);
+   505→        if (!moving) return;
+   506→        /* never move a note into itself or one of its own sub-pages */
+   507→        if (
+   508→          destSection === fromSection &&
+   509→          destParentId &&
+   510→          (destParentId === id || findNode([moving], destParentId))
+   511→        )
+   512→          return;
+   513→        const { nodes, removed } = removeFromNodes(fromRoots, id);
+   514→        if (!removed) return;
+   515→        novel.sections = { ...novel.sections, [fromSection]: nodes };
+   516→        /* destIndex (optional): insertion position in the post-removal list —
+   517→           the Corkboard computes it against the array without the dragged note */
+   518→        const spliceOrPush = (list: NoteNode[]) => {
+   519→          if (typeof destIndex === "number") {
+   520→            const idx = Math.max(0, Math.min(destIndex, list.length));
+   521→            list.splice(idx, 0, removed);
+   522→          } else {
+   523→            list.push(removed);
+   524→          }
+   525→        };
+   526→        if (destParentId) {
+   527→          const parent = findNode(novel.sections[destSection], destParentId);
+   528→          if (parent) {
+   529→            spliceOrPush(parent.children);
+   530→            parent.collapsed = false;
+   531→          } else {
+   532→            spliceOrPush(novel.sections[destSection]);
+   533→          }
+   534→        } else {
+   535→          spliceOrPush(novel.sections[destSection]);
+   536→        }
+   537→        set((s) => ({
+   538→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   539→        }));
+   540→      },
+   541→
+   542→      /* deep-copy the note (with all sub-pages) right below the original */
+   543→      duplicateNode: (section, id) => {
+   544→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   545→        if (!novel) return;
+   546→        const roots = novel.sections[section];
+   547→        if (!findNode(roots, id)) return;
+   548→        const deep = (n: NoteNode): NoteNode => ({
+   549→          ...n,
+   550→          id: uid(),
+   551→          createdAt: Date.now(),
+   552→          updatedAt: Date.now(),
+   553→          children: n.children.map(deep),
+   554→        });
+   555→        const insertAfter = (list: NoteNode[]): boolean => {
+   556→          const i = list.findIndex((n) => n.id === id);
+   557→          if (i >= 0) {
+   558→            list.splice(i + 1, 0, deep(list[i]));
+   559→            return true;
+   560→          }
+   561→          return list.some((n) => insertAfter(n.children));
+   562→        };
+   563→        insertAfter(roots);
+   564→        set((s) => ({
+   565→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   566→        }));
+   567→      },
+   568→
+   569→      /* sort sub-pages of a note — title A→Z / Z→A, oldest or newest first */
+   570→      sortChildren: (section, id, mode) => {
+   571→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   572→        if (!novel) return;
+   573→        const roots = novel.sections[section];
+   574→        const target = findNode(roots, id);
+   575→        const list = target ? target.children : roots;
+   576→        if (!target || list.length === 0) return;
+   577→        const byTitle = (a: NoteNode, b: NoteNode) =>
+   578→          a.title.localeCompare(b.title, undefined, {
+   579→            sensitivity: "base",
+   580→            numeric: true,
+   581→          });
+   582→        list.sort((a, b) => {
+   583→          switch (mode) {
+   584→            case "title-desc":
+   585→              return byTitle(b, a);
+   586→            case "created-asc":
+   587→              return a.createdAt - b.createdAt;
+   588→            case "created-desc":
+   589→              return b.createdAt - a.createdAt;
+   590→            default:
+   591→              return byTitle(a, b);
+   592→          }
+   593→        });
+   594→        set((s) => ({
+   595→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   596→        }));
+   597→      },
+   598→
+   599→      /* ---------- trash ---------- */
+   600→
+   601→      restoreFromTrash: (trashId) => {
+   602→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   603→        if (!novel) return;
+   604→        const item = novel.trash.find((t) => t.id === trashId);
+   605→        if (!item) return;
+   606→        if (item.parentId) {
+   607→          const parent = findNode(novel.sections[item.section], item.parentId);
+   608→          if (parent) {
+   609→            parent.children.push(item.node);
+   610→            parent.collapsed = false;
+   611→          } else {
+   612→            novel.sections[item.section].push(item.node);
+   613→          }
+   614→        } else {
+   615→          novel.sections[item.section].push(item.node);
+   616→        }
+   617→        novel.trash = novel.trash.filter((t) => t.id !== trashId);
+   618→        set((s) => ({
+   619→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   620→        }));
+   621→      },
+   622→
+   623→      deleteForever: (trashId) => {
+   624→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   625→        if (!novel) return;
+   626→        novel.trash = novel.trash.filter((t) => t.id !== trashId);
+   627→        set((s) => ({
+   628→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   629→        }));
+   630→      },
+   631→
+   632→      emptyTrash: () => {
+   633→        const novel = get().novels.find((n) => n.id === get().activeNovelId);
+   634→        if (!novel) return;
+   635→        novel.trash = [];
+   636→        set((s) => ({
+   637→          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+   638→        }));
+   639→      },
+   640→    }),
+   641→    {
+   642→      name: STORAGE_KEY,
+   643→      version: 5,
+   644→      storage: createJSONStorage(() => localStorage),
+   645→      /* v0 → v1: original-style statuses, free-text labels instead of label ids
+   646→         v2 → v3: every note gets its icon + colour (like the original app —
+   647→         acts and chapters as solid coloured folders)
+   648→         v3 → v4: everything is a NOTE on every tab — the old Codex
+   649→         categories/entries become plain notes in the Codex section
+   650→         v4 → v5: the Grid view becomes the Corkboard (Scrivener index cards) */
+   651→      migrate: (persisted) => {
+   652→        const s = persisted as KachamakState;
+   653→        if ((s as { view?: string }).view === "grid") s.view = "corkboard";
+   654→        const OLD_DEFAULT_STATUSES = [
+   655→          "To Do",
+   656→          "First Draft",
+   657→          "Second Draft",
+   658→          "Revised",
+   659→          "Final",
+   660→        ];
+   661→        const RENAMES: Record<string, string> = {
+   662→          "Second Draft": "Revised Draft",
+   663→          Revised: "Revised Draft",
+   664→          Final: "Final Draft",
+   665→        };
+   666→        for (const n of (s.novels ?? []) as LegacyNovel[]) {
+   667→          let upgraded = false;
+   668→          if ((n.statuses ?? []).join("|") === OLD_DEFAULT_STATUSES.join("|")) {
+   669→            n.statuses = [...DEFAULT_STATUSES];
+   670→            upgraded = true;
+   671→          }
+   672→          const idToName = new Map((n.labels ?? []).map((l) => [l.id, l.name]));
+   673→          const nameToColor = new Map((n.labels ?? []).map((l) => [l.name, l.color]));
+   674→          /* act palette like the original screenshot: gold / green / purple … */
+   675→          const ACT_PALETTE = [
+   676→            { act: "#e3c567", chapter: "#c69c6d" },
+   677→            { act: "#8ab661", chapter: "#699bdd" },
+   678→            { act: "#a371f7", chapter: "#c084fc" },
+   679→          ];
+   680→          let actIndex = -1;
+   681→          const walk = (nodes: NoteNode[], chapterColor?: string) => {
+   682→            for (const nd of nodes) {
+   683→              if (nd.label && idToName.has(nd.label)) nd.label = idToName.get(nd.label)!;
+   684→              if (!nd.color && nd.label && nameToColor.has(nd.label)) {
+   685→                nd.color = nameToColor.get(nd.label)!;
+   686→              }
+   687→              if (upgraded && RENAMES[nd.status]) nd.status = RENAMES[nd.status];
+   688→              /* give every container-like note the solid folder icon + colours */
+   689→              if (!nd.icon && (nd.kind === "act" || nd.kind === "chapter" || nd.kind === "folder")) {
+   690→                nd.icon = "folder";
+   691→              }
+   692→              let chColor: string | undefined;
+   693→              if (!nd.color && nd.kind === "act") {
+   694→                actIndex += 1;
+   695→                const pal = ACT_PALETTE[actIndex % ACT_PALETTE.length];
+   696→                nd.color = pal.act;
+   697→                chColor = pal.chapter;
+   698→              }
+   699→              if (!nd.color && nd.kind === "chapter" && chapterColor) {
+   700→                nd.color = chapterColor;
+   701→              }
+   702→              walk(nd.children, nd.kind === "act" ? chColor : undefined);
+   703→            }
+   704→          };
+   705→          normalizeNovelSections(n);
+   706→          for (const roots of Object.values(n.sections)) {
+   707→            actIndex = -1;
+   708→            walk(roots);
+   709→          }
+   710→          for (const t of n.trash ?? []) walk([t.node]);
+   711→        }
+   712→        return s;
+   713→      },
+   714→      onRehydrateStorage: () => (state) => {
+   715→        // first run: seed with the demo novels
+   716→        if (state && state.novels.length === 0) {
+   717→          state.novels = seedNovels();
+   718→        }
+   719→      },
+   720→    }
+   721→  )
+   722→);
+   723→
+   724→/* ---------- export helper (backup) ---------- */
+   725→
+   726→export function exportNovelJson(novel: Novel): void {
+   727→  const blob = new Blob([JSON.stringify(novel, null, 2)], {
+   728→    type: "application/json",
+   729→  });
+   730→  const url = URL.createObjectURL(blob);
+   731→  const a = document.createElement("a");
+   732→  a.href = url;
+   733→  a.download = `${novel.title.replace(/[^\w\d-]+/g, "_")}-kachamak-backup.json`;
+   734→  a.click();
+   735→  URL.revokeObjectURL(url);
+   736→}
+   737→
+   738→/* export a single note (with its sub-pages) from the 3-dots menu */
+   739→export function exportNoteJson(novelTitle: string, node: NoteNode): void {
+   740→  const payload = {
+   741→    type: "kachamak-note",
+   742→    novel: novelTitle,
+   743→    exportedAt: new Date().toISOString(),
+   744→    note: node,
+   745→  };
+   746→  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+   747→    type: "application/json",
+   748→  });
+   749→  const url = URL.createObjectURL(blob);
+   750→  const a = document.createElement("a");
+   751→  a.href = url;
+   752→  a.download = `${node.title.replace(/[^\w\d-]+/g, "_")}-note.json`;
+   753→  a.click();
+   754→  URL.revokeObjectURL(url);
+   755→}
+   756→

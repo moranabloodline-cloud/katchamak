@@ -9,7 +9,7 @@ import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
-import { findNodeInNovel, novelWords } from "@/lib/kachamak/utils";
+import { findNodeInNovel, novelWords, ownWords } from "@/lib/kachamak/utils";
 import { NOTE_COLORS } from "@/lib/kachamak/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -452,8 +452,18 @@ export function NotesSection({ section }: { section: SectionKey }) {
             word count stays exactly centred because the toolbar is absolute */}
         <div className="relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
           <Target className="absolute left-3 h-4 w-4 text-amber-400/90" aria-hidden="true" />
-          <span className="mx-auto text-xs text-muted-foreground">
-            {novel ? `${novelWords(novel).toLocaleString("en-US")} words` : "0 words"}
+          {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
+              OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
+              Details tabu); zbir celog romana samo kad ništa nije selektovano */}
+          <span
+            className="mx-auto text-xs text-muted-foreground"
+            title={selected ? "Words in the selected note" : "Total words in the novel"}
+          >
+            {selected
+              ? `${ownWords(selected).toLocaleString("en-US")} words`
+              : novel
+                ? `${novelWords(novel).toLocaleString("en-US")} words`
+                : "0 words"}
           </span>
           <div
             role="toolbar"

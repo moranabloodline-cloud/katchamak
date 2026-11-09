@@ -2,10 +2,9 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: zoom po panelu — Ctrl+skrol u svakom
-> panelu, sadržina se uvećava 0.5–2.0×, trake ostaju poravnate, preferenca se
-> čuva; drag & drop nota na svakom panelu — stablo/Grid/List, menja poziciju
-> i hijerarhiju kao u Scriveneru; next.config: devIndicators false).
+> **Zadnja izmena:** 2026-11-09 (sesija: sitnice posle rulera — pozadina reda
+> iza lineala vraćena na boju radne površine; brojač na dnu radne površine
+> sada pokazuje reči OTVORENE note, zbir romana samo bez selekcije).
 
 ---
 
@@ -15,7 +14,7 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 
 | # | Stavka | Gde u kodu |
 |---|--------|------------|
-| 1 | Donja traka radne površine: Target ikonica skroz levo, word count u sredini (`novelWords`, format „71,257 words"), **Split/Write/Grid/List uz desnu ivicu srednjeg panela** (09.11. po Nikoli) | `NotesSection.tsx` |
+| 1 | Donja traka radne površine: Target ikonica skroz levo, word count u sredini — **reči otvorene note** (`ownWords`: content + Synopsis + Notes, kao u Scriveneru; zbir celog romana `novelWords` samo kad ništa nije selektovano) (ispravka 09.11. po Nikoli — „i dalje ne radi kako treba"), **Split/Write/Grid/List uz desnu ivicu srednjeg panela** | `NotesSection.tsx` |
 | 2 | Everything is a Note — svi tabovi isti note sistem (Codex uključen; migrate v3→v4) | `types.ts`, `store.ts` |
 | 3 | Slobodna hijerarhija — novi notes uvek `kind:"doc"`, ime/ikona/boja po korisniku | `types.ts` |
 | 4 | Klik na ikonu note → icon picker popup (i preko menija „Change icon") | `NoteTree.tsx` |
@@ -96,6 +95,30 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (sitnice posle rulera: pozadina iza lineala + brojač reči) — ZAVRŠENO:**
+  po Nikolinoj naredbi „u delu iza rulera promenio si boju pozadine, mora da
+  bude isto kao i radne površine; a word count i dalje ne radi kako treba":
+  (1) **POZADINA IZA LINEALA** — red lineala imao je `bg-background`
+  (oklch(0.145) ≈ rgb(10,10,10)), a radna površina je `#0d0d0d` (rgb(13,13,13))
+  sa Workspace roota — vidljiva traka drugačijeg tona. Skinut `bg-background`
+  (i nepotrebni `sticky`/`z-10` — red je IZNAD skrolera, tekst ne može da
+  „curi“ ispod njega); red je sada providan i nasleđuje TAČNU boju radne
+  površine. `RulerStrip` (telо lineala) ostaje kako jeste. Piksel-verifikacija:
+  iza rulera = rgb(13,13,13) = radna površina, na 1280 i na 1440.
+  (2) **BROJAČ REČI** — bio je tehnički ispravan (uživo se menjao, zbir celog
+  romana nezavisno potvrđen 61=61), ALI je prikazivao ZBIR ROMANA i dok je
+  nota otvorena — zato „i dalje ne radi kako treba“ (u Scriveneru brojač
+  pokazuje otvoreni dokument). Sada: kad je nota selektovana pokazuje
+  `ownWords(selected)` (content + Synopsis + Notes — isto što i „Words“ u
+  Details tabu), zbir celog romana samo kad ništa nije selektovano; tooltip
+  „Words in the selected note“ / „Total words in the novel“. Testirano uživo:
+  „The third dial waited.“ → „4 words“; +3 otkucane → „7“; prazna Scene 1 →
+  „0“; kucanje u Synopsis/Notes se isto uključuje; Home ekran i dalje pokazuje
+  ukupni zbir. Test unosi obrisani — store vraćen na originalne podatke.
+  Verifikacija: tsc 0 grešaka (src/), build čist, oko lineala radi
+  (sakrij/prikaži), donja linija trake 2 y=79: 1440/1440 = 100%, konzola
+  bez grešaka.
 
 - **2026-11-09 (zoom po panelu + drag & drop nota na svakom panelu) — ZAVRŠENO:**
   po Nikolinoj naredbi „svaki panel treba da ima svoj zaseban zoom koji radi

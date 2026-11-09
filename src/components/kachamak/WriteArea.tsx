@@ -217,10 +217,11 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
       {/* zoom srednjeg panela: lineal + strana se uvećavaju; toolbar ostaje
           van zooma (traka 2 mora biti u istom redu kroz sve panele) */}
       <div className="flex min-h-0 flex-1 flex-col" style={{ zoom: midZoom }}>
-        {/* ruler — sticky na vrhu skrolera: dele ISTI kontekst širine sa tekstom
-            (isti scrollbar), pa je poravnat sa stubcem teksta pri svakom zoomu;
-            bg-background da tekst ne „curi“ ispod njega kad se skroluje */}
-        <div className="sticky top-0 z-10 flex h-7 shrink-0 items-center bg-background px-6">
+        {/* ruler — bez svoje pozadine: mora biti ISTA boja kao radna površina
+            (#0d0d0d sa Workspace roota; bg-background je bio drugačiji ton).
+            Red je IZNAD skrolera, ne unutar njega — tekst ne može da „curi“
+            ispod njega, pa sticky/z nisu potrebni */}
+        <div className="flex h-7 shrink-0 items-center px-6">
           <div
             className="relative mx-auto h-5 w-full"
             style={{ maxWidth: "min(48rem, 100%)" }}
