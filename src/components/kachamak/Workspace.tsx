@@ -215,12 +215,13 @@ export function Workspace() {
   return (
     <div className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
       {/* top bar — one continuous strip, identical on every tab; the vertical
-          dividers line up with the panel edges below and run to the very top */}
+          dividers line up with the panel edges below and run to the very top
+          (the +1 covers the 1px resizer column so the lines are never bent) */}
       <header className="flex shrink-0 items-stretch border-b border-white/10">
         {/* left panel zone: home icon pinned to the corner + project search */}
         <div
           className="flex shrink-0 items-center gap-2.5 border-r border-white/10 bg-black/20 px-3"
-          style={{ width: leftPanelOpen ? leftPanelWidth : 28 }}
+          style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
         >
           <button
             type="button"
@@ -259,7 +260,7 @@ export function Workspace() {
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
           className="flex shrink-0 items-center gap-3 border-l border-white/10 bg-black/20 px-3.5"
-          style={{ width: rightPanelOpen ? rightPanelWidth : 28 }}
+          style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
         >
           {rightPanelOpen ? (
             <>

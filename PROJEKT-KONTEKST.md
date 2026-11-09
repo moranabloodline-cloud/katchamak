@@ -99,17 +99,28 @@ Dodatno već postoje:
   za oba panela (levi 240–560px, desni 190–680px, persistovano).
 - Fix od ranije: `sr-only` span leak (svugde `relative` roditelji) +
   `html,body{overflow:hidden}` u `globals.css` — stranica se više ne pomera.
-- **✅ Tačka 6 — CORKBOARD (uradjeno 09.11.):** `Corkboard.tsx` zamenio
-  GridView (obrisan). Klasične Scrivener index kartice: **ikona + naslov +
-  Synopsis**, papir boje `#efe6cf` na tamnoj pluti `#241c12`, caption
-  „CORKBOARD · <nivo>“ zlatno. **Jedan nivo hijerarhije**: deca selektovanog
+- **✅ Tačka 6 — GRID (uradjeno 09.11., ime ispravljeno po Nikoli):**
+  `Corkboard.tsx` zamenio GridView (obrisan) — ali **naziv moda je „Grid"**,
+  po Nikolaovoj ispravci („NISAM TI DOZVOLIO DA PROMENIŠ Grid u Corkboard —
+  taj naziv Grid je ispravan"). Klasične Scrivener index kartice: **ikona +
+  naslov + Synopsis**, papir boje `#efe6cf` na tamnoj pluti `#241c12`, caption
+  „GRID · <nivo>" zlatno. **Jedan nivo hijerarhije**: deca selektovanog
   kontejnera / sama leaf nota / top nivo sekcije kad ništa nije selektovano.
   **Dupli klik** otvara notu u Write modu. **Drag & drop reorder** (HTML5 DnD,
   zlatna ivica-ubacivač pre/posle, drop na plutu = na kraj) preko novog
   opcionog `destIndex` parametra u `moveNodeTo`. Store **v5** (migracija:
-  sačuvani `view:"grid"` → `"corkboard"`). „+ New note“ dodaje u otvoreni nivo.
-  Testirano: render, nivoi, dupli klik, drag reorder + persistencija posle
-  reload-a, build + tsc čisti.
+  sačuvani `view:"grid"` → `"corkboard"` interno). „+ New note" dodaje u
+  otvoreni nivo. Testirano: render, nivoi, dupli klik, drag reorder +
+  persistencija posle reload-a, build + tsc čisti.
+- **✅ Ispravke po Nikolinoj prijavi (09.11.):**
+  1. **Header linije poravnate** — vertikalne linije topbara bile su 1px
+     ukrivo u odnosu na linije panela (levo header 255 vs body 256; desno
+     header 1152 vs body 1151). Fix: header zone width = panelWidth + 1
+     (pokriva 1px resizer kolonu). Mereno pikselima: 256=256, 1151=1151.
+  2. **Mod prikaza (Split/Write/Grid/List) se VIŠE NE RESETUJE** —
+     openNovel/createNovel/importNovel više ne postavljaju view; ostaje
+     uvek na poslednjem aktivnom modu (kroz tabove, izbor fajla, izlaz na
+     dashboard i ponovno otvaranje — testirano).
 
 ## 4. Šta je SLEDEĆE (po redu — iz arhitektura dokumenta)
 

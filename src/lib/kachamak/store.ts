@@ -305,7 +305,7 @@ export const useKachamak = create<KachamakState>()(
           activeNovelId: n.id,
           activeTab: "binder",
           selectedNodeId: null,
-          view: "corkboard",
+          /* view stays on the last active mode — never reset it */
         }));
       },
 
@@ -328,7 +328,7 @@ export const useKachamak = create<KachamakState>()(
             activeNovelId: n.id,
             activeTab: "binder",
             selectedNodeId: null,
-            view: "corkboard",
+            /* view stays on the last active mode — never reset it */
           }));
           return { ok: true };
         } catch {
@@ -343,7 +343,7 @@ export const useKachamak = create<KachamakState>()(
         })),
 
       openNovel: (id) =>
-        set({ activeNovelId: id, activeTab: "binder", selectedNodeId: null, view: "corkboard" }),
+        set({ activeNovelId: id, activeTab: "binder", selectedNodeId: null }),
 
       closeNovel: () => set({ activeNovelId: null, selectedNodeId: null }),
 

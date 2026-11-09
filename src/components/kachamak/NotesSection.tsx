@@ -27,10 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+/* naziv moda je „Grid“ — po Nikoli; interno ključ ostaje corkboard (kompatibilnost
+   sačuvanih podataka). Kartice (ikona+naslov+Synopsis) su iz arhitektura dokumenta */
 const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "split", label: "Split" },
   { key: "write", label: "Write" },
-  { key: "corkboard", label: "Corkboard" },
+  { key: "corkboard", label: "Grid" },
   { key: "list", label: "List" },
 ];
 
@@ -370,7 +372,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
                   onClick={() => setView("corkboard")}
                   className="mt-2 rounded-lg border border-orange-500/40 px-3 py-1.5 text-xs text-orange-300 hover:bg-orange-500/10"
                 >
-                  Browse Corkboard instead
+                  Browse Grid instead
                 </button>
               </div>
             ))}
@@ -419,7 +421,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
                   </button>
                 </div>
                 <p className="p-4 text-xs leading-relaxed text-muted-foreground">
-                  Select a note in the tree or a card in the Corkboard to see its synopsis,
+                  Select a note in the tree or a card in the Grid to see its synopsis,
                   notes and details here.
                 </p>
                 {/* keep the full-width bottom bar continuous */}

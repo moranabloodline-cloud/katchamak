@@ -97,7 +97,8 @@ function IndexCard({
   );
 }
 
-/* ---------- the corkboard: one hierarchy level at a time ---------- */
+/* ---------- the Grid: classic index cards, one hierarchy level at a time ----------
+   (Nikola's name for this mode is "Grid" — the label everywhere user-visible) */
 
 export function Corkboard({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
@@ -158,7 +159,7 @@ export function Corkboard({ section }: { section: SectionKey }) {
     >
       <div className="px-6 pb-1 pt-5">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[#c9a55c]/80">
-          Corkboard · {levelName}
+          Grid · {levelName}
         </p>
       </div>
       <div className="flex flex-wrap items-start gap-4 p-6 pt-3">
