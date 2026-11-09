@@ -58,3 +58,5 @@ backups/
 
 # generisane zip arhive (backup/deliverables) — ostaju lokalno, ne ide na GitHub
 *.zip
+/dist/
+/.sites-runtime/

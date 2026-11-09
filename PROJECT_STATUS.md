@@ -2,7 +2,9 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-10 (sesija: **Dashboard — ispravka proporcija**
+> **Preuzimanje u ChatGPT:** 2026-11-10 — nova osnova je GitHub commit `cbf05c1a6a4e6dd80bb9eb50ff6b78568970b33f`. Dashboard i editor otvoreni i provereni; dodat samo sloj za pokretanje i objavu kroz Sites.
+>
+> **Prethodna izmena:** 2026-11-10 (sesija: **Dashboard — ispravka proporcija**
 > — donji deo po referenci: sidebar ~19% širine, skoro-crna pozadina
 > #0a0c10 umesto toplo braon, krupniji toolbar (h-11) i pretraga 310px,
 > Grid/List zlatni segmented skroz desno, kartice 230px sa coverom ~44%
@@ -99,6 +101,8 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-10 (GitHub verzija preneta u ChatGPT) — ZAVRŠENO:** po Nikolinoj naredbi stari Sites frontend/worker/testovi zamenjeni kodom iz privatnog repozitorijuma `moranabloodline-cloud/katchamak`, osnova `cbf05c1a6a4e6dd80bb9eb50ff6b78568970b33f`. Sačuvan identitet postojeće aplikacije i njen pristup; GitHub istorija i izvorni upload materijali ostaju netaknuti. Dodati `scripts/preview-next.mjs` (prihvata host/port iz ChatGPT pregleda), `scripts/build-project.mjs` (standardni standalone build van Sites-a; statički export i Worker pakovanje uz hosting manifest), `scripts/package-sites.mjs` i `scripts/sites-runtime.mjs` (serviranje identičnog Next builda i postojeći `open_novel_studio` alat). Google fontovi koriste sistemske TLS sertifikate; Prisma klijent generisan prilikom instalacije. Bez promena izgleda, store-a, migracija ili funkcija editora. `bun run build` prošao, Sites build prošao (47 resursa), MCP smoke provera prošla; `bunx tsc --noEmit` ima samo dve postojeće greške u websocket primerima (socket.io paketi), bez grešaka u `src/`. U browseru provereni dashboard → projekat → beleška i editor. Dalji rad nastavlja se na ovoj GitHub osnovi.
 
 - **2026-11-10 (Dashboard — ispravka proporcija) — ZAVRŠENO:** Nikola uporedio
   fazu 1 sa referencom i tražio ispravke SAMO donjeg dela. Izmereno sa

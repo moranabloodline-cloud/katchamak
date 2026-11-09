@@ -1,0 +1,7 @@
+{
+  "repository": "moranabloodline-cloud/katchamak",
+  "imported_commit": "cbf05c1a6a4e6dd80bb9eb50ff6b78568970b33f",
+  "imported_date": "2026-11-10",
+  "application": "Next.js 16 / React 19",
+  "note": "Sites hosts the GitHub application; no legacy frontend is used."
+}
