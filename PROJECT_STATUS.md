@@ -111,7 +111,12 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   (sadržaj = baš git tree: kompletan izvorni kod, bez backups/*.zip, bez .env,
   bez node_modules/.next; `unzip -t` čist). **backups/ izbačen iz git praćenja**
   (`git rm -r --cached backups`, 12 zipova ostaje na disku; `.gitignore` +
-  `backups/`). Push čeka auth (fine-grained PAT, Contents: Read and write):
+  `backups/`). **Dopuna istog zadatka:** u prvom ZIP snimku našle su se i 4
+  generisane `.zip` arhive iz `download/`, `public/` i `upload/` (16,5 MB,
+  uključujući dve identične kopije `kachamak-aplikacija.zip` od 8,1 MB) — sve
+  izbačene iz praćenja (`git rm --cached`, lokalno ostaju), `.gitignore` +
+  `*.zip`; finalni snimak `katchamak-source-2026-11-10.zip` je bez ijednog
+  zipa i bez tajni. Push čeka auth (fine-grained PAT, Contents: Read and write):
   tada `fetch` → `merge origin/main --allow-unrelated-histories` (README,
   obe istorije sačuvane) → `push origin main` → verifikacija na GitHubu;
   bez force-pusha. Aplikativni kod NIJE diran.

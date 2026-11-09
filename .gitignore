@@ -55,3 +55,6 @@ server.log
 
 # backup archives — lokalni backup ostaje na disku, ne ide na GitHub
 backups/
+
+# generisane zip arhive (backup/deliverables) — ostaju lokalno, ne ide na GitHub
+*.zip
