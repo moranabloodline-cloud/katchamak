@@ -2,9 +2,10 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: sitnice posle rulera — pozadina reda
-> iza lineala vraćena na boju radne površine; brojač na dnu radne površine
-> sada pokazuje reči OTVORENE note, zbir romana samo bez selekcije).
+> **Zadnja izmena:** 2026-11-09 (sesija: **Split kao u Scriveneru** — radna
+> površina se deli na dva identična editora koji se šire/skupljaju razdelnikom;
+> klik na površinu je bira, klik na notu otvara notu SAMO u izabranoj, druga
+> ostaje ista; sve se čuva posle reload-a).
 
 ---
 
@@ -21,6 +22,7 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 | 5 | Tri-dot meni (tačna struktura iz dokumenta) + Move dijalog (izbor bilo kog root-a/note-a za parenta) | `NoteTree.tsx` |
 | 6 | **Grid** (zadata 09.11.): Scrivener index kartice (ikona + naslov + Synopsis), papir `#efe6cf` na pluti `#241c12`, caption „GRID · <nivo>", jedan nivo hijerarhije, dupli klik → Write, drag & drop reorder (`destIndex` u `moveNodeTo`), „+ New note" u otvoreni nivo; **store v5** (migracija `view:"grid"`→interno `"corkboard"`) | `Corkboard.tsx` |
 | 7 | Ispravke 09.11.: header linije piksel-poravnate (header = panelWidth+1); **mod prikaza se više ne resetuje** (ostaje poslednji aktivan kroz tabove/otvaranje/izlaz) | `NotesSection.tsx`, `store.ts` |
+| 8 | **Split (09.11., kao u Scriveneru)**: dva identična editora (svaki sa svojim toolbarom/linealom/okom), razdelnik širi/skuplja (0.2–0.8, persist), klik na površinu je bira (zlatna 2px linija na vrhu), klik na notu otvara SAMO u izabranoj — druga ostaje; prvi ulazak klonira otvorenu notu u oba; inspector/brojač/highlight prate fokusiranu; brisanje/prazni/nova nota/promena romana sve pokriveno | `SplitEditors.tsx`, `NotesSection.tsx`, `store.ts` |
 | + | Već postoje: Trash sa restore-om, **top bar u JEDNOJ traci (h-10)** — Home+Search levo, tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash u sredini (svi u jednom redu), Tree Scope+Save+Account+Settings desno; **druga traka (h-10, poravnata)** = header stabla | editor toolbar (jedan red, px-4 kao tabovi) | Info/Details/Mentions tabovi (BEZ ikonica, bez okvira — svetli samo selektovani zlatnom pilulom, po Nikoli); levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `NoteTree.tsx`, `WriteArea.tsx`, `RightPanel.tsx`, `PROJEKT-KONTEKST.md` §3 |
 
 ## 2. Šta je U TOKU
@@ -95,6 +97,42 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (Split — dva nezavisna editora kao u Scriveneru) — ZAVRŠENO:**
+  po Nikolinoj naredbi „pritiskom na Split, radna površina se podeli na dva
+  identična ekrana koja mogu da se šire i skupljaju kao u Scriveneru; kada
+  klikneš na površinu koju izabereš i onda klikneš na neki note ona se menja,
+  a druga ne — i naravno to važi i za drugu“ (uz uputu: ne brinuti o sadržaju
+  projekta dok aplikacija ne radi kako treba):
+  (1) **STORE** — novi `paneAId`/`paneBId` (nota u levom/desnom editoru),
+  `activePane` („a“|„b“), `splitRatio` (0.2–0.8) + `setActivePane`/
+  `setSplitRatio` — sve persist, čita se sa `?? default` (stari store-ovi OK).
+  `select()` otvara notu u FOKUSIRANOM editoru (drugi zadržava svoju);
+  `setActivePane` postavlja i `selectedNodeId` — inspector, brojač na dnu i
+  highlight u stablu prate fokusiranu površinu; `setView("split")` pri prvom
+  ulasku klonira otvorenu notu u OBA editora, `SplitEditors` isto pri mount-u
+  posle reload-a kad su paneli prazni; `addNode` novu notu otvara u aktivnoj;
+  `deleteNode` čisti panele koji su pokazivali na obrisano (bez duhova);
+  openNovel/closeNovel/createNovel/importNovel resetuju panele pri promeni
+  romana. (2) **NOVA KOMPONENTA `SplitEditors.tsx`** — dva identična WriteArea
+  (svaki sa svojim toolbarom, linealom i okom) + `SplitResizer` (vuče se
+  levo/desno, isti pattern kao resizer panela; try/catch oko
+  setPointerCapture) + `EmptyPane` (prazna površina sa h-10 redom da linija
+  trake 2 ostane neprekinuta). Fokusirana površina ima tanku zlatnu liniju na
+  vrhu (2px overlay — ne pomera layout ni linije). U `NotesSection`: view
+  „split“ renderuje SplitEditors; centralni prazan h-10 red se u split-u
+  preskače (paneli ga sami drže). Write/Grid/List neizmenjeni.
+  **VERIFIKACIJA (uživo):** split 50/50 — oba editora kloniraju notu; klik na
+  desnu površinu pa na „Scene 1“ u stablu → desna se menja, LEVA OSTAJE; klik
+  na levu pa na „The Query“ → samo leva (brojač 40 words = reči te note);
+  drag razdelnika 160px → ratio 0.5→0.678, širine 606/287; posle reload-a sve
+  ostaje (note, aktivna površina, širine); nova nota ide u aktivnu; brisanje
+  otvorene note prazni panel bez duhova; promena romana resetuje panele;
+  traka 2 y=79: 1440/1440 = 100%; pozadina iza OBA lineala = boja površine
+  (13,13,13); oko lineala radi (preferenca zajednička, kao i do sad); tsc 0,
+  build čist, konzola čista. Test note u CASHABLANCA obrisane, Trash
+  ispražnjen (roman 0/0 kao pre testa). Nikolaovo stanje vraćeno: split 50/50,
+  „The third dial waited.“ u oba panela.
 
 - **2026-11-09 (sitnice posle rulera: pozadina iza lineala + brojač reči) — ZAVRŠENO:**
   po Nikolinoj naredbi „u delu iza rulera promenio si boju pozadine, mora da

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Info, PenLine, Target, X } from "lucide-reac
 import { NoteTree } from "./NoteTree";
 import { Corkboard } from "./Corkboard";
 import { WriteArea } from "./WriteArea";
+import { SplitEditors } from "./SplitEditors";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { useKachamak } from "@/lib/kachamak/store";
@@ -420,14 +421,19 @@ export function NotesSection({ section }: { section: SectionKey }) {
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* traka 2 (sredina): editor toolbar živi unutar WriteArea; kad on nije
             prikazan (Grid / List / bez selekcije), ovaj prazan h-10 red drži
-            donju liniju trake 2 neprekinutom od leve do desne ivice */}
-        {!(showEditor && selected) && (
+            donju liniju trake 2 neprekinutom od leve do desne ivice. Split se
+            izuzima — oba njegova editora (i prazna) imaju svoj h-10 red, pa
+            liniju drže oni */}
+        {view !== "split" && !(showEditor && selected) && (
           <div className="h-10 shrink-0 border-b border-white/10" />
         )}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} />}
           {view === "list" && <ListView section={section} />}
-          {showEditor &&
+          {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
+              je bira, klik na notu otvara notu samo u izabranoj */}
+          {view === "split" && <SplitEditors section={section} />}
+          {view === "write" &&
             (selected ? (
               <WriteArea key={selected.id} node={selected} section={selectedSection} />
             ) : (

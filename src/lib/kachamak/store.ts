@@ -37,6 +37,19 @@ interface KachamakState {
   rulerVisible: boolean;
   setRulerVisible: (v: boolean) => void;
 
+  /* Split (kao u Scriveneru): dva nezavisna editora na radnoj površini.
+     paneAId/paneBId = nota otvorena u levom/desnom editoru; activePane =
+     površina koju je korisnik poslednja kliknuo — klik na notu u stablu/Gridu/
+     Listi otvara je SAMO u njoj, druga ostaje ista; splitRatio = širina levog
+     editora (0.2–0.8, menja se vučenjem razdelnika). Sve se čuva (persist),
+     čita sa ?? default zbog starih sačuvanih store-ova. */
+  paneAId: string | null;
+  paneBId: string | null;
+  activePane: "a" | "b";
+  splitRatio: number;
+  setActivePane: (p: "a" | "b") => void;
+  setSplitRatio: (r: number) => void;
+
   /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
      uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
      da linije trake 2 ostaju poravnate (persisted preference) */
@@ -252,6 +265,11 @@ export const useKachamak = create<KachamakState>()(
       rightPanelOpen: true,
       rulerVisible: true,
 
+      paneAId: null,
+      paneBId: null,
+      activePane: "a",
+      splitRatio: 0.5,
+
       leftZoom: 1,
       midZoom: 1,
       rightZoom: 1,
@@ -267,6 +285,18 @@ export const useKachamak = create<KachamakState>()(
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
 
       setRulerVisible: (v) => set({ rulerVisible: v }),
+
+      /* klik na površinu je bira: inspector, brojač na dnu i highlight u stablu
+         prate fokusirani editor (kao u Scriveneru); dok je površina prazna,
+         ostaje poslednja selekcija */
+      setActivePane: (p) =>
+        set((s) => ({
+          activePane: p,
+          selectedNodeId: (p === "a" ? s.paneAId : s.paneBId) ?? s.selectedNodeId,
+        })),
+
+      setSplitRatio: (r) =>
+        set({ splitRatio: Math.round(Math.min(0.8, Math.max(0.2, r)) * 1000) / 1000 }),
 
       setPanelZoom: (panel, v) => {
         const z = Math.round(Math.min(2, Math.max(0.5, v)) * 100) / 100;
@@ -336,6 +366,8 @@ export const useKachamak = create<KachamakState>()(
           activeNovelId: n.id,
           activeTab: "binder",
           selectedNodeId: null,
+          paneAId: null,
+          paneBId: null,
           /* view stays on the last active mode — never reset it */
         }));
       },
@@ -359,6 +391,8 @@ export const useKachamak = create<KachamakState>()(
             activeNovelId: n.id,
             activeTab: "binder",
             selectedNodeId: null,
+            paneAId: null,
+            paneBId: null,
             /* view stays on the last active mode — never reset it */
           }));
           return { ok: true };
@@ -374,9 +408,16 @@ export const useKachamak = create<KachamakState>()(
         })),
 
       openNovel: (id) =>
-        set({ activeNovelId: id, activeTab: "binder", selectedNodeId: null }),
+        set({
+          activeNovelId: id,
+          activeTab: "binder",
+          selectedNodeId: null,
+          paneAId: null,
+          paneBId: null,
+        }),
 
-      closeNovel: () => set({ activeNovelId: null, selectedNodeId: null }),
+      closeNovel: () =>
+        set({ activeNovelId: null, selectedNodeId: null, paneAId: null, paneBId: null }),
 
       /* ---------- workspace ---------- */
 
@@ -385,11 +426,26 @@ export const useKachamak = create<KachamakState>()(
          novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
       setTab: (tab) => set({ activeTab: tab, renamingNodeId: null }),
 
-      setView: (v) => set({ view: v }),
+      /* ulazak u Split (prvi put, kad paneli još nemaju note — kao u
+         Scriveneru): oba editora kloniraju trenutno otvorenu notu; ako su
+         paneli već bili raspoređeni, ostaje poslednje stanje iz njih */
+      setView: (v) =>
+        set((s) =>
+          v === "split" && s.paneAId === null && s.paneBId === null
+            ? { view: v, paneAId: s.selectedNodeId, paneBId: s.selectedNodeId }
+            : { view: v }
+        ),
 
       setTreeScope: (s) => set({ treeScope: s }),
 
-      select: (id) => set({ selectedNodeId: id }),
+      /* klik na notu otvara je u FOKUSIRANOM editoru (activePane) — drugi
+         editor zadržava svoju notu (po Nikoli, kao u Scriveneru) */
+      select: (id) =>
+        set((s) => ({
+          selectedNodeId: id,
+          paneAId: s.activePane === "a" ? id : s.paneAId,
+          paneBId: s.activePane === "b" ? id : s.paneBId,
+        })),
 
       setRenamingNode: (id) => set({ renamingNodeId: id }),
 
@@ -426,6 +482,8 @@ export const useKachamak = create<KachamakState>()(
         set((s) => ({
           selectedNodeId: created?.id ?? null,
           renamingNodeId: created?.id ?? null,
+          paneAId: s.activePane === "a" ? (created?.id ?? s.paneAId) : s.paneAId,
+          paneBId: s.activePane === "b" ? (created?.id ?? s.paneBId) : s.paneBId,
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
         return created?.id ?? null;
@@ -457,19 +515,21 @@ export const useKachamak = create<KachamakState>()(
           ...novel.trash,
         ];
         const removedNode: NoteNode = removed;
-        set((s) => ({
-          selectedNodeId:
-            s.selectedNodeId === id ||
-            findNode([removedNode], s.selectedNodeId ?? "")
-              ? null
-              : s.selectedNodeId,
-          renamingNodeId:
-            s.renamingNodeId &&
-            (s.renamingNodeId === id || findNode([removedNode], s.renamingNodeId))
-              ? null
-              : s.renamingNodeId,
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
-        }));
+        set((s) => {
+          const gone = (nid: string | null): boolean =>
+            !!nid && (nid === id || !!findNode([removedNode], nid));
+          return {
+            selectedNodeId: gone(s.selectedNodeId) ? null : s.selectedNodeId,
+            paneAId: gone(s.paneAId) ? null : s.paneAId,
+            paneBId: gone(s.paneBId) ? null : s.paneBId,
+            renamingNodeId:
+              s.renamingNodeId &&
+              (s.renamingNodeId === id || findNode([removedNode], s.renamingNodeId))
+                ? null
+                : s.renamingNodeId,
+            novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+          };
+        });
       },
 
       moveNode: (section, id, dir) => {
