@@ -2,10 +2,10 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: **lenjir u svakoj radnoj površini +
-> odvojen zoom po površini** — Nikola ispravio sebe: svaka Split površina ima
-> SVOJ lenjir i SVOJ zoom (Ctrl+skrol nad tom površinom), formatna traka (traka
-> 2) ostaje jedna i fiksna).
+> **Zadnja izmena:** 2026-11-10 (sesija: **GitHub push — opcija A + ZIP
+> fallback** — trenutna verzija `53af13c` spakovana u ZIP za ručni upload jer
+> GitHub auth nije dostupna u sandboxu; `backups/` izbačen iz git praćenja;
+> aplikativni kod NIJE diran).
 
 ---
 
@@ -98,6 +98,23 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-10 (GitHub push — opcija A, ZIP fallback) — ZAVRŠENO:** Nikola:
+  „Sačuvaj trenutnu verziju aplikacije na GitHub takvu kakva jeste; izostavi
+  nepotrebne ZIP arhive i tajne, ali sačuvaj kompletan izvorni kod; ako auth
+  nije dostupna, napravi ZIP za ručni upload". Ustanovljeno pre odluke: commit
+  `6133e1f` („Dashboard verzija") **ne postoji** u repozitorijumu (provereno
+  cat-file/reflog/grane/stash — poslednji HEAD je `53af13c`; Dashboard komponenti
+  nema ni u radnom stablu) → Nikola izabrao **opciju A**: čuvamo trenutni main.
+  Auth ka GitHubu nedostupna (privatan repo: `git ls-remote` → „could not read
+  Username"; nema credential helpera, gh CLI ni tokena) → po naredbi **ZIP
+  fallback**: `git archive` HEAD → `download/katchamak-source-2026-11-10.zip`
+  (sadržaj = baš git tree: kompletan izvorni kod, bez backups/*.zip, bez .env,
+  bez node_modules/.next; `unzip -t` čist). **backups/ izbačen iz git praćenja**
+  (`git rm -r --cached backups`, 12 zipova ostaje na disku; `.gitignore` +
+  `backups/`). Push čeka auth (fine-grained PAT, Contents: Read and write):
+  tada `fetch` → `merge origin/main --allow-unrelated-histories` (README,
+  obe istorije sačuvane) → `push origin main` → verifikacija na GitHubu;
+  bez force-pusha. Aplikativni kod NIJE diran.
 - **2026-11-09 (lenjir u svakoj površini + odvojen zoom po površini) — ZAVRŠENO:**
   Nikola ispravio sebe: „sve je dobro ali lenjir mora da ide svaka radna
   površina da ima svoj kako bi svaka radna površina imala odvojen zoom“:

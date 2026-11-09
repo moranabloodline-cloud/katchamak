@@ -52,3 +52,6 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# backup archives — lokalni backup ostaje na disku, ne ide na GitHub
+backups/
