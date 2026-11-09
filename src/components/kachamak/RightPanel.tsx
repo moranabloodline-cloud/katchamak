@@ -51,7 +51,9 @@ export function RightPanel({
 
   return (
     <Tabs defaultValue="info" className="flex h-full flex-col gap-0">
-      <div className="flex h-10 shrink-0 items-center pl-3.5 pr-3.5">
+      {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
+          „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
+      <div className="flex h-10 shrink-0 items-center border-b border-white/10 pl-3.5 pr-3.5">
         <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
           <TabsTrigger value="info" className={tabCls}>
             Info
@@ -69,7 +71,7 @@ export function RightPanel({
             aria-label="Hide panel"
             title="Hide panel"
             onClick={onHide}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+            className="ml-auto rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

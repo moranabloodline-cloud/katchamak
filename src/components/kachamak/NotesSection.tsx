@@ -328,20 +328,30 @@ export function NotesSection({ section }: { section: SectionKey }) {
           />
         </>
       ) : (
-        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 pt-2 md:flex">
-          <button
-            type="button"
-            aria-label="Show panel"
-            title="Show panel"
-            onClick={toggleLeftPanel}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+        // zatvoreni levi panel — uska traka; h-10 red održava donju liniju
+        // trake 2 kontinuiranom i kad je panel sakriven
+        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 md:flex">
+          <div className="flex h-10 w-full shrink-0 items-center justify-center border-b border-white/10">
+            <button
+              type="button"
+              aria-label="Show panel"
+              title="Show panel"
+              onClick={toggleLeftPanel}
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 
       <main className="flex min-w-0 flex-1 flex-col">
+        {/* traka 2 (sredina): editor toolbar živi unutar WriteArea; kad on nije
+            prikazan (Grid / List / bez selekcije), ovaj prazan h-10 red drži
+            donju liniju trake 2 neprekinutom od leve do desne ivice */}
+        {!(showEditor && selected) && (
+          <div className="h-10 shrink-0 border-b border-white/10" />
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} />}
           {view === "list" && <ListView section={section} />}
@@ -416,7 +426,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
               </>
             ) : (
               <div className="flex h-full flex-col">
-                <div className="flex h-10 shrink-0 items-center justify-between gap-1 pl-3.5 pr-3.5">
+                <div className="flex h-10 shrink-0 items-center justify-between gap-1 border-b border-white/10 pl-3.5 pr-3.5">
                   <span className="text-xs text-muted-foreground">Info</span>
                   <button
                     type="button"
@@ -439,16 +449,20 @@ export function NotesSection({ section }: { section: SectionKey }) {
           </aside>
         </>
       ) : (
-        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 pt-2 lg:flex">
-          <button
-            type="button"
-            aria-label="Show panel"
-            title="Show panel"
-            onClick={toggleRightPanel}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+        // zatvoreni desni panel — uska traka; h-10 red održava donju liniju
+        // trake 2 kontinuiranom i kad je panel sakriven
+        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 lg:flex">
+          <div className="flex h-10 w-full shrink-0 items-center justify-center border-b border-white/10">
+            <button
+              type="button"
+              aria-label="Show panel"
+              title="Show panel"
+              onClick={toggleRightPanel}
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>
