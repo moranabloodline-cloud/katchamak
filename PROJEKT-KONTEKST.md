@@ -3,6 +3,8 @@
 > **Ovaj fajl je uputstvo za novu sesiju.** Ako je korisnik (Nikola) poslao ovde,
 > znači da nastavlja rad na projektu iz prethodnih sesija. Sve što treba da
 > znaš je u ovom fajlu + u `KACHAMAK-ARHITEKTURA.md` (u korenu projekta).
+> **Obavezan redosled čitanja:** `AGENTS.md` (pravila) → ovaj fajl →
+> `PROJECT_STATUS.md` (aktuelni status) → `KACHAMAK-ARHITEKTURA.md` (spec).
 > Ne menjaj ništa bez da pitaš. Radi tačno ono što Nikola kaže, redom.
 
 ---
@@ -207,7 +209,10 @@ bun run start          # server na localhost:3000 (pre toga: pkill -f "next star
 ## 9. Backup
 
 `download/kachamak-aplikacija.zip` — kod trenutka 08.11.2026. (bez
-node_modules/.next). Za novi backup: zip bez tih foldera, u `download/`.
+node_modules/.next). **Za novi backup: `bash scripts/backup.sh`** — snapshot u
+`backups/` (čuva se 12), osvežava download i public kopije, secrets-guard
+(bez `.env`/ključeva), git commit; dnevno se sam pokreće cron-om u 03:00.
+Detalji: `PROJECT_STATUS.md` §6.
 
 ## 10. Reference
 
