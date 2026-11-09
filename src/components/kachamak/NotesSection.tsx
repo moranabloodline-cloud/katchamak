@@ -36,6 +36,48 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "list", label: "List" },
 ];
 
+/* ---------- zoom po panelu (Ctrl + skrol) ---------- */
+
+type ZoomPanel = "left" | "mid" | "right";
+
+/* Ctrl + skrol nad panelom = zoom SADRŽINE tog panela (0.5–2.0, korak 0.1;
+   trake/okvir ostaju iste visine pa linije trake 2 ostaju poravnate).
+   Mora nativan listener sa passive:false — React onWheel je pasivan, pa
+   preventDefault (gašenje zooma pregledača) ne bi radio. Mali komadi delte se
+   sabiraju (trackpad) — jedan „skok“ točkića = jedan korak. */
+function CtrlZoom({
+  panel,
+  targetRef,
+}: {
+  panel: ZoomPanel;
+  targetRef: React.RefObject<HTMLElement | null>;
+}) {
+  useEffect(() => {
+    const el = targetRef.current;
+    if (!el) return;
+    let acc = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) {
+        acc = 0;
+        return;
+      }
+      e.preventDefault();
+      acc += e.deltaY;
+      if (Math.abs(acc) >= 50) {
+        const step = acc < 0 ? 0.1 : -0.1;
+        acc = 0;
+        const s = useKachamak.getState();
+        const cur =
+          panel === "left" ? s.leftZoom : panel === "mid" ? s.midZoom : s.rightZoom;
+        s.setPanelZoom(panel, (cur ?? 1) + step);
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [panel, targetRef]);
+  return null;
+}
+
 /* kužić — document colour palette (shared with the tree icon picker) */
 const DOC_COLORS = NOTE_COLORS;
 
@@ -300,6 +342,11 @@ export function NotesSection({ section }: { section: SectionKey }) {
   const setRightPanelWidth = useKachamak((s) => s.setRightPanelWidth);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
 
+  /* zone za Ctrl+skrol (zoom po panelu) */
+  const leftPanelRef = useRef<HTMLElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const rightPanelRef = useRef<HTMLElement | null>(null);
+
   const novel = novels.find((n) => n.id === activeNovelId);
   /* selekcija preživi prelazak na drugi tab: nota se traži u celom romanu, ne
      samo u tekućoj sekciji — editor toolbar, editor i desni panel drže istu
@@ -317,9 +364,11 @@ export function NotesSection({ section }: { section: SectionKey }) {
       {leftPanelOpen ? (
         <>
           <aside
+            ref={leftPanelRef}
             style={{ width: leftPanelWidth }}
             className="hidden shrink-0 flex-col bg-black/20 md:flex"
           >
+            <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
               <NoteTree section={section} />
             </div>
@@ -367,7 +416,8 @@ export function NotesSection({ section }: { section: SectionKey }) {
         </div>
       )}
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
+        <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* traka 2 (sredina): editor toolbar živi unutar WriteArea; kad on nije
             prikazan (Grid / List / bez selekcije), ovaj prazan h-10 red drži
             donju liniju trake 2 neprekinutom od leve do desne ivice */}
@@ -436,9 +486,11 @@ export function NotesSection({ section }: { section: SectionKey }) {
             onMove={(dx) => setRightPanelWidth(useKachamak.getState().rightPanelWidth - dx)}
           />
           <aside
+            ref={rightPanelRef}
             style={{ width: rightPanelWidth }}
             className="hidden shrink-0 flex-col bg-black/20 lg:flex"
           >
+            <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {selected ? (
               <>
                 <div className="min-h-0 flex-1">

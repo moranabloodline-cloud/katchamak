@@ -21,6 +21,7 @@ import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { SECTION_KEYS, TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
+import { findNode, locateNode } from "@/lib/kachamak/utils";
 import { NOTE_COLORS, NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
@@ -64,14 +65,31 @@ const SECTION_LABELS = TABS.filter((t) =>
   SECTION_KEYS.includes(t.key as SectionKey)
 );
 
+/* ---------- drag & drop u stablu (kao u Scriveneru) ----------
+   gore/levo = „pre“, sredina = „u“ (postaje sub-strana), dole/desno = „posle“;
+   prazan prostor na dnu stabla = vrh sekcije (kraj liste). Spuštanje u sopstveno
+   podstablo je zabranjeno. Indikatori: zlatna linija iznad/ispod, okvir za „u“. */
+
+type DropMode = "before" | "after" | "onto";
+
+interface TreeDnd {
+  drop: { id: string; mode: DropMode } | null;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragEnd: () => void;
+  onDragOverRow: (e: React.DragEvent, id: string) => void;
+  onDragLeaveRow: (e: React.DragEvent, id: string) => void;
+  onDropRow: (e: React.DragEvent, id: string) => void;
+}
+
 interface TreeRowProps {
   node: NoteNode;
   section: SectionKey;
   depth: number;
   novelTitle: string;
+  dnd: TreeDnd;
 }
 
-function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
+function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const updateNode = useKachamak((s) => s.updateNode);
@@ -95,6 +113,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
   const selected = selectedNodeId === node.id;
   const open = !node.collapsed;
   const hasChildren = node.children.length > 0;
+  const dropHere = dnd.drop && dnd.drop.id === node.id ? dnd.drop.mode : null;
 
   /* sync the draft every time the rename starts (menu or right after create)
      and grab the caret — closing the dropdown menu steals focus for a moment,
@@ -188,12 +207,26 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
             deleteNode(section, node.id);
           }
         }}
+        draggable={!renaming}
+        onDragStart={(e) => dnd.onDragStart(e, node.id)}
+        onDragEnd={dnd.onDragEnd}
+        onDragOver={(e) => dnd.onDragOverRow(e, node.id)}
+        onDragLeave={(e) => dnd.onDragLeaveRow(e, node.id)}
+        onDrop={(e) => dnd.onDropRow(e, node.id)}
         className={`group flex items-center gap-1.5 rounded-md px-2 py-1.5 cursor-pointer text-sm transition-colors select-none ${
           node.hidden ? "opacity-50" : ""
         } ${
           selected
             ? "bg-amber-400/10 text-amber-100 border border-amber-400/40"
             : "border border-transparent hover:bg-white/5 text-foreground/90"
+        } ${
+          dropHere === "onto"
+            ? "bg-amber-400/15 ring-1 ring-inset ring-amber-400/70"
+            : ""
+        } ${
+          dropHere === "before" ? "shadow-[inset_0_2px_0_0_#ad7e2e]" : ""
+        } ${
+          dropHere === "after" ? "shadow-[inset_0_-2px_0_0_#ad7e2e]" : ""
         }`}
         style={{ paddingLeft: `${depth * 14 + 8}px` }}
       >
@@ -394,7 +427,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
       {open && hasChildren && (
         <div role="group">
           {node.children.map((c) => (
-            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} />
+            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} dnd={dnd} />
           ))}
         </div>
       )}
@@ -457,9 +490,93 @@ export function NoteTree({ section }: { section: SectionKey }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
+  const moveNodeTo = useKachamak((s) => s.moveNodeTo);
   const treeScope = useKachamak((s) => s.treeScope);
+  const leftZoom = useKachamak((s) => s.leftZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
+
+  /* ---------- drag & drop (kao u Scriveneru) ----------
+     Računa se nad STVARNIM stablom sekcije (roots), ne nad filtriranim prikazom
+     (treeScope „top“/„folders“ prave klonove) — pa pozicije i hijerarhija uvek
+     odgovaraju stvarnim podacima. dragSrcId putuje u refu jer dataTransfer ne
+     može da se čita tokom dragover-a. */
+  const dragSrcId = useRef<string | null>(null);
+  const [drop, setDrop] = useState<{ id: string; mode: DropMode } | null>(null);
+
+  const isInvalidTarget = (srcId: string, targetId: string): boolean => {
+    if (srcId === targetId) return true;
+    const srcNode = findNode(roots, srcId);
+    return !srcNode || !!findNode([srcNode], targetId);
+  };
+
+  const modeForEvent = (e: React.DragEvent): DropMode => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = (e.clientY - rect.top) / Math.max(rect.height, 1);
+    return y < 0.3 ? "before" : y > 0.7 ? "after" : "onto";
+  };
+
+  const treeDnd: TreeDnd = {
+    drop,
+    onDragStart: (e, id) => {
+      dragSrcId.current = id;
+      e.dataTransfer.setData("text/plain", id);
+      e.dataTransfer.effectAllowed = "move";
+    },
+    onDragEnd: () => {
+      dragSrcId.current = null;
+      setDrop(null);
+    },
+    onDragOverRow: (e, id) => {
+      const srcId = dragSrcId.current;
+      if (!srcId || isInvalidTarget(srcId, id)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const mode = modeForEvent(e);
+      setDrop((d) => (d && d.id === id && d.mode === mode ? d : { id, mode }));
+    },
+    onDragLeaveRow: (e, id) => {
+      /* relatedTarget = element u koji se ulazi — bez ove provere svaki prelaz
+         preko unutrašnjih elemenata reda bi tremao indikator */
+      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+      setDrop((d) => (d && d.id === id ? null : d));
+    },
+    onDropRow: (e, id) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const srcId = dragSrcId.current;
+      dragSrcId.current = null;
+      setDrop(null);
+      if (!srcId || isInvalidTarget(srcId, id)) return;
+      const mode = modeForEvent(e);
+      const tgtLoc = locateNode(roots, id);
+      if (!tgtLoc) return;
+      if (mode === "onto") {
+        /* u notu — postaje sub-strana (store automatski otvori roditelja) */
+        moveNodeTo(section, srcId, section, id);
+        return;
+      }
+      /* pre/posle — ista lista rođaka; korekcija indeksa ako se vadi iz istog
+         niza (destIndex je pozicija u listu POSLE vađenja vučene note) */
+      const srcLoc = locateNode(roots, srcId);
+      if (!srcLoc) return;
+      let insertIdx = mode === "before" ? tgtLoc.index : tgtLoc.index + 1;
+      if (srcLoc.parentId === tgtLoc.parentId) {
+        if (srcLoc.index < tgtLoc.index) insertIdx -= 1;
+        if (insertIdx === srcLoc.index) return;
+      }
+      moveNodeTo(section, srcId, section, tgtLoc.parentId, insertIdx);
+    },
+  };
+
+  /* pad na prazan prostor stabla = vrh sekcije, na kraj liste */
+  const handleDropRoot = (e: React.DragEvent) => {
+    const srcId = dragSrcId.current;
+    dragSrcId.current = null;
+    setDrop(null);
+    if (!srcId) return;
+    moveNodeTo(section, srcId, section, null);
+  };
 
   /* Hide — hidden notes (and everything inside them) leave the navigation tree.
      NOTE: computed on every render on purpose — store actions push into the same
@@ -561,9 +678,16 @@ export function NoteTree({ section }: { section: SectionKey }) {
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2" role="tree" aria-label={capLabel}>
+      <div
+        className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2"
+        style={{ zoom: leftZoom }}
+        role="tree"
+        aria-label={capLabel}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDropRoot}
+      >
         {visibleRoots.map((r) => (
-          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} />
+          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} dnd={treeDnd} />
         ))}
         {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">

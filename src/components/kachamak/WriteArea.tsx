@@ -104,6 +104,9 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
      (persist je ceo state, verzija se ne menja; šema podataka ista) */
   const rulerVisible = useKachamak((s) => s.rulerVisible ?? true);
   const setRulerVisible = useKachamak((s) => s.setRulerVisible);
+  /* zoom srednjeg panela (Ctrl + skrol) — važi za lineal i stranu, NE i za
+     toolbar (traka 2), da donje linije ostanu u istom redu kroz panele */
+  const midZoom = useKachamak((s) => s.midZoom ?? 1);
   // prefs reset naturally because NotesSection mounts this with key={node.id}
   const [font, setFont] = useState("Segoe UI");
   const [size, setSize] = useState(16);
@@ -211,46 +214,61 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
         </ToolBtn>
       </div>
 
-      {/* ruler — iznad naslova, u sirini tekuceg stubca (kao u Scriveneru);
-          oko na kraju ga sakriva i ponovo prikazuje (po Nikoli) */}
-      <div className="flex h-7 shrink-0 items-center px-6">
-        <div className="relative mx-auto h-5 w-full max-w-3xl">
-          {rulerVisible && <RulerStrip />}
-          <button
-            type="button"
-            title={rulerVisible ? "Hide ruler" : "Show ruler"}
-            aria-label={rulerVisible ? "Hide ruler" : "Show ruler"}
-            onClick={() => setRulerVisible(!rulerVisible)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            {rulerVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          </button>
-        </div>
-      </div>
-
-      {/* the page */}
-      <div className="flex-1 overflow-y-auto kachamak-scroll px-6 py-6">
-        <div className="mx-auto max-w-3xl">
-          <input
-            value={node.title}
-            onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
-            aria-label="Title"
-            className="mb-4 w-full bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
-            placeholder="Title"
-          />
+      {/* zoom srednjeg panela: lineal + strana se uvećavaju; toolbar ostaje
+          van zooma (traka 2 mora biti u istom redu kroz sve panele) */}
+      <div className="flex min-h-0 flex-1 flex-col" style={{ zoom: midZoom }}>
+        {/* ruler — sticky na vrhu skrolera: dele ISTI kontekst širine sa tekstom
+            (isti scrollbar), pa je poravnat sa stubcem teksta pri svakom zoomu;
+            bg-background da tekst ne „curi“ ispod njega kad se skroluje */}
+        <div className="sticky top-0 z-10 flex h-7 shrink-0 items-center bg-background px-6">
           <div
-            style={{
-              fontFamily: `'${font}', system-ui, sans-serif`,
-              fontSize: `${size}px`,
-              lineHeight: spacing,
-            }}
+            className="relative mx-auto h-5 w-full"
+            style={{ maxWidth: "min(48rem, 100%)" }}
           >
-            <RichEditor
-              html={node.content}
-              onChange={(html) => updateNode(section, node.id, { content: html })}
-              placeholder="Write here..."
-              className="min-h-[50vh] text-foreground"
-            />
+            {rulerVisible && <RulerStrip />}
+            <button
+              type="button"
+              title={rulerVisible ? "Hide ruler" : "Show ruler"}
+              aria-label={rulerVisible ? "Hide ruler" : "Show ruler"}
+              onClick={() => setRulerVisible(!rulerVisible)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+            >
+              {rulerVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* the page */}
+        <div className="flex-1 overflow-y-auto kachamak-scroll">
+          <div className="px-6 py-6">
+            {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
+                zoomu (100% je u koordinatama zoomovanog elementa) */}
+            <div
+              className="mx-auto w-full"
+              style={{ maxWidth: "min(48rem, 100%)" }}
+            >
+              <input
+                value={node.title}
+                onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
+                aria-label="Title"
+                className="mb-4 w-full bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
+                placeholder="Title"
+              />
+              <div
+                style={{
+                  fontFamily: `'${font}', system-ui, sans-serif`,
+                  fontSize: `${size}px`,
+                  lineHeight: spacing,
+                }}
+              >
+                <RichEditor
+                  html={node.content}
+                  onChange={(html) => updateNode(section, node.id, { content: html })}
+                  placeholder="Write here..."
+                  className="min-h-[50vh] text-foreground"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

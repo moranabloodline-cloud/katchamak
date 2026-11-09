@@ -21,6 +21,7 @@ export function RightPanel({
   const updateNode = useKachamak((s) => s.updateNode);
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
+  const rightZoom = useKachamak((s) => s.rightZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
 
   const mentions = useMemo(() => {
@@ -80,7 +81,12 @@ export function RightPanel({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto kachamak-scroll p-3">
+      {/* zoom desnog panela (Ctrl + skrol) — samo sadržina; red tabova (traka 2)
+          i NoteMetaBar na dnu ostaju istih visina, linije ostaju poravnate */}
+      <div
+        className="flex-1 overflow-y-auto kachamak-scroll p-3"
+        style={{ zoom: rightZoom }}
+      >
         <TabsContent value="info" className="mt-0 space-y-4">
           <div>
             <Label className="text-xs text-muted-foreground">Synopsis</Label>

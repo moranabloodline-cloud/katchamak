@@ -78,6 +78,22 @@ export function findParentId(
   return null;
 }
 
+/* gde nota živi: roditelj (null = vrh sekcije), lista rođaka i pozicija u njoj —
+   drag & drop („pre“/„posle“) računa destIndex po ovome, nad STVARNIM stablom
+   sekcije (ne nad filtriranim prikazom) */
+export function locateNode(
+  roots: NoteNode[],
+  id: string,
+  parentId: string | null = null
+): { parentId: string | null; list: NoteNode[]; index: number } | null {
+  for (let i = 0; i < roots.length; i++) {
+    if (roots[i].id === id) return { parentId, list: roots, index: i };
+    const hit = locateNode(roots[i].children, id, roots[i].id);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 export function forEachNode(
   roots: NoteNode[],
   fn: (n: NoteNode) => void

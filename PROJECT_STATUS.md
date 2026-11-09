@@ -2,9 +2,10 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: ruler kao u Scriveneru iznad naslova
-> na svakoj strani — oko na kraju ga sakriva i ponovo prikazuje, preferenca se
-> čuva; prethodno: skinut label iznad naslova, brojač reči tačan — 61).
+> **Zadnja izmena:** 2026-11-09 (sesija: zoom po panelu — Ctrl+skrol u svakom
+> panelu, sadržina se uvećava 0.5–2.0×, trake ostaju poravnate, preferenca se
+> čuva; drag & drop nota na svakom panelu — stablo/Grid/List, menja poziciju
+> i hijerarhiju kao u Scriveneru; next.config: devIndicators false).
 
 ---
 
@@ -95,6 +96,49 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (zoom po panelu + drag & drop nota na svakom panelu) — ZAVRŠENO:**
+  po Nikolinoj naredbi „svaki panel treba da ima svoj zaseban zoom koji radi
+  tako što držiš ctrl i skroluješ, a tekstovi unutar se prilagođavaju“ i „notes
+  treba da mogu da se drag and drop na svakom panelu... kada se promeni položaj
+  može da promeni time i hijerarhiju isto kao što u Scriveneru može“:
+  (1) **ZOOM PO PANELU** — nova preferenca u store-u `leftZoom`/`midZoom`/
+  `rightZoom` (0.5–2.0, korak 0.1, clamp u `setPanelZoom`, persist u
+  localStorage, čita se sa `?? 1` za stare store-ove). Nova komponenta
+  `CtrlZoom` u `NotesSection` kači NATIVAN `wheel` listener sa `passive:false`
+  na `<aside>`/`<main>` (React onWheel je pasivan — preventDefault, kojim se
+  gaši zoom pregledača, ne bi radio); male delte se sabiraju (trackpad) — jedan
+  skok točkića = jedan korak. Zoom (CSS `zoom`) važi za SADRŽINU panela, ne i
+  za trake: u levom panelu stablo, u srednjem lineal+strana (toolbar/traka 2
+  van zooma) i kartice Grid-a i redovi Liste, u desnom sadržina ispod tabova —
+  visine traka 2 i donjih traka su NEPROMENJENE pa linije ostaju poravnate.
+  `WriteArea`: ruler je prebačen u sticky na vrhu skrolera (isti kontekst
+  širine + scrollbar) i stubac teksta je `min(48rem, 100%)` — ruler i tekst su
+  poravnati pri SVAKOM zoomu i ni na jednoj širini panela (pre je scrollbar
+  pravio ~10px razliku na užim panelima). (2) **DRAG & DROP** — u stablu
+  (`NoteTree`): svaki red je draggable; gore 30% reda = „pre“, sredina = „u“
+  (postaje sub-strana), dole 30% = „posle“; indikatori — zlatna linija
+  iznad/ispod (`#ad7e2e`) i okvir za „u“; drop na prazan prostor stabla = vrh
+  sekcije (kraj liste); zabranjeno spuštanje u sopstveno podstablo; računa se
+  nad STVARNIM stablom sekcije (radi i kad Tree Scope prikazuje filtrirane
+  klonove); srcId putuje kroz ref (dataTransfer se ne čita u dragover).
+  U Gridu (`Corkboard`): kartica je podeljena na trećine — leva „pre“, sredina
+  „u karticu“ (nest — novi, Scrivener potez), desna „posle“ (postojeći reorder
+  sačuvan); indikator za „u“ = zlatni okvir oko cele kartice. U Listi
+  (`ListView`): redovi draggable, gore/dole trećine = pre/posle (indeks preko
+  nove `locateNode` util-a nad stvarnim stablom), sredina = u notu.
+  (3) **next.config.ts: `devIndicators: false`** — Next 16 je počeo da prikazuje
+  „N“ devtools dugme u uglu produkcije; ugašeno radi čistog izgleda.
+  **Verifikacija u browseru:** zoom levog 1.3 / srednjeg 1.3 / desnog 1.2 →
+  screenshot (tekst veći, trake i dalje u istom redu); reload → sve ostalo
+  sačuvano; reset Ctrl+skrolom nazad na 1; `defaultPrevented: true` na
+  wheel event-u (browser zoom ne skače). DnD testovi sintetskim DragEvent-
+  ovima + provera strukture u localStorage: Scene 1 → The Cemetery (nest ✓),
+  The Cemetery pre The Tether (reorder ✓), Act 1 na sopstvenu sub-stranu
+  ODBIJENO ✓, Chapter 4 na prazan prostor → root Binder-a ✓, Grid: Chapter 5
+  na sredinu The Tether kartice → sub-strana ✓, Lista: The third dial waited.
+  → Act 3 ✓. `tsc` (src: 0) + `build` čisti; konzola bez grešaka; traka 2
+  1440/1440 (100%); brojač reči i dalje 61 (pomeranje ne menja tekst).
 
 - **2026-11-09 (ruler kao u Scriveneru iznad naslova) — ZAVRŠENO:** po Nikolinoj
   naredbi „svaka strana treba da ima ruler kao u Scriveneru iznad naslova koji

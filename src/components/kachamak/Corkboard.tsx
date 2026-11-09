@@ -22,10 +22,10 @@ function IndexCard({
   node: NoteNode;
   draggable: boolean;
   onDragStartCard?: (id: string) => void;
-  onDragOverCard?: (id: string, after: boolean) => void;
-  onDropOnCard?: (targetId: string, after: boolean) => void;
+  onDragOverCard?: (id: string, zone: DropZone) => void;
+  onDropOnCard?: (targetId: string, zone: DropZone) => void;
   isDropTarget: boolean;
-  side: "before" | "after" | null;
+  side: DropZone | null;
 }) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
@@ -35,6 +35,14 @@ function IndexCard({
   const open = () => {
     select(node.id);
     useKachamak.getState().setView("write");
+  };
+
+  /* leve trećine = „pre“, sredina = „u karticu“ (postaje sub-strana),
+     desne trećine = „posle“ — kao u Scriveneru */
+  const zoneForEvent = (e: React.DragEvent): DropZone => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / Math.max(rect.width, 1);
+    return x < 1 / 3 ? "before" : x > 2 / 3 ? "after" : "onto";
   };
 
   return (
@@ -58,15 +66,13 @@ function IndexCard({
         if (!onDropOnCard) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        const rect = e.currentTarget.getBoundingClientRect();
-        onDragOverCard?.(node.id, e.clientX > rect.left + rect.width / 2);
+        onDragOverCard?.(node.id, zoneForEvent(e));
       }}
       onDrop={(e) => {
         if (!onDropOnCard) return;
         e.preventDefault();
         e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        onDropOnCard(node.id, e.clientX > rect.left + rect.width / 2);
+        onDropOnCard(node.id, zoneForEvent(e));
       }}
       className={`relative flex h-60 w-60 shrink-0 cursor-pointer flex-col rounded-[3px] border text-left transition-shadow ${
         selected
@@ -74,7 +80,9 @@ function IndexCard({
           : "border-black/30 shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:shadow-[0_5px_12px_rgba(0,0,0,0.5)]"
       } ${isDropTarget && side === "before" ? "shadow-[-4px_0_0_0_#ad7e2e]" : ""} ${
         isDropTarget && side === "after" ? "shadow-[4px_0_0_0_#ad7e2e]" : ""
-      } ${node.hidden ? "opacity-50" : ""}`}
+      } ${isDropTarget && side === "onto" ? "shadow-[0_0_0_3px_#ad7e2e]" : ""} ${
+        node.hidden ? "opacity-50" : ""
+      }`}
       style={{ backgroundColor: "#efe6cf", color: "#2a2118" }}
     >
       {/* title line — icon + title, thin rule under it, like the original card */}
@@ -100,12 +108,15 @@ function IndexCard({
 /* ---------- the Grid: classic index cards, one hierarchy level at a time ----------
    (Nikola's name for this mode is "Grid" — the label everywhere user-visible) */
 
+type DropZone = "before" | "onto" | "after";
+
 export function Corkboard({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const addNode = useKachamak((s) => s.addNode);
   const moveNodeTo = useKachamak((s) => s.moveNodeTo);
+  const midZoom = useKachamak((s) => s.midZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
 
@@ -123,19 +134,27 @@ export function Corkboard({ section }: { section: SectionKey }) {
 
   /* the id travels in a ref (HTML5 dataTransfer can't be read during dragover) */
   const dragSrcId = useRef<string | null>(null);
-  const [drop, setDrop] = useState<{ id: string; side: "before" | "after" } | null>(null);
+  const [drop, setDrop] = useState<{ id: string; side: DropZone } | null>(null);
 
-  const reorder = (targetId: string, after: boolean) => {
+  const onCardDrop = (targetId: string, zone: DropZone) => {
     const srcId = dragSrcId.current;
     dragSrcId.current = null;
     setDrop(null);
-    if (!srcId || !reorderParentId) return;
-    if (srcId === targetId) return;
+    if (!srcId || srcId === targetId) return;
+    if (zone === "onto") {
+      /* pad NA sredinu kartice — nota postaje sub-strana te kartice
+         (hijerarhija se menja, kao u Scriveneru) */
+      const srcNode = findNode(roots, srcId);
+      if (!srcNode || findNode([srcNode], targetId)) return;
+      moveNodeTo(section, srcId, section, targetId);
+      return;
+    }
+    if (!reorderParentId) return;
     const list = levelChildren;
     const srcIdx = list.findIndex((n) => n.id === srcId);
     const tgtIdx = list.findIndex((n) => n.id === targetId);
     if (srcIdx < 0 || tgtIdx < 0) return;
-    let insertIdx = after ? tgtIdx + 1 : tgtIdx;
+    let insertIdx = zone === "after" ? tgtIdx + 1 : tgtIdx;
     if (srcIdx < tgtIdx) insertIdx -= 1;
     if (insertIdx === srcIdx) return;
     moveNodeTo(section, srcId, section, reorderParentId, insertIdx);
@@ -144,6 +163,7 @@ export function Corkboard({ section }: { section: SectionKey }) {
   return (
     <div
       className="min-h-full bg-[#241c12]"
+      style={{ zoom: midZoom }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         /* drop on the bare cork (gaps, "+" button) → move to the end of the level */
@@ -169,8 +189,8 @@ export function Corkboard({ section }: { section: SectionKey }) {
             node={c}
             draggable={!!reorderParentId}
             onDragStartCard={(id) => (dragSrcId.current = id)}
-            onDragOverCard={(id, after) => setDrop({ id, side: after ? "after" : "before" })}
-            onDropOnCard={reorder}
+            onDragOverCard={(id, zone) => setDrop({ id, side: zone })}
+            onDropOnCard={onCardDrop}
             isDropTarget={drop?.id === c.id}
             side={drop?.id === c.id ? drop.side : null}
           />

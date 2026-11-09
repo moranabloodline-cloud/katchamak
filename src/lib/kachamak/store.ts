@@ -37,6 +37,14 @@ interface KachamakState {
   rulerVisible: boolean;
   setRulerVisible: (v: boolean) => void;
 
+  /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
+     uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
+     da linije trake 2 ostaju poravnate (persisted preference) */
+  leftZoom: number;
+  midZoom: number;
+  rightZoom: number;
+  setPanelZoom: (panel: "left" | "mid" | "right", v: number) => void;
+
   /* panel sizes in px (drag the vertical line to widen / narrow) */
   leftPanelWidth: number;
   rightPanelWidth: number;
@@ -244,6 +252,10 @@ export const useKachamak = create<KachamakState>()(
       rightPanelOpen: true,
       rulerVisible: true,
 
+      leftZoom: 1,
+      midZoom: 1,
+      rightZoom: 1,
+
       leftPanelWidth: 256,
       rightPanelWidth: 288,
       setLeftPanelWidth: (px) =>
@@ -255,6 +267,17 @@ export const useKachamak = create<KachamakState>()(
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
 
       setRulerVisible: (v) => set({ rulerVisible: v }),
+
+      setPanelZoom: (panel, v) => {
+        const z = Math.round(Math.min(2, Math.max(0.5, v)) * 100) / 100;
+        set(
+          panel === "left"
+            ? { leftZoom: z }
+            : panel === "mid"
+              ? { midZoom: z }
+              : { rightZoom: z }
+        );
+      },
 
       addStatus: (name) => {
         const v = name.trim();
