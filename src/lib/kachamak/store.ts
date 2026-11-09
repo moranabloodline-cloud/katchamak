@@ -63,11 +63,17 @@ interface KachamakState {
 
   /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
      uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
-     da linije trake 2 ostaju poravnate (persisted preference) */
+     da linije trake 2 ostaju poravnate (persisted preference).
+     Split površine imaju SVOJ odvojen zoom (paneAZoom/paneBZoom — po Nikoli
+     09.11., svaka radna površina svoj zoom, lenjir u svakoj površini);
+     null = još nije podešen → nasleđuje midZoom (bez skoka pri prelasku iz
+     Write moda), prvi Ctrl+skrol nad površinom ga zauvek odvaja. */
   leftZoom: number;
   midZoom: number;
   rightZoom: number;
-  setPanelZoom: (panel: "left" | "mid" | "right", v: number) => void;
+  paneAZoom: number | null;
+  paneBZoom: number | null;
+  setPanelZoom: (panel: "left" | "mid" | "right" | "paneA" | "paneB", v: number) => void;
 
   /* panel sizes in px (drag the vertical line to widen / narrow) */
   leftPanelWidth: number;
@@ -291,6 +297,8 @@ export const useKachamak = create<KachamakState>()(
       leftZoom: 1,
       midZoom: 1,
       rightZoom: 1,
+      paneAZoom: null,
+      paneBZoom: null,
 
       leftPanelWidth: 256,
       rightPanelWidth: 288,
@@ -323,7 +331,11 @@ export const useKachamak = create<KachamakState>()(
             ? { leftZoom: z }
             : panel === "mid"
               ? { midZoom: z }
-              : { rightZoom: z }
+              : panel === "right"
+                ? { rightZoom: z }
+                : panel === "paneA"
+                  ? { paneAZoom: z }
+                  : { paneBZoom: z }
         );
       },
 

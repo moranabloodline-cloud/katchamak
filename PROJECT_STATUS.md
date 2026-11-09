@@ -2,10 +2,10 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: **ispravka Split-a po Nikoli** — formatna
-> traka (traka 2) je JEDNA i fiksna, ne duplira se po panelu; lenjir je traka 3
-> (bez pozadine, pa se traka ne vidi) i stoji JEDAN red iznad OBA panela; deli
-> se samo radna površina ISPOD lenjira).
+> **Zadnja izmena:** 2026-11-09 (sesija: **lenjir u svakoj radnoj površini +
+> odvojen zoom po površini** — Nikola ispravio sebe: svaka Split površina ima
+> SVOJ lenjir i SVOJ zoom (Ctrl+skrol nad tom površinom), formatna traka (traka
+> 2) ostaje jedna i fiksna).
 
 ---
 
@@ -22,7 +22,7 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 | 5 | Tri-dot meni (tačna struktura iz dokumenta) + Move dijalog (izbor bilo kog root-a/note-a za parenta) | `NoteTree.tsx` |
 | 6 | **Grid** (zadata 09.11.): Scrivener index kartice (ikona + naslov + Synopsis), papir `#efe6cf` na pluti `#241c12`, caption „GRID · <nivo>", jedan nivo hijerarhije, dupli klik → Write, drag & drop reorder (`destIndex` u `moveNodeTo`), „+ New note" u otvoreni nivo; **store v5** (migracija `view:"grid"`→interno `"corkboard"`) | `Corkboard.tsx` |
 | 7 | Ispravke 09.11.: header linije piksel-poravnate (header = panelWidth+1); **mod prikaza se više ne resetuje** (ostaje poslednji aktivan kroz tabove/otvaranje/izlaz) | `NotesSection.tsx`, `store.ts` |
-| 8 | **Split (09.11., kao u Scriveneru; ispravka istog dana po Nikoli)**: formatna traka (traka 2) je JEDNA fiksna instanta iznad svega — NE duplira se po panelu; lenjir je traka 3 — JEDAN red preko cele radne površine, bez pozadine (zato se traka ne vidi) — i on se NE deli; deli se samo površina ISPOD lenjira: dva identična editora (EditorPage) + razdelnik (0.2–0.8, persist), klik na površinu je bira (zlatna 2px linija na vrhu), klik na notu otvara SAMO u izabranoj — druga ostaje; prvi ulazak klonira otvorenu notu u oba; inspector/brojač/highlight prate fokusiranu; font/veličina/prored u store-u (`editorFont/Size/Spacing`) — zajednički za traku i sve strane; brisanje/prazni/nova nota/promena romana sve pokriveno | `SplitEditors.tsx`, `WriteArea.tsx`, `NotesSection.tsx`, `store.ts` |
+| 8 | **Split (09.11., kao u Scriveneru; dve ispravke istog dana)**: formatna traka (traka 2) je JEDNA fiksna instanta iznad svega — NE duplira se po panelu; **lenjir je u SVAKOJ radnoj površini** (RulerRow + strana u zajedničkom zoom omotu panela) i **svaka površina ima SVOJ odvojeni zoom** (`paneAZoom`/`paneBZoom`, Ctrl+skrol nad tom površinom, `stopPropagation` da ne dira midZoom; null → nasleđuje midZoom); deli se radna površina: dva identična editora (EditorPage) + razdelnik (0.2–0.8, persist), klik na površinu je bira (zlatna 2px linija na vrhu), klik na notu otvara SAMO u izabranoj — druga ostaje; prvi ulazak klonira otvorenu notu u oba; inspector/brojač/highlight prate fokusiranu; font/veličina/prored u store-u (`editorFont/Size/Spacing`) — zajednički za traku i sve strane; brisanje/prazni/nova nota/promena romana sve pokriveno | `SplitEditors.tsx`, `WriteArea.tsx`, `CtrlZoom.tsx`, `NotesSection.tsx`, `store.ts` |
 | + | Već postoje: Trash sa restore-om, **top bar u JEDNOJ traci (h-10)** — Home+Search levo, tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash u sredini (svi u jednom redu), Tree Scope+Save+Account+Settings desno; **druga traka (h-10, poravnata)** = header stabla | editor toolbar (jedan red, px-4 kao tabovi) | Info/Details/Mentions tabovi (BEZ ikonica, bez okvira — svetli samo selektovani zlatnom pilulom, po Nikoli); levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `NoteTree.tsx`, `WriteArea.tsx`, `RightPanel.tsx`, `PROJEKT-KONTEKST.md` §3 |
 
 ## 2. Šta je U TOKU
@@ -97,6 +97,35 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (lenjir u svakoj površini + odvojen zoom po površini) — ZAVRŠENO:**
+  Nikola ispravio sebe: „sve je dobro ali lenjir mora da ide svaka radna
+  površina da ima svoj kako bi svaka radna površina imala odvojen zoom“:
+  (1) **LENJIR U SVAKOJ POVRŠINI** — `RulerRow` vraćen iz jednog pune-širine
+  reda U svaki panel: `SplitEditors` panel = kontejner (klik-bira, zlatna
+  linija, širina iz splitRatio) → zoom omot → `RulerRow` + `EditorPage` (ili
+  `EmptyPaneBody` — prazna površina IMA lenjir, „dva identična ekrana“ u svakom
+  stanju). Lenjir je i dalje bez pozadine (boja površine) i poravnat sa stubcem
+  svoje strane (min(48rem, 100%) u širini PANELA, ne cele radne površine);
+  razdelnik sada seče i kroz red lenjira (kao u Scriveneru — svaki editor svoj
+  lenjir). (2) **ODVOJENI ZOOM PO POVRŠINI** — novi `paneAZoom`/`paneBZoom` u
+  store-u (number|null, persist; `setPanelZoom` proširen sa
+  „left|mid|right“ na + „paneA|paneB“); `CtrlZoom` izdvojen u `CtrlZoom.tsx`
+  (isti native wheel listener) i kačen na OBA pane kontejnera; kad zoom
+  površine još nije podešen (null) čita se midZoom — bez skoka pri prelasku
+  iz Write moda, prvi Ctrl+skrol nad površinom je zauvek odvaja;
+  `stopPropagation` u wheel handleru da event ne „probije“ do main listenera
+  (koji bi menjao midZoom). Zoom omot je unutar panela — širine panela i
+  razdelnik ostaju u pravim pikselima (drag računanje jednostavnije).
+  **VERIFIKACIJA (uživo):** screenshot — traka 2 TAČNO JEDNOM, dva lenjira
+  (svaki sa okom, iznad svoje strane); Ctrl+skrol nad B ×3 → `paneBZoom=1.3`,
+  A i midZoom netaknuti; piksel: lenjir B viši (y85–110) od A (y80–103),
+  tekst B veći; Ctrl+skrol nad A → `paneAZoom=1.1` uz B ostao 1.3; razdelnik
+  0.499→0.604 (A=443px) → vraćeno 0.5; test zoomovi resetovani na null/null;
+  Write mod neizmenjen (jedan lenjir, midZoom); Grid/List netaknuti; traka 2
+  y=79: **894/894 = 100%** na 1440px; boja iza lenjira = površina
+  (13,13,13 = 13,13,13); nema duplirane trake (y=119 prazno); tsc 0 grešaka
+  (src/), build čist, konzola bez grešaka.
 
 - **2026-11-09 (ispravka Split-a: formatna traka fiksna, lenjir = traka 3) — ZAVRŠENO:**
   po Nikolinoj ispravci „ne treba da dupliraš formatting bar — on stoji fiksan

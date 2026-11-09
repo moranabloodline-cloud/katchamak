@@ -3,20 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { PenLine } from "lucide-react";
 import { EditorPage, RulerRow } from "./WriteArea";
+import { CtrlZoom } from "./CtrlZoom";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 
 type Pane = "a" | "b";
 
-/* prazna površina — u taj editor još nije otvorena nota. Bez lažnog reda za
-   traku 2: formatna traka je JEDNA fiksna instanta iznad lenjira (renderuje
-   je NotesSection), pa ovde ništa ne drži njenu liniju */
-function EmptyPane({ section, pane }: { section: SectionKey; pane: Pane }) {
-  const setActivePane = useKachamak((s) => s.setActivePane);
+/* prazna površina — u taj editor još nije otvorena nota. Samo telo praznog
+   stanja: lenjir iznad njega renderuje panel (ista struktura kao pun panel —
+   „dva identična ekrana“ u svakom stanju), a formatna traka je JEDNA fiksna
+   instanta iznad svega (renderuje je NotesSection) */
+function EmptyPaneBody({ section, pane }: { section: SectionKey; pane: Pane }) {
   return (
     <div
-      onPointerDown={() => setActivePane(pane)}
       aria-label={`Empty editor ${pane.toUpperCase()}`}
       className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-8 text-center"
     >
@@ -86,13 +86,16 @@ function SplitResizer({
 }
 
 /* Split (po Nikoli, kao u Scriveneru): formatna traka (traka 2) je JEDNA i
-   fiksna iznad svega — NE duplira se po panelu. Lenjir je traka 3: jedan red
-   preko cele radne površine, bez pozadine (zato se traka ne vidi) — i on se
-   NE deli. Deli se samo radna površina ISPOD lenjira: dva identična editora
-   (EditorPage) + razdelnik koji ih širi/skuplja. Klik na površinu je bira
-   (activePane) — klik na notu u stablu/Gridu/Listi onda otvara notu SAMO u
-   izabranoj površini, druga ostaje sa svojom notom. Fokusirana površina ima
-   tanku zlatnu liniju na vrhu (2px overlay — ne pomera layout ni linije). */
+   fiksna iznad svega — NE duplira se po panelu. Lenjir je u SVAKOJ radnoj
+   površini (ispravka 09.11.: svaka površina svoj lenjir, jer svaka površina
+   ima SVOJ odvojeni zoom — lenjir se uvećava sa stranom te površine). Deli se
+   radna površina: dva identična editora (lenjir + strana) + razdelnik koji
+   ih širi/skuplja. Klik na površinu je bira (activePane) — klik na notu u
+   stablu/Gridu/Listi onda otvara notu SAMO u izabranoj površini, druga
+   ostaje sa svojom notom. Ctrl+skrol nad površinom menja SAMO njen zoom
+   (paneAZoom/paneBZoom; null → nasleđuje midZoom dok korisnik ne pomeri).
+   Fokusirana površina ima tanku zlatnu liniju na vrhu (2px overlay — ne
+   pomera layout ni linije). */
 export function SplitEditors({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
@@ -101,11 +104,14 @@ export function SplitEditors({ section }: { section: SectionKey }) {
   const activePane = useKachamak((s) => s.activePane);
   const setActivePane = useKachamak((s) => s.setActivePane);
   const splitRatio = useKachamak((s) => s.splitRatio ?? 0.5);
-  /* zoom srednjeg panela: lenjir + površine se uvećavaju; formatna traka
-     ostaje van zooma (traka 2 mora biti u istom redu kroz sve panele) */
-  const midZoom = useKachamak((s) => s.midZoom ?? 1);
+  /* zoom po POVŠINI: dok korisnik ne podesi svoj, nasleđuje midZoom —
+     bez skoka kad dođe iz Write moda */
+  const zoomA = useKachamak((s) => s.paneAZoom ?? s.midZoom ?? 1);
+  const zoomB = useKachamak((s) => s.paneBZoom ?? s.midZoom ?? 1);
 
   const wrapRef = useRef<HTMLDivElement>(null);
+  const paneARef = useRef<HTMLDivElement | null>(null);
+  const paneBRef = useRef<HTMLDivElement | null>(null);
   const novel = novels.find((n) => n.id === activeNovelId);
   const hitA = paneAId && novel ? findNodeInNovel(novel, paneAId) : null;
   const hitB = paneBId && novel ? findNodeInNovel(novel, paneBId) : null;
@@ -120,13 +126,12 @@ export function SplitEditors({ section }: { section: SectionKey }) {
     }
   }, []);
 
-  const pane = (
-    p: Pane,
-    hit: { node: NoteNode; section: SectionKey } | null
-  ) => {
+  const pane = (p: Pane, hit: { node: NoteNode; section: SectionKey } | null) => {
     const active = activePane === p;
+    const zoom = p === "a" ? zoomA : zoomB;
     return (
       <div
+        ref={p === "a" ? paneARef : paneBRef}
         onPointerDown={() => setActivePane(p)}
         data-pane={p}
         className={`relative flex h-full min-w-0 flex-col ${
@@ -140,20 +145,25 @@ export function SplitEditors({ section }: { section: SectionKey }) {
             active ? "opacity-100" : "opacity-0"
           }`}
         />
-        {hit ? (
-          <EditorPage key={hit.node.id} node={hit.node} section={hit.section} />
-        ) : (
-          <EmptyPane section={section} pane={p} />
-        )}
+        {/* zoom POVŠINE: lenjir + strana se uvećavaju zajedno, svaka površina
+            odvojeno; širine panela i razdelnik ostaju u pravim pikselima */}
+        <div className="flex min-h-0 flex-1 flex-col" style={{ zoom }}>
+          <RulerRow />
+          {hit ? (
+            <EditorPage key={hit.node.id} node={hit.node} section={hit.section} />
+          ) : (
+            <EmptyPaneBody section={section} pane={p} />
+          )}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col" style={{ zoom: midZoom }}>
-      {/* traka 3 — lenjir: JEDAN red preko cele radne površine, bez pozadine
-          (zato se traka ne vidi); deli se samo površina ispod njega */}
-      <RulerRow />
+    <div className="flex h-full min-h-0 w-full flex-col">
+      {/* Ctrl+skrol nad pojedinačnom površinom menja SAMO njen zoom */}
+      <CtrlZoom panel="paneA" targetRef={paneARef} />
+      <CtrlZoom panel="paneB" targetRef={paneBRef} />
       <div ref={wrapRef} className="flex min-h-0 flex-1">
         {pane("a", hitA)}
         <SplitResizer wrapRef={wrapRef} />
