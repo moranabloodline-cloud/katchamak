@@ -24,9 +24,10 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 ## 2. Šta je U TOKU
 
 - **Ništa u aplikativnom kodu** — kod je u potvrđenom stanju (Grid završen i prijavljen).
-- *(ova stavka se briše/ispunjava posle svakog zadatka)* Kontinuitet i backup
-  infrastruktura (AGENTS.md, PROJECT_STATUS.md, backup skript, dnevni cron,
-  sigurnosni fix `.env`) — **u završnoj fazi, vidi Dnevnik**.
+- Kontinuitet i backup infrastruktura — **ZAVRŠENO 09.11.** (`AGENTS.md`,
+  `PROJECT_STATUS.md`, `scripts/backup.sh`, dnevni cron ID 517453 u 03:00,
+  sigurnosni fix `.env`; sve verifikovano — vidi §6 i Dnevnik). Ovaj odeljak
+  se puni novim započetim zadatkom, a prazni posle svakog završenog.
 
 ## 3. Šta je SLEDEĆE (po redu — „ajmo redom")
 
@@ -75,9 +76,9 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 | 2 | Git checkpointovi (platforma) + commitovi posle zadataka | prepisivanje koda, istorija | aktivan (zadnji: 09.11 08:02) |
 | 3 | `backups/kachamak-<stamp>.zip` — snapshotovi (čuva se 12) | brisanje/korupcija | `scripts/backup.sh` |
 | 4 | `download/kachamak-aplikacija.zip` — kopija za Nikolu | prenos izvan radnog prostora | osvežava skript |
-| 5 | `public/kachamak-aplikacija.zip` — cloud kopija na preview deploymentu | gubitak celog workspace-a | osvežava skript |
 | 4b | `download/kachamak-backup-<datum>.zip` — datumovane kopije | istorija za Nikolu | ručno |
-| 6 | **Cron „Kachamak — dnevni backup", 03:00 (Europe/Belgrade)** | zaboravljena ručna kopija | konfigurisan |
+| 5 | `public/kachamak-aplikacija.zip` — cloud kopija na preview deploymentu | gubitak celog workspace-a | osvežava skript |
+| 6 | **Cron „Kachamak — dnevni backup", 03:00 (Europe/Belgrade)** | zaboravljena ručna kopija | konfigurisan (ID 517453) |
 
 - **Restore postupak:** `PROJEKT-KONTEKST.md` §0 (prvo cloud link, onda
   Nikolaov zip; uvek `bun install && bun run build` posle raspakivanja).
@@ -93,12 +94,18 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
-- **2026-11-09 (kontinuitet/backup sesija):** Kreirani `AGENTS.md` (stalna
-  pravila + obavezan redosled čitanja) i `PROJECT_STATUS.md` (ovaj fajl);
-  napisan `scripts/backup.sh` (snapshot + secrets-guard + download/public
-  kopije + rotacija 12 + git commit); konfigurisan dnevni cron 03:00;
-  **sigurnosni fix:** `.env` izbačen iz git indeksa i iz oba zipa; snapshot,
-  restore-drill i test „nove sesije" verifikovani. Aplikativni kod NIJE diran.
+- **2026-11-09 (kontinuitet/backup sesija) — ZAVRŠENO:** Kreirani `AGENTS.md`
+  (stalna pravila + obavezan redosled čitanja) i `PROJECT_STATUS.md` (ovaj
+  fajl); napisan `scripts/backup.sh` (snapshot + secrets-guard + download/public
+  kopije + rotacija 12 + git commit); konfigurisan dnevni cron 03:00
+  Europe/Belgrade (ID 517453); **sigurnosni fix:** `.env` (sadrži
+  `DATABASE_URL`) izbačen iz git indeksa i iz oba zipa — zipovi rebuildovani,
+  sve tri kopije identične (MD5 proveren). Verifikacija: snapshot
+  `backups/kachamak-2026-11-09_094037.zip` (4,7M), `unzip -t` čist,
+  restore-drill u /tmp čist (133 fajla, diff bez razlike u izvornom kodu), i
+  nezavisni test „nove sesije" prošao — nova sesija je iz dokumenata
+  rekonstruisala projekat, status, sledeći zadatak (tačku 7), restore postupak
+  i pravila. Aplikativni kod NIJE diran.
 - **2026-11-09 ~08:02 (prethodni deo sesije, commit `9457ee5`):** Ispravka po
   Nikolinoj prijavi — naziv mode-a vraćen na **„Grid"** (zabrana preimenovanja
   u „Corkboard"); checkpoint commit platforme.

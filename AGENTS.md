@@ -2,7 +2,7 @@
 
 > **OBAVEZNO PRVO ČITANJE U SVAKOJ NOVOJ SESIJI — PRE BILO KAKVE IZMENE KODA.**
 > Ovaj fajl su stalna pravila projekta. Važi za svaku sesiju i svakog agenta
-> koji radi na ovom kodu. Menja se **samo uz Nikolainu eksplicitnu saglasnost**.
+> koji radi na ovom kodu. Menja se **samo uz Nikolinu eksplicitnu saglasnost**.
 
 ---
 
