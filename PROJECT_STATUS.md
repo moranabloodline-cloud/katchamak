@@ -2,10 +2,11 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-10 (sesija: **trajna GitHub veza uspostavljena** —
-> fine-grained PAT u `~/.git-credentials` (van repoa); merge unrelated histories
-> (README) + **push cele istorije uspeo bez force-pusha**; AGENTS.md dopunjen
-> push pravilom; aplikativni kod NIJE diran).
+> **Zadnja izmena:** 2026-11-10 (sesija: **Dashboard — faza 1** — novi početni
+> ekran po Nikolinoj referenci: logo/Help/Account, „My Collections“, AI banner
+> 2880x640 u `public/dashboard-banner.png`, stablo kolekcija (prazno, bez demo
+> podataka), horizontalne kartice postojećih projekata, otvaranje u Workspace +
+> povratak; ostale kontrole samo vizuelno. Store/schema/Workspace NIJE diran).
 
 ---
 
@@ -98,6 +99,33 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-10 (Dashboard — faza 1) — ZAVRŠENO:** po Nikolinoj referenci
+  (screenshot) napravljen Dashboard kao **početni ekran**. NOVO:
+  `src/components/kachamak/Dashboard.tsx`; `page.tsx` renderuje Dashboard
+  umesto starog Home kad nema aktivnog romana (**Home.tsx ostaje netaknut u
+  kodu** — stari kod se ne briše pre Nikolinet potvrde). **Gornji deo:** top
+  bar (Feather + „KATCHAMAK“ serif zlatno levo; Help i Account desno — samo
+  vizuelno), naslov „My Collections“ (serif) + podnaslov, **dekorativni
+  statični banner** — AI slika `public/dashboard-banner.png` (2880x640,
+  generisan `scripts/dashboard/gen_banner_wide.ts`; pet kartica Books/Games/
+  Software/Movies/Cartoons sa tačnim pluralom, planine levo i dvorac desno do
+  ivica; JEDNA slika, bez kartica/komponenti/funkcionalnosti). **Donji deo:**
+  levo stablo Collections (faza 1 prazno — „No collections yet.“, bez demo
+  podataka; kod za hijerarhiju/izbor spreman za fazu 2), desno „All Projects“
+  + toolbar: + Collection i + Project (zlatne), Import (outline), Search,
+  Sort, Group, Grid/List toggle — **svi samo vizuelno** (Nikolina tačka 4).
+  Projekti = postojeći romani (sort po updatedAt), **horizontalne kartice**:
+  cover levo (postojeći `n.cover.bg`+`icon` — podaci netaknuti), desno naslov
+  serif, „Novel“, broj reči (`novelWords`), „Modified X“ (`relativeTime`
+  helper u komponenti), ⋮ vizuelno. **Minimalna funkcionalnost radi:** klik na
+  karticu = `openNovel` → Workspace; postojeće „Back to dashboard“ dugme
+  (`closeNovel`) vraća na Dashboard. Store/schema/migracije NIJE diran;
+  Workspace/editor netaknuti. Verifikacija: `build` + `tsc` čisti; konzola
+  bez grešaka; screenshotovi 1440x900 (hero ~438px ≈ referenca, donji deo
+  staje bez skrola) i 1366x768 u `scripts/dashboard/`. Banner iteriran: v1
+  1440x704 (singular „project“ na 2 kartice) → ogledalo-extend neispravan
+  (odražavao kartice) → usvojen wide 2880x640 (tačni tekstovi, pejzaž do
+  ivica).
 - **2026-11-10 (trajna GitHub veza — merge + push cele istorije) — ZAVRŠENO:**
   Nikola napravio fine-grained PAT (samo repo `katchamak`, Contents: Read and
   write) i poslao ga u chatu. Token upisan **isključivo u `~/.git-credentials`**
