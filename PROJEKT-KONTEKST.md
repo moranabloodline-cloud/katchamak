@@ -86,15 +86,19 @@ Dodatno već postoje:
 
 - **Trash tab** sa restore-om (`TrashView.tsx`, `TrashItem` sa parentId/section,
   `deleteNode` → Trash, restore vraća na mesto; Delete taster na tastaturi radi).
-- **Top bar**: tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash
-  (zlatna aktivna: `border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]`); desno
-  **Tree Scope dropdown** (All/Folders only/Top level only), Save (toast
-  „Saved locally · vreme"), Account avatar (inijali → `AccountDialog`), Settings
-  (→ `SettingsDialog`).
+- **Top bar (dve trake, 09.11. po Nikoli)**: traka 1 — Home+Search levo (zona
+  levog panela), Tree Scope dropdown (All/Folders only/Top level only) + Save
+  (toast „Saved locally · vreme") + Account avatar (inijali → `AccountDialog`)
+  + Settings (→ `SettingsDialog`) desno (zona desnog panela); traka 2 — tabovi
+  Binder/Codex/Planning/Research/Templates/Prompts/Trash svi u jednom redu
+  (zlatna aktivna: `border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]`), poravnato
+  sa radnom površinom; vertikalne linije panela idu kroz obe trake.
 - **Levi panel**: header sa tab imenom, +(add), •••, Expand/Collapse all; stablo
   sa strelicom+ikonom+naslovom+tri-dot; **levo-donja traka**: ⓘ dugme
-  (Popover: Save/Recovery/Copy feedback) + **Split | Write | Corkboard | List**
-  dugmad uz desnu ivicu levog panela — fiksno, ne skroluje sa stablom.
+  (Popover: Save/Recovery/Copy feedback) — fiksno, ne skroluje sa stablom.
+- **Donja traka radne površine**: Target ikonica skroz levo, word count u
+  sredini, **Split | Write | Grid | List uz desnu ivicu srednjeg panela**
+  (09.11. premešteno iz levog panela po Nikoli).
 - **Desni panel**: Label + Status + boja u istom redu (`RightPanel.tsx`),
   Synopsis/Notes, hide dugme; `NoteMetaBar` dole.
 - **Corkboard / ListView / WriteArea** (rich editor), `NoteMetaBar`, resizer-i

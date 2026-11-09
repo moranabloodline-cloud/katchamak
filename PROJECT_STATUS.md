@@ -2,7 +2,7 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: kontinuitet i backup).
+> **Zadnja izmena:** 2026-11-09 (sesija: raspored view dugmića + dvoredni top bar).
 
 ---
 
@@ -12,18 +12,18 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 
 | # | Stavka | Gde u kodu |
 |---|--------|------------|
-| 1 | Donja traka radne površine: Target ikonica skroz levo, word count u sredini (`novelWords`, format „71,257 words") | `NotesSection.tsx` |
+| 1 | Donja traka radne površine: Target ikonica skroz levo, word count u sredini (`novelWords`, format „71,257 words"), **Split/Write/Grid/List uz desnu ivicu srednjeg panela** (09.11. po Nikoli) | `NotesSection.tsx` |
 | 2 | Everything is a Note — svi tabovi isti note sistem (Codex uključen; migrate v3→v4) | `types.ts`, `store.ts` |
 | 3 | Slobodna hijerarhija — novi notes uvek `kind:"doc"`, ime/ikona/boja po korisniku | `types.ts` |
 | 4 | Klik na ikonu note → icon picker popup (i preko menija „Change icon") | `NoteTree.tsx` |
 | 5 | Tri-dot meni (tačna struktura iz dokumenta) + Move dijalog (izbor bilo kog root-a/note-a za parenta) | `NoteTree.tsx` |
 | 6 | **Grid** (zadata 09.11.): Scrivener index kartice (ikona + naslov + Synopsis), papir `#efe6cf` na pluti `#241c12`, caption „GRID · <nivo>", jedan nivo hijerarhije, dupli klik → Write, drag & drop reorder (`destIndex` u `moveNodeTo`), „+ New note" u otvoreni nivo; **store v5** (migracija `view:"grid"`→interno `"corkboard"`) | `Corkboard.tsx` |
 | 7 | Ispravke 09.11.: header linije piksel-poravnate (header = panelWidth+1); **mod prikaza se više ne resetuje** (ostaje poslednji aktivan kroz tabove/otvaranje/izlaz) | `NotesSection.tsx`, `store.ts` |
-| + | Već postoje: Trash sa restore-om, top bar (Binder/Codex/Planning/Research/Templates/Prompts/Trash + Tree Scope + Save + Account + Settings), levi panel (stablo, ⓘ popover, Split/Write/Grid/List fiksirani), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | v. `PROJEKT-KONTEKST.md` §3 |
+| + | Već postoje: Trash sa restore-om, **top bar u dve trake (09.11. po Nikoli)** — traka 1: Home+Search levo / Tree Scope+Save+Account+Settings desno, traka 2: tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash svi u jednom redu; levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `PROJEKT-KONTEKST.md` §3 |
 
 ## 2. Šta je U TOKU
 
-- **Ništa** — kod je u potvrđenom stanju (Grid + UI polish prolaz završeni).
+- **Ništa** — kod je u potvrđenom stanju (Grid + UI polish + raspored dugmića/dvoredni top bar završeni; čeka Nikolino potvrdu).
 - Kontinuitet i backup infrastruktura — **ZAVRŠENO 09.11.** (`AGENTS.md`,
   `PROJECT_STATUS.md`, `scripts/backup.sh`, dnevni cron ID 517453 u 03:00,
   sigurnosni fix `.env`; sve verifikovano — vidi §6 i Dnevnik). Ovaj odeljak
@@ -94,6 +94,20 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-09 (raspored dugmića + dvoredni top bar) — ZAVRŠENO:** po Nikolinoj
+  naredbi dve izmene rasporeda, bez diranja funkcionalnosti i podataka:
+  (1) **Split/Write/Grid/List premešteni** — bili su u donjoj traci levog panela
+  (uz njenu desnu ivicu), sada stoje **uz desnu ivicu srednjeg panela radne
+  površine, skroz na donjoj traci** (`absolute right-2`, pa word count ostaje
+  tačno u sredini); ⓘ u levom panelu ostaje na svom mestu; (2) **top bar sada
+  ima dve trake** — traka 1: Home+Search (zona levog panela) i Tree Scope +
+  Save + Account + Settings (zona desnog panela), sredina prazna; traka 2:
+  **svih 7 tabova u jednom redu**, poravnato sa radnom površinom; vertikalne
+  linije panela produžene kroz obe trake (zone `panelWidth+1` u obe), tabovi
+  `whitespace-nowrap` + horizontalni skrol samo ako prozor bude suviše uzan —
+  nikad se ne lome u dva reda. Oba reda `h-10` (40px, na 4/8 skali).
+  Verifikacija: `tsc` + `build` čisti; screenshotovi 1440/1366/1100px + klik
+  test Grid/Split iz nove pozicije (radi). Store/schema: netaknuti.
 - **2026-11-09 (UI polish prolaz) — ZAVRŠENO:** Finalni vizuelni prolaz bez
   redizajna — samo className izmene u 10 komponenti: (1) **selekcija u zlatnoj
   boji** — NoteTree red i ListView red su bili ZELENI (green-500), sada

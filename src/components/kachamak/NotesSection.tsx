@@ -312,27 +312,10 @@ export function NotesSection({ section }: { section: SectionKey }) {
             <div className="min-h-0 flex-1">
               <NoteTree section={section} />
             </div>
-            {/* bottom of the left panel: circled "i" pinned to the bottom-left corner and
-                Split / Write / Corkboard / List at the right edge — both fixed, never scroll with the tree */}
-            <div className="flex h-10 shrink-0 items-center justify-between border-t border-amber-500/25 px-2">
+            {/* bottom of the left panel: circled "i" pinned to the bottom-left corner —
+                fixed, never scrolls with the tree (view modes live on the main bottom bar) */}
+            <div className="flex h-10 shrink-0 items-center border-t border-amber-500/25 px-2">
               <SaveInfoButton />
-              <div role="toolbar" aria-label="View mode" className="flex shrink-0 items-center gap-0.5">
-                {VIEW_BTNS.map((b) => (
-                  <button
-                    key={b.key}
-                    type="button"
-                    onClick={() => setView(b.key)}
-                    aria-pressed={view === b.key}
-                    className={`rounded-lg px-2 py-1 text-[13px] transition-colors ${
-                      view === b.key
-                        ? "border border-amber-400/70 bg-amber-400/15 text-amber-300"
-                        : "border border-transparent text-zinc-300 hover:text-white"
-                    }`}
-                  >
-                    {b.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </aside>
           <Resizer
@@ -378,12 +361,35 @@ export function NotesSection({ section }: { section: SectionKey }) {
             ))}
         </div>
 
-        {/* bottom bar, whole window width: target icon on the left, word count in the middle */}
+        {/* bottom bar of the work area: target icon on the left, word count in the
+            middle, Split / Write / Corkboard / List pinned to the right edge —
+            word count stays exactly centred because the toolbar is absolute */}
         <div className="relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
           <Target className="absolute left-3 h-4 w-4 text-amber-400/90" aria-hidden="true" />
           <span className="mx-auto text-xs text-muted-foreground">
             {novel ? `${novelWords(novel).toLocaleString("en-US")} words` : "0 words"}
           </span>
+          <div
+            role="toolbar"
+            aria-label="View mode"
+            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5"
+          >
+            {VIEW_BTNS.map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                onClick={() => setView(b.key)}
+                aria-pressed={view === b.key}
+                className={`rounded-lg px-2 py-1 text-[13px] transition-colors ${
+                  view === b.key
+                    ? "border border-amber-400/70 bg-amber-400/15 text-amber-300"
+                    : "border border-transparent text-zinc-300 hover:text-white"
+                }`}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
         </div>
       </main>
 
