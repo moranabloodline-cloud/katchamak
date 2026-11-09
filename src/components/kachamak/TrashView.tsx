@@ -55,7 +55,7 @@ export function TrashView() {
             aria-label="Show panel"
             title="Show panel"
             onClick={toggleLeftPanel}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -70,7 +70,7 @@ export function TrashView() {
             aria-label="Hide panel"
             title="Hide panel"
             onClick={toggleLeftPanel}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -110,7 +110,7 @@ export function TrashView() {
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter by name…"
             aria-label="Filter trash by name"
-            className="mt-4 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-orange-500/50"
+            className="mt-4 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition-colors focus:border-amber-500/50"
           />
 
           <div className="mt-4 space-y-2">
@@ -129,7 +129,7 @@ export function TrashView() {
                 <button
                   type="button"
                   onClick={() => restoreFromTrash(t.id)}
-                  className="flex items-center gap-1.5 rounded-lg border border-green-500/40 px-2.5 py-1.5 text-xs text-green-300 hover:bg-green-500/10"
+                  className="flex items-center gap-1.5 rounded-lg border border-green-500/40 px-2.5 py-1.5 text-xs text-green-300 transition-colors hover:bg-green-500/10"
                 >
                   <RotateCcw className="h-3.5 w-3.5" /> Restore
                 </button>
@@ -137,7 +137,7 @@ export function TrashView() {
                   type="button"
                   onClick={() => deleteForever(t.id)}
                   aria-label={`Delete ${t.node.title} forever`}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -171,7 +171,7 @@ export function TrashView() {
                 <button
                   type="button"
                   disabled={novel.trash.length === 0}
-                  className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Delete {novel.trash.length} item{novel.trash.length === 1 ? "" : "s"} forever
                 </button>
@@ -209,7 +209,7 @@ export function TrashView() {
             aria-label="Hide panel"
             title="Hide panel"
             onClick={toggleRightPanel}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -230,7 +230,7 @@ export function TrashView() {
             aria-label="Show panel"
             title="Show panel"
             onClick={toggleRightPanel}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>

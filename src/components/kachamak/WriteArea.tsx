@@ -41,7 +41,7 @@ function ToolBtn({
       aria-label={title}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
     >
       {children}
     </button>
@@ -140,7 +140,7 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
           <AlignJustify className="h-4 w-4" />
         </ToolBtn>
         <span className="mx-1 h-5 w-px bg-white/10" />
-        <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground" title="Text colour" aria-label="Text colour">
+        <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Text colour" aria-label="Text colour">
           <Palette className="h-4 w-4" />
           <input
             type="color"
@@ -148,7 +148,7 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
             onChange={(e) => cmd("foreColor", e.target.value)}
           />
         </label>
-        <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground" title="Highlight" aria-label="Highlight">
+        <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Highlight" aria-label="Highlight">
           <Highlighter className="h-4 w-4" />
           <input
             type="color"

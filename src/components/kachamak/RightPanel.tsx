@@ -63,7 +63,7 @@ export function RightPanel({
             aria-label="Hide panel"
             title="Hide panel"
             onClick={onHide}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

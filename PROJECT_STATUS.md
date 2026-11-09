@@ -23,7 +23,7 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 
 ## 2. Šta je U TOKU
 
-- **Ništa u aplikativnom kodu** — kod je u potvrđenom stanju (Grid završen i prijavljen).
+- **Ništa** — kod je u potvrđenom stanju (Grid + UI polish prolaz završeni).
 - Kontinuitet i backup infrastruktura — **ZAVRŠENO 09.11.** (`AGENTS.md`,
   `PROJECT_STATUS.md`, `scripts/backup.sh`, dnevni cron ID 517453 u 03:00,
   sigurnosni fix `.env`; sve verifikovano — vidi §6 i Dnevnik). Ovaj odeljak
@@ -94,6 +94,25 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-09 (UI polish prolaz) — ZAVRŠENO:** Finalni vizuelni prolaz bez
+  redizajna — samo className izmene u 10 komponenti: (1) **selekcija u zlatnoj
+  boji** — NoteTree red i ListView red su bili ZELENI (green-500), sada
+  `amber-400/10` (+ border `amber-400/40` u stablu) u skladu sa sistemom
+  „zlato za aktivno/selektovano“; (2) **uniformne ikonice** — ⓘ u donjoj traci
+  18px → 16px (`h-4 w-4`), Settings u topbaru (skupljena traka) 16px → 20px
+  kao ostale u topbaru; (3) **border konsistencija** — Tree Scope dropdown
+  `white/20` → `white/15` (par sa search poljem, `--input` token), focus
+  filtera u Trash-u `orange-500/50` → `amber-500/50` (isti fokus jezik kao
+  search); (4) **mikro-interakcije** — `transition-colors` dodat na ~40
+  interaktivnih elemenata (redovi, ikonice-dugmad, pilule, meni-tačke,
+  pickeri, dugmad dijaloša, „+ New note“ kartica, Restore/Delete); radii i
+  spacing već bili na koherentnoj skali (tokeni `--radius`, 4/8 baza sa 2px
+  mikro-koracima) — netaknuti; Scrivener kartice namerno `rounded-[3px]`.
+  Verifikacija: `tsc` + `build` čisti; izračunato potvrđene boje selekcije
+  (amber/10+/40), veličine ikonica (16/20px) i tranzicije; screenshotovi
+  pre/posle u `scripts/polish/` (home, workspace, grid, list, write) —
+  raspored neizmenjen, editor i dalje dominantan. Funkcionalnost i podaci
+  netaknuti (samo klase).
 - **2026-11-09 (kontinuitet/backup sesija) — ZAVRŠENO:** Kreirani `AGENTS.md`
   (stalna pravila + obavezan redosled čitanja) i `PROJECT_STATUS.md` (ovaj
   fajl); napisan `scripts/backup.sh` (snapshot + secrets-guard + download/public

@@ -76,7 +76,7 @@ export function Home() {
         <button
           type="button"
           onClick={() => setAccountOpen(true)}
-          className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
         >
           <UserCircle2 className="h-4 w-4" /> My Account
         </button>
@@ -96,14 +96,14 @@ export function Home() {
               setNewAuthor(defaultAuthor);
               setCreateOpen(true);
             }}
-            className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500"
+            className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
           >
             <Plus className="h-4 w-4" /> Create novel
           </button>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/5"
+            className="flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm transition-colors hover:bg-white/5"
           >
             <Upload className="h-4 w-4" /> Import backup
           </button>
@@ -170,7 +170,7 @@ export function Home() {
                   <button
                     type="button"
                     onClick={() => openNovel(n.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/10 py-1.5 text-xs hover:bg-white/15"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/10 py-1.5 text-xs transition-colors hover:bg-white/15"
                   >
                     <BookOpen className="h-3.5 w-3.5" /> Open
                   </button>
@@ -181,7 +181,7 @@ export function Home() {
                       exportNovelJson(n);
                       toast.success("Backup downloaded.");
                     }}
-                    className="rounded-lg border border-white/10 p-1.5 text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    className="rounded-lg border border-white/10 p-1.5 text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                   >
                     <Download className="h-3.5 w-3.5" />
                   </button>
@@ -189,7 +189,7 @@ export function Home() {
                     type="button"
                     aria-label={`Delete ${n.title}`}
                     onClick={() => setPendingDelete(n.id)}
-                    className="rounded-lg border border-white/10 p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-400"
+                    className="rounded-lg border border-white/10 p-1.5 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -251,7 +251,7 @@ export function Home() {
                 setCreateOpen(false);
                 toast.success("Novel created — happy writing!");
               }}
-              className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-500"
+              className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-500"
             >
               Create
             </button>

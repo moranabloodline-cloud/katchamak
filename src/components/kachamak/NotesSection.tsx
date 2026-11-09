@@ -95,9 +95,9 @@ function SaveInfoButton() {
           type="button"
           aria-label="Save information"
           title="Save information"
-          className="rounded-full p-1 text-amber-400/90 hover:bg-amber-400/10 hover:text-amber-300"
+          className="rounded-full p-1 text-amber-400/90 transition-colors hover:bg-amber-400/10 hover:text-amber-300"
         >
-          <Info className="h-[18px] w-[18px]" />
+          <Info className="h-4 w-4" />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -187,7 +187,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
             type="button"
             aria-label="Document colour"
             title="Document colour"
-            className="flex h-7 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20 hover:bg-white/5"
+            className="flex h-7 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20 transition-colors hover:bg-white/5"
           >
             <span
               className="h-4 w-4 rounded-full border border-white/20"
@@ -238,7 +238,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
                     aria-label={`Remove ${s}`}
                     title={`Remove ${s}`}
                     onClick={() => removeStatus(s)}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-white/10 hover:text-red-400"
+                    className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-red-400"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -267,7 +267,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
               />
               <button
                 type="submit"
-                className="shrink-0 rounded-md border border-orange-500/40 px-3 text-xs text-orange-300 hover:bg-orange-500/10"
+                className="shrink-0 rounded-md border border-orange-500/40 px-3 text-xs text-orange-300 transition-colors hover:bg-orange-500/10"
               >
                 Add
               </button>
@@ -347,7 +347,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
             aria-label="Show panel"
             title="Show panel"
             onClick={toggleLeftPanel}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -370,7 +370,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
                 <button
                   type="button"
                   onClick={() => setView("corkboard")}
-                  className="mt-2 rounded-lg border border-orange-500/40 px-3 py-1.5 text-xs text-orange-300 hover:bg-orange-500/10"
+                  className="mt-2 rounded-lg border border-orange-500/40 px-3 py-1.5 text-xs text-orange-300 transition-colors hover:bg-orange-500/10"
                 >
                   Browse Grid instead
                 </button>
@@ -415,7 +415,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
                     aria-label="Hide panel"
                     title="Hide panel"
                     onClick={toggleRightPanel}
-                    className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -437,7 +437,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
             aria-label="Show panel"
             title="Show panel"
             onClick={toggleRightPanel}
-            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>

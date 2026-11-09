@@ -57,7 +57,7 @@ export function AccountDialog({
               onOpenChange(false);
               toast.success("Account updated.");
             }}
-            className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-500"
+            className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-500"
           >
             Save
           </button>

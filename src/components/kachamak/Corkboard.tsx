@@ -179,7 +179,7 @@ export function Corkboard({ section }: { section: SectionKey }) {
         <button
           type="button"
           onClick={() => addNode(section, newNoteParentId, "doc")}
-          className="flex h-60 w-60 shrink-0 flex-col items-center justify-center gap-2 rounded-[3px] border-2 border-dashed border-white/15 text-[#c9a55c]/70 hover:border-[#c9a55c]/50 hover:text-[#c9a55c] cursor-pointer"
+          className="flex h-60 w-60 shrink-0 flex-col items-center justify-center gap-2 rounded-[3px] border-2 border-dashed border-white/15 text-[#c9a55c]/70 transition-colors hover:border-[#c9a55c]/50 hover:text-[#c9a55c] cursor-pointer"
         >
           <span className="text-lg leading-none">+</span>
           <span className="text-xs">New note</span>

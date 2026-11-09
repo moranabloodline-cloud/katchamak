@@ -158,7 +158,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
           disabled={invalid}
           onClick={() => pickDestination(sec, n.id)}
           title={invalid ? "You can't move a note into itself or its sub-pages." : n.title}
-          className={`flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm ${
+          className={`flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm transition-colors ${
             invalid
               ? "cursor-not-allowed text-muted-foreground/40"
               : "cursor-pointer hover:bg-white/10"
@@ -188,11 +188,11 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
             deleteNode(section, node.id);
           }
         }}
-        className={`group flex items-center gap-1.5 rounded-md px-2 py-1.5 cursor-pointer text-sm select-none ${
+        className={`group flex items-center gap-1.5 rounded-md px-2 py-1.5 cursor-pointer text-sm transition-colors select-none ${
           node.hidden ? "opacity-50" : ""
         } ${
           selected
-            ? "bg-green-500/20 text-green-100 border border-green-500/40"
+            ? "bg-amber-400/10 text-amber-100 border border-amber-400/40"
             : "border border-transparent hover:bg-white/5 text-foreground/90"
         }`}
         style={{ paddingLeft: `${depth * 14 + 8}px` }}
@@ -220,7 +220,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
               aria-label="Change icon"
               title="Change icon"
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 rounded p-0.5 hover:bg-white/10"
+              className="shrink-0 rounded p-0.5 transition-colors hover:bg-white/10"
             >
               {rowIcon(node, open)}
             </button>
@@ -245,7 +245,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
                     updateNode(section, node.id, { icon: key });
                     setPickerOpen(false);
                   }}
-                  className={`flex h-7 w-7 items-center justify-center rounded-md hover:bg-white/10 ${
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-white/10 ${
                     node.icon === key ? "bg-white/15" : ""
                   }`}
                 >
@@ -282,7 +282,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
             <button
               type="button"
               onClick={() => updateNode(section, node.id, { color: "" })}
-              className="mt-2 w-full rounded-md border border-white/10 py-1 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+              className="mt-2 w-full rounded-md border border-white/10 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
             >
               No colour
             </button>
@@ -316,7 +316,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
               <button
                 type="button"
                 aria-label="Note actions"
-                className="p-0.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                className="p-0.5 rounded transition-colors hover:bg-white/10 text-muted-foreground hover:text-foreground"
               >
                 <MoreVertical className="h-3.5 w-3.5" />
               </button>
@@ -417,7 +417,7 @@ function TreeRow({ node, section, depth, novelTitle }: TreeRowProps) {
                   <button
                     type="button"
                     onClick={() => pickDestination(sec, null)}
-                    className="flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm font-semibold hover:bg-white/10"
+                    className="flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm font-semibold transition-colors hover:bg-white/10"
                   >
                     <Library className="h-3.5 w-3.5 shrink-0 text-orange-400" />
                     <span>{t.label}</span>
@@ -504,7 +504,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
           aria-label="Hide panel"
           title="Hide panel"
           onClick={toggleLeftPanel}
-          className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -516,7 +516,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
           aria-label="Add note"
           title="Add note"
           onClick={() => addNode(section, null, "doc")}
-          className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
           <SquarePlus className="h-4 w-4" />
         </button>
@@ -526,7 +526,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
               type="button"
               aria-label="Section actions"
               title="More actions"
-              className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -563,14 +563,14 @@ export function NoteTree({ section }: { section: SectionKey }) {
         <button
           type="button"
           onClick={() => setAllNodesCollapsed(section, false)}
-          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
         >
           Expand all
         </button>
         <button
           type="button"
           onClick={() => setAllNodesCollapsed(section, true)}
-          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
         >
           Collapse all
         </button>

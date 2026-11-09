@@ -86,7 +86,7 @@ function ProjectSearch() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => go(r)}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-white/10"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-white/10"
               >
                 {Icon ? (
                   <Icon
@@ -142,14 +142,14 @@ function SettingsDialog({
               exportNovelJson(novel);
               toast.success("Backup downloaded.");
             }}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm hover:bg-white/5 disabled:opacity-40"
+            className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5 disabled:opacity-40"
           >
             <Save className="h-4 w-4" /> Export backup of “{novel?.title ?? "—"}”
           </button>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm hover:bg-white/5"
+            className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5"
           >
             <Upload className="h-4 w-4" /> Import backup
           </button>
@@ -270,7 +270,7 @@ export function Workspace() {
                     type="button"
                     aria-label="Tree level"
                     title="Which level of the tree to show"
-                    className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/20 px-3.5 text-[15px] text-stone-100 hover:bg-white/5"
+                    className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/15 px-3.5 text-[15px] text-stone-100 transition-colors hover:bg-white/5"
                   >
                     <span className="truncate">{SCOPE_LABELS[treeScope]}</span>
                     <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
@@ -306,7 +306,7 @@ export function Workspace() {
                     })}`
                   )
                 }
-                className="rounded-md p-1 text-stone-200 hover:bg-white/10 hover:text-white"
+                className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Save className="h-5 w-5" />
               </button>
@@ -315,7 +315,7 @@ export function Workspace() {
                 aria-label="My account"
                 title="My account"
                 onClick={() => setAccountOpen(true)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-[11px] font-bold text-stone-200 hover:border-white/50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-[11px] font-bold text-stone-200 transition-colors hover:border-white/50"
               >
                 {initials}
               </button>
@@ -324,7 +324,7 @@ export function Workspace() {
                 aria-label="Settings"
                 title="Settings"
                 onClick={() => setSettingsOpen(true)}
-                className="rounded-md p-1 text-stone-200 hover:bg-white/10 hover:text-white"
+                className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Settings className="h-5 w-5" />
               </button>
@@ -335,9 +335,9 @@ export function Workspace() {
               aria-label="Settings"
               title="Settings"
               onClick={() => setSettingsOpen(true)}
-              className="mx-auto rounded-md p-1 text-stone-200 hover:bg-white/10 hover:text-white"
+              className="mx-auto rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-5 w-5" />
             </button>
           )}
         </div>

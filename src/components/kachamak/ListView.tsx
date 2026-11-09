@@ -49,7 +49,7 @@ export function ListView({ section }: { section: SectionKey }) {
                   onClick={() => select(n.id)}
                   className={`cursor-pointer border-b border-white/5 transition-colors ${
                     selectedNodeId === n.id
-                      ? "bg-green-500/10"
+                      ? "bg-amber-400/10"
                       : "hover:bg-white/[0.04]"
                   }`}
                 >
