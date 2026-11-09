@@ -3,7 +3,7 @@
 import { FileText, FolderOpen } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
-import { countWords, nodeWords } from "@/lib/kachamak/utils";
+import { nodeWords, ownWords } from "@/lib/kachamak/utils";
 
 function flatten(nodes: NoteNode[], out: NoteNode[] = []): NoteNode[] {
   for (const n of nodes) {
@@ -67,7 +67,9 @@ export function ListView({ section }: { section: SectionKey }) {
                     {n.synopsis || "—"}
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground">
-                    {parent ? nodeWords(n).toLocaleString() : countWords(n.content).toLocaleString()}
+                    {/* kontejner: reči podstabla; list: sav tekst same note
+                        (content + Synopsis + Notes) — isti jezik kao Details */}
+                    {parent ? nodeWords(n).toLocaleString() : ownWords(n).toLocaleString()}
                   </td>
                   <td className="hidden px-4 py-2.5 sm:table-cell">
                     {n.status ? (

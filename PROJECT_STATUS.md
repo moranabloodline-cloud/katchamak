@@ -2,8 +2,9 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: selekcija preživi prelazak na tab —
-> editor i radna površina se ne menjaju dok se ne klikne note u levom panelu).
+> **Zadnja izmena:** 2026-11-09 (sesija: skinut label iznad naslova u editoru;
+> brojač reči na dnu sada pokazuje tačan ukupan broj — sve sekcije + Synopsis +
+> Notes; verifikovano nezavisnim izračunom 61).
 
 ---
 
@@ -94,6 +95,24 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (label iznad prozora + tačan brojač reči) — ZAVRŠENO:** po
+  Nikolinoj naredbi: (1) **uklonjen narandžasti natpis vrste** („Act“ /
+  „Chapter“ / „Scene“ / „Folder“ / „Note“) iznad naslova u editoru — naslov
+  sada počinje direktno na vrhu strane, bez labele koja je kvarila izgled;
+  (2) **brojač reči na dnu radne površine sada pokazuje TAČAN broj** — bio je
+  bug: `novelWords` je brojao SAMO Binder sekciju i SAMO `content` polje
+  (prikazivalo „4 words“ iako je u romanu očigledno više teksta). Sada:
+  nova `ownWords(n)` = content + **Synopsis** + **Notes** (sve što je na noti
+  napisano), `nodeWords` = ownWords + podstablo, `novelWords` = **sve sekcije**
+  („everything is a note“ — Codex/Planning/… se takođe računaju). Usklađeni i
+  ostali prikazi da broje isto: ListView kolona „Words“ (list = ownWords,
+  kontejner = podstablo) i Details „Words“ u desnom panelu (ownWords).
+  **Nezavisna verifikacija u browseru:** izračun iz localStorage podataka =
+  **61** (4 scena + 17 Act 1 synopsis + 40 The Query synopsis) = prikazano na
+  dnu i na dashboardu („21 scenes · 61 words“). Test uživo: kucanje reči
+  61 → 62, brisanje → 61. `tsc` (src: 0) + `build` čisti; linija trake 2 i
+  dalje 100% kontinuirana (piksel-provera 1440/1440).
 
 - **2026-11-09 (selekcija preživi prelazak na tab) — ZAVRŠENO:** po Nikolinoj
   prijavi „tekst editor iz druge trake ne treba da nestaje kada nešto nije

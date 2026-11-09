@@ -88,8 +88,14 @@ export function forEachNode(
   }
 }
 
+/* reči samog teksta jedne note — sve što je na njoj napisano: sadržaj u
+   editoru + Synopsis + Notes (polja u desnom panelu) */
+export function ownWords(n: NoteNode): number {
+  return countWords(n.content) + countWords(n.synopsis) + countWords(n.notes);
+}
+
 export function nodeWords(n: NoteNode): number {
-  return countWords(n.content) + n.children.reduce((a, c) => a + nodeWords(c), 0);
+  return ownWords(n) + n.children.reduce((a, c) => a + nodeWords(c), 0);
 }
 
 export function countScenes(roots: NoteNode[]): number {
@@ -105,7 +111,9 @@ export function sectionWords(novel: Novel, key: SectionKey): number {
 }
 
 export function novelWords(novel: Novel): number {
-  return sectionWords(novel, "binder");
+  /* broji SVE sekcije — „everything is a note“, pa se pisanje u Codexu,
+     Planningu i ostalim tabovima takođe računa (po Nikoli: tačan broj reči) */
+  return SECTION_KEYS.reduce((a, key) => a + sectionWords(novel, key), 0);
 }
 
 export function novelScenes(novel: Novel): number {

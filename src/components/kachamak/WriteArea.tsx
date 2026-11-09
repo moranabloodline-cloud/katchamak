@@ -165,17 +165,6 @@ export function WriteArea({ node, section }: { node: NoteNode; section: SectionK
       {/* the page */}
       <div className="flex-1 overflow-y-auto kachamak-scroll px-6 py-6">
         <div className="mx-auto max-w-3xl">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-orange-400/80">
-            {node.kind === "act"
-              ? "Act"
-              : node.kind === "chapter"
-                ? "Chapter"
-                : node.kind === "scene"
-                  ? "Scene"
-                  : node.kind === "folder"
-                    ? "Folder"
-                    : "Note"}
-          </p>
           <input
             value={node.title}
             onChange={(e) => updateNode(section, node.id, { title: e.target.value })}

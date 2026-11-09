@@ -5,7 +5,7 @@ import { AtSign, CalendarDays, ChevronRight, Hash } from "lucide-react";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
-import { countWords, stripHtml } from "@/lib/kachamak/utils";
+import { ownWords, stripHtml } from "@/lib/kachamak/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 
@@ -41,7 +41,9 @@ export function RightPanel({
     return found;
   }, [node.content, novel]);
 
-  const words = countWords(node.content);
+  /* reči note = sav njen tekst: content + Synopsis + Notes (konzistentno sa
+     Listom i brojačem na dnu radne površine) */
+  const words = ownWords(node);
 
   /* tabovi bez ikonica i bez okvira — svetli samo selektovani (zlatna pilula,
      isti aktivni jezik kao tabovi u topbaru); po Nikoli. dark: parnjaci su
