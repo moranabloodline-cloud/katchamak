@@ -2,10 +2,10 @@
 
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
-> **Zadnja izmena:** 2026-11-09 (sesija: **Split kao u Scriveneru** — radna
-> površina se deli na dva identična editora koji se šire/skupljaju razdelnikom;
-> klik na površinu je bira, klik na notu otvara notu SAMO u izabranoj, druga
-> ostaje ista; sve se čuva posle reload-a).
+> **Zadnja izmena:** 2026-11-09 (sesija: **ispravka Split-a po Nikoli** — formatna
+> traka (traka 2) je JEDNA i fiksna, ne duplira se po panelu; lenjir je traka 3
+> (bez pozadine, pa se traka ne vidi) i stoji JEDAN red iznad OBA panela; deli
+> se samo radna površina ISPOD lenjira).
 
 ---
 
@@ -22,7 +22,7 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 | 5 | Tri-dot meni (tačna struktura iz dokumenta) + Move dijalog (izbor bilo kog root-a/note-a za parenta) | `NoteTree.tsx` |
 | 6 | **Grid** (zadata 09.11.): Scrivener index kartice (ikona + naslov + Synopsis), papir `#efe6cf` na pluti `#241c12`, caption „GRID · <nivo>", jedan nivo hijerarhije, dupli klik → Write, drag & drop reorder (`destIndex` u `moveNodeTo`), „+ New note" u otvoreni nivo; **store v5** (migracija `view:"grid"`→interno `"corkboard"`) | `Corkboard.tsx` |
 | 7 | Ispravke 09.11.: header linije piksel-poravnate (header = panelWidth+1); **mod prikaza se više ne resetuje** (ostaje poslednji aktivan kroz tabove/otvaranje/izlaz) | `NotesSection.tsx`, `store.ts` |
-| 8 | **Split (09.11., kao u Scriveneru)**: dva identična editora (svaki sa svojim toolbarom/linealom/okom), razdelnik širi/skuplja (0.2–0.8, persist), klik na površinu je bira (zlatna 2px linija na vrhu), klik na notu otvara SAMO u izabranoj — druga ostaje; prvi ulazak klonira otvorenu notu u oba; inspector/brojač/highlight prate fokusiranu; brisanje/prazni/nova nota/promena romana sve pokriveno | `SplitEditors.tsx`, `NotesSection.tsx`, `store.ts` |
+| 8 | **Split (09.11., kao u Scriveneru; ispravka istog dana po Nikoli)**: formatna traka (traka 2) je JEDNA fiksna instanta iznad svega — NE duplira se po panelu; lenjir je traka 3 — JEDAN red preko cele radne površine, bez pozadine (zato se traka ne vidi) — i on se NE deli; deli se samo površina ISPOD lenjira: dva identična editora (EditorPage) + razdelnik (0.2–0.8, persist), klik na površinu je bira (zlatna 2px linija na vrhu), klik na notu otvara SAMO u izabranoj — druga ostaje; prvi ulazak klonira otvorenu notu u oba; inspector/brojač/highlight prate fokusiranu; font/veličina/prored u store-u (`editorFont/Size/Spacing`) — zajednički za traku i sve strane; brisanje/prazni/nova nota/promena romana sve pokriveno | `SplitEditors.tsx`, `WriteArea.tsx`, `NotesSection.tsx`, `store.ts` |
 | + | Već postoje: Trash sa restore-om, **top bar u JEDNOJ traci (h-10)** — Home+Search levo, tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash u sredini (svi u jednom redu), Tree Scope+Save+Account+Settings desno; **druga traka (h-10, poravnata)** = header stabla | editor toolbar (jedan red, px-4 kao tabovi) | Info/Details/Mentions tabovi (BEZ ikonica, bez okvira — svetli samo selektovani zlatnom pilulom, po Nikoli); levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `NoteTree.tsx`, `WriteArea.tsx`, `RightPanel.tsx`, `PROJEKT-KONTEKST.md` §3 |
 
 ## 2. Šta je U TOKU
@@ -97,6 +97,40 @@ Tačke 1–6 završene. Sledeća je **tačka 7**:
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-09 (ispravka Split-a: formatna traka fiksna, lenjir = traka 3) — ZAVRŠENO:**
+  po Nikolinoj ispravci „ne treba da dupliraš formatting bar — on stoji fiksan
+  stalno, na njega utiču jedino bočni paneli kad se pomeraju; radna površina
+  ispod lenjira se deli; lenjir je ustvari treća traka ali nema pozadinu pa se
+  traka ne vidi“: (1) **TRAKA 2 — JEDNA INSTANTA**: formatna traka je izvučena
+  IZ `WriteArea` u novi `EditorToolbar` (isti izgled, ista visina h-10 i
+  border-b) i renderuje je `NotesSection` JEDNOM, iznad sadržaja — u Write
+  modu sa otvorenom notom i u Split modu (uvek, i kad su paneli prazni); u
+  Grid/List/Write-bez-selekcije ostaje stari prazan h-10 red koji drži njenu
+  donju liniju. Font/veličina/prored su prešli u store (`editorFont`/
+  `editorSize`/`editorSpacing` + setteri, persist, `?? default`) — traka je
+  sada globalna pa i ta podešavanja važe za stranu u Write i OBA Split panela
+  (i više se ne resetuju pri promeni note). (2) **TRAKA 3 — LENJIR IZNAD
+  OBA PANELA**: novi `RulerRow` (providan red h-7, bez pozadine/ivica — ista
+  boja kao površina, zato se traka ne vidi; unutra `RulerStrip` + oko) stoji
+  JEDAN put iznad razdeljenih površina, u `SplitEditors` I u `WriteArea`;
+  **deli se samo radna površina ISPOD lenjira**: `SplitEditors` = RulerRow pa
+  flex red [pane A | razdelnik | pane B], paneli su čiste strane — novi
+  `EditorPage` (naslov + RichEditor, skroler po panelu) umesto punog
+  WriteArea, `EmptyPane` bez lažnog h-10 reda (više nije potreban). Zoom
+  srednjeg panela (CSS `zoom`) i dalje važi za lenjir + površine, NE i za
+  traku 2 (linije ostaju poravnate). **VERIFIKACIJA (uživo):** Split — traka
+  2 na ekranu TAČNO JEDNOM (piksel-provera: nema linije na y≈119 u panelima,
+  gde bi bila dupla traka); lenjir JEDAN red preko cele širine, boja iza
+  njega = radna površina (13,13,13 = 13,13,13) na 1280 i 1440; razdelnik
+  počinje TEK ISPOD lenjira (y=104 još površina); klik na desnu površinu pa
+  na „Scene 1“ (The Tether) → ušla SAMO u B (ID proveren), A zadržao „The
+  third dial waited.“; klik na levu pa na „Scene 1“ (The Cemetery) → SAMO u
+  A (ID proveren), B netaknut; drag razdelnika 624→560 → ratio 0.5→0.413,
+  širine A/B = 303/430, vraćeno na 0.5; oko sakriva/prikazuje lenjir; Write
+  mod ista arhitektura (traka + lenjir + strana), Grid/List neizmenjeni;
+  traka 2 y=79: **894/894 = 100%** na 1440px; tsc 0 grešaka (src/), build
+  čist, konzola bez grešaka.
 
 - **2026-11-09 (Split — dva nezavisna editora kao u Scriveneru) — ZAVRŠENO:**
   po Nikolinoj naredbi „pritiskom na Split, radna površina se podeli na dva

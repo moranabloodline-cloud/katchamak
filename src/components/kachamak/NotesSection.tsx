@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, PenLine, Target, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
 import { Corkboard } from "./Corkboard";
-import { WriteArea } from "./WriteArea";
+import { EditorToolbar, WriteArea } from "./WriteArea";
 import { SplitEditors } from "./SplitEditors";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
@@ -419,19 +419,24 @@ export function NotesSection({ section }: { section: SectionKey }) {
 
       <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
         <CtrlZoom panel="mid" targetRef={mainRef} />
-        {/* traka 2 (sredina): editor toolbar živi unutar WriteArea; kad on nije
-            prikazan (Grid / List / bez selekcije), ovaj prazan h-10 red drži
-            donju liniju trake 2 neprekinutom od leve do desne ivice. Split se
-            izuzima — oba njegova editora (i prazna) imaju svoj h-10 red, pa
-            liniju drže oni */}
-        {view !== "split" && !(showEditor && selected) && (
+        {/* traka 2 — formatna traka: JEDNA fiksna instanta (po Nikoli se NE
+            duplira po panelu u Splitu), uvek na istom mestu iznad lenjira i
+            radne površine; na njenu širinu utiču jedino bočni paneli. Prikazuje
+            se u Write modu sa otvorenom notom i u Split modu; u Grid / List /
+            Write bez selekcije prazan h-10 red drži njenu donju liniju
+            neprekinutom od leve do desne ivice */}
+        {view === "split" || (showEditor && selected) ? (
+          <EditorToolbar />
+        ) : (
           <div className="h-10 shrink-0 border-b border-white/10" />
         )}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} />}
           {view === "list" && <ListView section={section} />}
           {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
-              je bira, klik na notu otvara notu samo u izabranoj */}
+              je bira, klik na notu otvara notu samo u izabranoj. Lenjir (traka
+              3) je unutar SplitEditors — JEDAN red iznad OBA panela, bez
+              pozadine; deli se samo površina ispod njega */}
           {view === "split" && <SplitEditors section={section} />}
           {view === "write" &&
             (selected ? (

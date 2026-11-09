@@ -2,31 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PenLine } from "lucide-react";
-import { WriteArea } from "./WriteArea";
+import { EditorPage, RulerRow } from "./WriteArea";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 
 type Pane = "a" | "b";
 
-/* prazna površina — u taj editor još nije otvorena nota; prvi red je prazan
-   h-10 „toolbar“ da donja linija trake 2 ostane neprekinuta i kad je editor
-   prazan (isti kompromis kao kad editor uopšte nije prikazan) */
+/* prazna površina — u taj editor još nije otvorena nota. Bez lažnog reda za
+   traku 2: formatna traka je JEDNA fiksna instanta iznad lenjira (renderuje
+   je NotesSection), pa ovde ništa ne drži njenu liniju */
 function EmptyPane({ section, pane }: { section: SectionKey; pane: Pane }) {
   const setActivePane = useKachamak((s) => s.setActivePane);
   return (
     <div
       onPointerDown={() => setActivePane(pane)}
       aria-label={`Empty editor ${pane.toUpperCase()}`}
-      className="flex h-full min-w-0 flex-1 flex-col"
+      className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-8 text-center"
     >
-      <div className="h-10 shrink-0 border-b border-white/10" />
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-        <PenLine className="h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">
-          Select a note from the {section} tree to start writing.
-        </p>
-      </div>
+      <PenLine className="h-8 w-8 text-muted-foreground/50" />
+      <p className="text-sm text-muted-foreground">
+        Select a note from the {section} tree to start writing.
+      </p>
     </div>
   );
 }
@@ -88,10 +85,13 @@ function SplitResizer({
   );
 }
 
-/* Split (po Nikoli, kao u Scriveneru): radna površina se podeli na DVA
-   identična editora. Klik na površinu je bira (activePane) — klik na notu u
-   stablu/Gridu/Listi onda otvara notu SAMO u izabranoj površini, druga ostaje
-   sa svojom notom. Razdelnik širi/skuplja površine. Fokusirana površina ima
+/* Split (po Nikoli, kao u Scriveneru): formatna traka (traka 2) je JEDNA i
+   fiksna iznad svega — NE duplira se po panelu. Lenjir je traka 3: jedan red
+   preko cele radne površine, bez pozadine (zato se traka ne vidi) — i on se
+   NE deli. Deli se samo radna površina ISPOD lenjira: dva identična editora
+   (EditorPage) + razdelnik koji ih širi/skuplja. Klik na površinu je bira
+   (activePane) — klik na notu u stablu/Gridu/Listi onda otvara notu SAMO u
+   izabranoj površini, druga ostaje sa svojom notom. Fokusirana površina ima
    tanku zlatnu liniju na vrhu (2px overlay — ne pomera layout ni linije). */
 export function SplitEditors({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
@@ -101,6 +101,9 @@ export function SplitEditors({ section }: { section: SectionKey }) {
   const activePane = useKachamak((s) => s.activePane);
   const setActivePane = useKachamak((s) => s.setActivePane);
   const splitRatio = useKachamak((s) => s.splitRatio ?? 0.5);
+  /* zoom srednjeg panela: lenjir + površine se uvećavaju; formatna traka
+     ostaje van zooma (traka 2 mora biti u istom redu kroz sve panele) */
+  const midZoom = useKachamak((s) => s.midZoom ?? 1);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const novel = novels.find((n) => n.id === activeNovelId);
@@ -119,17 +122,17 @@ export function SplitEditors({ section }: { section: SectionKey }) {
 
   const pane = (
     p: Pane,
-    hit: { node: NoteNode; section: SectionKey } | null,
-    extraCls: string,
-    extraStyle?: React.CSSProperties
+    hit: { node: NoteNode; section: SectionKey } | null
   ) => {
     const active = activePane === p;
     return (
       <div
         onPointerDown={() => setActivePane(p)}
         data-pane={p}
-        className={`relative h-full min-w-0 ${extraCls}`}
-        style={extraStyle}
+        className={`relative flex h-full min-w-0 flex-col ${
+          p === "a" ? "shrink-0" : "flex-1"
+        }`}
+        style={p === "a" ? { width: `${splitRatio * 100}%` } : undefined}
       >
         <div
           aria-hidden="true"
@@ -138,7 +141,7 @@ export function SplitEditors({ section }: { section: SectionKey }) {
           }`}
         />
         {hit ? (
-          <WriteArea key={hit.node.id} node={hit.node} section={hit.section} />
+          <EditorPage key={hit.node.id} node={hit.node} section={hit.section} />
         ) : (
           <EmptyPane section={section} pane={p} />
         )}
@@ -147,10 +150,15 @@ export function SplitEditors({ section }: { section: SectionKey }) {
   };
 
   return (
-    <div ref={wrapRef} className="flex h-full min-h-0 w-full">
-      {pane("a", hitA, "shrink-0", { width: `${splitRatio * 100}%` })}
-      <SplitResizer wrapRef={wrapRef} />
-      {pane("b", hitB, "flex-1")}
+    <div className="flex h-full min-h-0 w-full flex-col" style={{ zoom: midZoom }}>
+      {/* traka 3 — lenjir: JEDAN red preko cele radne površine, bez pozadine
+          (zato se traka ne vidi); deli se samo površina ispod njega */}
+      <RulerRow />
+      <div ref={wrapRef} className="flex min-h-0 flex-1">
+        {pane("a", hitA)}
+        <SplitResizer wrapRef={wrapRef} />
+        {pane("b", hitB)}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   AlignCenter,
   AlignJustify,
@@ -55,9 +54,127 @@ const cmd = (command: string, value?: string) => {
   document.execCommand(command, false, value);
 };
 
+/* ---------- traka 2: formatna traka ---------- */
+
+/* JEDNA fiksna formatna traka (po Nikoli): stoji uvek na istom mestu iznad
+   radne površine i NE duplira se po panelu u Splitu — na njenu širinu utiču
+   jedino bočni paneli kad se pomeraju. Font/veličina/prored žive u store-u
+   (vaze za stranu u Write i u oba Split panela). */
+export function EditorToolbar() {
+  const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
+  const setFont = useKachamak((s) => s.setEditorFont);
+  const size = useKachamak((s) => s.editorSize ?? 16);
+  const setSize = useKachamak((s) => s.setEditorSize);
+  const spacing = useKachamak((s) => s.editorSpacing ?? "1.5");
+  const setSpacing = useKachamak((s) => s.setEditorSpacing);
+
+  return (
+    <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
+      <select
+        aria-label="Font"
+        value={font}
+        onChange={(e) => setFont(e.target.value)}
+        className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
+      >
+        {FONTS.map((f) => (
+          <option key={f} value={f}>
+            {f}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Font size"
+        value={size}
+        onChange={(e) => setSize(Number(e.target.value))}
+        className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
+      >
+        {SIZES.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Line spacing"
+        value={spacing}
+        onChange={(e) => setSpacing(e.target.value)}
+        className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
+      >
+        {SPACINGS.map((s) => (
+          <option key={s} value={s}>
+            {s}×
+          </option>
+        ))}
+      </select>
+      <span className="mx-1 h-5 w-px bg-white/10" />
+      <ToolBtn title="Bold" onClick={() => cmd("bold")}>
+        <Bold className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Italic" onClick={() => cmd("italic")}>
+        <Italic className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Underline" onClick={() => cmd("underline")}>
+        <Underline className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Strikethrough" onClick={() => cmd("strikeThrough")}>
+        <Strikethrough className="h-4 w-4" />
+      </ToolBtn>
+      <span className="mx-1 h-5 w-px bg-white/10" />
+      <ToolBtn title="Bulleted list" onClick={() => cmd("insertUnorderedList")}>
+        <List className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Numbered list" onClick={() => cmd("insertOrderedList")}>
+        <ListOrdered className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Quote"
+        onClick={() => cmd("formatBlock", "<blockquote>")}
+      >
+        <Quote className="h-4 w-4" />
+      </ToolBtn>
+      <span className="mx-1 h-5 w-px bg-white/10" />
+      <ToolBtn title="Align left" onClick={() => cmd("justifyLeft")}>
+        <AlignLeft className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Align center" onClick={() => cmd("justifyCenter")}>
+        <AlignCenter className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Align right" onClick={() => cmd("justifyRight")}>
+        <AlignRight className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Justify" onClick={() => cmd("justifyFull")}>
+        <AlignJustify className="h-4 w-4" />
+      </ToolBtn>
+      <span className="mx-1 h-5 w-px bg-white/10" />
+      <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Text colour" aria-label="Text colour">
+        <Palette className="h-4 w-4" />
+        <input
+          type="color"
+          className="sr-only"
+          onChange={(e) => cmd("foreColor", e.target.value)}
+        />
+      </label>
+      <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Highlight" aria-label="Highlight">
+        <Highlighter className="h-4 w-4" />
+        <input
+          type="color"
+          className="sr-only"
+          defaultValue="#f0883e"
+          onChange={(e) => cmd("hiliteColor", e.target.value)}
+        />
+      </label>
+      <ToolBtn title="Clear formatting" onClick={() => cmd("removeFormat")}>
+        <RemoveFormatting className="h-4 w-4" />
+      </ToolBtn>
+    </div>
+  );
+}
+
+/* ---------- traka 3: lenjir ---------- */
+
 /* Scrivener-style ruler — tick marks with numbers and shaded margin zones.
-   Serves every page (WriteArea is the only page editor). The eye at its end
-   (right margin) hides it or shows it again — persisted in the store. */
+   The eye at its end (right margin) hides it or shows it again — persisted
+   in the store. */
 function RulerStrip() {
   return (
     <div className="relative h-5 w-full overflow-hidden rounded-[3px] border border-white/10 bg-white/[0.04]">
@@ -98,181 +215,97 @@ function RulerStrip() {
   );
 }
 
-export function WriteArea({ node, section }: { node: NoteNode; section: SectionKey }) {
-  const updateNode = useKachamak((s) => s.updateNode);
-  /* ruler pref — „?? true“ jer stari sačuvani store nema ovaj ključ
-     (persist je ceo state, verzija se ne menja; šema podataka ista) */
+/* traka 3 — red sa lenjirom preko CELE radne površine. Bez pozadine i ivica:
+   ista boja kao radna površina (#0d0d0d sa Workspace roota), zato se traka
+   „ne vidi“ (po Nikoli) — ali je traka, i NE deli se u Splitu; deli se samo
+   površina ISPOD nje. */
+export function RulerRow() {
+  /* „?? true“ jer stari sačuvani store nema ovaj ključ (persist je ceo
+     state, verzija se ne menja; šema podataka ista) */
   const rulerVisible = useKachamak((s) => s.rulerVisible ?? true);
   const setRulerVisible = useKachamak((s) => s.setRulerVisible);
-  /* zoom srednjeg panela (Ctrl + skrol) — važi za lineal i stranu, NE i za
-     toolbar (traka 2), da donje linije ostanu u istom redu kroz panele */
-  const midZoom = useKachamak((s) => s.midZoom ?? 1);
-  // prefs reset naturally because NotesSection mounts this with key={node.id}
-  const [font, setFont] = useState("Segoe UI");
-  const [size, setSize] = useState(16);
-  const [spacing, setSpacing] = useState("1.5");
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {/* toolbar — track 2: ista visina i poravnanje kao header stabla i Info tabovi */}
-      <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
-        <select
-          aria-label="Font"
-          value={font}
-          onChange={(e) => setFont(e.target.value)}
-          className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
+    <div className="flex h-7 shrink-0 items-center px-6">
+      <div
+        className="relative mx-auto h-5 w-full"
+        style={{ maxWidth: "min(48rem, 100%)" }}
+      >
+        {rulerVisible && <RulerStrip />}
+        <button
+          type="button"
+          title={rulerVisible ? "Hide ruler" : "Show ruler"}
+          aria-label={rulerVisible ? "Hide ruler" : "Show ruler"}
+          onClick={() => setRulerVisible(!rulerVisible)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
-          {FONTS.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Font size"
-          value={size}
-          onChange={(e) => setSize(Number(e.target.value))}
-          className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
-        >
-          {SIZES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Line spacing"
-          value={spacing}
-          onChange={(e) => setSpacing(e.target.value)}
-          className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
-        >
-          {SPACINGS.map((s) => (
-            <option key={s} value={s}>
-              {s}×
-            </option>
-          ))}
-        </select>
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <ToolBtn title="Bold" onClick={() => cmd("bold")}>
-          <Bold className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Italic" onClick={() => cmd("italic")}>
-          <Italic className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Underline" onClick={() => cmd("underline")}>
-          <Underline className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Strikethrough" onClick={() => cmd("strikeThrough")}>
-          <Strikethrough className="h-4 w-4" />
-        </ToolBtn>
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <ToolBtn title="Bulleted list" onClick={() => cmd("insertUnorderedList")}>
-          <List className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Numbered list" onClick={() => cmd("insertOrderedList")}>
-          <ListOrdered className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn
-          title="Quote"
-          onClick={() => cmd("formatBlock", "<blockquote>")}
-        >
-          <Quote className="h-4 w-4" />
-        </ToolBtn>
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <ToolBtn title="Align left" onClick={() => cmd("justifyLeft")}>
-          <AlignLeft className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Align center" onClick={() => cmd("justifyCenter")}>
-          <AlignCenter className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Align right" onClick={() => cmd("justifyRight")}>
-          <AlignRight className="h-4 w-4" />
-        </ToolBtn>
-        <ToolBtn title="Justify" onClick={() => cmd("justifyFull")}>
-          <AlignJustify className="h-4 w-4" />
-        </ToolBtn>
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Text colour" aria-label="Text colour">
-          <Palette className="h-4 w-4" />
-          <input
-            type="color"
-            className="sr-only"
-            onChange={(e) => cmd("foreColor", e.target.value)}
-          />
-        </label>
-        <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Highlight" aria-label="Highlight">
-          <Highlighter className="h-4 w-4" />
-          <input
-            type="color"
-            className="sr-only"
-            defaultValue="#f0883e"
-            onChange={(e) => cmd("hiliteColor", e.target.value)}
-          />
-        </label>
-        <ToolBtn title="Clear formatting" onClick={() => cmd("removeFormat")}>
-          <RemoveFormatting className="h-4 w-4" />
-        </ToolBtn>
+          {rulerVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </button>
       </div>
+    </div>
+  );
+}
 
-      {/* zoom srednjeg panela: lineal + strana se uvećavaju; toolbar ostaje
-          van zooma (traka 2 mora biti u istom redu kroz sve panele) */}
-      <div className="flex min-h-0 flex-1 flex-col" style={{ zoom: midZoom }}>
-        {/* ruler — bez svoje pozadine: mora biti ISTA boja kao radna površina
-            (#0d0d0d sa Workspace roota; bg-background je bio drugačiji ton).
-            Red je IZNAD skrolera, ne unutar njega — tekst ne može da „curi“
-            ispod njega, pa sticky/z nisu potrebni */}
-        <div className="flex h-7 shrink-0 items-center px-6">
+/* ---------- strana: naslov + tekst ---------- */
+
+/* Sadržaj JEDNOG editora (naslov + RichEditor) — koristi ga Write mod i
+   OBA Split panela. Font/veličina/prored dolaze iz store-a (fiksna formatna
+   traka iznad njih je jedina instanta). */
+export function EditorPage({ node, section }: { node: NoteNode; section: SectionKey }) {
+  const updateNode = useKachamak((s) => s.updateNode);
+  const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
+  const size = useKachamak((s) => s.editorSize ?? 16);
+  const spacing = useKachamak((s) => s.editorSpacing ?? "1.5");
+
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
+      <div className="px-6 py-6">
+        {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
+            zoomu (100% je u koordinatama zoomovanog elementa) */}
+        <div
+          className="mx-auto w-full"
+          style={{ maxWidth: "min(48rem, 100%)" }}
+        >
+          <input
+            value={node.title}
+            onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
+            aria-label="Title"
+            className="mb-4 w-full bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
+            placeholder="Title"
+          />
           <div
-            className="relative mx-auto h-5 w-full"
-            style={{ maxWidth: "min(48rem, 100%)" }}
+            style={{
+              fontFamily: `'${font}', system-ui, sans-serif`,
+              fontSize: `${size}px`,
+              lineHeight: spacing,
+            }}
           >
-            {rulerVisible && <RulerStrip />}
-            <button
-              type="button"
-              title={rulerVisible ? "Hide ruler" : "Show ruler"}
-              aria-label={rulerVisible ? "Hide ruler" : "Show ruler"}
-              onClick={() => setRulerVisible(!rulerVisible)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-            >
-              {rulerVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* the page */}
-        <div className="flex-1 overflow-y-auto kachamak-scroll">
-          <div className="px-6 py-6">
-            {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
-                zoomu (100% je u koordinatama zoomovanog elementa) */}
-            <div
-              className="mx-auto w-full"
-              style={{ maxWidth: "min(48rem, 100%)" }}
-            >
-              <input
-                value={node.title}
-                onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
-                aria-label="Title"
-                className="mb-4 w-full bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
-                placeholder="Title"
-              />
-              <div
-                style={{
-                  fontFamily: `'${font}', system-ui, sans-serif`,
-                  fontSize: `${size}px`,
-                  lineHeight: spacing,
-                }}
-              >
-                <RichEditor
-                  html={node.content}
-                  onChange={(html) => updateNode(section, node.id, { content: html })}
-                  placeholder="Write here..."
-                  className="min-h-[50vh] text-foreground"
-                />
-              </div>
-            </div>
+            <RichEditor
+              html={node.content}
+              onChange={(html) => updateNode(section, node.id, { content: html })}
+              placeholder="Write here..."
+              className="min-h-[50vh] text-foreground"
+            />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- Write mod: lenjir + strana ---------- */
+
+/* U Write modu ispod fiksne formatne trake (traka 2, koju renderuje
+   NotesSection) idu: lenjir (traka 3) pa strana. Zoom srednjeg panela
+   (Ctrl + skrol) važi za lenjir i stranu, NE i za formatnu traku — da
+   donje linije trake 2 ostanu u istom redu kroz panele. */
+export function WriteArea({ node, section }: { node: NoteNode; section: SectionKey }) {
+  const midZoom = useKachamak((s) => s.midZoom ?? 1);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col" style={{ zoom: midZoom }}>
+      <RulerRow />
+      <EditorPage node={node} section={section} />
     </div>
   );
 }

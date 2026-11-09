@@ -50,6 +50,17 @@ interface KachamakState {
   setActivePane: (p: "a" | "b") => void;
   setSplitRatio: (r: number) => void;
 
+  /* formatna traka (traka 2) — JEDNA fiksna instanta iznad radne površine,
+     ne duplira se po panelu u Splitu (po Nikoli). Font/veličina/prored važe za
+     stranu u svakom modu (Write i oba Split panela). ?? default zbog starih
+     sačuvanih store-ova. */
+  editorFont: string;
+  editorSize: number;
+  editorSpacing: string;
+  setEditorFont: (f: string) => void;
+  setEditorSize: (n: number) => void;
+  setEditorSpacing: (s: string) => void;
+
   /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
      uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
      da linije trake 2 ostaju poravnate (persisted preference) */
@@ -269,6 +280,13 @@ export const useKachamak = create<KachamakState>()(
       paneBId: null,
       activePane: "a",
       splitRatio: 0.5,
+
+      editorFont: "Segoe UI",
+      editorSize: 16,
+      editorSpacing: "1.5",
+      setEditorFont: (f) => set({ editorFont: f }),
+      setEditorSize: (n) => set({ editorSize: n }),
+      setEditorSpacing: (sp) => set({ editorSpacing: sp }),
 
       leftZoom: 1,
       midZoom: 1,
