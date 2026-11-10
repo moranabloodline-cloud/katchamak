@@ -828,11 +828,20 @@ export const useKachamak = create<KachamakState>()(
         }
         return s;
       },
-      onRehydrateStorage: () => (state) => {
-        // first run: seed with the demo novels
-        if (state && state.novels.length === 0) {
-          state.novels = seedNovels();
+      onRehydrateStorage: () => {
+        // Seed only a genuinely new browser, never a saved empty library.
+        // If storage cannot be read, do not replace anything with demo data.
+        let isFirstRun = false;
+        try {
+          isFirstRun = typeof localStorage !== "undefined" && localStorage.getItem(STORAGE_KEY) === null;
+        } catch {
+          isFirstRun = false;
         }
+        return (state, error) => {
+          if (!error && state && isFirstRun && state.novels.length === 0) {
+            state.novels = seedNovels();
+          }
+        };
       },
     }
   )
