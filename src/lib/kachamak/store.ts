@@ -157,6 +157,32 @@ interface LegacyCodexCategory {
 
 type LegacyNovel = Novel & { codex?: LegacyCodexCategory[] };
 
+// Check the structure before adding anything to persistent storage. In particular,
+// malformed trees or covers can otherwise make the dashboard unusable on reload.
+function isUsableBackup(value: unknown): value is LegacyNovel {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const n = value as Record<string, unknown>;
+  if (typeof n.title !== "string" || !n.title.trim()) return false;
+  if (n.author !== undefined && typeof n.author !== "string") return false;
+  if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
+  const cover = n.cover as Record<string, unknown>;
+  if (typeof cover.bg !== "string" || typeof cover.icon !== "string") return false;
+  if (!n.sections || typeof n.sections !== "object" || Array.isArray(n.sections)) return false;
+  const sections = n.sections as Record<string, unknown>;
+  const isTree = (nodes: unknown): boolean => Array.isArray(nodes) && nodes.every((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const node = value as Record<string, unknown>;
+    return typeof node.id === "string" && typeof node.title === "string" &&
+      typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") && isTree(node.children);
+  });
+  if (!SECTION_KEYS.some((key) => key in sections) && !Array.isArray(n.codex)) return false;
+  if (!Object.values(sections).every((nodes) => isTree(nodes))) return false;
+  if (n.statuses !== undefined && (!Array.isArray(n.statuses) || !n.statuses.every((s) => typeof s === "string"))) return false;
+  if (n.labels !== undefined && (!Array.isArray(n.labels) || !n.labels.every((label) => label && typeof label === "object" && typeof label.id === "string" && typeof label.name === "string" && typeof label.color === "string"))) return false;
+  if (n.trash !== undefined && (!Array.isArray(n.trash) || !n.trash.every((t) => t && typeof t === "object" && typeof t.id === "string" && isTree([t.node])))) return false;
+  return true;
+}
+
 const LEGACY_CAT_ICONS: [RegExp, string][] = [
   [/^char/i, "users"],
   [/^loc/i, "map-pin"],
@@ -404,13 +430,14 @@ export const useKachamak = create<KachamakState>()(
 
       importNovel: (json) => {
         try {
-          const parsed = JSON.parse(json) as LegacyNovel;
-          if (!parsed || typeof parsed !== "object" || !parsed.title) {
+          const parsed: unknown = JSON.parse(json);
+          if (!isUsableBackup(parsed)) {
             return { ok: false, error: "Not a Kachamak novel backup." };
           }
           const n: LegacyNovel = {
             ...parsed,
             id: uid(), // never collide with existing ids
+            author: parsed.author ?? "",
             trash: parsed.trash ?? [],
             statuses: parsed.statuses ?? [],
             labels: parsed.labels ?? [],
