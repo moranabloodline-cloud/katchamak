@@ -24,3 +24,10 @@ jobs:
       - name: Build Sites package
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: bun run build
+      - name: Save test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: compact-dashboard-build
+          path: |
+            dist/
+            out/
