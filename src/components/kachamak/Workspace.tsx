@@ -9,6 +9,7 @@ import { NotesSection } from "./NotesSection";
 import { TrashView } from "./TrashView";
 import { AccountDialog } from "./AccountDialog";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
+import { stripHtml } from "@/lib/kachamak/utils";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +43,9 @@ function ProjectSearch() {
     for (const key of Object.keys(novel.sections) as SectionKey[]) {
       const walk = (nodes: NoteNode[]) => {
         for (const n of nodes) {
-          if (n.title.toLowerCase().includes(needle)) {
+          if ([n.title, n.content, n.synopsis, n.notes].some((value) =>
+            stripHtml(value ?? "").toLocaleLowerCase().includes(needle)
+          )) {
             out.push({ node: n, section: key });
           }
           walk(n.children);
