@@ -133,11 +133,11 @@ export function Dashboard() {
 
       {/* ── hero: naslov + dekorativni banner (statična slika) ── */}
       <section className="relative shrink-0 overflow-hidden bg-[#0b0806]">
-        <div className="relative z-10 py-4 text-center">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-4 py-4 text-center" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
           <h1 className="font-serif text-4xl font-bold text-[#f2ead9]">
             My Collections
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-[#e8e1d4]">
             Your creative projects, organized your way.
           </p>
         </div>
@@ -197,9 +197,9 @@ export function Dashboard() {
             <button
               type="button"
               onClick={openNewCollection}
-              className="flex h-11 items-center gap-2 rounded-lg bg-[#f3b64e] px-5 text-base font-semibold text-[#221503] transition-colors hover:bg-[#ffc36a]"
+              className="group flex h-11 items-center gap-2.5 rounded-lg border border-[#b78b43]/80 bg-[#211a10] px-4 text-base font-semibold text-[#f5d99d] shadow-[inset_0_1px_0_rgba(255,222,160,0.12)] transition-colors hover:border-[#e4b960] hover:bg-[#342615] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e4b960]"
             >
-              <Plus className="h-5 w-5" /> Collection
+              <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[#c89c50]/60 bg-[#6d4c1b]/40 text-[#f4ca76]"><Plus className="h-4 w-4" /></span> Collection
             </button>
             <button
               type="button"
@@ -208,9 +208,9 @@ export function Dashboard() {
                 setNewAuthor(defaultAuthor);
                 setCreateOpen(true);
               }}
-              className="flex h-11 items-center gap-2 rounded-lg bg-[#f3b64e] px-5 text-base font-semibold text-[#221503] transition-colors hover:bg-[#ffc36a]"
+              className="group flex h-11 items-center gap-2.5 rounded-lg border border-[#b78b43]/80 bg-[#211a10] px-4 text-base font-semibold text-[#f5d99d] shadow-[inset_0_1px_0_rgba(255,222,160,0.12)] transition-colors hover:border-[#e4b960] hover:bg-[#342615] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e4b960]"
             >
-              <Plus className="h-5 w-5" /> Project
+              <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[#c89c50]/60 bg-[#6d4c1b]/40 text-[#f4ca76]"><Plus className="h-4 w-4" /></span> Project
             </button>
             <button
               type="button"
