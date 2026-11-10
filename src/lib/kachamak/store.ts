@@ -777,6 +777,9 @@ export const useKachamak = create<KachamakState>()(
          v5 → v6: older Trash items have no recorded position and keep the old append behavior */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // Version 6 only adds optional Trash metadata. Do not rerun older
+        // migrations on an already migrated version 5 library.
+        if (version >= 5) return s;
         if ((s as { view?: string }).view === "grid") s.view = "corkboard";
         const OLD_DEFAULT_STATUSES = [
           "To Do",
@@ -835,10 +838,6 @@ export const useKachamak = create<KachamakState>()(
             walk(roots);
           }
           for (const t of n.trash ?? []) walk([t.node]);
-        }
-        if (version < 6) {
-          // Old Trash items lack optional position metadata; restoration appends them.
-          // Preserve all existing fields and all notes unchanged.
         }
         return s;
       },
