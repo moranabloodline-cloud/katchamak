@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Sačuvana prazna biblioteka:** primeri se učitavaju samo pri prvom korišćenju; postojeća prazna biblioteka se više ne popunjava automatski posle ponovnog učitavanja. Automatski su provereni prvi ulazak, prazna biblioteka i očuvanje postojećeg projekta; build i TypeScript provera su prošli.
+
 > **2026-11-10 — Meni projekta:** sa Dashboarda se može izvesti JSON backup ili zatražiti trajno brisanje projekta uz potvrdu. Backup testnog projekta sa beleškom je izvezen i ponovo uvezen, a dijalog za brisanje proverava upozorenje; build i TypeScript provera prošli su na GitHub Actions.
 
 > **2026-11-10 — Pretraga i bezbedniji uvoz:** pretraga projekta nalazi tekst u sadržaju, sinopsisu i beleškama, kao i po naslovu. Uvoz proverava osnovnu strukturu projekta i stabla pre čuvanja; neispravna datoteka se odbija bez menjanja podataka. Provereni su pronalaženje reči u tekstu i uvoz ispravnog i neispravnog probnog backupa; build i TypeScript provera prošli su na GitHub Actions.
