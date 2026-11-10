@@ -1,7 +1,7 @@
 name: Build and type-check
 on:
   push:
-    branches: [main]
+    branches: [main, codex/dashboard-ctrl-wheel-20261110]
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,3 +24,10 @@ jobs:
       - name: Build Sites package
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: bun run build
+      - name: Save build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-ctrl-wheel-build
+          path: |
+            dist/
+            out/

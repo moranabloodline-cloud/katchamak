@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Ctrl + skrol:** Dashboard koristi nativni wheel listener sa passive:false; Ctrl + skrol menja uvećanje istog prikaza koji kontrolišu dugmad. Običan skrol ostaje neizmenjen. Provere pokrivaju smer, trackpad, wheel jedinice i uklanjanje listenera.
+
 > **2026-11-10 — Pregledniji Dashboard:** visina bannera ograničena je prema visini prozora, uz celu sliku i očuvane proporcije; naslov je pomeren ulevo. Kontrole u gornjoj traci omogućavaju promenu uvećanja Dashboarda između 70% i 130%, sa povratkom na 100%.
 
 > **2026-11-10 — Dashboard:** banner je proširen iza naslova i podnaslova uz očuvane proporcije cele slike; dugmad Collection i Project dobila su usklađen tamno-zlatni izgled, uz postojeće funkcije.
