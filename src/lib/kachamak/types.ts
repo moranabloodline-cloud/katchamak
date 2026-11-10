@@ -56,6 +56,7 @@ export interface TrashItem {
   section: SectionKey;
   node: NoteNode; // whole subtree
   deletedAt: number;
+  originalIndex?: number; // original position among siblings; absent in older backups
 }
 
 export interface Novel {

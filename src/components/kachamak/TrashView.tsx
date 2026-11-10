@@ -38,6 +38,7 @@ export function TrashView() {
   const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
   const novel = novels.find((n) => n.id === activeNovelId);
   const [filter, setFilter] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
 
   if (!novel) return null;
 
@@ -135,7 +136,7 @@ export function TrashView() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteForever(t.id)}
+                  onClick={() => setPendingDelete({ id: t.id, title: t.node.title })}
                   aria-label={`Delete ${t.node.title} forever`}
                   className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
                 >
@@ -197,6 +198,19 @@ export function TrashView() {
           </div>
         </div>
       </main>
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent className="bg-[#1b1b1b] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{pendingDelete?.title}” forever?</AlertDialogTitle>
+            <AlertDialogDescription>This permanently removes the note and all its sub-pages. This cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={() => { if (pendingDelete) deleteForever(pendingDelete.id); setPendingDelete(null); }}>Delete forever</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {rightPanelOpen ? (
       <aside className="hidden w-72 shrink-0 border-l border-white/10 bg-black/20 p-4 lg:block">

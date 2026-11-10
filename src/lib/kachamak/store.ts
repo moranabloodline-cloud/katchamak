@@ -248,17 +248,19 @@ function mapNodes(nodes: NoteNode[], fn: (n: NoteNode) => NoteNode): NoteNode[] 
 function removeFromNodes(
   nodes: NoteNode[],
   id: string
-): { nodes: NoteNode[]; removed: NoteNode | null; parentId: string | null } {
-  const found: { removed: NoteNode | null; parentId: string | null } = {
+): { nodes: NoteNode[]; removed: NoteNode | null; parentId: string | null; originalIndex: number | null } {
+  const found: { removed: NoteNode | null; parentId: string | null; originalIndex: number | null } = {
     removed: null,
     parentId: null,
+    originalIndex: null,
   };
   const walk = (list: NoteNode[], pid: string | null): NoteNode[] => {
     const out: NoteNode[] = [];
-    for (const n of list) {
+    for (const [index, n] of list.entries()) {
       if (n.id === id) {
         found.removed = n;
         found.parentId = pid;
+        found.originalIndex = index;
         continue;
       }
       out.push({ ...n, children: walk(n.children, n.id) });
@@ -266,7 +268,7 @@ function removeFromNodes(
     return out;
   };
   const nodes2 = walk(nodes, null);
-  return { nodes: nodes2, removed: found.removed, parentId: found.parentId };
+  return { nodes: nodes2, removed: found.removed, parentId: found.parentId, originalIndex: found.originalIndex };
 }
 
 function touch(novel: Novel): Novel {
@@ -561,14 +563,14 @@ export const useKachamak = create<KachamakState>()(
       deleteNode: (section, id) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
-        const { nodes, removed, parentId } = removeFromNodes(
+        const { nodes, removed, parentId, originalIndex } = removeFromNodes(
           novel.sections[section],
           id
         );
         if (!removed) return;
         novel.sections = { ...novel.sections, [section]: nodes };
         novel.trash = [
-          { id: uid(), parentId, section, node: removed, deletedAt: Date.now() },
+          { id: uid(), parentId, section, node: removed, deletedAt: Date.now(), originalIndex: originalIndex ?? undefined },
           ...novel.trash,
         ];
         const removedNode: NoteNode = removed;
@@ -720,16 +722,23 @@ export const useKachamak = create<KachamakState>()(
         if (!novel) return;
         const item = novel.trash.find((t) => t.id === trashId);
         if (!item) return;
+        const restoreAtOriginalPosition = (list: NoteNode[]) => {
+          if (typeof item.originalIndex === "number" && Number.isInteger(item.originalIndex) && item.originalIndex >= 0) {
+            list.splice(Math.min(item.originalIndex, list.length), 0, item.node);
+          } else {
+            list.push(item.node);
+          }
+        };
         if (item.parentId) {
           const parent = findNode(novel.sections[item.section], item.parentId);
           if (parent) {
-            parent.children.push(item.node);
+            restoreAtOriginalPosition(parent.children);
             parent.collapsed = false;
           } else {
             novel.sections[item.section].push(item.node);
           }
         } else {
-          novel.sections[item.section].push(item.node);
+          restoreAtOriginalPosition(novel.sections[item.section]);
         }
         novel.trash = novel.trash.filter((t) => t.id !== trashId);
         set((s) => ({
@@ -757,15 +766,16 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
          acts and chapters as solid coloured folders)
          v3 → v4: everything is a NOTE on every tab — the old Codex
          categories/entries become plain notes in the Codex section
-         v4 → v5: the Grid view becomes the Corkboard (Scrivener index cards) */
-      migrate: (persisted) => {
+         v4 → v5: the Grid view becomes the Corkboard (Scrivener index cards)
+         v5 → v6: older Trash items have no recorded position and keep the old append behavior */
+      migrate: (persisted, version) => {
         const s = persisted as KachamakState;
         if ((s as { view?: string }).view === "grid") s.view = "corkboard";
         const OLD_DEFAULT_STATUSES = [
@@ -825,6 +835,10 @@ export const useKachamak = create<KachamakState>()(
             walk(roots);
           }
           for (const t of n.trash ?? []) walk([t.node]);
+        }
+        if (version < 6) {
+          // Old Trash items lack optional position metadata; restoration appends them.
+          // Preserve all existing fields and all notes unchanged.
         }
         return s;
       },
