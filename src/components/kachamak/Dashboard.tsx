@@ -28,7 +28,7 @@ import {
   Feather,
   ArrowUpDown,
 } from "lucide-react";
-import { useKachamak } from "@/lib/kachamak/store";
+import { exportNovelJson, useKachamak } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
 import { AccountDialog } from "./AccountDialog";
@@ -64,6 +64,7 @@ export function Dashboard() {
   const openNovel = useKachamak((s) => s.openNovel);
   const createNovel = useKachamak((s) => s.createNovel);
   const importNovel = useKachamak((s) => s.importNovel);
+  const deleteNovel = useKachamak((s) => s.deleteNovel);
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
   const collections = useCollections((s) => s.collections);
   const addCollection = useCollections((s) => s.addCollection);
@@ -79,6 +80,7 @@ export function Dashboard() {
   const [collectionName, setCollectionName] = useState("");
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [pendingProjectDelete, setPendingProjectDelete] = useState<Novel | null>(null);
   const [sort, setSort] = useState<"updated" | "title" | "created">("updated");
   const [group, setGroup] = useState<"none" | "author">("none");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
@@ -301,6 +303,8 @@ export function Dashboard() {
                   layout={layout}
                   collections={collections}
                   setMembership={setMembership}
+                  onExport={() => { exportNovelJson(n); toast.success("Project backup downloaded."); }}
+                  onDelete={() => setPendingProjectDelete(n)}
                 />
               ))}
               </div></section>)}</div>
@@ -332,13 +336,14 @@ export function Dashboard() {
       <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
       <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader><form onSubmit={(event) => { event.preventDefault(); const name = collectionName.trim(); if (!name) return; if (collectionDialog === "new") { const id = addCollection(name); if (id) setSelectedCollection(id); } else if (collectionDialog) renameCollection(collectionDialog, name); setCollectionDialog(null); }}><Label htmlFor="collection-name">Name</Label><Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" /><DialogFooter className="mt-4"><button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button><button type="submit" className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503]">Save</button></DialogFooter></form></DialogContent></Dialog>
       <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete collection?</AlertDialogTitle><AlertDialogDescription>The collection will be removed. Its projects and their contents will remain in All Projects.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingDelete) { removeCollection(pendingDelete); if (selectedCollection === pendingDelete) setSelectedCollection(null); } setPendingDelete(null); }}>Delete collection</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open) setPendingProjectDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete {pendingProjectDelete?.title}?</AlertDialogTitle><AlertDialogDescription>This permanently removes the project, all its notes and trash from this browser. Export a backup first if you want to keep it.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={() => { if (pendingProjectDelete) { collections.forEach((c) => setMembership(c.id, pendingProjectDelete.id, false)); deleteNovel(pendingProjectDelete.id); toast.success("Project deleted."); } setPendingProjectDelete(null); }}>Delete project</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>Dashboard help</DialogTitle></DialogHeader><p className="text-sm leading-relaxed text-muted-foreground">Create or import projects, search by title or author, and use a project’s menu to add it to collections. Projects and collections are stored in this browser. Export individual project backups from the workspace settings; these backups do not include collections.</p></DialogContent></Dialog>
     </div>
   );
 }
 
 /** Horizontalna kartica projekta: naslovna slika levo, informacije desno. */
-function ProjectCard({ novel, onOpen, layout, collections, setMembership }: { novel: Novel; onOpen: () => void; layout: "grid" | "list"; collections: { id: string; name: string; projectIds: string[] }[]; setMembership: (collectionId: string, projectId: string, included: boolean) => void }) {
+function ProjectCard({ novel, onOpen, onExport, onDelete, layout, collections, setMembership }: { novel: Novel; onOpen: () => void; onExport: () => void; onDelete: () => void; layout: "grid" | "list"; collections: { id: string; name: string; projectIds: string[] }[]; setMembership: (collectionId: string, projectId: string, included: boolean) => void }) {
   return (
     <div className={`group relative overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] transition-colors hover:border-[#f0b018] ${layout === "grid" ? "h-[230px]" : "h-[104px]"}`}>
     <button
@@ -373,7 +378,7 @@ function ProjectCard({ novel, onOpen, layout, collections, setMembership }: { no
         </span>
       </span>
     </button>
-    <DropdownMenu><DropdownMenuTrigger asChild><button type="button" aria-label={`Options for ${novel.title}`} className="absolute bottom-3 right-3 rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-white"><MoreVertical className="h-5 w-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={onOpen}>Open project</DropdownMenuItem><DropdownMenuSeparator />{collections.length === 0 ? <DropdownMenuItem disabled>Create a collection first</DropdownMenuItem> : collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(novel.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, novel.id, checked === true)}>{c.name}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
+    <DropdownMenu><DropdownMenuTrigger asChild><button type="button" aria-label={`Options for ${novel.title}`} className="absolute bottom-3 right-3 rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-white"><MoreVertical className="h-5 w-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={onOpen}>Open project</DropdownMenuItem><DropdownMenuItem onSelect={onExport}>Export backup</DropdownMenuItem><DropdownMenuItem variant="destructive" onSelect={onDelete}>Delete project</DropdownMenuItem><DropdownMenuSeparator />{collections.length === 0 ? <DropdownMenuItem disabled>Create a collection first</DropdownMenuItem> : collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(novel.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, novel.id, checked === true)}>{c.name}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
     </div>
   );
 }
