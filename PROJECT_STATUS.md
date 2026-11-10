@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Bezbedniji Trash:** trajno brisanje pojedinačne beleške traži potvrdu; nove obrisane beleške vraćaju se na ranije mesto među susednim beleškama. Starije stavke bez podatka o položaju i dalje se vraćaju na kraj. Verzija čuvanja je v6, uz očuvanje postojećih v5 podataka; dodate su provere čuvanja i vraćanja podataka.
+
 > **2026-11-10 — Sačuvana prazna biblioteka:** primeri se učitavaju samo pri prvom korišćenju; postojeća prazna biblioteka se više ne popunjava automatski posle ponovnog učitavanja. Automatski su provereni prvi ulazak, prazna biblioteka i očuvanje postojećeg projekta; build i TypeScript provera su prošli.
 
 > **2026-11-10 — Meni projekta:** sa Dashboarda se može izvesti JSON backup ili zatražiti trajno brisanje projekta uz potvrdu. Backup testnog projekta sa beleškom je izvezen i ponovo uvezen, a dijalog za brisanje proverava upozorenje; build i TypeScript provera prošli su na GitHub Actions.
