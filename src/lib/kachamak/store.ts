@@ -179,7 +179,11 @@ function isUsableBackup(value: unknown): value is LegacyNovel {
   if (!Object.values(sections).every((nodes) => isTree(nodes))) return false;
   if (n.statuses !== undefined && (!Array.isArray(n.statuses) || !n.statuses.every((s) => typeof s === "string"))) return false;
   if (n.labels !== undefined && (!Array.isArray(n.labels) || !n.labels.every((label) => label && typeof label === "object" && typeof label.id === "string" && typeof label.name === "string" && typeof label.color === "string"))) return false;
-  if (n.trash !== undefined && (!Array.isArray(n.trash) || !n.trash.every((t) => t && typeof t === "object" && typeof t.id === "string" && isTree([t.node])))) return false;
+  if (n.trash !== undefined && (!Array.isArray(n.trash) || !n.trash.every((t) =>
+    t && typeof t === "object" && typeof t.id === "string" &&
+    typeof t.section === "string" && SECTION_KEYS.includes(t.section as SectionKey) &&
+    isTree([t.node])
+  ))) return false;
   return true;
 }
 

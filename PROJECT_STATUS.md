@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Provera Trash stavki pri uvozu:** backup koji sadrži stavku Trash-a sa nepoznatom sekcijom odbija se pre upisa, jer se takva stavka ne bi mogla vratiti. Dodate su provere odbijanja bez izmene postojeće biblioteke i uvoza i vraćanja ispravne stavke. Dijalog trajnog brisanja, otkazivanje i Restore provereni su i kroz probni interfejs.
+
 > **2026-11-10 — Provera lokalnog čuvanja:** dugme Save ponovo pokušava da upiše podatke i proverava da li se sačuvani projekti poklapaju sa trenutnim podacima. U slučaju greške upozorava i upućuje na izvoz JSON backupa. Informacije o čuvanju ne tvrde da postoji zasebna recovery kopija; Vault još nije dostupan. Dodate su provere neuspelog i ponovljenog upisa.
 
 > **2026-11-10 — Bezbedniji Trash:** trajno brisanje pojedinačne beleške traži potvrdu; nove obrisane beleške vraćaju se na ranije mesto među susednim beleškama. Starije stavke bez podatka o položaju i dalje se vraćaju na kraj. Verzija čuvanja je v6, uz očuvanje postojećih v5 podataka; dodate su provere čuvanja i vraćanja podataka.

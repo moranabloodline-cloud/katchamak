@@ -58,4 +58,15 @@ storage.setItem = realSetItem;
 assert.equal(saveProjectsLocally(), true, "manual save retries and verifies the project data");
 await useKachamak.persist.rehydrate();
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].children[0].title, "Unsaved change", "retried change survives reload");
+
+const validBackup = JSON.parse(JSON.stringify(useKachamak.getState().novels[0]));
+validBackup.trash.push({ id: "imported-trash", parentId: null, section: "binder", node: validBackup.sections.binder.pop(), deletedAt: Date.now() });
+const initialProjects = JSON.stringify(useKachamak.getState().novels);
+const invalidBackup = structuredClone(validBackup);
+invalidBackup.trash[0].section = "missing-section";
+assert.equal(useKachamak.getState().importNovel(JSON.stringify(invalidBackup)).ok, false, "backup with an unknown Trash section is rejected");
+assert.equal(JSON.stringify(useKachamak.getState().novels), initialProjects, "rejected backup leaves the existing library unchanged");
+assert.equal(useKachamak.getState().importNovel(JSON.stringify(validBackup)).ok, true, "valid backup with Trash can be imported");
+useKachamak.getState().restoreFromTrash("imported-trash");
+assert.equal(useKachamak.getState().novels.find((n) => n.id === useKachamak.getState().activeNovelId).trash.length, 0, "imported Trash entry can be restored");
 console.log("Storage rehydration checks passed.");
