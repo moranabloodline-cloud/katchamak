@@ -4,10 +4,8 @@
  * Dashboard — početni ekran (faza 1).
  * Gornji deo: KATCHAMAK logo + Help/Account, naslov „My Collections“,
  * dekorativni statični banner (slika, bez funkcionalnosti).
- * Donji deo: levo stablo kolekcija (faza 1: vizuelno, prazno dok korisnik
- * ne napravi kolekcije), desno lista postojećih projekata — klik otvara
- * Workspace (openNovel). Collection, Sort, Group i Grid/List su u fazi 1
- * samo vizuelne kontrole. Projekti se čuvaju postojećim mehanizmom.
+ * Donji deo: lokalne kolekcije i lista projekata; klik otvara Workspace.
+ * Projekti se čuvaju postojećim mehanizmom.
  */
 
 import { useRef, useState } from "react";
@@ -38,6 +36,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useCollections } from "@/lib/kachamak/collections-store";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 /** „Modified 3d ago“ stil iz reference. */
 function relativeTime(ts: number): string {
@@ -64,19 +65,39 @@ export function Dashboard() {
   const createNovel = useKachamak((s) => s.createNovel);
   const importNovel = useKachamak((s) => s.importNovel);
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
+  const collections = useCollections((s) => s.collections);
+  const addCollection = useCollections((s) => s.addCollection);
+  const renameCollection = useCollections((s) => s.renameCollection);
+  const removeCollection = useCollections((s) => s.removeCollection);
+  const setMembership = useCollections((s) => s.setMembership);
   const [searchText, setSearchText] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAuthor, setNewAuthor] = useState(defaultAuthor);
+  const [collectionDialog, setCollectionDialog] = useState<"new" | string | null>(null);
+  const [collectionName, setCollectionName] = useState("");
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [sort, setSort] = useState<"updated" | "title" | "created">("updated");
+  const [group, setGroup] = useState<"none" | "author">("none");
+  const [layout, setLayout] = useState<"grid" | "list">("grid");
+  const [helpOpen, setHelpOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const query = searchText.trim().toLocaleLowerCase();
+  const activeCollection = collections.find((c) => c.id === selectedCollection);
   const sortedNovels = novels.filter((n) =>
-    n.title.toLocaleLowerCase().includes(query) || (n.author ?? "").toLocaleLowerCase().includes(query)
-  ).sort(
-    (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
-  );
+    (!activeCollection || activeCollection.projectIds.includes(n.id)) &&
+    (n.title.toLocaleLowerCase().includes(query) || (n.author ?? "").toLocaleLowerCase().includes(query))
+  ).sort((a, b) => sort === "title" ? a.title.localeCompare(b.title) : sort === "created" ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+  const projectGroups = group === "none" ? [{ name: "", projects: sortedNovels }] :
+    Object.entries(sortedNovels.reduce<Record<string, Novel[]>>((groups, novel) => {
+      const author = novel.author?.trim() || "Unknown Author";
+      (groups[author] ??= []).push(novel);
+      return groups;
+    }, {})).sort(([a], [b]) => a.localeCompare(b)).map(([name, projects]) => ({ name, projects }));
+  const openNewCollection = () => { setCollectionName(""); setCollectionDialog("new"); };
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#17110b] text-foreground">
@@ -91,6 +112,7 @@ export function Dashboard() {
         <div className="ml-auto flex items-center gap-1">
           <button
             type="button"
+            onClick={() => setHelpOpen(true)}
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
           >
             <HelpCircle className="h-4 w-4" /> Help
@@ -142,19 +164,20 @@ export function Dashboard() {
             <button
               type="button"
               aria-label="New collection"
+              onClick={openNewCollection}
               className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg border border-[#c9973c]/70 text-[#e8c265] transition-colors hover:bg-white/5"
             >
               <Plus className="h-5 w-5" />
             </button>
           </div>
 
-          {/* faza 1: stablo je prazno dok ne nastanu kolekcije (bez demo
-              podataka); kod za prikaz hijerarhije i izbora je spreman za
-              fazu 2, kada kolekcije dobiju model */}
           <div className="mt-4 flex-1 overflow-y-auto kachamak-scroll">
-            <p className="mt-1 px-1 text-sm leading-relaxed text-muted-foreground/70">
-              No collections yet.
-            </p>
+            <button type="button" onClick={() => setSelectedCollection(null)} aria-pressed={!activeCollection} className={`w-full rounded px-2 py-2 text-left text-sm ${!activeCollection ? "bg-amber-400/15 text-amber-200" : "text-muted-foreground hover:bg-white/5"}`}>All Projects</button>
+            {collections.length === 0 && <p className="mt-2 px-2 text-sm text-muted-foreground/70">No collections yet.</p>}
+            {collections.map((c) => <div key={c.id} className="flex items-center gap-1">
+              <button type="button" onClick={() => setSelectedCollection(c.id)} aria-pressed={c.id === activeCollection?.id} className={`flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-2 text-left text-sm ${c.id === activeCollection?.id ? "bg-amber-400/15 text-amber-200" : "text-muted-foreground hover:bg-white/5"}`}><Folder className="h-4 w-4 shrink-0" /><span className="truncate">{c.name}</span></button>
+              <DropdownMenu><DropdownMenuTrigger asChild><button type="button" aria-label={`Options for ${c.name}`} className="rounded p-1.5 text-muted-foreground hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => { setCollectionName(c.name); setCollectionDialog(c.id); }}>Rename</DropdownMenuItem><DropdownMenuItem variant="destructive" onSelect={() => setPendingDelete(c.id)}>Delete collection</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+            </div>)}
           </div>
         </aside>
 
@@ -163,7 +186,7 @@ export function Dashboard() {
           <div className="flex items-center gap-3.5">
             <BookOpen className="h-8 w-8 text-[#e8c265]" />
             <h2 className="font-serif text-3xl font-bold text-[#f2ead9]">
-              All Projects
+              {activeCollection?.name ?? "All Projects"}
             </h2>
           </div>
 
@@ -171,6 +194,7 @@ export function Dashboard() {
           <div className="mt-5 flex flex-wrap items-center gap-3.5">
             <button
               type="button"
+              onClick={openNewCollection}
               className="flex h-11 items-center gap-2 rounded-lg bg-[#f3b64e] px-5 text-base font-semibold text-[#221503] transition-colors hover:bg-[#ffc36a]"
             >
               <Plus className="h-5 w-5" /> Collection
@@ -225,32 +249,34 @@ export function Dashboard() {
                   className="h-11 w-full rounded-lg border border-white/15 bg-black/30 pl-10 pr-3 text-base text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-[#f0b018]/50"
                 />
               </div>
-              <button
-                type="button"
+              <DropdownMenu><DropdownMenuTrigger asChild><button type="button"
                 className="flex h-11 items-center gap-2 rounded-lg border border-white/20 px-4 text-base text-[#cfd2d6] transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 <ArrowUpDown className="h-5 w-5" /> Sort
                 <ChevronDown className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
+              </button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuCheckboxItem checked={sort === "updated"} onSelect={() => setSort("updated")}>Recently modified</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={sort === "title"} onSelect={() => setSort("title")}>Title A–Z</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={sort === "created"} onSelect={() => setSort("created")}>Recently created</DropdownMenuCheckboxItem></DropdownMenuContent></DropdownMenu>
+              <DropdownMenu><DropdownMenuTrigger asChild><button type="button"
                 className="flex h-11 items-center gap-2 rounded-lg border border-white/20 px-4 text-base text-[#cfd2d6] transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 <Layers className="h-5 w-5" /> Group
                 <ChevronDown className="h-4 w-4" />
-              </button>
+              </button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuCheckboxItem checked={group === "none"} onSelect={() => setGroup("none")}>None</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={group === "author"} onSelect={() => setGroup("author")}>Author</DropdownMenuCheckboxItem></DropdownMenuContent></DropdownMenu>
               <div className="ml-1 flex h-11 shrink-0 overflow-hidden rounded-lg border border-[#c9973c]/70">
                 <button
                   type="button"
                   aria-label="Grid view"
-                  className="flex h-full w-[52px] items-center justify-center bg-[#f3b64e] text-[#221503]"
+                  aria-pressed={layout === "grid"}
+                  onClick={() => setLayout("grid")}
+                  className={`flex h-full w-[52px] items-center justify-center ${layout === "grid" ? "bg-[#f3b64e] text-[#221503]" : "text-[#e8c265] hover:bg-white/5"}`}
                 >
                   <LayoutGrid className="h-5 w-5" />
                 </button>
                 <button
                   type="button"
                   aria-label="List view"
-                  className="flex h-full w-[52px] items-center justify-center border-l border-[#c9973c]/60 text-[#e8c265] transition-colors hover:bg-white/5"
+                  aria-pressed={layout === "list"}
+                  onClick={() => setLayout("list")}
+                  className={`flex h-full w-[52px] items-center justify-center border-l border-[#c9973c]/60 ${layout === "list" ? "bg-[#f3b64e] text-[#221503]" : "text-[#e8c265] hover:bg-white/5"}`}
                 >
                   <List className="h-5 w-5" />
                 </button>
@@ -264,15 +290,20 @@ export function Dashboard() {
               {query ? "No projects match your search." : "No projects yet."}
             </p>
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3">
-              {sortedNovels.map((n) => (
+            <div className="mt-6 space-y-6">{projectGroups.map((groupItem) => <section key={groupItem.name || "all"}>
+              {groupItem.name && <h3 className="mb-3 font-serif text-lg text-[#f2ead9]">{groupItem.name}</h3>}
+              <div className={layout === "grid" ? "grid grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3" : "grid grid-cols-1 gap-3"}>
+              {groupItem.projects.map((n) => (
                 <ProjectCard
                   key={n.id}
                   novel={n}
                   onOpen={() => openNovel(n.id)}
+                  layout={layout}
+                  collections={collections}
+                  setMembership={setMembership}
                 />
               ))}
-            </div>
+              </div></section>)}</div>
           )}
         </main>
       </div>
@@ -299,45 +330,50 @@ export function Dashboard() {
         </DialogContent>
       </Dialog>
       <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
+      <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader><form onSubmit={(event) => { event.preventDefault(); const name = collectionName.trim(); if (!name) return; if (collectionDialog === "new") { const id = addCollection(name); if (id) setSelectedCollection(id); } else if (collectionDialog) renameCollection(collectionDialog, name); setCollectionDialog(null); }}><Label htmlFor="collection-name">Name</Label><Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" /><DialogFooter className="mt-4"><button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button><button type="submit" className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503]">Save</button></DialogFooter></form></DialogContent></Dialog>
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete collection?</AlertDialogTitle><AlertDialogDescription>The collection will be removed. Its projects and their contents will remain in All Projects.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingDelete) { removeCollection(pendingDelete); if (selectedCollection === pendingDelete) setSelectedCollection(null); } setPendingDelete(null); }}>Delete collection</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>Dashboard help</DialogTitle></DialogHeader><p className="text-sm leading-relaxed text-muted-foreground">Create or import projects, search by title or author, and use a project’s menu to add it to collections. Projects and collections are stored in this browser. Export individual project backups from the workspace settings; these backups do not include collections.</p></DialogContent></Dialog>
     </div>
   );
 }
 
 /** Horizontalna kartica projekta: naslovna slika levo, informacije desno. */
-function ProjectCard({ novel, onOpen }: { novel: Novel; onOpen: () => void }) {
+function ProjectCard({ novel, onOpen, layout, collections, setMembership }: { novel: Novel; onOpen: () => void; layout: "grid" | "list"; collections: { id: string; name: string; projectIds: string[] }[]; setMembership: (collectionId: string, projectId: string, included: boolean) => void }) {
   return (
+    <div className={`group relative overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] transition-colors hover:border-[#f0b018] ${layout === "grid" ? "h-[230px]" : "h-[104px]"}`}>
     <button
       type="button"
       onClick={onOpen}
       aria-label={`Open ${novel.title}`}
-      className="group relative flex h-[230px] cursor-pointer overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] text-left transition-colors hover:border-[#f0b018]"
+      className="flex h-full w-full cursor-pointer overflow-hidden text-left"
     >
       {/* cover */}
       <span
-        className="flex w-[44%] min-w-[160px] max-w-[250px] shrink-0 items-center justify-center border-r border-[#a97f33]/40 text-6xl"
+        className={`flex shrink-0 items-center justify-center border-r border-[#a97f33]/40 ${layout === "grid" ? "w-[44%] min-w-[160px] max-w-[250px] text-6xl" : "w-[90px] text-3xl"}`}
         style={{ background: novel.cover.bg }}
       >
         <span className="drop-shadow-lg">{novel.cover.icon}</span>
       </span>
       {/* info */}
-      <span className="flex min-w-0 flex-1 flex-col px-6 pt-7">
-        <span className="truncate font-serif text-2xl font-bold text-white">
+      <span className={`flex min-w-0 flex-1 flex-col px-6 ${layout === "grid" ? "pt-7" : "justify-center"}`}>
+        <span className={`truncate pr-5 font-serif font-bold text-white ${layout === "grid" ? "text-2xl" : "text-xl"}`}>
           {novel.title}
         </span>
-        <span className="mt-6 flex items-center gap-3 text-base text-[#d4d1c9]">
+        <span className={`${layout === "grid" ? "mt-6" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
           <BookOpen className="h-5 w-5 shrink-0 text-[#e8c265]" />
           Novel
         </span>
-        <span className="mt-5 flex items-center gap-3 text-base text-[#d4d1c9]">
+        <span className={`${layout === "grid" ? "mt-5" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
           <FileText className="h-5 w-5 shrink-0 text-[#e8c265]" />
           {novelWords(novel).toLocaleString()} words
         </span>
-        <span className="mt-5 flex items-center gap-3 text-base text-[#d4d1c9]">
+        <span className={`${layout === "grid" ? "mt-5" : "hidden"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
           <Calendar className="h-5 w-5 shrink-0 text-[#e8c265]" />
           Modified {relativeTime(novel.updatedAt)}
         </span>
-        <MoreVertical className="absolute bottom-3.5 right-3.5 h-5 w-5 text-muted-foreground/60" />
       </span>
     </button>
+    <DropdownMenu><DropdownMenuTrigger asChild><button type="button" aria-label={`Options for ${novel.title}`} className="absolute bottom-3 right-3 rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-white"><MoreVertical className="h-5 w-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={onOpen}>Open project</DropdownMenuItem><DropdownMenuSeparator />{collections.length === 0 ? <DropdownMenuItem disabled>Create a collection first</DropdownMenuItem> : collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(novel.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, novel.id, checked === true)}>{c.name}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
+    </div>
   );
 }
