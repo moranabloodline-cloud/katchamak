@@ -1,7 +1,7 @@
 name: Build and type-check
 on:
   push:
-    branches: [main]
+    branches: [main, codex/dashboard-fixes-20261110]
   workflow_dispatch:
 permissions:
   contents: read
