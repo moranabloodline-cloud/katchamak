@@ -21,6 +21,7 @@ import {
   Layers,
   LayoutGrid,
   List,
+  Minus,
   MoreVertical,
   Plus,
   Search,
@@ -85,6 +86,7 @@ export function Dashboard() {
   const [group, setGroup] = useState<"none" | "author">("none");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [dashboardZoom, setDashboardZoom] = useState(100);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const query = searchText.trim().toLocaleLowerCase();
@@ -102,7 +104,7 @@ export function Dashboard() {
   const openNewCollection = () => { setCollectionName(""); setCollectionDialog("new"); };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#17110b] text-foreground">
+    <div className="flex flex-col overflow-hidden bg-[#17110b] text-foreground" style={{ zoom: dashboardZoom / 100, width: `${10000 / dashboardZoom}%`, height: `${10000 / dashboardZoom}dvh` }}>
       {/* ── top bar ── */}
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-black/70 bg-[#0c0906] px-5">
         <span className="flex items-center gap-2.5">
@@ -112,6 +114,11 @@ export function Dashboard() {
           </span>
         </span>
         <div className="ml-auto flex items-center gap-1">
+          <div className="mr-2 flex items-center rounded-md border border-[#a97f33]/40 bg-white/[0.03] text-[#e8c265]" aria-label="Dashboard zoom">
+            <button type="button" aria-label="Zoom out dashboard" title="Zoom out" disabled={dashboardZoom <= 70} onClick={() => setDashboardZoom((value) => Math.max(70, value - 10))} className="rounded-l-md p-1.5 hover:bg-white/10 disabled:opacity-40"><Minus className="h-3.5 w-3.5" /></button>
+            <button type="button" aria-label="Reset dashboard zoom" title="Reset zoom" onClick={() => setDashboardZoom(100)} className="min-w-10 px-1 text-xs tabular-nums hover:text-white">{dashboardZoom}%</button>
+            <button type="button" aria-label="Zoom in dashboard" title="Zoom in" disabled={dashboardZoom >= 130} onClick={() => setDashboardZoom((value) => Math.min(130, value + 10))} className="rounded-r-md p-1.5 hover:bg-white/10 disabled:opacity-40"><Plus className="h-3.5 w-3.5" /></button>
+          </div>
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
@@ -133,20 +140,20 @@ export function Dashboard() {
 
       {/* ── hero: naslov + dekorativni banner (statična slika) ── */}
       <section className="relative shrink-0 overflow-hidden bg-[#0b0806]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-4 py-4 text-center" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
-          <h1 className="font-serif text-4xl font-bold text-[#f2ead9]">
-            My Collections
-          </h1>
-          <p className="mt-1 text-sm text-[#e8e1d4]">
-            Your creative projects, organized your way.
-          </p>
-        </div>
-        <div className="relative">
+        <div className="relative mx-auto w-full" style={{ maxWidth: "min(100%, 84vh, 870px)" }}>
+          <div className="pointer-events-none absolute left-0 top-0 z-10 px-5 py-4 sm:px-8" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
+            <h1 className="font-serif text-2xl font-bold text-[#f2ead9] sm:text-3xl">
+              My Collections
+            </h1>
+            <p className="mt-1 text-sm text-[#e8e1d4]">
+              Your creative projects, organized your way.
+            </p>
+          </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/dashboard-banner.png"
             alt="Decorative banner: Books, Games, Software, Movies and Cartoons"
-            className="block w-full"
+            className="block h-auto w-full"
             draggable={false}
           />
         </div>

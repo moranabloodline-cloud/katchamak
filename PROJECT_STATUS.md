@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Pregledniji Dashboard:** visina bannera ograničena je prema visini prozora, uz celu sliku i očuvane proporcije; naslov je pomeren ulevo. Kontrole u gornjoj traci omogućavaju promenu uvećanja Dashboarda između 70% i 130%, sa povratkom na 100%.
+
 > **2026-11-10 — Dashboard:** banner je proširen iza naslova i podnaslova uz očuvane proporcije cele slike; dugmad Collection i Project dobila su usklađen tamno-zlatni izgled, uz postojeće funkcije.
 
 > **2026-11-10 — Provera Trash stavki pri uvozu:** backup koji sadrži stavku Trash-a sa nepoznatom sekcijom odbija se pre upisa, jer se takva stavka ne bi mogla vratiti. Dodate su provere odbijanja bez izmene postojeće biblioteke i uvoza i vraćanja ispravne stavke. Dijalog trajnog brisanja, otkazivanje i Restore provereni su i kroz probni interfejs.
