@@ -147,9 +147,10 @@ export function Dashboard() {
       </header>
 
       {/* ── hero: naslov + dekorativni banner (statična slika) ── */}
-      <section className="relative shrink-0 overflow-hidden bg-[#0b0806]">
-        <div className="relative mx-auto w-full" style={{ maxWidth: "min(100%, 84vh, 870px)" }}>
-          <div className="pointer-events-none absolute left-0 top-0 z-10 px-5 py-4 sm:px-8" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
+      <section className="relative h-[clamp(230px,38vh,400px)] shrink-0 overflow-hidden border-b border-[#a97f33]/25 bg-[#101114]">
+        <div aria-hidden="true" className="pointer-events-none absolute -inset-8 bg-cover bg-center opacity-50 blur-2xl" style={{ backgroundImage: "url('/dashboard-banner.png')" }} />
+        <div className="relative h-full w-full">
+          <div className="pointer-events-none absolute left-0 top-0 z-10 px-6 py-5 sm:px-8" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
             <h1 className="font-serif text-2xl font-bold text-[#f2ead9] sm:text-3xl">
               My Collections
             </h1>
@@ -161,7 +162,7 @@ export function Dashboard() {
           <img
             src="/dashboard-banner.png"
             alt="Decorative banner: Books, Games, Software, Movies and Cartoons"
-            className="block h-auto w-full"
+            className="block h-full w-full object-contain"
             draggable={false}
           />
         </div>
@@ -172,7 +173,7 @@ export function Dashboard() {
           sidebar ~19% širine, krupnija tipografija i zlatni detalji */}
       <div className="flex min-h-0 flex-1 bg-[#0a0c10]">
         {/* sidebar: collections */}
-        <aside className="flex w-[19%] min-w-[230px] shrink-0 flex-col border-r border-white/[0.07] bg-[#090b0f] px-5 pb-5 pt-5">
+        <aside className="flex w-60 shrink-0 flex-col border-r border-white/[0.07] bg-[#090b0f] px-4 pb-5 pt-5">
           <div className="flex items-center gap-3 border-b border-white/10 pb-4">
             <Folder className="h-6 w-6 fill-amber-400/90 text-amber-400" />
             <span className="font-serif text-[19px] font-semibold text-[#f2ead9]">
@@ -199,7 +200,7 @@ export function Dashboard() {
         </aside>
 
         {/* glavni panel */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto kachamak-scroll px-9 pb-6 pt-5">
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto kachamak-scroll px-7 pb-6 pt-5">
           <div className="flex items-center gap-3.5">
             <BookOpen className="h-8 w-8 text-[#e8c265]" />
             <h2 className="font-serif text-3xl font-bold text-[#f2ead9]">
@@ -309,7 +310,7 @@ export function Dashboard() {
           ) : (
             <div className="mt-6 space-y-6">{projectGroups.map((groupItem) => <section key={groupItem.name || "all"}>
               {groupItem.name && <h3 className="mb-3 font-serif text-lg text-[#f2ead9]">{groupItem.name}</h3>}
-              <div className={layout === "grid" ? "grid grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3" : "grid grid-cols-1 gap-3"}>
+              <div className={layout === "grid" ? "grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3" : "grid grid-cols-1 gap-3"}>
               {groupItem.projects.map((n) => (
                 <ProjectCard
                   key={n.id}
@@ -360,7 +361,7 @@ export function Dashboard() {
 /** Horizontalna kartica projekta: naslovna slika levo, informacije desno. */
 function ProjectCard({ novel, onOpen, onExport, onDelete, layout, collections, setMembership }: { novel: Novel; onOpen: () => void; onExport: () => void; onDelete: () => void; layout: "grid" | "list"; collections: { id: string; name: string; projectIds: string[] }[]; setMembership: (collectionId: string, projectId: string, included: boolean) => void }) {
   return (
-    <div className={`group relative overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] transition-colors hover:border-[#f0b018] ${layout === "grid" ? "h-[230px]" : "h-[104px]"}`}>
+    <div className={`group relative overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] transition-colors hover:border-[#f0b018] ${layout === "grid" ? "h-[210px]" : "h-[104px]"}`}>
     <button
       type="button"
       onClick={onOpen}
@@ -369,25 +370,25 @@ function ProjectCard({ novel, onOpen, onExport, onDelete, layout, collections, s
     >
       {/* cover */}
       <span
-        className={`flex shrink-0 items-center justify-center border-r border-[#a97f33]/40 ${layout === "grid" ? "w-[44%] min-w-[160px] max-w-[250px] text-6xl" : "w-[90px] text-3xl"}`}
+        className={`flex shrink-0 items-center justify-center border-r border-[#a97f33]/40 ${layout === "grid" ? "w-[32%] min-w-[112px] max-w-[180px] text-5xl" : "w-[90px] text-3xl"}`}
         style={{ background: novel.cover.bg }}
       >
         <span className="drop-shadow-lg">{novel.cover.icon}</span>
       </span>
       {/* info */}
-      <span className={`flex min-w-0 flex-1 flex-col px-6 ${layout === "grid" ? "pt-7" : "justify-center"}`}>
+      <span className={`flex min-w-0 flex-1 flex-col px-5 ${layout === "grid" ? "py-5" : "justify-center"}`}>
         <span className={`truncate pr-5 font-serif font-bold text-white ${layout === "grid" ? "text-2xl" : "text-xl"}`}>
           {novel.title}
         </span>
-        <span className={`${layout === "grid" ? "mt-6" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
+        <span className={`${layout === "grid" ? "mt-4" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
           <BookOpen className="h-5 w-5 shrink-0 text-[#e8c265]" />
           Novel
         </span>
-        <span className={`${layout === "grid" ? "mt-5" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
+        <span className={`${layout === "grid" ? "mt-3" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
           <FileText className="h-5 w-5 shrink-0 text-[#e8c265]" />
           {novelWords(novel).toLocaleString()} words
         </span>
-        <span className={`${layout === "grid" ? "mt-5" : "hidden"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
+        <span className={`${layout === "grid" ? "mt-3" : "hidden"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
           <Calendar className="h-5 w-5 shrink-0 text-[#e8c265]" />
           Modified {relativeTime(novel.updatedAt)}
         </span>
