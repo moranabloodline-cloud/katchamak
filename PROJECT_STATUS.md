@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Dashboard kompozicija:** široki hero koristi ambijent iste originalne slike na bočnim delovima, dok jasna slika ostaje cela. Visina je ograničena na 38vh / 400px; kolekcije imaju uži panel, a kartice projekta kompaktnije proporcije i prilagodljiv broj kolona.
+
 > **2026-11-10 — Ctrl + skrol:** Dashboard koristi nativni wheel listener sa passive:false; Ctrl + skrol menja uvećanje istog prikaza koji kontrolišu dugmad. Običan skrol ostaje neizmenjen. Provere pokrivaju smer, trackpad, wheel jedinice i uklanjanje listenera.
 
 > **2026-11-10 — Pregledniji Dashboard:** visina bannera ograničena je prema visini prozora, uz celu sliku i očuvane proporcije; naslov je pomeren ulevo. Kontrole u gornjoj traci omogućavaju promenu uvećanja Dashboarda između 70% i 130%, sa povratkom na 100%.
