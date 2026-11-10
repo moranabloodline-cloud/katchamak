@@ -140,20 +140,20 @@ export function Dashboard() {
 
       {/* ── hero: naslov + dekorativni banner (statična slika) ── */}
       <section className="relative shrink-0 overflow-hidden bg-[#0b0806]">
-        <div className="pointer-events-none absolute left-0 top-0 z-10 px-5 py-4 sm:px-8" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
-          <h1 className="font-serif text-2xl font-bold text-[#f2ead9] sm:text-3xl">
-            My Collections
-          </h1>
-          <p className="mt-1 text-sm text-[#e8e1d4]">
-            Your creative projects, organized your way.
-          </p>
-        </div>
-        <div className="relative">
+        <div className="relative mx-auto w-full" style={{ maxWidth: "min(100%, 84vh, 870px)" }}>
+          <div className="pointer-events-none absolute left-0 top-0 z-10 px-5 py-4 sm:px-8" style={{ textShadow: "0 2px 8px rgba(0,0,0,.95), 0 1px 3px black" }}>
+            <h1 className="font-serif text-2xl font-bold text-[#f2ead9] sm:text-3xl">
+              My Collections
+            </h1>
+            <p className="mt-1 text-sm text-[#e8e1d4]">
+              Your creative projects, organized your way.
+            </p>
+          </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/dashboard-banner.png"
             alt="Decorative banner: Books, Games, Software, Movies and Cartoons"
-            className="mx-auto block h-auto max-h-[min(28vh,290px)] w-auto max-w-full"
+            className="block h-auto w-full"
             draggable={false}
           />
         </div>
