@@ -110,8 +110,6 @@ export function Dashboard() {
             className="block w-full"
             draggable={false}
           />
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-[#0b0806] to-transparent" />
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#0a0c10] to-transparent" />
         </div>
       </section>
 
