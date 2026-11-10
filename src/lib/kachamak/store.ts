@@ -860,6 +860,29 @@ export const useKachamak = create<KachamakState>()(
   )
 );
 
+/** Check that all current project data actually matches browser storage. */
+export function projectsSavedLocally(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const stored = JSON.parse(raw) as { state?: { novels?: unknown } };
+    return Array.isArray(stored.state?.novels) &&
+      JSON.stringify(stored.state.novels) === JSON.stringify(useKachamak.getState().novels);
+  } catch {
+    return false;
+  }
+}
+
+/** Retry the normal persist write, then verify its contents before reporting success. */
+export function saveProjectsLocally(): boolean {
+  try {
+    useKachamak.setState({});
+    return projectsSavedLocally();
+  } catch {
+    return false;
+  }
+}
+
 /* ---------- export helper (backup) ---------- */
 
 export function exportNovelJson(novel: Novel): void {

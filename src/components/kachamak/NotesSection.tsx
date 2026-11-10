@@ -9,7 +9,7 @@ import { SplitEditors } from "./SplitEditors";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { CtrlZoom } from "./CtrlZoom";
-import { useKachamak } from "@/lib/kachamak/store";
+import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNodeInNovel, novelWords, ownWords } from "@/lib/kachamak/utils";
 import { NOTE_COLORS } from "@/lib/kachamak/icons";
@@ -85,15 +85,10 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
 
 /* bottom of the left panel: circled "i" opens save information */
 function SaveInfoButton() {
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setLastSaved(new Date());
-    return useKachamak.subscribe(() => setLastSaved(new Date()));
-  }, []);
+  const [isSaved, setIsSaved] = useState(false);
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => { if (open) setIsSaved(projectsSavedLocally()); }}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -112,26 +107,21 @@ function SaveInfoButton() {
         <p className="mb-2 font-semibold text-foreground">Save information</p>
         <dl className="space-y-1 text-muted-foreground">
           <div className="flex justify-between gap-2">
-            <dt>Recovery copy:</dt>
-            <dd className="text-foreground">
-              {lastSaved
-                ? `saved ${lastSaved.toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}`
-                : "not saved"}
+            <dt>Browser storage:</dt>
+            <dd className={isSaved ? "text-foreground" : "text-red-400"}>
+              {isSaved ? "up to date" : "not verified"}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt>JSON:</dt>
-            <dd>not saved this session</dd>
+            <dd>export manually</dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt>Vault:</dt>
-            <dd>not saved this session</dd>
+            <dd>not available</dd>
           </div>
         </dl>
+        {!isSaved && <p className="mt-2 text-red-400">Try Save and export a JSON backup before closing.</p>}
       </PopoverContent>
     </Popover>
   );

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
-import { exportNovelJson, useKachamak } from "@/lib/kachamak/store";
+import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
 import { NotesSection } from "./NotesSection";
@@ -304,14 +304,16 @@ export function Workspace() {
                 type="button"
                 aria-label="Save"
                 title="Save"
-                onClick={() =>
-                  toast.success(
-                    `Saved locally · ${new Date().toLocaleTimeString("en-US", {
+                onClick={() => {
+                  if (saveProjectsLocally()) {
+                    toast.success(`Saved locally · ${new Date().toLocaleTimeString("en-US", {
                       hour: "numeric",
                       minute: "2-digit",
-                    })}`
-                  )
-                }
+                    })}`);
+                  } else {
+                    toast.error("Could not save projects in this browser. Export a JSON backup before closing.", { duration: 10000 });
+                  }
+                }}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Save className="h-5 w-5" />
