@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Meni projekta:** sa Dashboarda se može izvesti JSON backup ili zatražiti trajno brisanje projekta uz potvrdu. Backup testnog projekta sa beleškom je izvezen i ponovo uvezen, a dijalog za brisanje proverava upozorenje; build i TypeScript provera prošli su na GitHub Actions.
+
 > **2026-11-10 — Pretraga i bezbedniji uvoz:** pretraga projekta nalazi tekst u sadržaju, sinopsisu i beleškama, kao i po naslovu. Uvoz proverava osnovnu strukturu projekta i stabla pre čuvanja; neispravna datoteka se odbija bez menjanja podataka. Provereni su pronalaženje reči u tekstu i uvoz ispravnog i neispravnog probnog backupa; build i TypeScript provera prošli su na GitHub Actions.
 
 > **2026-11-10 — Dashboard kolekcije i prikazi:** lokalne kolekcije (kreiranje, preimenovanje, uklanjanje kolekcije bez brisanja projekata, višestruko članstvo projekata), sortiranje, grupisanje po autoru, Grid/List i Help su povezani. Kolekcije se čuvaju odvojeno u browseru; postojeći pojedinačni JSON backup projekta ne sadrži kolekcije. Provereno u probnoj verziji: kolekcija i članstvo posle reload-a, prikazi, sortiranje, grupisanje i dijalog za bezbedno uklanjanje; build i TypeScript provera prošli su na GitHub Actions.
