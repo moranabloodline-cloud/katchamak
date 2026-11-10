@@ -16,7 +16,7 @@ jobs:
       - id: install
         run: bun install --frozen-lockfile
       - name: Test storage rehydration
-        run: bun test tests/rehydration.test.ts
+        run: bun run tests/rehydration.test.mjs
       - name: Type-check application
         run: |
           printf '%s\n' '{"extends":"./tsconfig.json","exclude":["node_modules","examples","skills"]}' > tsconfig.ci.json
