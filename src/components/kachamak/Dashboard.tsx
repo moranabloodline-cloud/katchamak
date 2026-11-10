@@ -6,12 +6,11 @@
  * dekorativni statični banner (slika, bez funkcionalnosti).
  * Donji deo: levo stablo kolekcija (faza 1: vizuelno, prazno dok korisnik
  * ne napravi kolekcije), desno lista postojećih projekata — klik otvara
- * Workspace (openNovel). Ostale kontrole (+ Collection, + Project, Import,
- * Search, Sort, Group, Grid/List) su u fazi 1 samo vizuelne.
- * Ne dira store, podatke ni migracije — samo čita novels i otvara projekte.
+ * Workspace (openNovel). Collection, Sort, Group i Grid/List su u fazi 1
+ * samo vizuelne kontrole. Projekti se čuvaju postojećim mehanizmom.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   BookOpen,
   Calendar,
@@ -34,6 +33,11 @@ import {
 import { useKachamak } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
+import { AccountDialog } from "./AccountDialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 /** „Modified 3d ago“ stil iz reference. */
 function relativeTime(ts: number): string {
@@ -57,10 +61,20 @@ function relativeTime(ts: number): string {
 export function Dashboard() {
   const novels = useKachamak((s) => s.novels);
   const openNovel = useKachamak((s) => s.openNovel);
-  // faza 1: search/sort/group/grid-list su samo vizuelne kontrole
+  const createNovel = useKachamak((s) => s.createNovel);
+  const importNovel = useKachamak((s) => s.importNovel);
+  const defaultAuthor = useKachamak((s) => s.defaultAuthor);
   const [searchText, setSearchText] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newAuthor, setNewAuthor] = useState(defaultAuthor);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const sortedNovels = [...novels].sort(
+  const query = searchText.trim().toLocaleLowerCase();
+  const sortedNovels = novels.filter((n) =>
+    n.title.toLocaleLowerCase().includes(query) || (n.author ?? "").toLocaleLowerCase().includes(query)
+  ).sort(
     (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
   );
 
@@ -84,6 +98,7 @@ export function Dashboard() {
           <span className="mx-1 h-5 w-px bg-white/10" />
           <button
             type="button"
+            onClick={() => setAccountOpen(true)}
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
           >
             <UserCircle2 className="h-4 w-4 text-[#e8c265]" /> Account
@@ -162,16 +177,42 @@ export function Dashboard() {
             </button>
             <button
               type="button"
+              onClick={() => {
+                setNewTitle("");
+                setNewAuthor(defaultAuthor);
+                setCreateOpen(true);
+              }}
               className="flex h-11 items-center gap-2 rounded-lg bg-[#f3b64e] px-5 text-base font-semibold text-[#221503] transition-colors hover:bg-[#ffc36a]"
             >
               <Plus className="h-5 w-5" /> Project
             </button>
             <button
               type="button"
+              onClick={() => fileRef.current?.click()}
               className="flex h-11 items-center gap-2 rounded-lg border border-white/20 px-5 text-base text-[#cfd2d6] transition-colors hover:bg-white/5 hover:text-foreground"
             >
               <Download className="h-5 w-5" /> Import
             </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              aria-label="Import JSON backup"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const result = importNovel(String(reader.result));
+                  if (result.ok) toast.success("Project imported from backup.");
+                  else toast.error(result.error ?? "Import failed.");
+                };
+                reader.onerror = () => toast.error("Could not read the backup file.");
+                reader.readAsText(file);
+              }}
+            />
             <span className="mx-1 hidden h-7 w-px bg-white/10 md:block" />
             <div className="ml-auto flex flex-wrap items-center gap-3.5">
               <div className="relative w-[310px] max-w-full">
@@ -220,7 +261,7 @@ export function Dashboard() {
           {/* kartice projekata */}
           {sortedNovels.length === 0 ? (
             <p className="mt-10 text-sm text-muted-foreground">
-              No projects yet.
+              {query ? "No projects match your search." : "No projects yet."}
             </p>
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3">
@@ -235,6 +276,29 @@ export function Dashboard() {
           )}
         </main>
       </div>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="border-white/10 bg-[#1b1b1b]">
+          <DialogHeader><DialogTitle>Create a new project</DialogTitle></DialogHeader>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            const title = newTitle.trim();
+            if (!title) return;
+            createNovel(title, newAuthor.trim());
+            setCreateOpen(false);
+            toast.success("Project created.");
+          }}>
+            <div className="space-y-3">
+              <div><Label htmlFor="dashboard-project-title">Title</Label><Input id="dashboard-project-title" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} className="bg-black/30" required /></div>
+              <div><Label htmlFor="dashboard-project-author">Author</Label><Input id="dashboard-project-author" value={newAuthor} onChange={(event) => setNewAuthor(event.target.value)} className="bg-black/30" /></div>
+            </div>
+            <DialogFooter className="mt-4">
+              <button type="button" onClick={() => setCreateOpen(false)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+              <button type="submit" className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503] hover:bg-[#ffc36a]">Create</button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
     </div>
   );
 }

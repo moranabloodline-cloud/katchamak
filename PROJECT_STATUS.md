@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-10 — Dashboard:** dugmad Project, Import i Account povezana su sa postojećim funkcijama; pretraga filtrira projekte po naslovu i autoru. Provereni su kreiranje i otvaranje projekta, čuvanje posle osvežavanja, pretraga, dijalog naloga, uvoz ispravnog i odbijanje neispravnog JSON-a. Build i TypeScript provera aplikacije prošli su na GitHub Actions. Collection, Sort, Group i Grid/List ostaju nedovršeni.
+
 > **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
 > Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
 > **Preuzimanje u ChatGPT:** 2026-11-10 — nova osnova je GitHub commit `cbf05c1a6a4e6dd80bb9eb50ff6b78568970b33f`. Dashboard i editor otvoreni i provereni; dodat samo sloj za pokretanje i objavu kroz Sites.
