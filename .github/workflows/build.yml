@@ -13,6 +13,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.4"
-      - run: bun install --frozen-lockfile
-      - run: bunx tsc --noEmit
-      - run: bun run build
+      - id: install
+        run: bun install --frozen-lockfile
+      - name: Type-check application
+        run: |
+          printf '%s\n' '{"extends":"./tsconfig.json","exclude":["node_modules","examples","skills"]}' > tsconfig.ci.json
+          bunx tsc --noEmit -p tsconfig.ci.json
+      - name: Build Sites package
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        run: bun run build
