@@ -1,0 +1,13 @@
+{
+  "project_id": "appgprj_6ae0f5136c108191916b81308506e9ab",
+  "application_commit": "10691ff7c50d2c41f97e60dfd4eddf9156c01a0d",
+  "source_tree": "1cfc2c7be69fc4a5d685b1dbdf94f126d83c9cbaa5a84aaeff554769e3cfd6e0",
+  "build_id": "347f181ec8264fc73516a739579933376382c925d8fdee81e7669b102f69f55c",
+  "sites_source_commit": "be5c47ddf955ac04668d2c5f58add0c03d778066",
+  "version_number": 171,
+  "version_id": "appgprj_6ae0f5136c108191916b81308506e9ab~appgver_a51c850aca888191b82ddbf940ac3a2f",
+  "deployment_id": "appgdep_6af43201a9c08191885406f0e26e036a",
+  "deployment_status": "succeeded",
+  "url": "https://nikola-novel-studio.morana-bloodline.chatgpt.site",
+  "approval": "Nikola explicitly approved publication of version 171 in this conversation."
+}

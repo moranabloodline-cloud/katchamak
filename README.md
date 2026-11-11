@@ -32,6 +32,13 @@ bun run build
 6. Proveriti uspeh objave i `/api/app-version`, pa otvoriti Kachamak alat u razgovoru. Njegov odgovor i ista HTTP ruta prikazuju `sourceCommit`, `sourceTree` i `appBuild`/`buildId`; moraju odgovarati proverenom paketu. Posle objave ponovo otvoriti prikaz da stari iframe ne ostane na ekranu.
 7. Predati Nikola-i URL i GitHub commit. Lokalni screenshot, commit bez push-a i Sites save bez deploy-a nisu potvrda završenog objavljivanja.
 
+Za ručno pakovanje nakon uspešne provere, arhiva mora sadržati manifest u korenu i Worker na putanji `dist/server/index.js`:
+
+```sh
+mkdir -p .sites-runtime
+tar -czf .sites-runtime/katchamak-release.tar.gz .openai/hosting.json dist/server/index.js
+```
+
 `scripts/source-version.mjs` računa kontrolni zbir aplikacionih ulaza. `scripts/check-sites-build.mjs` proverava paket, početnu stranicu i isti MCP alat kojim se otvara prikaz u razgovoru. `/app-version.json` postoji na razvojnom serveru i na Sites-u; Sites dodatno izlaže `/api/app-version` sa identitetom paketa.
 
 ## Podaci i pristup
