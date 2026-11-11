@@ -3,10 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const sections = { binder: [], codex: [], planning: [], research: [], templates: [], prompts: [] };
 const project = (id, title) => ({ id, title, author: 'Test author', cover: { bg: '#333', icon: '' }, sections: structuredClone(sections), trash: [], statuses: [], labels: [], createdAt: 1, updatedAt: 2 });
+let currentPage;
 (async () => {
   fs.mkdirSync('qa-results', { recursive: true });
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  currentPage = page;
+  page.setDefaultTimeout(15000);
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.addInitScript(({ novels }) => {
@@ -28,6 +31,7 @@ const project = (id, title) => ({ id, title, author: 'Test author', cover: { bg:
   }
   await page.goto('http://127.0.0.1:4173');
   await tree.waitFor();
+  await page.screenshot({ path: 'qa-results/library-initial.png', fullPage: true });
   assert.equal(await page.locator('img[src="/dashboard-banner.png"]').count(), 0);
   assert.equal(await page.getByRole('main', { name: 'Project library' }).count(), 1);
   await contents.getByRole('button', { name: 'Open Beta', exact: true }).waitFor();
@@ -101,4 +105,4 @@ const project = (id, title) => ({ id, title, author: 'Test author', cover: { bg:
   assert.deepEqual(errors, [], 'no browser runtime errors');
   fs.writeFileSync('qa-results/results.json', JSON.stringify({ passed: true, tested: ['migration', 'nested creation', 'native drag and drop in both panels', 'cycles', 'cover zoom', 'resize', 'list/grid', 'reload', 'cover upload', 'independent scroll', 'desktop widths', 'workspace'] }, null, 2));
   await browser.close(); console.log('Dashboard browser checks passed.');
-})().catch((error) => { console.error(error); process.exit(1); });
+})().catch(async (error) => { if (currentPage) await currentPage.screenshot({ path: 'qa-results/library-failure.png', fullPage: true }).catch(() => {}); console.error(error); process.exit(1); });
