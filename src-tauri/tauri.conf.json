@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Katchamak",
+  "version": "0.2.1",
+  "identifier": "com.katchamak.desktop",
+  "build": {
+    "beforeDevCommand": "node scripts/preview-next.mjs --host 127.0.0.1 --port 3000",
+    "devUrl": "http://127.0.0.1:3000",
+    "beforeBuildCommand": "node scripts/build-project.mjs",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Katchamak",
+        "width": 1440,
+        "height": 950,
+        "minWidth": 1000,
+        "minHeight": 650,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      }
+    }
+  }
+}

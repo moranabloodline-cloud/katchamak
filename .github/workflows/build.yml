@@ -1,11 +1,10 @@
-name: Verify and publish Katchamak
+name: Verify Katchamak desktop
 on:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  id-token: write
 concurrency:
   group: katchamak-main-release
   cancel-in-progress: false
@@ -29,13 +28,30 @@ jobs:
         run: bun run tests/application-updates.test.mjs
       - name: Test workspace synchronization and recovery
         run: bun run tests/workspace-sync.test.mjs
+      - name: Test verified desktop synchronization
+        run: bun run tests/desktop-sync.test.mjs
       - name: Type-check application
         run: bun run typecheck
-      - name: Build Sites package
+      - name: Build offline application
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: bun run build
-      - name: Verify release source and application entrypoint
-        run: bun run check:release
-      - name: Publish and verify the same application on Sites
-        if: ${{ success() && github.ref == 'refs/heads/main' }}
-        run: bun run publish:github
+      - name: Verify offline application assets
+        run: node scripts/check-desktop.mjs
+  windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bun install --frozen-lockfile
+      - name: Build Windows desktop installer
+        run: bun run desktop:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Katchamak-Windows
+          path: src-tauri/target/release/bundle/nsis/*-setup.exe

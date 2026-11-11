@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Local Katchamak window; no filesystem or network IPC permissions.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

@@ -10,14 +10,14 @@ const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8",
 try {
   const remote = path.join(root, "remote.git"), first = path.join(root, "first"), second = path.join(root, "second");
   mkdirSync(remote); git(remote, "init", "--bare", "--initial-branch=main");
-  git(root, "clone", remote, first);
+  git(root, "-c", "core.autocrlf=false", "clone", remote, first); git(first, "config", "core.autocrlf", "false");
   for (const folder of ["src", "upload", ".openai"]) mkdirSync(path.join(first, folder), { recursive: true });
   writeFileSync(path.join(first, ".gitignore"), ".sites-runtime/\n");
   writeFileSync(path.join(first, ".openai/automation.json"), JSON.stringify({ repository: "owner/repo", branch: "main", workspace_poll_seconds: 30 }));
   writeFileSync(path.join(first, "src/app.js"), "original\n"); writeFileSync(path.join(first, "upload/reference.txt"), "protected\n");
   git(first, "config", "user.name", "Test"); git(first, "config", "user.email", "test@example.test");
   git(first, "add", "."); git(first, "commit", "-m", "initial"); git(first, "push", "origin", "main");
-  git(root, "clone", remote, second); git(second, "config", "user.name", "Other"); git(second, "config", "user.email", "other@example.test");
+  git(root, "-c", "core.autocrlf=false", "clone", remote, second); git(second, "config", "core.autocrlf", "false"); git(second, "config", "user.name", "Other"); git(second, "config", "user.email", "other@example.test");
   const opts = { enforceRemote: false, checks: [], quietMs: 100, publish: true };
   assert.equal(syncWorkspace(first, { ...opts, now: 0 }).status, "up_to_date");
   writeFileSync(path.join(first, "src/app.js"), "local edit 1\n");

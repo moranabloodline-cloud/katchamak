@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 // Application inputs only: no credentials, browser data or generated output.
-const inputs = ["src", "public", "scripts", "package.json", "bun.lock", "next.config.ts", "tsconfig.json", "tsconfig.app.json", "tailwind.config.ts", "postcss.config.mjs", ".openai/hosting.json", ".openai/automation.json"];
+const inputs = ["src-tauri", "src", "public", "scripts", "package.json", "bun.lock", "next.config.ts", "tsconfig.json", "tsconfig.app.json", "tailwind.config.ts", "postcss.config.mjs", ".openai/hosting.json", ".openai/automation.json"];
 
 export function sourceVersion(cwd = process.cwd()) {
   const git = (...args) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();

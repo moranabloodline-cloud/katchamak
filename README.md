@@ -1,5 +1,7 @@
 # Katchamak
 
+> **Aktuelno od 11.11.2026:** razvoj je prebačen u `C:\Katchamak`, sa Tauri Windows aplikacijom, offline buildom i proverom pre automatskog commit/push-a. Uputstva u [DESKTOP.md](DESKTOP.md) imaju prednost nad istorijskim Sites tokom ispod. `dev`, `build`, `start` i `sync:watch` sada koriste desktop tok. Stari Sites adapter ostaje sačuvan; GitHub push više ne objavljuje na Sites.
+
 Privatna pisalačka radionica: Next.js / React / TypeScript. Autoritativni izvor aplikacije je ovaj GitHub repozitorijum. Pre rada pročitati `AGENTS.md`, `PROJEKT-KONTEKST.md`, `PROJECT_STATUS.md` i `KACHAMAK-ARHITEKTURA.md`.
 
 ## Pokretanje i provere

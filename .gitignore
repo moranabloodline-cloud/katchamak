@@ -60,3 +60,16 @@ backups/
 *.zip
 /dist/
 /.sites-runtime/
+/.desktop-runtime/
+/src-tauri/target/
+/src-tauri/gen/
+/qa-results/
+/.qa-runtime/
+/user-projects/
+/vaults/
+*.key
+.git-credentials
+
+/.tools/
+/src-tauri/icons/android/
+/src-tauri/icons/ios/

@@ -1,5 +1,7 @@
 # PROJEKT-KONTEKST — Kachamak (pročitaj ovo prvo!)
 
+> **Aktuelni razvoj: Windows desktop, `C:\Katchamak`.** Koristiti postojeći GitHub main i [DESKTOP.md](DESKTOP.md). Korisnik je 11.11.2026. odobrio lokalni razvoj, Tauri, offline rad i automatski commit/push tek posle provera. Istorijske Sites/GLM instrukcije ispod ne određuju novi razvojni tok. Rukopisi ostaju u odvojenom lokalnom profilu, izvan Git backupa.
+
 > **Ovaj fajl je uputstvo za novu sesiju.** Ako je korisnik (Nikola) poslao ovde,
 > znači da nastavlja rad na projektu iz prethodnih sesija. Sve što treba da
 > znaš je u ovom fajlu + u `KACHAMAK-ARHITEKTURA.md` (u korenu projekta).

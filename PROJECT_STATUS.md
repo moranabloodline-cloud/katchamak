@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-11 — Windows desktop migracija pripremljena i lokalno proverena:** postojeći GitHub kod iz `c703f1e` preuzet u `C:\Katchamak`; prethodna lokalna Sites istorija sačuvana na `sites-history-preserved`, izvorna radna kopija nije menjana. Dodati Tauri 2 omotač, lokalni fontovi, samostalni statički build i automatika koja proverava pre commit/push-a bez automatskog prepisivanja rada. Podaci i store migracije nisu menjani. Detalji u DESKTOP.md; TypeScript, svi postojeći testovi, novi testovi automatike, offline asset provera i nativni release build prošli su. Napravljen Windows NSIS installer (212 MiB) sa offline WebView2 paketom. GitHub commit/push se izvršava po završetku ovih provera.
+
 > **2026-11-11 — OBJAVLJENO: Tačka 7 (Inspector reorg) na GitHub `main`.** Commit `e3045257e263d8353710e18e424aa04ffc19c1d9` push-ovan fast-forward (`fea7ee0..e304525`, bez force-a) i verifikovan na remote-u. GitHub Actions automatski gradi i objavljuje na postojećem Sites-u; identitet objave potvrđen na sajtu: `/api/app-version` i `/app-version.json` vraćaju `sourceCommit` `8c10d1cd93fc06125312dd857a42afd5f3f687ac` i `sourceTree` `68e11ebf77a2e33e1e953808ce1d9210a4e73d14529f45d9d8da17ca6c34dc3f` (sadržajni hash aplikacionih ulaza — identičan lokalnom buildu i CI-ju), `dirty:false`. Push urađen iz GLM okruženja; token isključivo u `~/.git-credentials` (0600), remote URL čist.
 
 > **2026-11-11 — AUTOMATSKO USAGLAŠAVANJE UKLJUČENO.** GitHub `main` je glavni izvor. `bun run dev` preuzima najnoviji kod i pokreće automatski commit/push završenih izmena posle provera; za postojeći server pokrenut je `sync:watch`. Pre višefajlnih agentskih izmena koristiti `bun run sync:pause`, po završetku `bun run sync:resume`. GitHub Actions automatski proverava, gradi, objavljuje aplikaciju na postojećem javnom Sites-u i proverava stvarni HTML/JS/CSS. Stvarna oblačna objava i provere prošle su za commit `42ecfbb` / run `42998803144`. Sites adapter v172 koristi R2 isključivo za pakete aplikacije i GitHub OIDC autorizaciju bez servisnih tokena. Otvoreni prikazi proveravaju novu verziju na 15s; lokalni kod proverava GitHub na 30s, uz recovery granu i stash pre preuzimanja tuđeg koda. Promene samog hosting adaptera traže native Sites objavu; uobičajene izmene aplikacije su automatske. Detalji i stanje su u `README.md` i `.openai/release.json`.
@@ -562,3 +564,14 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - **2026-11-09 ~08:02 (prethodni deo sesije, commit `9457ee5`):** Ispravka po
   Nikolinoj prijavi — naziv mode-a vraćen na **„Grid"** (zabrana preimenovanja
   u „Corkboard"); checkpoint commit platforme.
+
+
+### 2026-11-11 — Dnevnik: prelazak na lokalni Windows razvoj
+
+- Autoritativna radna kopija `C:\Katchamak`, postojeći GitHub main `c703f1e` i sačuvana Sites istorija; originalni checkout i upload materijali nisu menjani.
+- Tauri 2, statični Next.js izvoz, fontovi sa postojećim unicode podskupovima i OFL licencom; desktop ne pokreće Sites adapter ni proveru oblačnih verzija.
+- Izgrađeni `src-tauri/target/release/katchamak.exe` i NSIS installer sa offline WebView2 paketom. Single-instance čuva jedan aktivni prozor. Postojeći store i migracije ostaju isti.
+- UI provera kroz Windows computer-use: pokretanje sa neispravnim HTTP proxyjem, prikaz Dashboarda, kreiranje probnog projekta i Binder beleške, postojeći editor/Inspector; odvojeni `.desktop-runtime/qa-profile` za test podatke. Dalji unos u prozor preuzeo je korisnik; ponovni start, JSON izvoz/uvoz i svi prikazi nisu zasebno proveravani kroz native UI. Čuvanje, rehidracija i import validacija provereni postojećim testovima.
+- Prošli su `typecheck`, rehydration, library, dashboard-zoom, release-store, application-updates, workspace-sync, desktop-sync, statički build, check-desktop i nativni release build. Git test koristi LF u izolovanim checkout-ima radi Windows kompatibilnosti.
+- Automatika radi tokom razvojne sesije, posle 30s mirovanja i punih provera, čuva korisnički rad pri remote konfliktu i nikada ne radi force-push. GitHub CI više ne objavljuje desktop izmene na Sites i dodatno gradi Windows installer.
+- GitHub backup koda je odvojen od WebView2 rukopisa i JSON backupa. Sites podatke treba preneti postojećim JSON izvozom i uvozom. Detalji i komande u DESKTOP.md.
