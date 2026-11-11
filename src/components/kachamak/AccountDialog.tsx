@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isDesktop } from "@/lib/kachamak/project-files";
 import { useKachamak } from "@/lib/kachamak/store";
 import {
   Dialog,
@@ -45,8 +46,7 @@ export function AccountDialog({
             className="bg-black/30"
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Your initials appear in the circle at the top right. Everything stays
-            saved locally in this browser.
+            Your initials appear in the circle at the top right. {isDesktop() ? "Projects are saved in their own folders on your computer." : "Everything stays saved locally in this browser."}
           </p>
         </div>
         <DialogFooter>

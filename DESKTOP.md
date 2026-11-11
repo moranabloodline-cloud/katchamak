@@ -7,9 +7,9 @@ omotač. Dashboard, Binder, Codex, Inspector i editor ostaju ista aplikacija.
 ## Pokretanje
 
 `Start-Katchamak.cmd` otvara izgrađeni Windows program iz
-`src-tauri\target\release\katchamak.exe`. Ne zahteva Node, Bun, Git, razvojni
+`src-tauri\target\project-files\release\katchamak.exe`. Ne zahteva Node, Bun, Git, razvojni
 server, ChatGPT nalog ili internet. Instalacioni paket nalazi se u
-`src-tauri\target\release\bundle\nsis`; sadrži i offline WebView2 installer.
+`src-tauri\target\project-files\release\bundle\nsis`; sadrži i offline WebView2 installer.
 
 Za razvoj otvoriti `Develop-Katchamak.cmd`. On koristi lokalni `.tools\bun.exe`
 ako postoji, inače Bun iz PATH-a, i pokreće Tauri razvojni prozor i automatiku.
@@ -37,23 +37,31 @@ gotovoj aplikaciji i prenositi JSON backupom.
 
 ## Sačuvani projekti i GitHub
 
-Rukopisi se i dalje čuvaju kroz postojeći Zustand/localStorage sistem i njegove
-migracije. Gotova aplikacija ima sopstveni WebView2 korisnički profil izvan
-`C:\Katchamak`. Stabilni identifikator `com.katchamak.desktop` ne menjati između
-izdanja. Druga instanca aktivira postojeći prozor, radi izbegavanja paralelnog
-pisanja u istu biblioteku.
+Od verzije **0.2.2**, nova instalacija počinje praznom bibliotekom i bez unapred upisanog autora. Privatni primeri više nisu deo aplikacije ili instalera.
 
-GitHub sadrži izvorni kod, ne korisničke rukopise. U Git ne ulaze WebView2 profil,
-`user-projects/`, `vaults/`, `backups/`, `.env*`, kredencijali i generisani buildovi.
-Izvoz projekta u JSON i uvoz ostaju postojeće funkcije aplikacije. Git push nije
-backup rukopisa. Kolekcije i njihove korice/preference su zaseban lokalni store;
-postojeći pojedinačni JSON izvoz projekta ih ne sadrži.
+Svaki korisnički projekat je zaseban folder na lokaciji koju korisnik bira:
 
-Postojeći Sites/browser podaci ne mogu se automatski čitati iz desktop profila.
-Za prenos otvoriti stari sajt u istom browser profilu, izvesti svaki projekat kroz
-**Export backup**, sačuvati JSON izvan repozitorijuma i uvesti ga kroz **Import**
-u gotovoj desktop aplikaciji. Stari profil i podatke čuvati dok se uvezene beleške
-ne provere. Ova migracija ne briše niti prepisuje postojeće rukopise.
+```text
+D:\Moji rukopisi\Naziv projekta.katchamak\
+  project.json       ← rukopis, Binder, Codex, Synopsis, Notes, Trash i metapodaci
+  project.json.bak   ← prethodna uspešno sačuvana verzija
+```
+
+**Project** otvara obrazac za naziv i autora, a zatim Windows izbor lokacije. Projekat se dodaje u biblioteku tek kada njegov folder i fajl uspešno nastanu. Otkazivanje izbora ne pravi prazan projekat u biblioteci. **Open** otvara `project.json` iz postojećeg `.katchamak` foldera. Aplikacija pamti putanje u `%LOCALAPPDATA%\com.katchamak.desktop\recent-projects.json`; svaki ulazak u projekat i ponovno pokretanje učitavaju stvarni fajl sa diska.
+
+Izmene se automatski čuvaju u projektni fajl posle kratkog mirovanja. **Save** odmah završava upis. Pri zatvaranju se prvo čeka da upis uspe; greška ostavlja prozor otvoren radi oporavka. Upis koristi privremeni fajl i zamenu tek nakon uspešnog upisa, uz prethodnu `.bak` kopiju. Ako je fajl u međuvremenu izmenjen drugim programom, aplikacija prijavljuje konflikt i čuva izmene za oporavak umesto prepisivanja.
+
+Projekat se može ukloniti iz biblioteke bez brisanja njegovog foldera. Ponovo se otvara pomoću **Open**. Nestao ili premešten fajl ne zamenjuje se starom keširanom kopijom; korisnik bira njegovu novu putanju.
+
+WebView2/localStorage sada služi kao lokalni keš za oporavak i podešavanja, a projektni fajlovi su glavni izvor rukopisa. Pre zamene keša sadržajem fajlova prethodna sesija se, ako se razlikuje, čuva u `%LOCALAPPDATA%\com.katchamak.desktop\recovery`. Te kopije mogu se ponovo otvoriti kroz **Open**. Stabilni identifikator `com.katchamak.desktop` ne menjati između izdanja.
+
+Pri prvom pokretanju preko stare verzije, postojeća biblioteka ostaje sačuvana. Prikazuje se **Choose a folder for your projects**: korisnik bira lokaciju, a svaki postojeći projekat dobija sopstveni folder uz očuvanje ID-a, teksta i metapodataka. Otkazivanje ništa ne briše. Do izbora lokacije stari podaci ostaju zaštićeni od daljeg uređivanja.
+
+**Import** zadržava uvoz JSON backupa, ali u desktop aplikaciji traži lokaciju za novi projektni folder pre dodavanja u biblioteku. **Export backup** i dalje pravi samostalni JSON backup. Kolekcije i preference biblioteke ostaju zasebna lokalna podešavanja; pojedinačni projekat sadrži svoje naslovne podatke i rukopis.
+
+GitHub sadrži izvorni kod. Korisnički folderi, putanje, recovery kopije i rukopisi ne ulaze u Git niti u installer. Izbor projektnog foldera unutar izvornog repozitorijuma je blokiran. Build proverava odsustvo ranijih privatnih početnih projekata i izostavlja interne razvojne dokumente iz distribucije. Stari installer 0.2.1 sa privatnim primerima sklonjen je u ignorisani `.desktop-runtime/private-artifacts`; ne koristiti ga za deljenje.
+
+Za prenos podataka sa starog Sites-a izvesti projekte kroz **Export backup** i uvesti ih kroz **Import** u desktop aplikaciji, birajući lokacije izvan izvornog koda. Stari browser profil čuvati do provere prenosa.
 
 ## Automatsko verzionisanje
 

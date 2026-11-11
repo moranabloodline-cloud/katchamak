@@ -9,6 +9,7 @@ import { canMoveCollection, useCollections, type Collection } from "@/lib/kacham
 import { useLibraryPreferences } from "@/lib/kachamak/library-preferences";
 import { bindDashboardZoom } from "@/lib/kachamak/dashboard-zoom";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ProjectFileStatus } from "./ProjectFileStorage";
 import { toast } from "sonner";
 
 type DragItem = { kind: "collection" | "project"; id: string; sourceId: string | null };
@@ -51,6 +52,7 @@ interface Props {
   onCreateCollection: () => void;
   onCreateProject: () => void;
   onImport: () => void;
+  onOpenFile?: () => void;
   onAccount: () => void;
   onHelp: () => void;
   onRenameCollection: (collection: Collection) => void;
@@ -187,6 +189,7 @@ export function DashboardLibrary(props: Props) {
           <div aria-label="Library toolbar" className="flex flex-wrap items-center gap-2">
             <button onClick={props.onCreateCollection} className={createControl}><Plus className="h-4 w-4" />Collection</button>
             <button onClick={props.onCreateProject} className={createControl}><Plus className="h-4 w-4" />Project</button>
+            {props.onOpenFile && <button onClick={props.onOpenFile} className={control}><FolderOpen className="h-4 w-4" />Open</button>}
             <button onClick={props.onImport} className={control}><Download className="h-4 w-4" />Import</button>
             <div className="relative min-w-[100px] flex-1 basis-40"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><input aria-label="Search library" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this location…" className="h-9 w-full rounded-md border border-white/15 bg-black/25 pl-8 pr-2 text-sm outline-none focus:border-[#c9973c]" /></div>
             <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><ArrowUpDown className="h-4 w-4" />Sort<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">{([ ["updated", "Recently modified"], ["title", "Title A–Z"], ["created", "Recently created"] ] as const).map(([value, label]) => <DropdownMenuCheckboxItem key={value} checked={sort === value} onSelect={() => prefs.setSort(value)}>{label}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
@@ -213,7 +216,7 @@ export function DashboardLibrary(props: Props) {
           </section>)}
           {!folders.length && !projects.length && <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-center text-muted-foreground"><FolderOpen className="h-10 w-10 text-[#8d7548]" /><p className="text-sm">{query ? "No matching collections or projects." : "This location is empty."}</p>{!query && <p className="max-w-64 text-xs leading-relaxed">Create a collection or project, or drag items here from the tree.</p>}</div>}
         </div>
-        <footer className="shrink-0 border-t border-white/[0.07] px-4 py-2 text-xs text-muted-foreground">{layout === "grid" ? "Ctrl + scroll to resize covers" : "List view"}<span className="float-right">Saved in this browser</span></footer>
+        <footer className="shrink-0 border-t border-white/[0.07] px-4 py-2 text-xs text-muted-foreground">{layout === "grid" ? "Ctrl + scroll to resize covers" : "List view"}<span className="float-right"><ProjectFileStatus /></span></footer>
       </main>
     </div>
     {props.children}

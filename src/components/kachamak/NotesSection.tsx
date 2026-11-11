@@ -9,6 +9,7 @@ import { SplitEditors } from "./SplitEditors";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { CtrlZoom } from "./CtrlZoom";
+import { isDesktop, useProjectFiles } from "@/lib/kachamak/project-files";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNodeInNovel, novelWords, ownWords } from "@/lib/kachamak/utils";
@@ -86,6 +87,8 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
 /* bottom of the left panel: circled "i" opens save information */
 function SaveInfoButton() {
   const [isSaved, setIsSaved] = useState(false);
+  const files = useProjectFiles();
+  const saved = isDesktop() ? files.ready && !files.pending && !files.busy && !files.error : isSaved;
 
   return (
     <Popover onOpenChange={(open) => { if (open) setIsSaved(projectsSavedLocally()); }}>
@@ -107,9 +110,9 @@ function SaveInfoButton() {
         <p className="mb-2 font-semibold text-foreground">Save information</p>
         <dl className="space-y-1 text-muted-foreground">
           <div className="flex justify-between gap-2">
-            <dt>Browser storage:</dt>
-            <dd className={isSaved ? "text-foreground" : "text-red-400"}>
-              {isSaved ? "up to date" : "not verified"}
+            <dt>{isDesktop() ? "Project files:" : "Browser storage:"}</dt>
+            <dd className={saved ? "text-foreground" : "text-red-400"}>
+              {saved ? "up to date" : "not verified"}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
@@ -117,11 +120,11 @@ function SaveInfoButton() {
             <dd>export manually</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt>Vault:</dt>
-            <dd>not available</dd>
+            <dt>{isDesktop() ? "Previous save:" : "Vault:"}</dt>
+            <dd>{isDesktop() ? "project.json.bak" : "not available"}</dd>
           </div>
         </dl>
-        {!isSaved && <p className="mt-2 text-red-400">Try Save and export a JSON backup before closing.</p>}
+        {!saved && <p className="mt-2 text-red-400">Try Save and export a JSON backup before closing.</p>}
       </PopoverContent>
     </Popover>
   );

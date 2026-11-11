@@ -1,6 +1,6 @@
 [package]
 name = "katchamak"
-version = "0.2.1"
+version = "0.2.2"
 description = "Katchamak private offline writing workspace"
 edition = "2021"
 
@@ -10,3 +10,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-single-instance = "2"
+
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"

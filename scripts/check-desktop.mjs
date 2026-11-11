@@ -11,3 +11,11 @@ const visit = folder => readdirSync(folder, { withFileTypes: true }).flatMap(ent
 assert.ok(visit("out/fonts").some(file => file.endsWith(".woff2")), "Fonts must be packaged offline");
 for (const asset of [...html.matchAll(/(?:src|href)="([^"?#]+)"/g)].map(m => m[1]).filter(s => s.startsWith("/_next/"))) assert.ok(readFileSync(path.join("out", asset)));
 console.log("Desktop static entry, local assets and bundled fonts verified.");
+
+for (const file of visit("out")) {
+  assert.ok(!/\.(?:zip|7z|tar|gz|bak)$/i.test(file) && !/(?:^|[\\/])(?:project\.json|recent-projects\.json)$|\.katchamak[\\/]|-kachamak-backup\.json$/i.test(file), `Project data or source archive in distribution: ${file}`);
+  if (!/\.(?:js|json|html|txt|md|map)$/i.test(file)) continue;
+  const content = readFileSync(file, "utf8");
+  assert.ok(!/Morrigan|CASHABLANCA|Nikola Djokovic|Archive-Prime|The third dial waited|Morana: Bloodline/i.test(content), `Private sample content in distribution: ${file}`);
+}
+console.log("Distribution contains no personal seed projects or internal project records.");

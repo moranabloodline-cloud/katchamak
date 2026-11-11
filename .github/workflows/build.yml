@@ -30,6 +30,8 @@ jobs:
         run: bun run tests/workspace-sync.test.mjs
       - name: Test verified desktop synchronization
         run: bun run tests/desktop-sync.test.mjs
+      - name: Test project-file persistence
+        run: bun run tests/project-files.test.mjs
       - name: Type-check application
         run: bun run typecheck
       - name: Build offline application
@@ -51,7 +53,9 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Build Windows desktop installer
         run: bun run desktop:build
+      - name: Test native project files
+        run: cargo test --manifest-path src-tauri/Cargo.toml
       - uses: actions/upload-artifact@v4
         with:
           name: Katchamak-Windows
-          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          path: src-tauri/target/project-files/release/bundle/nsis/*-setup.exe

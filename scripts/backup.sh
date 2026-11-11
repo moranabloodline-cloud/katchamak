@@ -25,6 +25,7 @@ mkdir -p "$BACKUPS"
 # Isključeno: zavisnosti/build/git/sistemske fascikle i SVE potencijalne tajne.
 zip -r -q "$ZIP" . \
   -x "node_modules/*" ".next/*" ".git/*" "$BACKUPS/*" "tool-results/*" \
+     ".desktop-runtime/*" ".sites-runtime/*" ".tools/*" "src-tauri/target/*" "out/*" "dist/*" "user-projects/*" "vaults/*" "*.katchamak/*" "recent-projects.json" \
      "download/*" "skills/*" "agent-ctx/*" "public/kachamak-*.zip" \
      ".env" ".env.*" "*.env" "*.pem" "*.key" "*.p12" "*.pfx" \
      "*.log" "nohup.out" ".DS_Store"

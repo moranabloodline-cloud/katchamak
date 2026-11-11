@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { useKachamak } from "@/lib/kachamak/store";
 import { Dashboard } from "@/components/kachamak/Dashboard";
+import { ProjectFileStorage } from "@/components/kachamak/ProjectFileStorage";
 import { Workspace } from "@/components/kachamak/Workspace";
 
 const emptySubscribe = () => () => {};
@@ -46,5 +47,5 @@ export default function Page() {
     );
   }
 
-  return activeNovelId ? <Workspace /> : <Dashboard />;
+  return <ProjectFileStorage>{activeNovelId ? <Workspace /> : <Dashboard />}</ProjectFileStorage>;
 }

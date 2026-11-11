@@ -11,7 +11,7 @@ import type {
   ViewMode,
 } from "./types";
 import { SECTION_KEYS } from "./types";
-import { newNovel, seedNovels, DEFAULT_STATUSES } from "./seed";
+import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode } from "./utils";
 
 interface KachamakState {
@@ -165,7 +165,7 @@ type LegacyNovel = Novel & { codex?: LegacyCodexCategory[] };
 
 // Check the structure before adding anything to persistent storage. In particular,
 // malformed trees or covers can otherwise make the dashboard unusable on reload.
-function isUsableBackup(value: unknown): value is LegacyNovel {
+export function isUsableBackup(value: unknown): value is LegacyNovel {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const n = value as Record<string, unknown>;
   if (typeof n.title !== "string" || !n.title.trim()) return false;
@@ -237,7 +237,7 @@ function legacyCatToNode(cat: LegacyCodexCategory): NoteNode {
 
 /* make sure a novel has every section (older backups may miss keys) and convert
    its legacy codex array into plain notes in the Codex section */
-function normalizeNovelSections(n: LegacyNovel): void {
+export function normalizeNovelSections(n: LegacyNovel): void {
   const secs: Record<string, NoteNode[] | undefined> = { ...(n.sections ?? {}) };
   for (const k of SECTION_KEYS) {
     if (!Array.isArray(secs[k])) secs[k] = [];
@@ -314,7 +314,7 @@ export const useKachamak = create<KachamakState>()(
       renamingNodeId: null,
       view: "split",
       treeScope: "all",
-      defaultAuthor: "Nikola Djokovic",
+      defaultAuthor: "",
 
       leftPanelOpen: true,
       rightPanelOpen: true,
@@ -860,21 +860,7 @@ export const useKachamak = create<KachamakState>()(
         }
         return s;
       },
-      onRehydrateStorage: () => {
-        // Seed only a genuinely new browser, never a saved empty library.
-        // If storage cannot be read, do not replace anything with demo data.
-        let isFirstRun = false;
-        try {
-          isFirstRun = typeof localStorage !== "undefined" && localStorage.getItem(STORAGE_KEY) === null;
-        } catch {
-          isFirstRun = false;
-        }
-        return (state, error) => {
-          if (!error && state && isFirstRun && state.novels.length === 0) {
-            state.novels = seedNovels();
-          }
-        };
-      },
+
     }
   )
 );

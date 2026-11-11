@@ -73,3 +73,6 @@ backups/
 /.tools/
 /src-tauri/icons/android/
 /src-tauri/icons/ios/
+
+*.katchamak/
+recent-projects.json

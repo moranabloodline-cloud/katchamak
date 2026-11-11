@@ -221,7 +221,7 @@ export function Home() {
                 id="novel-title"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="e.g. Morrigan's Ocean"
+                placeholder="Project title"
                 className="bg-black/30"
               />
             </div>

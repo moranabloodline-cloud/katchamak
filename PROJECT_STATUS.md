@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-11 — Projekti odvojeni od aplikacije (0.2.2), lokalno provereno:** uklonjeni privatni početni projekti i podrazumevani vlasnik iz aplikacije. Nova instalacija počinje prazno. Desktop projekti su zasebni `.katchamak` folderi sa `project.json`; biblioteka pamti samo putanje. Dodati izbor lokacije, Open, automatsko čuvanje, upis pri zatvaranju, prethodna `.bak` kopija, recovery i prenos postojeće biblioteke bez brisanja. Rukopisi i stari WebView2 profil nisu menjani tokom razvoja. Detalji u DESKTOP.md.
+
 > **2026-11-11 — Windows desktop migracija pripremljena i lokalno proverena:** postojeći GitHub kod iz `c703f1e` preuzet u `C:\Katchamak`; prethodna lokalna Sites istorija sačuvana na `sites-history-preserved`, izvorna radna kopija nije menjana. Dodati Tauri 2 omotač, lokalni fontovi, samostalni statički build i automatika koja proverava pre commit/push-a bez automatskog prepisivanja rada. Podaci i store migracije nisu menjani. Detalji u DESKTOP.md; TypeScript, svi postojeći testovi, novi testovi automatike, offline asset provera i nativni release build prošli su. Napravljen Windows NSIS installer (212 MiB) sa offline WebView2 paketom. GitHub commit/push se izvršava po završetku ovih provera.
 
 > **2026-11-11 — OBJAVLJENO: Tačka 7 (Inspector reorg) na GitHub `main`.** Commit `e3045257e263d8353710e18e424aa04ffc19c1d9` push-ovan fast-forward (`fea7ee0..e304525`, bez force-a) i verifikovan na remote-u. GitHub Actions automatski gradi i objavljuje na postojećem Sites-u; identitet objave potvrđen na sajtu: `/api/app-version` i `/app-version.json` vraćaju `sourceCommit` `8c10d1cd93fc06125312dd857a42afd5f3f687ac` i `sourceTree` `68e11ebf77a2e33e1e953808ce1d9210a4e73d14529f45d9d8da17ca6c34dc3f` (sadržajni hash aplikacionih ulaza — identičan lokalnom buildu i CI-ju), `dirty:false`. Push urađen iz GLM okruženja; token isključivo u `~/.git-credentials` (0600), remote URL čist.
@@ -577,3 +579,16 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - GitHub backup koda je odvojen od WebView2 rukopisa i JSON backupa. Sites podatke treba preneti postojećim JSON izvozom i uvozom. Detalji i komande u DESKTOP.md.
 
 - **Dorada oporavka mreže:** regresioni test potvrđuje da odbijen push i naredni neuspešan fetch ne gube identitet proverenog lokalnog commita; posle povratka mreže šalje se isti commit bez dupliranja i bez slanja rukopisa.
+
+
+### 2026-11-11 — Dnevnik: korisnički projektni folderi i prazna distribucija
+
+- Uklonjen sadržaj privatnih početnih projekata iz aktivnog seed modula; postojeća biblioteka se ne briše. Nova instalacija ima nula projekata i praznog podrazumevanog autora. Interne dokumente desktop build više ne kopira u distribuciju; check-desktop odbija poznati privatni sadržaj.
+- Nativni projekat je zaseban `.katchamak` folder sa `project.json`. Kreiranje traži lokaciju; Open i nedavne putanje čitaju stvarne fajlove. Registar u AppData sadrži ID i putanju, a ne ugrađene rukopise. Korisnički projektni folder unutar izvornog repozitorijuma je blokiran.
+- Zasebni upisi koriste privremeni fajl, prethodnu `.bak` kopiju i proveru revizije radi zaštite od spoljnih izmena. Pri zatvaranju se završava upis; neuspeh ostavlja prozor otvoren. Keš je samo oporavak; prethodna sesija se bez prepisivanja čuva u AppData recovery kada se razlikuje od diska.
+- Stara biblioteka dobija izbor lokacije i prenosi se u zasebne foldere sa očuvanjem ID-a i sadržaja. Otkazivanje prenosa ništa ne briše. Uklanjanje projekta iz biblioteke čuva njegov folder i omogućava ponovno otvaranje.
+- Prošli novi testovi: prazna instalacija, otkazan izbor lokacije, prenos stare biblioteke, zaseban upis, ponovno otvaranje preko putanje, neuspešan upis i oporavak, uvoz i bezbedno uklanjanje iz biblioteke. Rust testovi rade sa stvarnim fajlovima: čuvanje/backup, ponovno čitanje registra, odbijanje zastarelog upisa i neispravnog stabla.
+- Windows UI QA u izolovanom profilu i sa blokiranom HTTP mrežom: nova biblioteka prazna; izbor foldera pravi `Local files test.katchamak/project.json` u privremenoj korisničkoj lokaciji; beleška je automatski upisana u fajl. Posle zatvaranja, probna beleška promenjena je direktno na disku; ponovno pokretanje prikazuje novu vrednost sa diska, čime je potvrđeno da se ne otvara stara kopija iz keša. Korisnički projekti nisu korišćeni za testiranje.
+- Stari installer 0.2.1 sa primerima izdvojen u ignorisani private-artifacts, nije za deljenje. Izvorni executable starog otvorenog programa ostavljen netaknut; novi build koristi `src-tauri/target/project-files`, a Start skripta i CI prate novu putanju.
+
+- Build dodatno odbija korisničke projektne fajlove i arhive izvornog koda u distribuciji; source backup izostavlja runtime/profile/target foldere i korisničke projektne foldere.

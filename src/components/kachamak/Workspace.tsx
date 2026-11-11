@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
+import { isDesktop, flushProjectFiles, importFileProject, useProjectFiles } from "@/lib/kachamak/project-files";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
@@ -165,7 +166,8 @@ function SettingsDialog({
               const f = e.target.files?.[0];
               if (!f) return;
               const reader = new FileReader();
-              reader.onload = () => {
+              reader.onload = async () => {
+                if (isDesktop()) { try { const id = await importFileProject(String(reader.result)); if (id) toast.success("Project saved to its own folder."); } catch (error) { toast.error(String(error)); } return; }
                 const res = importNovel(String(reader.result));
                 if (res.ok) toast.success("Novel imported from backup.");
                 else toast.error(res.error ?? "Import failed.");
@@ -175,7 +177,7 @@ function SettingsDialog({
             }}
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Everything is saved locally in this browser. Export a JSON backup from
+            {isDesktop() ? "Projects are saved in their own folders on your computer. Export a JSON backup from" : "Everything is saved locally in this browser. Export a JSON backup from"}
             time to time to keep it safe.
           </p>
         </div>
@@ -200,6 +202,7 @@ export function Workspace() {
   const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
   const rightPanelWidth = useKachamak((s) => s.rightPanelWidth);
 
+  const filePath = useProjectFiles(state => activeNovelId ? state.paths[activeNovelId] : undefined);
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -213,7 +216,7 @@ export function Workspace() {
       .map((w) => w[0])
       .slice(0, 2)
       .join("")
-      .toUpperCase() || "ND";
+      .toUpperCase() || "?";
 
   return (
     <div className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
@@ -303,8 +306,9 @@ export function Workspace() {
               <button
                 type="button"
                 aria-label="Save"
-                title="Save"
-                onClick={() => {
+                title={isDesktop() && filePath ? `Save · ${filePath}` : "Save"}
+                onClick={async () => {
+                  if (isDesktop()) { try { await flushProjectFiles(); toast.success("Saved to project file."); } catch (error) { toast.error(String(error)); } return; }
                   if (saveProjectsLocally()) {
                     toast.success(`Saved locally · ${new Date().toLocaleTimeString("en-US", {
                       hour: "numeric",

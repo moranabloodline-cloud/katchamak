@@ -14,8 +14,10 @@ Object.defineProperty(globalThis, "localStorage", { configurable: true, value: s
 const { useKachamak, projectsSavedLocally, saveProjectsLocally } = await import("../src/lib/kachamak/store.ts");
 const key = "kachamak-store-v1";
 
-assert.ok(useKachamak.getState().novels.length > 0, "first run loads examples");
-const savedNovel = useKachamak.getState().novels[0];
+assert.deepEqual(useKachamak.getState().novels, [], "new installation has no bundled user projects");
+assert.equal(useKachamak.getState().defaultAuthor, "", "new installation has no owner identity");
+useKachamak.getState().createNovel("Existing private project", "Existing author");
+const savedNovel = structuredClone(useKachamak.getState().novels[0]);
 storage.setItem(key, JSON.stringify({ state: { novels: [] }, version: 5 }));
 await useKachamak.persist.rehydrate();
 assert.deepEqual(useKachamak.getState().novels, [], "saved empty library stays empty");
@@ -69,5 +71,5 @@ assert.equal(JSON.stringify(useKachamak.getState().novels), initialProjects, "re
 assert.equal(useKachamak.getState().importNovel(JSON.stringify(validBackup)).ok, true, "valid backup with Trash can be imported");
 useKachamak.getState().restoreFromTrash("imported-trash");
 assert.equal(useKachamak.getState().novels.find((n) => n.id === useKachamak.getState().activeNovelId).trash.length, 0, "imported Trash entry can be restored");
-console.log("Storage rehydration checks passed.");
+console.log("Empty first run, existing-project preservation and storage rehydration checks passed.");
 await import("./dashboard-zoom.test.mjs");
