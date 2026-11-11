@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 const config = JSON.parse(readFileSync(".openai/automation.json", "utf8"));
 const payload = JSON.parse(readFileSync(".sites-runtime/github-release.json", "utf8"));
@@ -24,4 +25,8 @@ if (!response.ok) throw new Error(`Release rejected (${response.status}): ${resu
 if (result.sourceCommit !== payload.version.sourceCommit || result.buildId !== payload.buildId) throw new Error("Published release did not match this build.");
 const live = await fetch(`${config.origin}/api/app-version`, { cache: "no-store", signal: AbortSignal.timeout(30000) }).then(r => r.json());
 if (live.sourceCommit !== payload.version.sourceCommit || live.sourceTree !== payload.version.sourceTree || live.buildId !== payload.buildId) throw new Error("Published application readback did not match this build.");
+for (const asset of [payload.assets.find(a => a.path === "/index.html"), payload.assets.find(a => a.path.endsWith(".js")), payload.assets.find(a => a.path.endsWith(".css"))].filter(Boolean)) {
+  const liveAsset = await fetch(`${config.origin}${asset.path === "/index.html" ? "/" : asset.path}`, { cache: "no-store", signal: AbortSignal.timeout(30000) });
+  if (!liveAsset.ok || createHash("sha256").update(Buffer.from(await liveAsset.arrayBuffer())).digest("hex") !== asset.hash) throw new Error(`Published asset differs from the checked build: ${asset.path}`);
+}
 console.log(JSON.stringify({ status: "verified", sourceCommit: live.sourceCommit, sourceTree: live.sourceTree, buildId: live.buildId, url: config.origin }));

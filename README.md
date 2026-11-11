@@ -11,7 +11,9 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Razvojni server ispisuje lokalnu adresu. U managed Sites okruženju pokretanje Preview-a ide preko `sites-preview start /workspace/katchamak`. Za pregled u razgovoru postoji Kachamak alat `open_novel_studio`: on otvara trenutno objavljenu aplikaciju sa iste Sites adrese kao samostalni sajt.
+`bun run dev` prvo preuzima GitHub `main`, zatim otvara razvojni server i pokreće automatsku sinhronizaciju. Završene izmene posle 30 sekundi bez novih izmena prolaze provere, build i push; kod koji ne prođe provere ne objavljuje se. Nova verzija sa GitHuba ima prednost, uz povratnu granu i stash za lokalni rad. Za ručni rad bez automatike postoji `bun run dev:local`.
+
+U managed Sites okruženju pokretanje Preview-a ide preko `sites-preview start /workspace/katchamak`. Pregled u razgovoru kroz Kachamak alat `open_novel_studio` i samostalni sajt učitavaju istu objavljenu aplikaciju. Otvorena aplikacija proverava novu verziju na 15 sekundi i osvežava se kada korisnik ne uređuje sadržaj i kada postojeće lokalno čuvanje potvrdi da nema nesačuvanih izmena.
 
 ```sh
 bun run tests/rehydration.test.mjs
@@ -22,15 +24,25 @@ bun run build
 
 `typecheck` proverava aplikaciju; samostalni primeri iz `examples/` i tuđe veštine iz `skills/` nisu deo aplikacije. GitHub Actions izvršava ove provere i proveru izgrađenog paketa.
 
-## Jedna verzija za pregled, sajt i nastavak rada
+## Automatski tok: GitHub → sajt i pregled
 
-1. Pre izmene proveriti najnoviji `origin/main`. Raditi na postojećoj aplikaciji; sačuvati istoriju i tuđe izmene.
-2. Izmenu prvo pregledati u razvojnom Preview-u i dobiti Nikolaovo odobrenje za objavu, osim kada njegov trenutni zahtev već nalaže objavu/usaglašavanje sajta.
-3. Završiti provere, ažurirati status, napraviti commit i push na GitHub `main` bez force-pusha.
-4. Iz tog commita pokrenuti `bun run build`, zatim `bun run check:release`. Provera odbija paket sa drugog commita, sa drugačijim izvornim fajlovima ili sa necommitovanim izmenama aplikacije.
-5. Sačuvati isti sadržaj izvornog koda u postojećem Sites source repozitorijumu i objaviti upravo provereni `dist/` paket kroz Sites, uz postojeći `project_id` iz `.openai/hosting.json`. Sites source commit ima svoju istoriju; aplikacija u paketu beleži GitHub commit i kontrolni zbir izvornog koda. Ne praviti zamenski Site i ne menjati publiku sajta.
-6. Proveriti uspeh objave i `/api/app-version`, pa otvoriti Kachamak alat u razgovoru. Njegov odgovor i ista HTTP ruta prikazuju `sourceCommit`, `sourceTree` i `appBuild`/`buildId`; moraju odgovarati proverenom paketu. Posle objave ponovo otvoriti prikaz da stari iframe ne ostane na ekranu.
-7. Predati Nikola-i URL i GitHub commit. Lokalni screenshot, commit bez push-a i Sites save bez deploy-a nisu potvrda završenog objavljivanja.
+Nikola je 11.11.2026. zatražio i odobrio automatsko usaglašavanje aplikacije. GitHub `main` je autoritativni izvor. Svaki push na `main`, uključujući promenu drugog saradnika, pokreće `.github/workflows/build.yml`: testove, proveru tipova, build, proveru paketa, automatsku objavu i proveru stvarno objavljene verzije. Neuspeh zadržava prethodnu objavu.
+
+Objava koristi kratkotrajni GitHub OIDC identitet, bez sačuvanih servisnih tokena. Sites prihvata samo ovaj repozitorijum, ovaj workflow i `main`. Potpuno provereni statični paketi smeštaju se u R2; aktivna verzija menja se tek nakon uspešnog upisa svih fajlova. Stariji workflow ne može da prepiše noviju objavu. R2 ne čuva rukopise niti projekte.
+
+Pre uređivanja više fajlova u agentskom zadatku zaustaviti automatsko slanje, a po završetku ga ponovo uključiti:
+
+```sh
+bun run sync:pause
+# završiti izmene i proveru
+bun run sync:resume
+```
+
+Za već pokrenut razvojni server može se zasebno pokrenuti `bun run sync:watch`. Radi dok je radno okruženje aktivno; posle ponovnog pokretanja `bun run dev` prvo preuzima najnoviji `main`. GitHub Actions nastavlja objavljivanje i kada ovo okruženje ne radi. Stanje i eventualna greška su u ignorisanom `.sites-runtime/sync-state.json`. Nema force-pusha; lokalni rad pre preuzimanja tuđeg koda ostaje u `backup/autosync-*` grani i stash-u.
+
+Aktivnu verziju proveriti preko `/api/app-version` ili Kachamak alata: `sourceCommit`, `sourceTree` i `appBuild`/`buildId` moraju odgovarati poslednjem uspešnom workflow-u. Kod za nastavak rada uvek preuzeti sa GitHub `main`.
+
+Sites Worker je osnovni adapter za objavljivanje, odvojen od statične aplikacije. Promena samog adaptera, GitHub autorizacije ili Sites bindinga zahteva novu native Sites objavu sa istim `project_id` i publikom; workflow takvu promenu prepoznaje kroz `runtimeHash` i zaustavlja se umesto da potajno pokrene stari server. Uobičajene izmene stranica, komponenti, stilova, slika i klijentske logike objavljuju se automatski. Ne čuvati tokene u kodu niti menjati pristup sajtu radi objave.
 
 Za ručno pakovanje nakon uspešne provere, arhiva mora sadržati manifest u korenu i Worker na putanji `dist/server/index.js`:
 
