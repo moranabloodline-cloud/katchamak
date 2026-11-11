@@ -1,7 +1,7 @@
 name: Build and type-check
 on:
   push:
-    branches: [main]
+    branches: [main, codex/dashboard-library-20261111]
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,3 +24,20 @@ jobs:
       - name: Build Sites package
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: bun run build
+      - name: Install isolated browser test runtime
+        run: npm install --prefix .qa-runtime --no-package-lock --no-audit --no-fund playwright@1.56.1
+      - name: Install test browser
+        run: .qa-runtime/node_modules/.bin/playwright install --with-deps chromium
+      - name: Browser library regression checks
+        run: |
+          python3 -m http.server 4173 --directory out >/tmp/katchamak-preview.log 2>&1 &
+          node tests/dashboard-library.browser.cjs
+      - name: Save library build and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-library-build
+          path: |
+            dist/
+            out/
+            qa-results/

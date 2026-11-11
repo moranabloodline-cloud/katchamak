@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-11 — Biblioteka Dashboarda:** uklonjen banner; dva panela dele kolekcije v2 sa kompatibilnom migracijom, gnežđenjem, zaštitom od ciklusa i zajedničkim premeštanjem. Biblioteka koristi vertikalne korice, kompaktan List, perzistentnu veličinu korica, režim i razdelnik; Ctrl + skrol menja samo korice. Omogućene korisničke korice i kategorije u Dashboard metapodacima. Workspace i rukopisi nisu menjani. Provere obuhvataju migraciju, premeštanje, oporavak posle reload-a i browser scenarije.
+
 > **2026-11-10 — Dashboard kompozicija:** široki hero koristi ambijent iste originalne slike na bočnim delovima, dok jasna slika ostaje cela. Visina je ograničena na 38vh / 400px; kolekcije imaju uži panel, a kartice projekta kompaktnije proporcije i prilagodljiv broj kolona.
 
 > **2026-11-10 — Ctrl + skrol:** Dashboard koristi nativni wheel listener sa passive:false; Ctrl + skrol menja uvećanje istog prikaza koji kontrolišu dugmad. Običan skrol ostaje neizmenjen. Provere pokrivaju smer, trackpad, wheel jedinice i uklanjanje listenera.

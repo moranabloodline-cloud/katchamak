@@ -71,3 +71,4 @@ useKachamak.getState().restoreFromTrash("imported-trash");
 assert.equal(useKachamak.getState().novels.find((n) => n.id === useKachamak.getState().activeNovelId).trash.length, 0, "imported Trash entry can be restored");
 console.log("Storage rehydration checks passed.");
 await import("./dashboard-zoom.test.mjs");
+await import("./collections.test.mjs");
