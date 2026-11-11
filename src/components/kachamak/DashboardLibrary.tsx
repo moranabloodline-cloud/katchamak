@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, HelpCircle, Layers, LayoutGrid, List, MoreVertical, Plus, Search, UserCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search, UserCircle2 } from "lucide-react";
 import { exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
@@ -9,6 +9,7 @@ import { canMoveCollection, useCollections, type Collection } from "@/lib/kacham
 import { useLibraryPreferences } from "@/lib/kachamak/library-preferences";
 import { bindDashboardZoom } from "@/lib/kachamak/dashboard-zoom";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { HelpCenter } from "./HelpCenter";
 import { ProjectFileStatus } from "./ProjectFileStorage";
 import { toast } from "sonner";
 
@@ -54,7 +55,6 @@ interface Props {
   onImport: () => void;
   onOpenFile?: () => void;
   onAccount: () => void;
-  onHelp: () => void;
   onRenameCollection: (collection: Collection) => void;
   onDeleteCollection: (id: string) => void;
   onDeleteProject: (novel: Novel) => void;
@@ -166,7 +166,7 @@ export function DashboardLibrary(props: Props) {
     <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#a97f33]/25 bg-[#0c0906] px-4 py-1.5">
       <button type="button" aria-label="KATCHAMAK — Library home" onClick={() => navigate(null)} className="flex items-center gap-2.5 py-1 text-[#e8c265]"><Feather className="h-5 w-5" /><span className="font-serif text-lg font-semibold tracking-[0.25em]">KATCHAMAK</span></button>
       <div className="ml-auto flex items-center gap-1">
-        <button onClick={props.onHelp} className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-white/5"><HelpCircle className="h-4 w-4" />Help</button>
+        <HelpCenter />
         <span className="mx-1 h-5 w-px bg-white/10" />
         <button onClick={props.onAccount} className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-white/5"><UserCircle2 className="h-4 w-4 text-[#e8c265]" />Account<ChevronDown className="h-3.5 w-3.5" /></button>
       </div>

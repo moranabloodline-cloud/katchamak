@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Katchamak",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "identifier": "com.katchamak.desktop",
   "build": {
     "beforeDevCommand": "node scripts/preview-next.mjs --host 127.0.0.1 --port 3000",

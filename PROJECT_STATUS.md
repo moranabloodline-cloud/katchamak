@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-11 — Help Center na Dashboardu (0.2.3):** Help sada otvara padajući panel prema referenci, sa pretragom, grupama Learn Katchamak / Your Projects / Support & Feedback, What’s New i About. Stavke otvaraju lokalne članke u istom panelu, uz povratak na listu. Panel se zatvara preko X, Escape ili klika izvan njega; pretraga se resetuje po zatvaranju. Windows vizuelna provera potvrdila je raspored, filtriranje i otvaranje članka bez interneta. Čuvanje projekata nije menjano.
+
 > **2026-11-11 — Projekti odvojeni od aplikacije (0.2.2), lokalno provereno:** uklonjeni privatni početni projekti i podrazumevani vlasnik iz aplikacije. Nova instalacija počinje prazno. Desktop projekti su zasebni `.katchamak` folderi sa `project.json`; biblioteka pamti samo putanje. Dodati izbor lokacije, Open, automatsko čuvanje, upis pri zatvaranju, prethodna `.bak` kopija, recovery i prenos postojeće biblioteke bez brisanja. Rukopisi i stari WebView2 profil nisu menjani tokom razvoja. Detalji u DESKTOP.md.
 
 > **2026-11-11 — Windows desktop migracija pripremljena i lokalno proverena:** postojeći GitHub kod iz `c703f1e` preuzet u `C:\Katchamak`; prethodna lokalna Sites istorija sačuvana na `sites-history-preserved`, izvorna radna kopija nije menjana. Dodati Tauri 2 omotač, lokalni fontovi, samostalni statički build i automatika koja proverava pre commit/push-a bez automatskog prepisivanja rada. Podaci i store migracije nisu menjani. Detalji u DESKTOP.md; TypeScript, svi postojeći testovi, novi testovi automatike, offline asset provera i nativni release build prošli su. Napravljen Windows NSIS installer (212 MiB) sa offline WebView2 paketom. GitHub commit/push se izvršava po završetku ovih provera.
@@ -592,3 +594,10 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - Stari installer 0.2.1 sa primerima izdvojen u ignorisani private-artifacts, nije za deljenje. Izvorni executable starog otvorenog programa ostavljen netaknut; novi build koristi `src-tauri/target/project-files`, a Start skripta i CI prate novu putanju.
 
 - Build dodatno odbija korisničke projektne fajlove i arhive izvornog koda u distribuciji; source backup izostavlja runtime/profile/target foldere i korisničke projektne foldere.
+
+
+### 2026-11-11 — Dnevnik: Dashboard Help padajući meni
+
+- Zamenjen raniji Dashboard help dijalog panelom HelpCenter, vezanim za postojeće Help dugme. Tamna podloga, zaobljen okvir, žute ikonice, grupisane stavke i tipografija prate referencu.
+- Lokalna pretraga filtrira naslove, opise i tekst članaka. Svih devet stavki imaju lokalni sadržaj; About prikazuje verziju iz package.json. Nije izmišljena adresa podrške niti se bilo šta šalje drugim servisima.
+- Provereno u izolovanoj Windows aplikaciji uz blokiranu mrežu: otvaranje, vizuelni raspored svih stavki, pretraga keyboard, otvaranje članka Keyboard Shortcuts i zatvaranje Escape tasterom. TypeScript i statički build prolaze; sledi standardna završna provera, commit/push i installer.
