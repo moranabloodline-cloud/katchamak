@@ -17,10 +17,12 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Test storage rehydration
         run: bun run tests/rehydration.test.mjs
+      - name: Test collection hierarchy and migration
+        run: bun run tests/library.test.mjs
       - name: Type-check application
-        run: |
-          printf '%s\n' '{"extends":"./tsconfig.json","exclude":["node_modules","examples","skills"]}' > tsconfig.ci.json
-          bunx tsc --noEmit -p tsconfig.ci.json
+        run: bun run typecheck
       - name: Build Sites package
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: bun run build
+      - name: Verify release source and application entrypoint
+        run: bun run check:release

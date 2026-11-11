@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "node scripts/preview-next.mjs",
     "build": "node scripts/build-project.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "check:release": "node scripts/check-sites-build.mjs",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",

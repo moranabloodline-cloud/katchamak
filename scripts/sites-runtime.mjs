@@ -12,7 +12,7 @@ const rpc = (id, result, error) => Response.json(error ? { jsonrpc: "2.0", id, e
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/app-version") return Response.json({ buildId: APP_BUILD, source: "moranabloodline-cloud/katchamak", resourceUri: UI_URI }, { headers: { "Cache-Control": "no-store" } });
+    if (url.pathname === "/api/app-version") return Response.json({ ...SOURCE_VERSION, buildId: APP_BUILD, source: "moranabloodline-cloud/katchamak", resourceUri: UI_URI }, { headers: { "Cache-Control": "no-store" } });
     if (url.pathname === "/mcp") {
       if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
       let body;
@@ -25,7 +25,7 @@ export default {
         case "ping": return rpc(id, {});
         case "tools/list": return rpc(id, { tools: [TOOL] });
         case "tools/call": return params.name === TOOL.name
-          ? rpc(id, { content: [{ type: "text", text: "Kachamak opened from the GitHub codebase. Manuscripts remain on your device." }], structuredContent: { status: "ready", appBuild: APP_BUILD, sharedManuscript: false }, _meta: TOOL._meta })
+          ? rpc(id, { content: [{ type: "text", text: "Kachamak opened from the GitHub codebase. Manuscripts remain on your device." }], structuredContent: { status: "ready", appBuild: APP_BUILD, ...SOURCE_VERSION, sharedManuscript: false }, _meta: TOOL._meta })
           : rpc(id, { isError: true, content: [{ type: "text", text: "Unknown tool" }] });
         case "resources/list": return rpc(id, { resources: [{ uri: UI_URI, name: "Kachamak", mimeType: "text/html;profile=mcp-app" }] });
         case "resources/templates/list": return rpc(id, { resourceTemplates: [] });
