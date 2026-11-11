@@ -1,0 +1,566 @@
+     1→# PROJECT_STATUS — Kachamak
+     2→
+     3→> **2026-11-11 — OBJAVLJENO: Tačka 7 (Inspector reorg) na GitHub `main`.** Commit `e3045257e263d8353710e18e424aa04ffc19c1d9` push-ovan fast-forward (`fea7ee0..e304525`, bez force-a) i verifikovan na remote-u. GitHub Actions automatski gradi i objavljuje na postojećem Sites-u; identitet objave potvrđen na sajtu: `/api/app-version` i `/app-version.json` vraćaju `sourceCommit` `8c10d1cd93fc06125312dd857a42afd5f3f687ac` i `sourceTree` `68e11ebf77a2e33e1e953808ce1d9210a4e73d14529f45d9d8da17ca6c34dc3f` (sadržajni hash aplikacionih ulaza — identičan lokalnom buildu i CI-ju), `dirty:false`. Push urađen iz GLM okruženja; token isključivo u `~/.git-credentials` (0600), remote URL čist.
+     4→
+     5→> **2026-11-11 — AUTOMATSKO USAGLAŠAVANJE UKLJUČENO.** GitHub `main` je glavni izvor. `bun run dev` preuzima najnoviji kod i pokreće automatski commit/push završenih izmena posle provera; za postojeći server pokrenut je `sync:watch`. Pre višefajlnih agentskih izmena koristiti `bun run sync:pause`, po završetku `bun run sync:resume`. GitHub Actions automatski proverava, gradi, objavljuje aplikaciju na postojećem javnom Sites-u i proverava stvarni HTML/JS/CSS. Stvarna oblačna objava i provere prošle su za commit `42ecfbb` / run `42998803144`. Sites adapter v172 koristi R2 isključivo za pakete aplikacije i GitHub OIDC autorizaciju bez servisnih tokena. Otvoreni prikazi proveravaju novu verziju na 15s; lokalni kod proverava GitHub na 30s, uz recovery granu i stash pre preuzimanja tuđeg koda. Promene samog hosting adaptera traže native Sites objavu; uobičajene izmene aplikacije su automatske. Detalji i stanje su u `README.md` i `.openai/release.json`.
+     6→
+     7→> **2026-11-11 — OBJAVLJENO: Dashboard biblioteka, Sites verzija 171.** Nikola je izričito odobrio objavu verzije 171. Novi Dashboard i provera identiteta objave su na GitHubu (`10691ff7c50d2c41f97e60dfd4eddf9156c01a0d`). Sites potvrđuje uspešnu objavu; Kachamak alat za otvaranje u razgovoru vraća isti `sourceCommit`, `sourceTree` i build kao provereni lokalni paket. Sajt: https://nikola-novel-studio.morana-bloodline.chatgpt.site . Uputstvo za nastavak rada je u `README.md`, a identifikatori objave u `.openai/release.json`. Starije beleške ispod o čekanju odobrenja opisuju prethodni korak i više nisu aktuelni status.
+     8→
+     9→> **2026-11-11 — Dashboard biblioteka, lokalna verzija za pregled:** uklonjeni banner i „My Collections“. Dodati hijerarhija kolekcija, folderi i vertikalne korice, drag & drop između stabla i biblioteke, zaštita od ciklusa, putanja za navigaciju i nezavisni skroleri. Širina levog panela, Grid/List, zoom korica i otvorena lokacija se pamte. Collections store v2 migrira postojeće kolekcije bez promene ID-eva i članstava; manuscript store v6 i Workspace nisu menjani. **Objava na Sites-u i GitHub push čekaju Nikolino odobrenje po trenutnom zahtevu.** Lokalni browser testovi i build prolaze; TypeScript ima samo dve postojeće greške u `examples/websocket`. Sites razvojni Preview blokiran je greškom relay-a (`timed out waiting for relay readiness`); deljeni browser alat prijavljuje grešku sandbox-a. Automatske browser provere i screenshot urađeni su lokalno, u izolovanim testnim kontekstima.
+    10→
+    11→> **2026-11-10 — Dashboard kompozicija:** široki hero koristi ambijent iste originalne slike na bočnim delovima, dok jasna slika ostaje cela. Visina je ograničena na 38vh / 400px; kolekcije imaju uži panel, a kartice projekta kompaktnije proporcije i prilagodljiv broj kolona.
+    12→
+    13→> **2026-11-10 — Ctrl + skrol:** Dashboard koristi nativni wheel listener sa passive:false; Ctrl + skrol menja uvećanje istog prikaza koji kontrolišu dugmad. Običan skrol ostaje neizmenjen. Provere pokrivaju smer, trackpad, wheel jedinice i uklanjanje listenera.
+    14→
+    15→> **2026-11-10 — Pregledniji Dashboard:** visina bannera ograničena je prema visini prozora, uz celu sliku i očuvane proporcije; naslov je pomeren ulevo. Kontrole u gornjoj traci omogućavaju promenu uvećanja Dashboarda između 70% i 130%, sa povratkom na 100%.
+    16→
+    17→> **2026-11-10 — Dashboard:** banner je proširen iza naslova i podnaslova uz očuvane proporcije cele slike; dugmad Collection i Project dobila su usklađen tamno-zlatni izgled, uz postojeće funkcije.
+    18→
+    19→> **2026-11-10 — Provera Trash stavki pri uvozu:** backup koji sadrži stavku Trash-a sa nepoznatom sekcijom odbija se pre upisa, jer se takva stavka ne bi mogla vratiti. Dodate su provere odbijanja bez izmene postojeće biblioteke i uvoza i vraćanja ispravne stavke. Dijalog trajnog brisanja, otkazivanje i Restore provereni su i kroz probni interfejs.
+    20→
+    21→> **2026-11-10 — Provera lokalnog čuvanja:** dugme Save ponovo pokušava da upiše podatke i proverava da li se sačuvani projekti poklapaju sa trenutnim podacima. U slučaju greške upozorava i upućuje na izvoz JSON backupa. Informacije o čuvanju ne tvrde da postoji zasebna recovery kopija; Vault još nije dostupan. Dodate su provere neuspelog i ponovljenog upisa.
+    22→
+    23→> **2026-11-10 — Bezbedniji Trash:** trajno brisanje pojedinačne beleške traži potvrdu; nove obrisane beleške vraćaju se na ranije mesto među susednim beleškama. Starije stavke bez podatka o položaju i dalje se vraćaju na kraj. Verzija čuvanja je v6, uz očuvanje postojećih v5 podataka; dodate su provere čuvanja i vraćanja podataka.
+    24→
+    25→> **2026-11-10 — Sačuvana prazna biblioteka:** primeri se učitavaju samo pri prvom korišćenju; postojeća prazna biblioteka se više ne popunjava automatski posle ponovnog učitavanja. Automatski su provereni prvi ulazak, prazna biblioteka i očuvanje postojećeg projekta; build i TypeScript provera su prošli.
+    26→
+    27→> **2026-11-10 — Meni projekta:** sa Dashboarda se može izvesti JSON backup ili zatražiti trajno brisanje projekta uz potvrdu. Backup testnog projekta sa beleškom je izvezen i ponovo uvezen, a dijalog za brisanje proverava upozorenje; build i TypeScript provera prošli su na GitHub Actions.
+    28→
+    29→> **2026-11-10 — Pretraga i bezbedniji uvoz:** pretraga projekta nalazi tekst u sadržaju, sinopsisu i beleškama, kao i po naslovu. Uvoz proverava osnovnu strukturu projekta i stabla pre čuvanja; neispravna datoteka se odbija bez menjanja podataka. Provereni su pronalaženje reči u tekstu i uvoz ispravnog i neispravnog probnog backupa; build i TypeScript provera prošli su na GitHub Actions.
+    30→
+    31→> **2026-11-10 — Dashboard kolekcije i prikazi:** lokalne kolekcije (kreiranje, preimenovanje, uklanjanje kolekcije bez brisanja projekata, višestruko članstvo projekata), sortiranje, grupisanje po autoru, Grid/List i Help su povezani. Kolekcije se čuvaju odvojeno u browseru; postojeći pojedinačni JSON backup projekta ne sadrži kolekcije. Provereno u probnoj verziji: kolekcija i članstvo posle reload-a, prikazi, sortiranje, grupisanje i dijalog za bezbedno uklanjanje; build i TypeScript provera prošli su na GitHub Actions.
+    32→
+    33→> **2026-11-10 — Dashboard:** dugmad Project, Import i Account povezana su sa postojećim funkcijama; pretraga filtrira projekte po naslovu i autoru. Provereni su kreiranje i otvaranje projekta, čuvanje posle osvežavanja, pretraga, dijalog naloga, uvoz ispravnog i odbijanje neispravnog JSON-a. Build i TypeScript provera aplikacije prošli su na GitHub Actions. Collection, Sort, Group i Grid/List ostaju nedovršeni.
+    34→
+    35→> **Ažurira se posle SVAKOG završenog zadatka** (pravilo `AGENTS.md` §3.9).
+    36→> Čita se na početku sesije, posle `AGENTS.md`, pre bilo kakve izmene.
+    37→> **Preuzimanje u ChatGPT:** 2026-11-10 — nova osnova je GitHub commit `cbf05c1a6a4e6dd80bb9eb50ff6b78568970b33f`. Dashboard i editor otvoreni i provereni; dodat samo sloj za pokretanje i objavu kroz Sites.
+    38→>
+    39→> **Prethodna izmena:** 2026-11-10 (sesija: **Dashboard — ispravka proporcija**
+    40→> — donji deo po referenci: sidebar ~19% širine, skoro-crna pozadina
+    41→> #0a0c10 umesto toplo braon, krupniji toolbar (h-11) i pretraga 310px,
+    42→> Grid/List zlatni segmented skroz desno, kartice 230px sa coverom ~44%
+    43→> širine i krupnijom tipografijom. Banner, funkcije, Workspace i podaci
+    44→> NIJE diran — samo klasa boje gradijenta ispod bannera (bez šava).
+    45→
+    46→---
+    47→
+    48→## 1. Šta je ZAVRŠENO (verifikovano u kodu)
+    49→
+    50→Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
+    51→
+    52→| # | Stavka | Gde u kodu |
+    53→|---|--------|------------|
+    54→| 1 | Donja traka radne površine: Target ikonica skroz levo, word count u sredini — **reči otvorene note** (`ownWords`: content + Synopsis + Notes, kao u Scriveneru; zbir celog romana `novelWords` samo kad ništa nije selektovano) (ispravka 09.11. po Nikoli — „i dalje ne radi kako treba"), **Split/Write/Grid/List uz desnu ivicu srednjeg panela** | `NotesSection.tsx` |
+    55→| 2 | Everything is a Note — svi tabovi isti note sistem (Codex uključen; migrate v3→v4) | `types.ts`, `store.ts` |
+    56→| 3 | Slobodna hijerarhija — novi notes uvek `kind:"doc"`, ime/ikona/boja po korisniku | `types.ts` |
+    57→| 4 | Klik na ikonu note → icon picker popup (i preko menija „Change icon") | `NoteTree.tsx` |
+    58→| 5 | Tri-dot meni (tačna struktura iz dokumenta) + Move dijalog (izbor bilo kog root-a/note-a za parenta) | `NoteTree.tsx` |
+    59→| 6 | **Grid** (zadata 09.11.): Scrivener index kartice (ikona + naslov + Synopsis), papir `#efe6cf` na pluti `#241c12`, caption „GRID · <nivo>", jedan nivo hijerarhije, dupli klik → Write, drag & drop reorder (`destIndex` u `moveNodeTo`), „+ New note" u otvoreni nivo; **store v5** (migracija `view:"grid"`→interno `"corkboard"`) | `Corkboard.tsx` |
+    60→| 7 | Ispravke 09.11.: header linije piksel-poravnate (header = panelWidth+1); **mod prikaza se više ne resetuje** (ostaje poslednji aktivan kroz tabove/otvaranje/izlaz) | `NotesSection.tsx`, `store.ts` |
+    61→| 8 | **Split (09.11., kao u Scriveneru; dve ispravke istog dana)**: formatna traka (traka 2) je JEDNA fiksna instanta iznad svega — NE duplira se po panelu; **lenjir je u SVAKOJ radnoj površini** (RulerRow + strana u zajedničkom zoom omotu panela) i **svaka površina ima SVOJ odvojeni zoom** (`paneAZoom`/`paneBZoom`, Ctrl+skrol nad tom površinom, `stopPropagation` da ne dira midZoom; null → nasleđuje midZoom); deli se radna površina: dva identična editora (EditorPage) + razdelnik (0.2–0.8, persist), klik na površinu je bira (zlatna 2px linija na vrhu), klik na notu otvara SAMO u izabranoj — druga ostaje; prvi ulazak klonira otvorenu notu u oba; inspector/brojač/highlight prate fokusiranu; font/veličina/prored u store-u (`editorFont/Size/Spacing`) — zajednički za traku i sve strane; brisanje/prazni/nova nota/promena romana sve pokriveno | `SplitEditors.tsx`, `WriteArea.tsx`, `CtrlZoom.tsx`, `NotesSection.tsx`, `store.ts` |
+    62→| + | Već postoje: Trash sa restore-om, **top bar u JEDNOJ traci (h-10)** — Home+Search levo, tabovi Binder/Codex/Planning/Research/Templates/Prompts/Trash u sredini (svi u jednom redu), Tree Scope+Save+Account+Settings desno; **druga traka (h-10, poravnata)** = header stabla | editor toolbar (jedan red, px-4 kao tabovi) | Info/Details/Mentions tabovi (BEZ ikonica, bez okvira — svetli samo selektovani zlatnom pilulom, po Nikoli); levi panel (stablo, ⓘ popover), desni panel (Label+Status+boja, Synopsis/Notes, NoteMetaBar), resizer-i, app-shell bez skrola stranice (`globals.css`) | `Workspace.tsx`, `NoteTree.tsx`, `WriteArea.tsx`, `RightPanel.tsx`, `PROJEKT-KONTEKST.md` §3 |
+    63→
+    64→## 2. Šta je U TOKU
+    65→
+    66→- **Tačka 7 — Inspector reorg: OBJAVLJENO na GitHub `main`, commit `e304525`** (detalji u Dnevniku); Actions automatski gradi i objavljuje na postojećem Sites-u.
+    67→- Kontinuitet i backup infrastruktura — **ZAVRŠENO 09.11.** (`AGENTS.md`,
+    68→  `PROJECT_STATUS.md`, `scripts/backup.sh`, dnevni cron ID 517453 u 03:00,
+    69→  sigurnosni fix `.env`; sve verifikovano — vidi §6 i Dnevnik). Ovaj odeljak
+    70→  se puni novim započetim zadatkom, a prazni posle svakog završenog.
+    71→
+    72→## 3. Šta je SLEDEĆE (po redu — „ajmo redom")
+    73→
+    74→Tačke 1–7 završene i objavljene (tačka 7 na GitHubu, commit `e304525` — detalji u Dnevniku). Sledeća je **tačka 8**:
+    75→
+    76→7. **Inspector reorg** — desni panel u 3 taba: Info (Synopsis + Notes vertikalno,
+    77→   draggable razdelnik), Details (povezivanje sa Codex notama, pretraživo),
+    78→   Mentions; panel ostaje collapsible.
+    79→8. **Toolbar dopune** — postojeći dizajn ostaje; dodati Text Style dropdown
+    80→   (podrazumevano „Normal") + dugmad Copy, Delete, Link.
+    81→9. **Tabovi — pravila**: obavezni (ne mogu se brisati ni preimenovati): Binder, Codex,
+    82→   Trash; brisljivi: Planning, Research, Templates, Prompts; korisnički custom tabovi.
+    83→10. **Top bar — „Current Note" dropdown** (ime aktivne note desno u topbaru).
+    84→11. **Storage/eksport** — Vault (Markdown fajlovi) + Master Backup_<Project>.json;
+    85→    eksport: Importable Master, HTML, Markdown, JSON.
+    86→12. **Dashboard** (početni ekran projekta; detalje pitati Nikolu kad dođe na red).
+    87→
+    88→## 4. Otvorena pitanja (pitati Nikolu kad dođe na red)
+    89→
+    90→- Meni u kodu: **„Create note"** vs screenshot: **„Create sub-page"** — koje ime?
+    91→- Screenshot menija ima **„Edit permissions"** koju arhitektura dokument ne
+    92→  pominje — dodati li je?
+    93→
+    94→## 5. Ključne odluke (hronološki, najnovije dole)
+    95→
+    96→- Naziv mode-a je **„Grid"** — Nikola je eksplicitno zabranio preimenovanje u
+    97→  „Corkboard" („NISAM TI DOZVOLIO DA PROMENIŠ Grid u Corkboard"). Interno se
+    98→  view zove `corkboard`, korisniku se prikazuje „Grid".
+    99→- `KACHAMAK-ARHITEKTURA.md` je autoritativna specifikacija; kad se ona i
+   100→  `PROJEKT-KONTEKST.md` razilaze, dokument pobeđuje; Nikolaova trenutna reč
+   101→  pobeđuje sve.
+   102→- App-shell: `html,body{height:100%;overflow:hidden}` — stranica nikad ne
+   103→  skroluje, samo unutrašnji kontejneri (`kachamak-scroll`).
+   104→- Mod prikaza (Split/Write/Grid/List) se ne resetuje ni pri kom otvaranju.
+   105→- **09.11. — bezbednosna odluka:** `.env` (sadrži `DATABASE_URL`) je bio u git
+   106→  indeksu i u oba backup zipa, od kojih jedan stoji u javnom `public/`. Ispravljeno:
+   107→  `.env` izbačen iz git indeksa (`.gitignore` već pokriva `.env*`), zipovi
+   108→  rebuildovani bez njega, `scripts/backup.sh` ima secrets-guard. Git nema remote,
+   109→  pa ništa nije napustilo radni prostor; stara istorija se NE prepravlja.
+   110→
+   111→## 6. Backup & kontinuitet — mehanizmi i status
+   112→
+   113→| # | Mehanizam | Šta štiti | Status |
+   114→|---|-----------|-----------|--------|
+   115→| 1 | Workspace persistencija (`/home/z/my-project`) | gubitak sesije | uvek aktivan |
+   116→| 2 | Git checkpointovi (platforma) + commitovi posle zadataka | prepisivanje koda, istorija | aktivan (zadnji: 09.11 08:02) |
+   117→| 3 | `backups/kachamak-<stamp>.zip` — snapshotovi (čuva se 12) | brisanje/korupcija | `scripts/backup.sh` |
+   118→| 4 | `download/kachamak-aplikacija.zip` — kopija za Nikolu | prenos izvan radnog prostora | osvežava skript |
+   119→| 4b | `download/kachamak-backup-<datum>.zip` — datumovane kopije | istorija za Nikolu | ručno |
+   120→| 5 | `public/kachamak-aplikacija.zip` — cloud kopija na preview deploymentu | gubitak celog workspace-a | osvežava skript |
+   121→| 6 | **Cron „Kachamak — dnevni backup", 03:00 (Europe/Belgrade)** | zaboravljena ručna kopija | konfigurisan (ID 517453) |
+   122→
+   123→- **Restore postupak:** `PROJEKT-KONTEKST.md` §0 (prvo cloud link, onda
+   124→  Nikolaov zip; uvek `bun install && bun run build` posle raspakivanja).
+   125→- **Napomena o cloud URL-u:** preview URL se menja sa deploymentom; stari
+   126→  (`preview-dev-4f587c…space-z.ai`) vraća 404 od 09.11. Trenutni link vidi
+   127→  Nikola u platformi (dodati `/kachamak-aplikacija.zip`); fajl u `public/` je
+   128→  uvek svež, pa važeći deployment uvek servira najnoviji backup.
+   129→- **Zadnja verifikacija:** 09.11.2026 — snapshot kreiran, `unzip -t` čist,
+   130→  restore-drill (raspakivanje u /tmp + `diff -r` naspram workspace-a) čist,
+   131→  potvrđeno da `.env` NEMA u zipovima. Dnevni cron: konfigurisan. Nova sesija
+   132→  može da rekonstruiše status iz `AGENTS.md` → `PROJEKT-KONTEKST.md` → ovog
+   133→  fajla (provereno nezavisnim testom — vidi Dnevnik).
+   134→
+   135→## 7. Dnevnik izmena (najnovije prvo)
+   136→
+   137→- **2026-11-11 (tačka 7 — Inspector reorg) — OBJAVLJENO NA GITHUB:** po arhitekturi §11 završena reorganizacija desnog panela. **Info tab:** Synopsis i Notes vertikalno, svako polje skroluje svoj sadržaj nezavisno; između njih **draggable razdelnik** (1px linija, `role="separator"`, po defaultu 50%/50%, granice 15–85%, vuče se gore/dole — isti obrazac pointer-capture stilova kao postojeći vertikalni Resizer-i panela). Proporcija se čuva kao nova preferencija `infoSynopsisRatio` (`?? 0.5` za stare store-ove) i preživi reload. **Details tab:** sada povezuje notu sa **Codex notama** — lista „Linked Codex notes“ (ikona + naslov rešen uživo iz Codex sekcije pa se preimenovanja provlače; klik na red otvara Codex notu — prelazak na Codex tab + selekcija; X skida vezu; obrisana Codex nota ostaje kao „missing note“ dok se veza ne skine) + **pretraživi birač** „Link a Codex note“ (pretraga po naslovu, bez ove note i bez već povezanih, max 8 rezultata, klik povezuje i čisti polje). Osnovni podaci note (Type/Words/Created/Updated/Sub-notes) ostaju ispod veza — postojeći prikaz, ništa nije uklonjeno. **Store v6→v7:** `NoteNode.links?: string[]` (opciono polje, bez data migracije — stari store-ovi i backupovi ga jednostavno nemaju; `duplicateNode`, JSON eksport i import prenose veze automatski). Mentions tab i collapsible ponašanje panela nisu menjani (već postojali). Verifikacija: `bunx tsc --noEmit` čist; `bun run build` prolazi (49 assets, build `99ebfb402c18`); Playwright E2E (`scripts/verify_inspector.py`): vučenje razdelnika 50%→68.6%, persist posle reload-a, pretraga „dec“ → „Declan“, povezivanje, persist veze posle reload-a, klik na vezu → prelazak na Codex tab — **sve PASS**; screenshotovi u `scripts/inspector7/`. Nikola je odobrio trenutno stanje i naredio prenos na GitHub („sada treba da se apdejtuje i github — ako tamo ne bude ovo sada čemu sve ovo“). Push iz GLM okruženja: commit `e3045257e263d8353710e18e424aa04ffc19c1d9`, fast-forward `fea7ee0..e304525` na `main`, bez force-a; remote SHA verifikovan API-jem; identitet objave potvrđen i na sajtu — `/api/app-version` i `/app-version.json` vraćaju isti `sourceCommit` `8c10d1c…` i `sourceTree` `68e11ebf77a2e33e1e953808ce1d9210a4e73d14529f45d9d8da17ca6c34dc3f` kao lokalna CI-simulacija (sadržajni hash ulaza, `dirty:false`; napomena: `sourceTree` NIJE git tree hash vec sadržajni hash iz `source-version.mjs`). Uz Inspektor izmene, commit sadrži i `DashboardLibrary.tsx` iz trenutnog stanja (sklonjene Cover-size dugmadi, „Library“ dugme u sidebaru, Folder ikona uz naslov „Collections“) i ovu evidenciju. Sajt-side potvrdu identiteta daje Kachamak alat u razgovoru (`/api/app-version`) kada Actions objava stigne.
+   138→- **2026-11-11 (automatizacija razvoja i objave) — ZAVRŠENO:** uveden GitHub Actions → OIDC → R2 tok na istom Sites-u. Prihvata samo konfigurisan repozitorijum, `main` i workflow, proverava potpis, identitet i sadržaj, upisuje sve resurse pre atomske aktivacije, odbija starije workflow-e i zadržava prethodnu verziju pri neuspehu. Produkcioni prikaz učitava isti paket preko sajta i MCP iframe-a; proverava se nova verzija na 15s uz odlaganje tokom uređivanja/dijaloga/nesačuvanog postojećeg browser stanja. `sync-workspace` preuzima tuđe izmene sa `main`, prethodno čuva lokalne commitove u recovery grani i radni sadržaj u stash-u, bez force-pusha i izmene `upload/`. Završene lokalne izmene automatski proverava, commit-uje, gradi i push-uje. `bun run dev` uključuje ovu sinhronizaciju, a u postojećem okruženju pokrenut je zaseban watcher; pauza za agentski rad je dokumentovana. Unit testovi koriste stvarne RSA potpise i izolovane git repozitorijume; svi testovi i TypeScript/build prolaze lokalno i na GitHubu. Native Sites adapter v172 uspešno objavljen. Stvaran GitHub workflow `42998803144` samostalno je objavio commit `42ecfbb`, proverio učitane app reference i identične JS/CSS fajlove, a MCP potvrdio isti commit/build. Završna evidencija ide kroz lokalnu automatiku kao dodatna provera commit/push toka. R2 nije skladište korisničkih projekata. Konačan JSON sistem i prazna početna biblioteka su poseban kasniji zadatak po Nikolinoj odluci; u ovom zadatku nisu menjani editor, rukopisi ni njihov store.
+   139→
+   140→- **2026-11-11 (usaglašavanje aplikacije, prikaza u razgovoru i GitHub-a) — ZAVRŠENO:** GitHub `main` ažuriran bez force-pusha. Novi Dashboard i kompletan postojeći aplikacioni kod preneti u postojeći Sites izvor, uz očuvanje njegove istorije i javnog pristupa. Aplikacioni commit `10691ff7c50d2c41f97e60dfd4eddf9156c01a0d`; Sites source commit `be5c47ddf955ac04668d2c5f58add0c03d778066`; objavljena verzija 171. `bun run typecheck`, rehydration i library testovi, build i `check:release` prolaze. Dodati `/app-version.json`, identitet source-a u Sites `/api/app-version` i u odgovoru `open_novel_studio`, provera izvornog koda/paketa pre objave, i uputstvo za preuzimanje i nastavak rada. Izmenjen postojeći GitHub Actions workflow da koristi istu proveru tipova aplikacije i proverava kolekcije i release paket. Posle prvobitnog odbijanja automatske provere, Nikola izričito odobrio objavu verzije 171; Sites deployment `appgdep_6af43201a9c08191885406f0e26e036a` uspešan. Poziv postojećeg Kachamak alata posle objave potvrdio source tree `1cfc2c7be69fc4a5d685b1dbdf94f126d83c9cbaa5a84aaeff554769e3cfd6e0` i build `347f181ec8264fc73516a739579933376382c925d8fdee81e7669b102f69f55c`, identične proverenom paketu. Baza podataka nije dodavana; rukopisi i editor ostaju na postojećem lokalnom sistemu. Završni commit dokumentacije beleži ovu objavu, bez izmene aplikacionog paketa.
+   141→
+   142→- **2026-11-11 (Dashboard — biblioteka projekata) — SPREMNO ZA PREGLED, NIJE OBJAVLJENO:**
+   143→  `DashboardLibrary.tsx` prikazuje stablo podkolekcija/projekata i neposredni sadržaj otvorene lokacije. Root prikazuje glavne kolekcije i projekte bez kolekcije. Native DnD i alternativni „Move to“ meni premeštaju foldere/projekte između oba prikaza; ciklusi se odbijaju. Postojeće višestruko članstvo ostaje očuvano; premeštanje projekta u root uklanja članstva, a brisanje kolekcije promoviše njen sadržaj roditelju bez brisanja projekata. Kreiranje i uvoz koriste postojeće akcije; novi projekat se smešta u otvorenu kolekciju. Sačuvani su Account, Help, eksport, pretraga, sortiranje i grupisanje. Collections storage ključ ostaje isti, verzija je 2 uz v1 migraciju; nove UI preference imaju poseban ključ. Dashboard pri prvom prikazu koristi postojeći Save mehanizam da početni ID-evi projekata ostanu trajni pre povezivanja sa kolekcijama. Unit provere pokrivaju 50 nivoa, cikluse, migraciju, članstva, pomeranje, brisanje i reload. Browser provere pokrivaju oba smera DnD, root drop, Grid/List/zoom, promenu broja kolona, razdelnik i reload, nezavisno skrolovanje, legacy podatke, otvaranje starog i novog projekta, import/eksport, rename/delete i širine 390–1440px. `bun run build` prolazi; `bunx tsc --noEmit` prijavljuje samo nedostajuće socket.io pakete u dva postojeća websocket primera. Nije rađen Sites save/deploy ni GitHub push: čekaju Nikolaov pregled i odobrenje. Razvojni Preview u panelu nije dostupan zbog Sites relay/browser infrastrukture; lokalna aplikacija radi na portu 3000.
+   144→
+   145→- **2026-11-10 (GitHub verzija preneta u ChatGPT) — ZAVRŠENO:** po Nikolinoj naredbi stari Sites frontend/worker/testovi zamenjeni kodom iz privatnog repozitorijuma `moranabloodline-cloud/katchamak`, osnova `cbf05c1a6a4e6dd80bb9eb50ff6b78568970b33f`. Sačuvan identitet postojeće aplikacije i njen pristup; GitHub istorija i izvorni upload materijali ostaju netaknuti. Dodati `scripts/preview-next.mjs` (prihvata host/port iz ChatGPT pregleda), `scripts/build-project.mjs` (standardni standalone build van Sites-a; statički export i Worker pakovanje uz hosting manifest), `scripts/package-sites.mjs` i `scripts/sites-runtime.mjs` (serviranje identičnog Next builda i postojeći `open_novel_studio` alat). Google fontovi koriste sistemske TLS sertifikate; Prisma klijent generisan prilikom instalacije. Bez promena izgleda, store-a, migracija ili funkcija editora. `bun run build` prošao, Sites build prošao (47 resursa), MCP smoke provera prošla; `bunx tsc --noEmit` ima samo dve postojeće greške u websocket primerima (socket.io paketi), bez grešaka u `src/`. U browseru provereni dashboard → projekat → beleška i editor. Dalji rad nastavlja se na ovoj GitHub osnovi.
+   146→
+   147→- **2026-11-10 (Dashboard — ispravka proporcija) — ZAVRŠENO:** Nikola uporedio
+   148→  fazu 1 sa referencom i tražio ispravke SAMO donjeg dela. Izmereno sa
+   149→  reference (piksel-analiza, referenca 1672px vs ekran 1920px → sve ×1.148):
+   150→  sidebar `w-[280px]` → **`w-[19%]`** (min 230px); pozadina donjeg dela
+   151→  `#17110b` → **`#0a0c10`** + sidebar `#090b0f` (referenca je skoro-crna,
+   152→  ne toplo-braon — boje merene: #080b0f/#0b0c0e); header stabla krupniji
+   153→  (serif 19px, folder 24px, + dugme 40x40, separator linija ispod);
+   154→  „All Projects“ serif **30px** + ikona 32px; toolbar **h-11** dugmad (text-
+   155→  base, ikone 20px), pretraga **310px**, Sort/Group u desnoj grupi,
+   156→  **Grid/List zlatni segmented** (aktivni zlatni fill + tamna ikona, zlatni
+   157→  obrub, 52px segmenti) **skroz desno**; kartice **h-230px** (ref ~200px na
+   158→  1672 → ×1.148), cover **44%** širine (min 160/max 250) sa zlatnim
+   159→  separatorom, naslov **serif 24px bijel**, redovi **16px** skoro-bijeli
+   160→  (#d4d1c9) sa zlatnim ikonama 20px, zlatni obrub #a97f33/60 + hover
+   161→  #f0b018. JEDINA izmena iznad bannera: donji gradijent prelaza
+   162→  `from-[#17110b]` → `from-[#0a0c10]` (da nema šava prema novoj pozadini —
+   163→  banner slika netaknuta). Bez izmišljenih kolekcija/projekata — i dalje
+   164→  „No collections yet.“ + postojeća 2 projekta. **Turbopack/Tailwind v4 dev
+   165→  keš podmukao:** nove Tailwind klase nisu ulazile u CSS ni posle restarta
+   166→  dev servera (DOM imao klasu, CSS pravilo nedostajalo, kartice 170px);
+   167→  rešeno **`rm -rf .next`** + restart — zapisati ako se ponovi. Verifikacija:
+   168→  navigacija kartica→Workspace→„Back to dashboard“ radi, konzola bez
+   169→  grešaka; `tsc` čist (samo 3 poznate greške u examples/ i skills/);
+   170→  `build` čist; screenshot 1920x1080 + side-by-side poređenje sa referencom
+   171→  u `/tmp/render/compare-final.png` (proporcije poklapaju se).
+   172→- **2026-11-10 (Dashboard — faza 1) — ZAVRŠENO:** po Nikolinoj referenci
+   173→  (screenshot) napravljen Dashboard kao **početni ekran**. NOVO:
+   174→  `src/components/kachamak/Dashboard.tsx`; `page.tsx` renderuje Dashboard
+   175→  umesto starog Home kad nema aktivnog romana (**Home.tsx ostaje netaknut u
+   176→  kodu** — stari kod se ne briše pre Nikolinet potvrde). **Gornji deo:** top
+   177→  bar (Feather + „KATCHAMAK“ serif zlatno levo; Help i Account desno — samo
+   178→  vizuelno), naslov „My Collections“ (serif) + podnaslov, **dekorativni
+   179→  statični banner** — AI slika `public/dashboard-banner.png` (2880x640,
+   180→  generisan `scripts/dashboard/gen_banner_wide.ts`; pet kartica Books/Games/
+   181→  Software/Movies/Cartoons sa tačnim pluralom, planine levo i dvorac desno do
+   182→  ivica; JEDNA slika, bez kartica/komponenti/funkcionalnosti). **Donji deo:**
+   183→  levo stablo Collections (faza 1 prazno — „No collections yet.“, bez demo
+   184→  podataka; kod za hijerarhiju/izbor spreman za fazu 2), desno „All Projects“
+   185→  + toolbar: + Collection i + Project (zlatne), Import (outline), Search,
+   186→  Sort, Group, Grid/List toggle — **svi samo vizuelno** (Nikolina tačka 4).
+   187→  Projekti = postojeći romani (sort po updatedAt), **horizontalne kartice**:
+   188→  cover levo (postojeći `n.cover.bg`+`icon` — podaci netaknuti), desno naslov
+   189→  serif, „Novel“, broj reči (`novelWords`), „Modified X“ (`relativeTime`
+   190→  helper u komponenti), ⋮ vizuelno. **Minimalna funkcionalnost radi:** klik na
+   191→  karticu = `openNovel` → Workspace; postojeće „Back to dashboard“ dugme
+   192→  (`closeNovel`) vraća na Dashboard. Store/schema/migracije NIJE diran;
+   193→  Workspace/editor netaknuti. Verifikacija: `build` + `tsc` čisti; konzola
+   194→  bez grešaka; screenshotovi 1440x900 (hero ~438px ≈ referenca, donji deo
+   195→  staje bez skrola) i 1366x768 u `scripts/dashboard/`. Banner iteriran: v1
+   196→  1440x704 (singular „project“ na 2 kartice) → ogledalo-extend neispravan
+   197→  (odražavao kartice) → usvojen wide 2880x640 (tačni tekstovi, pejzaž do
+   198→  ivica).
+   199→- **2026-11-10 (trajna GitHub veza — merge + push cele istorije) — ZAVRŠENO:**
+   200→  Nikola napravio fine-grained PAT (samo repo `katchamak`, Contents: Read and
+   201→  write) i poslao ga u chatu. Token upisan **isključivo u `~/.git-credentials`**
+   202→  (IZVAN projektnog foldera, dozvole 0600) + `credential.helper store` globalno;
+   203→  remote URL čist (bez tokena). Provereno pre pusha: **`.env` u git istoriji**
+   204→  (bio u Initial commit `dd8b046`, izbačen u `11b00a2`) sadrži **SAMO lokalnu
+   205→  putanju** `DATABASE_URL=file:…/db/custom.db` — bez mrežnog kredencijala, bez
+   206→  lozinke → bezbedno, bez prepisivanja istorije. Spajanje: `git fetch` →
+   207→  `merge origin/main --allow-unrelated-histories` (README commit `4366e1e`; merge
+   208→  `6243ecb`, obe istorije sačuvane, README dodata lokalno bez konflikta) →
+   209→  **`git push origin main` uspeo: `4366e1e..6243ecb`, fast-forward, BEZ
+   210→  force-pusha**. Verifikacija na remote: 57 commitova; `src/` 74 fajla;
+   211→  `PROJECT_STATUS.md`, `AGENTS.md`, `db/`, `prisma/`, `README.md` prisutni;
+   212→  remote hash == lokalni HEAD. AGENTS.md dopunjen po Nikolinoj naredbi (tačka
+   213→  5): posle svakog završenog i testiranog zadatka → commit **+ push origin
+   214→  main** (§3.9, §4 GitHub veza, §5 checklist). Kredencijal nikad u repo/istoriju;
+   215→  token može regenerisati samo Nikola. Aplikativni kod NIJE diran.
+   216→- **2026-11-10 (GitHub push — opcija A, ZIP fallback) — ZAVRŠENO:** Nikola:
+   217→  „Sačuvaj trenutnu verziju aplikacije na GitHub takvu kakva jeste; izostavi
+   218→  nepotrebne ZIP arhive i tajne, ali sačuvaj kompletan izvorni kod; ako auth
+   219→  nije dostupna, napravi ZIP za ručni upload". Ustanovljeno pre odluke: commit
+   220→  `6133e1f` („Dashboard verzija") **ne postoji** u repozitorijumu (provereno
+   221→  cat-file/reflog/grane/stash — poslednji HEAD je `53af13c`; Dashboard komponenti
+   222→  nema ni u radnom stablu) → Nikola izabrao **opciju A**: čuvamo trenutni main.
+   223→  Auth ka GitHubu nedostupna (privatan repo: `git ls-remote` → „could not read
+   224→  Username"; nema credential helpera, gh CLI ni tokena) → po naredbi **ZIP
+   225→  fallback**: `git archive` HEAD → `download/katchamak-source-2026-11-10.zip`
+   226→  (sadržaj = baš git tree: kompletan izvorni kod, bez backups/*.zip, bez .env,
+   227→  bez node_modules/.next; `unzip -t` čist). **backups/ izbačen iz git praćenja**
+   228→  (`git rm -r --cached backups`, 12 zipova ostaje na disku; `.gitignore` +
+   229→  `backups/`). **Dopuna istog zadatka:** u prvom ZIP snimku našle su se i 4
+   230→  generisane `.zip` arhive iz `download/`, `public/` i `upload/` (16,5 MB,
+   231→  uključujući dve identične kopije `kachamak-aplikacija.zip` od 8,1 MB) — sve
+   232→  izbačene iz praćenja (`git rm --cached`, lokalno ostaju), `.gitignore` +
+   233→  `*.zip`; finalni snimak `katchamak-source-2026-11-10.zip` je bez ijednog
+   234→  zipa i bez tajni. Push čeka auth (fine-grained PAT, Contents: Read and write):
+   235→  tada `fetch` → `merge origin/main --allow-unrelated-histories` (README,
+   236→  obe istorije sačuvane) → `push origin main` → verifikacija na GitHubu;
+   237→  bez force-pusha. Aplikativni kod NIJE diran.
+   238→- **2026-11-09 (lenjir u svakoj površini + odvojen zoom po površini) — ZAVRŠENO:**
+   239→  Nikola ispravio sebe: „sve je dobro ali lenjir mora da ide svaka radna
+   240→  površina da ima svoj kako bi svaka radna površina imala odvojen zoom“:
+   241→  (1) **LENJIR U SVAKOJ POVRŠINI** — `RulerRow` vraćen iz jednog pune-širine
+   242→  reda U svaki panel: `SplitEditors` panel = kontejner (klik-bira, zlatna
+   243→  linija, širina iz splitRatio) → zoom omot → `RulerRow` + `EditorPage` (ili
+   244→  `EmptyPaneBody` — prazna površina IMA lenjir, „dva identična ekrana“ u svakom
+   245→  stanju). Lenjir je i dalje bez pozadine (boja površine) i poravnat sa stubcem
+   246→  svoje strane (min(48rem, 100%) u širini PANELA, ne cele radne površine);
+   247→  razdelnik sada seče i kroz red lenjira (kao u Scriveneru — svaki editor svoj
+   248→  lenjir). (2) **ODVOJENI ZOOM PO POVRŠINI** — novi `paneAZoom`/`paneBZoom` u
+   249→  store-u (number|null, persist; `setPanelZoom` proširen sa
+   250→  „left|mid|right“ na + „paneA|paneB“); `CtrlZoom` izdvojen u `CtrlZoom.tsx`
+   251→  (isti native wheel listener) i kačen na OBA pane kontejnera; kad zoom
+   252→  površine još nije podešen (null) čita se midZoom — bez skoka pri prelasku
+   253→  iz Write moda, prvi Ctrl+skrol nad površinom je zauvek odvaja;
+   254→  `stopPropagation` u wheel handleru da event ne „probije“ do main listenera
+   255→  (koji bi menjao midZoom). Zoom omot je unutar panela — širine panela i
+   256→  razdelnik ostaju u pravim pikselima (drag računanje jednostavnije).
+   257→  **VERIFIKACIJA (uživo):** screenshot — traka 2 TAČNO JEDNOM, dva lenjira
+   258→  (svaki sa okom, iznad svoje strane); Ctrl+skrol nad B ×3 → `paneBZoom=1.3`,
+   259→  A i midZoom netaknuti; piksel: lenjir B viši (y85–110) od A (y80–103),
+   260→  tekst B veći; Ctrl+skrol nad A → `paneAZoom=1.1` uz B ostao 1.3; razdelnik
+   261→  0.499→0.604 (A=443px) → vraćeno 0.5; test zoomovi resetovani na null/null;
+   262→  Write mod neizmenjen (jedan lenjir, midZoom); Grid/List netaknuti; traka 2
+   263→  y=79: **894/894 = 100%** na 1440px; boja iza lenjira = površina
+   264→  (13,13,13 = 13,13,13); nema duplirane trake (y=119 prazno); tsc 0 grešaka
+   265→  (src/), build čist, konzola bez grešaka.
+   266→
+   267→- **2026-11-09 (ispravka Split-a: formatna traka fiksna, lenjir = traka 3) — ZAVRŠENO:**
+   268→  po Nikolinoj ispravci „ne treba da dupliraš formatting bar — on stoji fiksan
+   269→  stalno, na njega utiču jedino bočni paneli kad se pomeraju; radna površina
+   270→  ispod lenjira se deli; lenjir je ustvari treća traka ali nema pozadinu pa se
+   271→  traka ne vidi“: (1) **TRAKA 2 — JEDNA INSTANTA**: formatna traka je izvučena
+   272→  IZ `WriteArea` u novi `EditorToolbar` (isti izgled, ista visina h-10 i
+   273→  border-b) i renderuje je `NotesSection` JEDNOM, iznad sadržaja — u Write
+   274→  modu sa otvorenom notom i u Split modu (uvek, i kad su paneli prazni); u
+   275→  Grid/List/Write-bez-selekcije ostaje stari prazan h-10 red koji drži njenu
+   276→  donju liniju. Font/veličina/prored su prešli u store (`editorFont`/
+   277→  `editorSize`/`editorSpacing` + setteri, persist, `?? default`) — traka je
+   278→  sada globalna pa i ta podešavanja važe za stranu u Write i OBA Split panela
+   279→  (i više se ne resetuju pri promeni note). (2) **TRAKA 3 — LENJIR IZNAD
+   280→  OBA PANELA**: novi `RulerRow` (providan red h-7, bez pozadine/ivica — ista
+   281→  boja kao površina, zato se traka ne vidi; unutra `RulerStrip` + oko) stoji
+   282→  JEDAN put iznad razdeljenih površina, u `SplitEditors` I u `WriteArea`;
+   283→  **deli se samo radna površina ISPOD lenjira**: `SplitEditors` = RulerRow pa
+   284→  flex red [pane A | razdelnik | pane B], paneli su čiste strane — novi
+   285→  `EditorPage` (naslov + RichEditor, skroler po panelu) umesto punog
+   286→  WriteArea, `EmptyPane` bez lažnog h-10 reda (više nije potreban). Zoom
+   287→  srednjeg panela (CSS `zoom`) i dalje važi za lenjir + površine, NE i za
+   288→  traku 2 (linije ostaju poravnate). **VERIFIKACIJA (uživo):** Split — traka
+   289→  2 na ekranu TAČNO JEDNOM (piksel-provera: nema linije na y≈119 u panelima,
+   290→  gde bi bila dupla traka); lenjir JEDAN red preko cele širine, boja iza
+   291→  njega = radna površina (13,13,13 = 13,13,13) na 1280 i 1440; razdelnik
+   292→  počinje TEK ISPOD lenjira (y=104 još površina); klik na desnu površinu pa
+   293→  na „Scene 1“ (The Tether) → ušla SAMO u B (ID proveren), A zadržao „The
+   294→  third dial waited.“; klik na levu pa na „Scene 1“ (The Cemetery) → SAMO u
+   295→  A (ID proveren), B netaknut; drag razdelnika 624→560 → ratio 0.5→0.413,
+   296→  širine A/B = 303/430, vraćeno na 0.5; oko sakriva/prikazuje lenjir; Write
+   297→  mod ista arhitektura (traka + lenjir + strana), Grid/List neizmenjeni;
+   298→  traka 2 y=79: **894/894 = 100%** na 1440px; tsc 0 grešaka (src/), build
+   299→  čist, konzola bez grešaka.
+   300→
+   301→- **2026-11-09 (Split — dva nezavisna editora kao u Scriveneru) — ZAVRŠENO:**
+   302→  po Nikolinoj naredbi „pritiskom na Split, radna površina se podeli na dva
+   303→  identična ekrana koja mogu da se šire i skupljaju kao u Scriveneru; kada
+   304→  klikneš na površinu koju izabereš i onda klikneš na neki note ona se menja,
+   305→  a druga ne — i naravno to važi i za drugu“ (uz uputu: ne brinuti o sadržaju
+   306→  projekta dok aplikacija ne radi kako treba):
+   307→  (1) **STORE** — novi `paneAId`/`paneBId` (nota u levom/desnom editoru),
+   308→  `activePane` („a“|„b“), `splitRatio` (0.2–0.8) + `setActivePane`/
+   309→  `setSplitRatio` — sve persist, čita se sa `?? default` (stari store-ovi OK).
+   310→  `select()` otvara notu u FOKUSIRANOM editoru (drugi zadržava svoju);
+   311→  `setActivePane` postavlja i `selectedNodeId` — inspector, brojač na dnu i
+   312→  highlight u stablu prate fokusiranu površinu; `setView("split")` pri prvom
+   313→  ulasku klonira otvorenu notu u OBA editora, `SplitEditors` isto pri mount-u
+   314→  posle reload-a kad su paneli prazni; `addNode` novu notu otvara u aktivnoj;
+   315→  `deleteNode` čisti panele koji su pokazivali na obrisano (bez duhova);
+   316→  openNovel/closeNovel/createNovel/importNovel resetuju panele pri promeni
+   317→  romana. (2) **NOVA KOMPONENTA `SplitEditors.tsx`** — dva identična WriteArea
+   318→  (svaki sa svojim toolbarom, linealom i okom) + `SplitResizer` (vuče se
+   319→  levo/desno, isti pattern kao resizer panela; try/catch oko
+   320→  setPointerCapture) + `EmptyPane` (prazna površina sa h-10 redom da linija
+   321→  trake 2 ostane neprekinuta). Fokusirana površina ima tanku zlatnu liniju na
+   322→  vrhu (2px overlay — ne pomera layout ni linije). U `NotesSection`: view
+   323→  „split“ renderuje SplitEditors; centralni prazan h-10 red se u split-u
+   324→  preskače (paneli ga sami drže). Write/Grid/List neizmenjeni.
+   325→  **VERIFIKACIJA (uživo):** split 50/50 — oba editora kloniraju notu; klik na
+   326→  desnu površinu pa na „Scene 1“ u stablu → desna se menja, LEVA OSTAJE; klik
+   327→  na levu pa na „The Query“ → samo leva (brojač 40 words = reči te note);
+   328→  drag razdelnika 160px → ratio 0.5→0.678, širine 606/287; posle reload-a sve
+   329→  ostaje (note, aktivna površina, širine); nova nota ide u aktivnu; brisanje
+   330→  otvorene note prazni panel bez duhova; promena romana resetuje panele;
+   331→  traka 2 y=79: 1440/1440 = 100%; pozadina iza OBA lineala = boja površine
+   332→  (13,13,13); oko lineala radi (preferenca zajednička, kao i do sad); tsc 0,
+   333→  build čist, konzola čista. Test note u CASHABLANCA obrisane, Trash
+   334→  ispražnjen (roman 0/0 kao pre testa). Nikolaovo stanje vraćeno: split 50/50,
+   335→  „The third dial waited.“ u oba panela.
+   336→
+   337→- **2026-11-09 (sitnice posle rulera: pozadina iza lineala + brojač reči) — ZAVRŠENO:**
+   338→  po Nikolinoj naredbi „u delu iza rulera promenio si boju pozadine, mora da
+   339→  bude isto kao i radne površine; a word count i dalje ne radi kako treba":
+   340→  (1) **POZADINA IZA LINEALA** — red lineala imao je `bg-background`
+   341→  (oklch(0.145) ≈ rgb(10,10,10)), a radna površina je `#0d0d0d` (rgb(13,13,13))
+   342→  sa Workspace roota — vidljiva traka drugačijeg tona. Skinut `bg-background`
+   343→  (i nepotrebni `sticky`/`z-10` — red je IZNAD skrolera, tekst ne može da
+   344→  „curi“ ispod njega); red je sada providan i nasleđuje TAČNU boju radne
+   345→  površine. `RulerStrip` (telо lineala) ostaje kako jeste. Piksel-verifikacija:
+   346→  iza rulera = rgb(13,13,13) = radna površina, na 1280 i na 1440.
+   347→  (2) **BROJAČ REČI** — bio je tehnički ispravan (uživo se menjao, zbir celog
+   348→  romana nezavisno potvrđen 61=61), ALI je prikazivao ZBIR ROMANA i dok je
+   349→  nota otvorena — zato „i dalje ne radi kako treba“ (u Scriveneru brojač
+   350→  pokazuje otvoreni dokument). Sada: kad je nota selektovana pokazuje
+   351→  `ownWords(selected)` (content + Synopsis + Notes — isto što i „Words“ u
+   352→  Details tabu), zbir celog romana samo kad ništa nije selektovano; tooltip
+   353→  „Words in the selected note“ / „Total words in the novel“. Testirano uživo:
+   354→  „The third dial waited.“ → „4 words“; +3 otkucane → „7“; prazna Scene 1 →
+   355→  „0“; kucanje u Synopsis/Notes se isto uključuje; Home ekran i dalje pokazuje
+   356→  ukupni zbir. Test unosi obrisani — store vraćen na originalne podatke.
+   357→  Verifikacija: tsc 0 grešaka (src/), build čist, oko lineala radi
+   358→  (sakrij/prikaži), donja linija trake 2 y=79: 1440/1440 = 100%, konzola
+   359→  bez grešaka.
+   360→
+   361→- **2026-11-09 (zoom po panelu + drag & drop nota na svakom panelu) — ZAVRŠENO:**
+   362→  po Nikolinoj naredbi „svaki panel treba da ima svoj zaseban zoom koji radi
+   363→  tako što držiš ctrl i skroluješ, a tekstovi unutar se prilagođavaju“ i „notes
+   364→  treba da mogu da se drag and drop na svakom panelu... kada se promeni položaj
+   365→  može da promeni time i hijerarhiju isto kao što u Scriveneru može“:
+   366→  (1) **ZOOM PO PANELU** — nova preferenca u store-u `leftZoom`/`midZoom`/
+   367→  `rightZoom` (0.5–2.0, korak 0.1, clamp u `setPanelZoom`, persist u
+   368→  localStorage, čita se sa `?? 1` za stare store-ove). Nova komponenta
+   369→  `CtrlZoom` u `NotesSection` kači NATIVAN `wheel` listener sa `passive:false`
+   370→  na `<aside>`/`<main>` (React onWheel je pasivan — preventDefault, kojim se
+   371→  gaši zoom pregledača, ne bi radio); male delte se sabiraju (trackpad) — jedan
+   372→  skok točkića = jedan korak. Zoom (CSS `zoom`) važi za SADRŽINU panela, ne i
+   373→  za trake: u levom panelu stablo, u srednjem lineal+strana (toolbar/traka 2
+   374→  van zooma) i kartice Grid-a i redovi Liste, u desnom sadržina ispod tabova —
+   375→  visine traka 2 i donjih traka su NEPROMENJENE pa linije ostaju poravnate.
+   376→  `WriteArea`: ruler je prebačen u sticky na vrhu skrolera (isti kontekst
+   377→  širine + scrollbar) i stubac teksta je `min(48rem, 100%)` — ruler i tekst su
+   378→  poravnati pri SVAKOM zoomu i ni na jednoj širini panela (pre je scrollbar
+   379→  pravio ~10px razliku na užim panelima). (2) **DRAG & DROP** — u stablu
+   380→  (`NoteTree`): svaki red je draggable; gore 30% reda = „pre“, sredina = „u“
+   381→  (postaje sub-strana), dole 30% = „posle“; indikatori — zlatna linija
+   382→  iznad/ispod (`#ad7e2e`) i okvir za „u“; drop na prazan prostor stabla = vrh
+   383→  sekcije (kraj liste); zabranjeno spuštanje u sopstveno podstablo; računa se
+   384→  nad STVARNIM stablom sekcije (radi i kad Tree Scope prikazuje filtrirane
+   385→  klonove); srcId putuje kroz ref (dataTransfer se ne čita u dragover).
+   386→  U Gridu (`Corkboard`): kartica je podeljena na trećine — leva „pre“, sredina
+   387→  „u karticu“ (nest — novi, Scrivener potez), desna „posle“ (postojeći reorder
+   388→  sačuvan); indikator za „u“ = zlatni okvir oko cele kartice. U Listi
+   389→  (`ListView`): redovi draggable, gore/dole trećine = pre/posle (indeks preko
+   390→  nove `locateNode` util-a nad stvarnim stablom), sredina = u notu.
+   391→  (3) **next.config.ts: `devIndicators: false`** — Next 16 je počeo da prikazuje
+   392→  „N“ devtools dugme u uglu produkcije; ugašeno radi čistog izgleda.
+   393→  **Verifikacija u browseru:** zoom levog 1.3 / srednjeg 1.3 / desnog 1.2 →
+   394→  screenshot (tekst veći, trake i dalje u istom redu); reload → sve ostalo
+   395→  sačuvano; reset Ctrl+skrolom nazad na 1; `defaultPrevented: true` na
+   396→  wheel event-u (browser zoom ne skače). DnD testovi sintetskim DragEvent-
+   397→  ovima + provera strukture u localStorage: Scene 1 → The Cemetery (nest ✓),
+   398→  The Cemetery pre The Tether (reorder ✓), Act 1 na sopstvenu sub-stranu
+   399→  ODBIJENO ✓, Chapter 4 na prazan prostor → root Binder-a ✓, Grid: Chapter 5
+   400→  na sredinu The Tether kartice → sub-strana ✓, Lista: The third dial waited.
+   401→  → Act 3 ✓. `tsc` (src: 0) + `build` čisti; konzola bez grešaka; traka 2
+   402→  1440/1440 (100%); brojač reči i dalje 61 (pomeranje ne menja tekst).
+   403→
+   404→- **2026-11-09 (ruler kao u Scriveneru iznad naslova) — ZAVRŠENO:** po Nikolinoj
+   405→  naredbi „svaka strana treba da ima ruler kao u Scriveneru iznad naslova koji
+   406→  na kraju ima oko da se sakrije ili pojavi ponovo“: (1) **novi `RulerStrip` u
+   407→  `WriteArea`** — horizontalni lineal u širini stubca teksta (`max-w-3xl`,
+   408→  poravnat tačno sa naslovom i tekstom ispod), sa sitnim podelacima na svakih
+   409→  8px, većim na svakih 40px, brojevima iznad velikih podelaka, zasenjenim
+   410→  zonama margina (48px levo/desno) i trouglastim markerima margina — izgled
+   411→  Scrivener lineala prilagođen tamnoj temi; (2) **oko na kraju lineala**
+   412→  (lucide `Eye`/`EyeOff`, smešteno u desnoj margini lineala) ga sakriva i
+   413→  ponovo prikazuje — kad je sakriven, ostaje samo oko na istom mestu; (3)
+   414→  **nova preferenca `rulerVisible` u store-u** (persist u localStorage; čita
+   415→  se sa `?? true` da stari sačuvani store ne bi sakrio lineal posle update-a;
+   416→  verzija šeme se NE menja — nema nove migracione grane, šema podataka ista).
+   417→  Ruler je na SVAKOJ strani: `WriteArea` je jedini page editor (Split/Write,
+   418→  sve sekcije i tabovi); Grid/List ga nemaju jer tamo nema strane. Testirano
+   419→  u browseru: The Query → lineal iznad naslova; klik na oko → nestaje, EyeOff
+   420→  ostaje; ponovni klik → vraća se; reload → stanje sačuvano (ostao sakriven);
+   421→  Scene 1 i Codex tab → lineal tu; 1100px → skuplja se sa stubcem, poravnato.
+   422→  `tsc` (src: 0) + `build` čisti; konzola bez grešaka; linija trake 2 i dalje
+   423→  100% kontinuirana (piksel-provera 1440/1440 na y=79).
+   424→
+   425→- **2026-11-09 (label iznad prozora + tačan brojač reči) — ZAVRŠENO:** po
+   426→  Nikolinoj naredbi: (1) **uklonjen narandžasti natpis vrste** („Act“ /
+   427→  „Chapter“ / „Scene“ / „Folder“ / „Note“) iznad naslova u editoru — naslov
+   428→  sada počinje direktno na vrhu strane, bez labele koja je kvarila izgled;
+   429→  (2) **brojač reči na dnu radne površine sada pokazuje TAČAN broj** — bio je
+   430→  bug: `novelWords` je brojao SAMO Binder sekciju i SAMO `content` polje
+   431→  (prikazivalo „4 words“ iako je u romanu očigledno više teksta). Sada:
+   432→  nova `ownWords(n)` = content + **Synopsis** + **Notes** (sve što je na noti
+   433→  napisano), `nodeWords` = ownWords + podstablo, `novelWords` = **sve sekcije**
+   434→  („everything is a note“ — Codex/Planning/… se takođe računaju). Usklađeni i
+   435→  ostali prikazi da broje isto: ListView kolona „Words“ (list = ownWords,
+   436→  kontejner = podstablo) i Details „Words“ u desnom panelu (ownWords).
+   437→  **Nezavisna verifikacija u browseru:** izračun iz localStorage podataka =
+   438→  **61** (4 scena + 17 Act 1 synopsis + 40 The Query synopsis) = prikazano na
+   439→  dnu i na dashboardu („21 scenes · 61 words“). Test uživo: kucanje reči
+   440→  61 → 62, brisanje → 61. `tsc` (src: 0) + `build` čisti; linija trake 2 i
+   441→  dalje 100% kontinuirana (piksel-provera 1440/1440).
+   442→
+   443→- **2026-11-09 (selekcija preživi prelazak na tab) — ZAVRŠENO:** po Nikolinoj
+   444→  prijavi „tekst editor iz druge trake ne treba da nestaje kada nešto nije
+   445→  selektovano prelaskom na novi tab; radna površina se ne menja dok se ne
+   446→  klikne na levi panel gde biramo novu“: (1) **`setTab` više NE briše
+   447→  `selectedNodeId`** (briše samo inline preimenovanje) — prelazak na drugi tab
+   448→  ne menja radnu površinu; (2) **nova util `findNodeInNovel(novel, id)`** —
+   449→  nota se traži u celom romanu, ne samo u tekućoj sekciji, i vraća njenu
+   450→  **matičnu sekciju**; `NotesSection` prosleđuje tu matičnu sekciju
+   451→  (`selectedSection`) u WriteArea / RightPanel / NoteMetaBar, pa izmene uvek
+   452→  pogađaju sekciju gde nota stvarno živi (ranije bi update na „tuđoj“ noti
+   453→  bio tih no-op). Editor toolbar (traka 2) tako ostaje vertikalan kroz sve
+   454→  tabove. Grid/List ostaju sekciski pregledi (nivo Grid-a prati selekciju
+   455→  samo unutar tekućeg taba). Testirano u browseru: The Query (Binder) →
+   456→  prelazak na Codex → editor i desni panel NEIZMENJENI, Codex stablo ništa ne
+   457→  ističe; klik na Codex notu „Syntax“ → editor prelazi na nju; izmena naslova
+   458→  na Codex tabu → sačuvana u Codex sekciji (stablo pokazuje izmenu); povratak
+   459→  na Binder → editor i dalje drži istu notu. `tsc` (src: 0) + `build` čisti;
+   460→  piksel-provera donje linije trake 2 i dalje 1440/1440.
+   461→
+   462→- **2026-11-09 (linija trake 2 + dno levog panela) — ZAVRŠENO:** po Nikolinoj
+   463→  prijavi „donja linija treba da bude u jednoj ravni od početka do kraja“ i
+   464→  „desni hide panel ne treba da bude zalepljen uz ove“: (1) **donja linija
+   465→  trake 2 sada ide od leve do desne ivice ekrana bez prekida** — `border-b
+   466→  border-white/10` dodat na header stabla (NoteTree) i na Info/Details/Mentions
+   467→  red (RightPanel) i na prazno stanje desnog panela; editor toolbar ju je već
+   468→  imao; u srednjoj zoni se kad toolbar nije prikazan (Grid / List / bez
+   469→  selekcije) crta prazan h-10 red sa istom linijom; zatvoreni paneli dobili
+   470→  h-10 red sa border-b u uskoj traci (chevron sada centriran u traci 2).
+   471→  **Piksel-verifikovano:** na y=79 svetli 1440/1440 px (i 1100/1100 na užem
+   472→  ekranu), u sva četri stanja (Write, Grid, desni zatvoren, levi zatvoren).
+   473→  (2) **„Hide panel“ desnog panela skroz desno** u istom redu sa tabovima
+   474→  (`ml-auto`; box x=1402, 14px od desne ivice, ista y-visina) — više nije
+   475→  zalepljen uz „Mentions“. (3) **Expand all / Collapse all premešteni** iz reda
+   476→  ispod headera stabla u **donju traku levog panela**: ⓘ ostaje levo (left
+   477→  align), dugmad idu skroz desno u istom redu (ml-auto); red ispod headera
+   478→  uklonjen, stablo počinje direktno ispod trake 2; meni „⋯“ zadržava iste
+   479→  stavke. Funkcionalnost testirana: Collapse all → 3 vidljiva root-a, Expand
+   480→  all → 45 redova. `tsc` (src: 0 grešaka) + `build` čisti.
+   481→- **2026-11-09 (poravnanje trake 2 + Info/Details/Mentions tabovi) — ZAVRŠENO:**
+   482→  po Nikolinoj prijavi „nisu dve poravnane trake“ + screenshot: (1) **obe trake
+   483→  sada h-10 (40px)** — header (Workspace), header stabla (NoteTree, pl-3 da se
+   484→  ‹ poravna sa Home), editor toolbar (WriteArea: uklonjen flex-wrap → jedan
+   485→  red + horizontalni skrol, px-4 kao tabovi, `[&>*]:shrink-0`), red sa tabovima
+   486→  (RightPanel, pl-3.5 kao scope dropdown iznad); (2) **Info/Details/Mentions
+   487→  prepravljeni u tabove po Nikoli** — bez ikonica, bez okvira i pozadine kod
+   488→  neselektovanih (samo prigušen tekst), selektovani svetli zlatnom pilulom
+   489→  (`border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]` — isti aktivni jezik kao
+   490→  tabovi u topbaru; dodati `dark:` parnjaci jer dark: varijante iz
+   491→  `ui/tabs.tsx` inače pobeđuju). Prazno stanje desnog panela takođe h-10 bez
+   492→  kutije. Testirano: klik Info↔Details (svetli prađa selekciju, sadržaj se
+   493→  menja), 1440 i 1100px. `tsc`+`build` čisti.
+   494→- **2026-11-09 (ISUPRAVKA — top bar vraćen u jednu traku) — ZAVRŠENO:** moja
+   495→  prethodna izmena je pogrešno podelila top bar u dve posebne trake (pa je
+   496→  sa editor toolbar-om ukupno bilo 3 trake). Nikola poslao screenshot kao
+   497→  cilj: **tabovi idu na najvišu traku**, zajedno sa Home+Search levo i
+   498→  Scope+Save+Account+Settings desno — sve u jednom redu; **druga traka je
+   499→  red panela + editor toolbar** (već postoji: header stabla | Normal/Segoe
+   500→  UI/BIUS/align/liste | Info/Details/Mentions). Vraćen header iz commit-a
+   501→  `224b376` u jednoredni oblik (novi commit), zadržan `whitespace-nowrap`+
+   502→  horizontalni skrol da tabovi nikad ne prelome u dva reda. Ukupno: **2
+   503→  trake**. Na Nikolovom screenshotu se vidé i „Chapter 2 - The Tether“
+   504→  dropdown umesto Tree Scope (= tačka 10, Current Note) i „Normal“+copy/
+   505→  delete/link u toolbaru (= tačka 8) — NIJE rađeno bez njegove reči, čeka
+   506→  red (“ajmo redom”).
+   507→- **2026-11-09 (Label i Status — wrap oko teksta) — ZAVRŠENO:** po Nikolinoj
+   508→  naredbi u `NoteMetaBar` (dno desnog panela): Label input više nije `flex-1`
+   509→  (razvlačio se preko celog panela) ni Status fiksiran na 110px — sada **oba
+   510→  „wrap“ oko svog teksta** (Label: `size` po broju znakova, min 8 = dužina
+   511→  „No Label“; Status: `w-fit` iz baze, bez fiksne širine) i stoje **uz levu
+   512→  ivicu desnog panela**, prazno desno kad je panel širok. Na uzom panelu se
+   513→  oba proporcionalno skupljaju i čisto seku (`overflow-hidden` na traci) —
+   514→  po Nikolinoj reči „izgubiće se“ ako se panel suzi. Boja-dot ostaje odmah
+   515→  iza. Testirano u browseru: kucan dug label (raste sa tekstom), sužen i
+   516→  raširen panel, label vraćen na prazno. `tsc`+`build` čisti; store/schema
+   517→  netaknuti (samo klase + `size` atribut).
+   518→- **2026-11-09 (raspored dugmića + dvoredni top bar) — ZAVRŠENO:** po Nikolinoj
+   519→  naredbi dve izmene rasporeda, bez diranja funkcionalnosti i podataka:
+   520→  (1) **Split/Write/Grid/List premešteni** — bili su u donjoj traci levog panela
+   521→  (uz njenu desnu ivicu), sada stoje **uz desnu ivicu srednjeg panela radne
+   522→  površine, skroz na donjoj traci** (`absolute right-2`, pa word count ostaje
+   523→  tačno u sredini); ⓘ u levom panelu ostaje na svom mestu; (2) **top bar sada
+   524→  ima dve trake** — traka 1: Home+Search (zona levog panela) i Tree Scope +
+   525→  Save + Account + Settings (zona desnog panela), sredina prazna; traka 2:
+   526→  **svih 7 tabova u jednom redu**, poravnato sa radnom površinom; vertikalne
+   527→  linije panela produžene kroz obe trake (zone `panelWidth+1` u obe), tabovi
+   528→  `whitespace-nowrap` + horizontalni skrol samo ako prozor bude suviše uzan —
+   529→  nikad se ne lome u dva reda. Oba reda `h-10` (40px, na 4/8 skali).
+   530→  Verifikacija: `tsc` + `build` čisti; screenshotovi 1440/1366/1100px + klik
+   531→  test Grid/Split iz nove pozicije (radi). Store/schema: netaknuti.
+   532→- **2026-11-09 (UI polish prolaz) — ZAVRŠENO:** Finalni vizuelni prolaz bez
+   533→  redizajna — samo className izmene u 10 komponenti: (1) **selekcija u zlatnoj
+   534→  boji** — NoteTree red i ListView red su bili ZELENI (green-500), sada
+   535→  `amber-400/10` (+ border `amber-400/40` u stablu) u skladu sa sistemom
+   536→  „zlato za aktivno/selektovano“; (2) **uniformne ikonice** — ⓘ u donjoj traci
+   537→  18px → 16px (`h-4 w-4`), Settings u topbaru (skupljena traka) 16px → 20px
+   538→  kao ostale u topbaru; (3) **border konsistencija** — Tree Scope dropdown
+   539→  `white/20` → `white/15` (par sa search poljem, `--input` token), focus
+   540→  filtera u Trash-u `orange-500/50` → `amber-500/50` (isti fokus jezik kao
+   541→  search); (4) **mikro-interakcije** — `transition-colors` dodat na ~40
+   542→  interaktivnih elemenata (redovi, ikonice-dugmad, pilule, meni-tačke,
+   543→  pickeri, dugmad dijaloša, „+ New note“ kartica, Restore/Delete); radii i
+   544→  spacing već bili na koherentnoj skali (tokeni `--radius`, 4/8 baza sa 2px
+   545→  mikro-koracima) — netaknuti; Scrivener kartice namerno `rounded-[3px]`.
+   546→  Verifikacija: `tsc` + `build` čisti; izračunato potvrđene boje selekcije
+   547→  (amber/10+/40), veličine ikonica (16/20px) i tranzicije; screenshotovi
+   548→  pre/posle u `scripts/polish/` (home, workspace, grid, list, write) —
+   549→  raspored neizmenjen, editor i dalje dominantan. Funkcionalnost i podaci
+   550→  netaknuti (samo klase).
+   551→- **2026-11-09 (kontinuitet/backup sesija) — ZAVRŠENO:** Kreirani `AGENTS.md`
+   552→  (stalna pravila + obavezan redosled čitanja) i `PROJECT_STATUS.md` (ovaj
+   553→  fajl); napisan `scripts/backup.sh` (snapshot + secrets-guard + download/public
+   554→  kopije + rotacija 12 + git commit); konfigurisan dnevni cron 03:00
+   555→  Europe/Belgrade (ID 517453); **sigurnosni fix:** `.env` (sadrži
+   556→  `DATABASE_URL`) izbačen iz git indeksa i iz oba zipa — zipovi rebuildovani,
+   557→  sve tri kopije identične (MD5 proveren). Verifikacija: snapshot
+   558→  `backups/kachamak-2026-11-09_094037.zip` (4,7M), `unzip -t` čist,
+   559→  restore-drill u /tmp čist (133 fajla, diff bez razlike u izvornom kodu), i
+   560→  nezavisni test „nove sesije" prošao — nova sesija je iz dokumenata
+   561→  rekonstruisala projekat, status, sledeći zadatak (tačku 7), restore postupak
+   562→  i pravila. Aplikativni kod NIJE diran.
+   563→- **2026-11-09 ~08:02 (prethodni deo sesije, commit `9457ee5`):** Ispravka po
+   564→  Nikolinoj prijavi — naziv mode-a vraćen na **„Grid"** (zabrana preimenovanja
+   565→  u „Corkboard"); checkpoint commit platforme.
+   566→
