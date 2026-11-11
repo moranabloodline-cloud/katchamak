@@ -56,3 +56,5 @@ tar -czf .sites-runtime/katchamak-release.tar.gz .openai/hosting.json dist/serve
 ## Podaci i pristup
 
 Rukopisi i kolekcije trenutno ostaju u browseru. Baza nije potrebna za pokretanje aplikacije niti za usaglašavanje koda na Preview-u i sajtu. Hosting konfiguracija i adapter moraju ostati u repozitorijumu. Kredencijali za GitHub/Sites ostaju izvan repozitorijuma i build paketa; novi saradnik koristi sopstveni odobreni pristup tim servisima.
+
+Konačan sistem projekata (kasnija faza): nova aplikacija ima praznu biblioteku; projekti su zasebni JSON fajlovi na lokaciji koju bira korisnik. Kreiranje i uređivanje ne znače automatsko trajno čuvanje. Sadašnji browser store i početni primeri ostaju privremeni dok se taj sistem posebno ne implementira. Automatika u ovom zadatku odnosi se na kod i objavu aplikacije.

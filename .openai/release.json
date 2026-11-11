@@ -1,13 +1,33 @@
 {
   "project_id": "appgprj_6ae0f5136c108191916b81308506e9ab",
-  "application_commit": "10691ff7c50d2c41f97e60dfd4eddf9156c01a0d",
-  "source_tree": "1cfc2c7be69fc4a5d685b1dbdf94f126d83c9cbaa5a84aaeff554769e3cfd6e0",
-  "build_id": "347f181ec8264fc73516a739579933376382c925d8fdee81e7669b102f69f55c",
-  "sites_source_commit": "be5c47ddf955ac04668d2c5f58add0c03d778066",
-  "version_number": 171,
-  "version_id": "appgprj_6ae0f5136c108191916b81308506e9ab~appgver_a51c850aca888191b82ddbf940ac3a2f",
-  "deployment_id": "appgdep_6af43201a9c08191885406f0e26e036a",
-  "deployment_status": "succeeded",
   "url": "https://nikola-novel-studio.morana-bloodline.chatgpt.site",
-  "approval": "Nikola explicitly approved publication of version 171 in this conversation."
+  "publication_mode": "github-actions-oidc",
+  "canonical_repository": "moranabloodline-cloud/katchamak",
+  "canonical_branch": "main",
+  "hosting_adapter": {
+    "version_number": 172,
+    "application_commit": "8ac311d6bc9b9faa7377f81c24434fe000ccb379",
+    "sites_source_commit": "deeb8bece085779ef8b40317c99b421a7df3683a",
+    "version_id": "appgprj_6ae0f5136c108191916b81308506e9ab~appgver_5b4dcab094fc819193e86f15ed89d974",
+    "deployment_id": "appgdep_6af439550f1081918b9d4fa65c27cb14",
+    "runtime_hash": "bb4b07c1ceff5219c17c785e6cf1a21303bd8a6178e434798747b3ffce4a9935",
+    "status": "succeeded"
+  },
+  "last_completed_end_to_end_verification": {
+    "commit": "42ecfbb8c432303f6b482c43940d72fb4c52a369",
+    "workflow_run_id": 42998803144,
+    "status": "success",
+    "source_tree": "19c531a58e701df767f46eecbf3dbedd4995be3c694a35f9779a5e0536344e80",
+    "build_id": "90cc3ce4d88cb8a624098a0fcf05a7db4ee61c0fa9008d5df63674ceb7feffe8"
+  },
+  "current_application_identity_endpoint": "/api/app-version",
+  "workspace_sync": {
+    "startup": "bun run dev",
+    "separate_watcher": "bun run sync:watch",
+    "pause": "bun run sync:pause",
+    "resume": "bun run sync:resume",
+    "poll_seconds": 30,
+    "quiet_seconds": 30,
+    "local_state_file": ".sites-runtime/sync-state.json"
+  }
 }
