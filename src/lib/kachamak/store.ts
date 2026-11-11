@@ -1,4 +1,5 @@
 "use client";
+import { projectStorage, isWebSession, folderSaved } from "./session-storage";
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -449,7 +450,8 @@ export const useKachamak = create<KachamakState>()(
 
       importNovel: (json) => {
         try {
-          const parsed: unknown = JSON.parse(json);
+          const input = JSON.parse(json);
+          const parsed: unknown = input?.format === "katchamak-project" && input?.version === 1 ? input.novel : input;
           if (!isUsableBackup(parsed)) {
             return { ok: false, error: "Not a Kachamak novel backup." };
           }
@@ -784,7 +786,7 @@ export const useKachamak = create<KachamakState>()(
     {
       name: STORAGE_KEY,
       version: 7,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
          acts and chapters as solid coloured folders)
@@ -867,6 +869,7 @@ export const useKachamak = create<KachamakState>()(
 
 /** Check that all current project data actually matches browser storage. */
 export function projectsSavedLocally(): boolean {
+  if (isWebSession()) return folderSaved();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
@@ -880,6 +883,7 @@ export function projectsSavedLocally(): boolean {
 
 /** Retry the normal persist write, then verify its contents before reporting success. */
 export function saveProjectsLocally(): boolean {
+  if (isWebSession()) return folderSaved();
   try {
     useKachamak.setState({});
     return projectsSavedLocally();

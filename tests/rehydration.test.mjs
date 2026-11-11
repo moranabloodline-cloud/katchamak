@@ -71,5 +71,12 @@ assert.equal(JSON.stringify(useKachamak.getState().novels), initialProjects, "re
 assert.equal(useKachamak.getState().importNovel(JSON.stringify(validBackup)).ok, true, "valid backup with Trash can be imported");
 useKachamak.getState().restoreFromTrash("imported-trash");
 assert.equal(useKachamak.getState().novels.find((n) => n.id === useKachamak.getState().activeNovelId).trash.length, 0, "imported Trash entry can be restored");
-console.log("Empty first run, existing-project preservation and storage rehydration checks passed.");
+const desktopDocument = { format: "katchamak-project", version: 1, storeVersion: 7, novel: validBackup };
+assert.equal(useKachamak.getState().importNovel(JSON.stringify(desktopDocument)).ok, true, "Windows project.json can be imported in the web app");
+const importedDesktop = useKachamak.getState().novels.find(n => n.id === useKachamak.getState().activeNovelId);
+assert.deepEqual(importedDesktop.sections, validBackup.sections, "desktop import preserves manuscript sections");
+const beforeInvalidDesktop = JSON.stringify(useKachamak.getState().novels);
+assert.equal(useKachamak.getState().importNovel(JSON.stringify({ ...desktopDocument, novel: invalidBackup })).ok, false);
+assert.equal(JSON.stringify(useKachamak.getState().novels), beforeInvalidDesktop, "invalid desktop document does not change browser projects");
+console.log("Empty first run, existing-project preservation, desktop import and storage rehydration checks passed.");
 await import("./dashboard-zoom.test.mjs");

@@ -60,3 +60,16 @@ tar -czf .sites-runtime/katchamak-release.tar.gz .openai/hosting.json dist/serve
 Rukopisi i kolekcije trenutno ostaju u browseru. Baza nije potrebna za pokretanje aplikacije niti za usaglašavanje koda na Preview-u i sajtu. Hosting konfiguracija i adapter moraju ostati u repozitorijumu. Kredencijali za GitHub/Sites ostaju izvan repozitorijuma i build paketa; novi saradnik koristi sopstveni odobreni pristup tim servisima.
 
 Konačan sistem projekata (kasnija faza): nova aplikacija ima praznu biblioteku; projekti su zasebni JSON fajlovi na lokaciji koju bira korisnik. Kreiranje i uređivanje ne znače automatsko trajno čuvanje. Sadašnji browser store i početni primeri ostaju privremeni dok se taj sistem posebno ne implementira. Automatika u ovom zadatku odnosi se na kod i objavu aplikacije.
+
+
+## Sites web build and local folder library
+
+`bun run build:sites` builds the current application for Sites. Managed Sites previews select the web target and never launch desktop synchronization. Windows defaults remain unchanged.
+
+The web app serves an empty shell. It uses the File System Access API in desktop Chrome/Edge, in a top-level tab. Each top-level collection/project asks once for its parent location. Nested collections/projects are created under that collection automatically. IndexedDB stores only opaque directory handles and item identifiers for a browser-local profile; localStorage stores only the local profile identity/author. Neither sends paths or content to Sites. This is a local profile, not a cloud sign-in or cross-device account system. Browser permissions may need renewal on reopening.
+
+Collection folders contain `.collection.json` metadata, subcollections and project folders. Projects contain `project.json` (rich content, tree and metadata), `Notes/<section>/*.md` (portable Markdown), and `Files/` (attachments). Reading compares Markdown to the saved Markdown snapshot and imports external edits with HTML sanitization. New Markdown files in Notes are imported into Binder. Save checks for external changes before writing; previous project metadata is retained as `project.json.bak`. Folder moves copy and verify all bytes, update the location registry, then archive prior folders under `.katchamak-history`. Removing a collection promotes its contents; it never deletes manuscripts.
+
+Account provides Open existing folder, Reload folders, and Project files. Import copies JSON backups or Windows project.json into a selected destination. Existing browser-only data is not erased by this update, but is not used as the new folder library. Export/import any older browser backups as needed. No manuscript cache is persisted by the web app.
+
+Validation: `bun run tests/web-library.test.mjs`, existing storage/library/release tests, `bun run typecheck`, `bun run build:sites`, and `bun run check:release`. The folder test exercises real temporary filesystem paths with test permission/IndexedDB adapters; cloud-browser system-picker verification remains limited by its NotAllowedError.

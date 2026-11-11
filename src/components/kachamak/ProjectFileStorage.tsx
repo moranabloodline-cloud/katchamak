@@ -1,5 +1,7 @@
 "use client";
 
+import { WebLibraryStorage } from "./WebLibraryStorage";
+import { useWebLibrary } from "@/lib/kachamak/web-library";
 import { useEffect, useState, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { initializeProjectFiles, isDesktop, useProjectFiles, migrateExistingProjects, openFileProject, flushProjectFiles } from "@/lib/kachamak/project-files";
@@ -24,7 +26,7 @@ export function ProjectFileStorage({ children }: { children: ReactNode }) {
     }).then(stop => { if (disposed) stop(); else dispose = stop; });
     return () => { disposed = true; dispose?.(); };
   }, []);
-  if (!isDesktop()) return <>{children}</>;
+  if (!isDesktop()) return <WebLibraryStorage>{children}</WebLibraryStorage>;
   const run = async (action: () => Promise<unknown>) => {
     setWorking(true);
     try { await action(); } catch (error) { toast.error(String(error)); }
@@ -51,6 +53,7 @@ export function ProjectFileStorage({ children }: { children: ReactNode }) {
 export function ProjectFileStatus() {
   const state = useProjectFiles();
   const activeId = useKachamak(s => s.activeNovelId);
-  if (!isDesktop()) return <>Saved in this browser</>;
+  const web = useWebLibrary();
+  if (!isDesktop()) return <>{web.error ? "Folder save failed" : web.busy || web.pending ? "Saving to your folders…" : "Saved to your folders"}</>;
   return <span title={activeId ? state.paths[activeId] : Object.values(state.paths).join("\n")}>{state.error ? "File save failed" : state.busy || state.pending ? "Saving project files…" : "Saved to project folders"}</span>;
 }

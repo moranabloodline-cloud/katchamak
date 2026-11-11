@@ -1,4 +1,5 @@
 "use client";
+import { projectStorage, isWebSession } from "./session-storage";
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -75,13 +76,13 @@ export const useCollections = create<CollectionsState>()(persist((set, get) => (
     })) };
   }),
   setMembership: (collectionId, projectId, included) => set((state) => ({
-    collections: state.collections.map((c) => c.id !== collectionId ? c : {
+    collections: state.collections.map((c) => c.id !== collectionId ? (included && isWebSession() ? { ...c, projectIds: c.projectIds.filter(id => id !== projectId) } : c) : {
       ...c,
       projectIds: included ? [...new Set([...c.projectIds, projectId])] : c.projectIds.filter((id) => id !== projectId),
     }),
   })),
 }), {
-  name: "kachamak-collections-v1", version: 2, storage: createJSONStorage(() => localStorage),
+  name: "kachamak-collections-v1", version: 2, storage: createJSONStorage(() => projectStorage),
   migrate: (persisted, version) => {
     const state = persisted as { collections: Collection[] };
     if (version < 2) return { ...state, collections: state.collections.map((c) => ({ ...c, parentId: c.parentId ?? null })) };

@@ -1,8 +1,9 @@
 "use client";
 
+import { WebFolderControls } from "./WebLibraryStorage";
 import { useEffect, useState } from "react";
 import { isDesktop } from "@/lib/kachamak/project-files";
-import { useKachamak } from "@/lib/kachamak/store";
+import { useKachamak, isUsableBackup, exportNovelJson } from "@/lib/kachamak/store";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +26,11 @@ export function AccountDialog({
 }) {
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
   const setDefaultAuthor = useKachamak((s) => s.setDefaultAuthor);
+  const [legacyCount, setLegacyCount] = useState(0);
   const [draft, setDraft] = useState(defaultAuthor);
 
   useEffect(() => {
-    if (open) setDraft(defaultAuthor);
+    if (open) { setDraft(defaultAuthor); if (!isDesktop()) { try { const old = JSON.parse(localStorage.getItem("kachamak-store-v1") ?? "null"); setLegacyCount(old?.state?.novels?.filter(isUsableBackup).length ?? 0); } catch { setLegacyCount(0); } } }
   }, [open, defaultAuthor]);
 
   return (
@@ -46,9 +48,11 @@ export function AccountDialog({
             className="bg-black/30"
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Your initials appear in the circle at the top right. {isDesktop() ? "Projects are saved in their own folders on your computer." : "Everything stays saved locally in this browser."}
+            Your initials appear in the circle at the top right. {isDesktop() ? "Projects are saved in their own folders on your computer." : "Your account remembers folder locations on this browser. Manuscripts and files stay in the folders you choose."}
           </p>
         </div>
+        {!isDesktop() && <WebFolderControls />}
+        {!isDesktop() && legacyCount > 0 && <button className="rounded border border-white/20 px-3 py-2 text-xs" onClick={() => { try { const old = JSON.parse(localStorage.getItem("kachamak-store-v1") ?? "null"); for (const n of old?.state?.novels ?? []) if (isUsableBackup(n)) exportNovelJson(n); } catch { toast.error("Could not read the previous browser backup."); } }}>Export older browser projects ({legacyCount})</button>}
         <DialogFooter>
           <button
             type="button"
