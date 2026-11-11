@@ -575,3 +575,5 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - Prošli su `typecheck`, rehydration, library, dashboard-zoom, release-store, application-updates, workspace-sync, desktop-sync, statički build, check-desktop i nativni release build. Git test koristi LF u izolovanim checkout-ima radi Windows kompatibilnosti.
 - Automatika radi tokom razvojne sesije, posle 30s mirovanja i punih provera, čuva korisnički rad pri remote konfliktu i nikada ne radi force-push. GitHub CI više ne objavljuje desktop izmene na Sites i dodatno gradi Windows installer.
 - GitHub backup koda je odvojen od WebView2 rukopisa i JSON backupa. Sites podatke treba preneti postojećim JSON izvozom i uvozom. Detalji i komande u DESKTOP.md.
+
+- **Dorada oporavka mreže:** regresioni test potvrđuje da odbijen push i naredni neuspešan fetch ne gube identitet proverenog lokalnog commita; posle povratka mreže šalje se isti commit bez dupliranja i bez slanja rukopisa.

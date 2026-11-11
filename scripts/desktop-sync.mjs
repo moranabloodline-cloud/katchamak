@@ -13,7 +13,9 @@ export function verifiedSave(cwd, { commands, enforceRemote = true } = {}) {
   mkdirSync(directory, { recursive: true });
   const git = (...args) => execFileSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never" }, timeout: 60000, stdio: ["ignore", "pipe", "pipe"] }).trim();
   const state = (status, detail = {}) => {
-    const result = { status, ...detail, updatedAt: new Date().toISOString() };
+    let previous;
+    try { previous = JSON.parse(readFileSync(path.join(directory, "sync-state.json"), "utf8")); } catch {}
+    const result = { ...previous, status, ...detail, ...(["pushed", "up_to_date"].includes(status) ? { pendingCommit: null, error: null } : {}), updatedAt: new Date().toISOString() };
     writeFileSync(path.join(directory, "sync-state.json"), JSON.stringify(result, null, 2));
     return result;
   };
@@ -59,13 +61,13 @@ export function verifiedSave(cwd, { commands, enforceRemote = true } = {}) {
       git("fetch", "origin", "main");
       const remote = git("rev-parse", "origin/main");
       if (remote === startHead) return state("up_to_date", { commit: startHead });
-      if (prior?.status === "push_pending" && prior.commit === startHead && spawnSync("git", ["merge-base", "--is-ancestor", remote, startHead], { cwd }).status === 0) {
+      if (prior?.pendingCommit === startHead && spawnSync("git", ["merge-base", "--is-ancestor", remote, startHead], { cwd }).status === 0) {
         for (const command of commands ?? [[process.execPath, "scripts/verify-desktop.mjs"]]) {
           if (spawnSync(command[0], command.slice(1), { cwd, stdio: "inherit" }).status !== 0) throw new Error("Pending commit verification failed.");
         }
         if (fingerprint() !== start) return state("changed_during_checks");
         try { git("push", "origin", "HEAD:main"); }
-        catch { return state("push_pending", { commit: startHead }); }
+        catch { return state("push_pending", { commit: startHead, pendingCommit: startHead }); }
         git("fetch", "origin", "main");
         if (git("rev-parse", "origin/main") !== startHead) throw new Error("Remote changed after push.");
         return state("pushed", { commit: startHead });
@@ -96,7 +98,7 @@ export function verifiedSave(cwd, { commands, enforceRemote = true } = {}) {
     const commit = git("rev-parse", "HEAD");
     // A concurrent remote push is rejected by Git, never forced.
     try { git("push", "origin", "HEAD:main"); }
-    catch (error) { return state("push_pending", { commit, message: "Verified local commit preserved; GitHub push must be retried.", error: error.message }); }
+    catch (error) { return state("push_pending", { commit, pendingCommit: commit, message: "Verified local commit preserved; GitHub push must be retried.", error: error.message }); }
     git("fetch", "origin", "main");
     if (git("rev-parse", "origin/main") !== commit) throw new Error("Remote changed after push; inspect GitHub history.");
     return state("pushed", { commit });
