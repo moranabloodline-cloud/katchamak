@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { ApplicationUpdates } from "@/components/kachamak/ApplicationUpdates";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,6 +34,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
+        <ApplicationUpdates />
         <Toaster theme="dark" position="bottom-right" duration={3500} />
       </body>
     </html>

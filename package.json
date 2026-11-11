@@ -3,7 +3,12 @@
   "version": "0.2.1",
   "private": true,
   "scripts": {
-    "dev": "node scripts/preview-next.mjs",
+    "dev": "node scripts/dev-sync.mjs",
+    "dev:local": "node scripts/preview-next.mjs",
+    "sync:watch": "node scripts/sync-workspace.mjs watch",
+    "sync:pause": "node scripts/sync-workspace.mjs pause",
+    "sync:resume": "node scripts/sync-workspace.mjs resume",
+    "publish:github": "node scripts/publish-github-release.mjs",
     "build": "node scripts/build-project.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "check:release": "node scripts/check-sites-build.mjs",

@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { syncWorkspace } from "../scripts/sync-workspace.mjs";
+
+const root = mkdtempSync(path.join(tmpdir(), "kachamak-sync-"));
+const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+try {
+  const remote = path.join(root, "remote.git"), first = path.join(root, "first"), second = path.join(root, "second");
+  mkdirSync(remote); git(remote, "init", "--bare", "--initial-branch=main");
+  git(root, "clone", remote, first);
+  for (const folder of ["src", "upload", ".openai"]) mkdirSync(path.join(first, folder), { recursive: true });
+  writeFileSync(path.join(first, ".gitignore"), ".sites-runtime/\n");
+  writeFileSync(path.join(first, ".openai/automation.json"), JSON.stringify({ repository: "owner/repo", branch: "main", workspace_poll_seconds: 30 }));
+  writeFileSync(path.join(first, "src/app.js"), "original\n"); writeFileSync(path.join(first, "upload/reference.txt"), "protected\n");
+  git(first, "config", "user.name", "Test"); git(first, "config", "user.email", "test@example.test");
+  git(first, "add", "."); git(first, "commit", "-m", "initial"); git(first, "push", "origin", "main");
+  git(root, "clone", remote, second); git(second, "config", "user.name", "Other"); git(second, "config", "user.email", "other@example.test");
+  const opts = { enforceRemote: false, checks: [], quietMs: 100, publish: true };
+  assert.equal(syncWorkspace(first, { ...opts, now: 0 }).status, "up_to_date");
+  writeFileSync(path.join(first, "src/app.js"), "local edit 1\n");
+  assert.equal(syncWorkspace(first, { ...opts, now: 10 }).status, "waiting_for_finished_edit");
+  writeFileSync(path.join(first, "src/app.js"), "local edit 2\n");
+  assert.equal(syncWorkspace(first, { ...opts, now: 100 }).status, "waiting_for_finished_edit", "editing the same file resets the quiet period");
+  assert.equal(syncWorkspace(first, { ...opts, now: 150 }).status, "waiting_for_finished_edit");
+  assert.equal(syncWorkspace(first, { ...opts, now: 250 }).status, "pushed");
+  assert.equal(git(remote, "rev-parse", "main"), git(first, "rev-parse", "HEAD"));
+  git(second, "pull", "--ff-only");
+  writeFileSync(path.join(first, "src/app.js"), "unfinished local work\n");
+  writeFileSync(path.join(second, "src/app.js"), "remote canonical version\n"); git(second, "commit", "-am", "remote change"); git(second, "push", "origin", "main");
+  const pulled = syncWorkspace(first, { ...opts, now: 300 });
+  assert.equal(pulled.status, "pulled");
+  assert.equal(readFileSync(path.join(first, "src/app.js"), "utf8"), "remote canonical version\n");
+  assert.equal(git(first, "show", "stash@{0}:src/app.js"), "unfinished local work", "local work is recoverable");
+  assert.ok(git(first, "branch", "--list", pulled.backup));
+  assert.equal(readFileSync(path.join(first, "upload/reference.txt"), "utf8"), "protected\n");
+  writeFileSync(path.join(first, "public.key"), "unrelated excluded file\n");
+  writeFileSync(path.join(first, ".sites-runtime/sync.paused"), "paused");
+  assert.equal(syncWorkspace(first, { ...opts, now: 400 }).status, "paused");
+  console.log("Workspace quiet-period commit/push, canonical pull, recovery backup and pause checks passed.");
+} finally { rmSync(root, { recursive: true, force: true }); }

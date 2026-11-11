@@ -1,0 +1,8 @@
+{
+  "repository": "moranabloodline-cloud/katchamak",
+  "branch": "main",
+  "origin": "https://nikola-novel-studio.morana-bloodline.chatgpt.site",
+  "workflow": ".github/workflows/build.yml",
+  "workspace_poll_seconds": 30,
+  "commit_quiet_seconds": 30
+}

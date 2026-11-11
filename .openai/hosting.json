@@ -3,6 +3,6 @@
   "capabilities": [
     "mcp"
   ],
-  "r2": null,
+  "r2": "BUCKET",
   "d1": null
 }

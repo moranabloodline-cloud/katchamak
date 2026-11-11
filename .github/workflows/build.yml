@@ -1,10 +1,14 @@
-name: Build and type-check
+name: Verify and publish Katchamak
 on:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
+  id-token: write
+concurrency:
+  group: katchamak-main-release
+  cancel-in-progress: false
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -19,6 +23,12 @@ jobs:
         run: bun run tests/rehydration.test.mjs
       - name: Test collection hierarchy and migration
         run: bun run tests/library.test.mjs
+      - name: Test release authorization and activation
+        run: bun run tests/release-store.test.mjs
+      - name: Test application refresh
+        run: bun run tests/application-updates.test.mjs
+      - name: Test workspace synchronization and recovery
+        run: bun run tests/workspace-sync.test.mjs
       - name: Type-check application
         run: bun run typecheck
       - name: Build Sites package
