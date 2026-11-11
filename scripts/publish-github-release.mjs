@@ -27,6 +27,16 @@ const live = await fetch(`${config.origin}/api/app-version`, { cache: "no-store"
 if (live.sourceCommit !== payload.version.sourceCommit || live.sourceTree !== payload.version.sourceTree || live.buildId !== payload.buildId) throw new Error("Published application readback did not match this build.");
 for (const asset of [payload.assets.find(a => a.path === "/index.html"), payload.assets.find(a => a.path.endsWith(".js")), payload.assets.find(a => a.path.endsWith(".css"))].filter(Boolean)) {
   const liveAsset = await fetch(`${config.origin}${asset.path === "/index.html" ? "/" : asset.path}`, { cache: "no-store", signal: AbortSignal.timeout(30000) });
-  if (!liveAsset.ok || createHash("sha256").update(Buffer.from(await liveAsset.arrayBuffer())).digest("hex") !== asset.hash) throw new Error(`Published asset differs from the checked build: ${asset.path}`);
+  const bytes = Buffer.from(await liveAsset.arrayBuffer());
+  if (!liveAsset.ok) throw new Error(`Published asset unavailable: ${asset.path} (HTTP ${liveAsset.status})`);
+  if (asset.path === "/index.html") {
+    // Sites can inject its host integration into HTML. Verify the built application references,
+    // then verify the immutable JS/CSS bytes, instead of rejecting that platform integration.
+    const expected = Buffer.from(asset.data, "base64").toString("utf8");
+    const refs = [...new Set([...expected.matchAll(/(?:src|href)=["']([^"']*\/_next\/static\/[^"']+)["']/g)].map(m => m[1]))];
+    const html = bytes.toString("utf8");
+    const missing = refs.filter(ref => !html.includes(ref));
+    if (!refs.length || missing.length) throw new Error(`Published page has different application references: ${missing.slice(0, 3).join(", ")} (HTTP ${liveAsset.status}, title=${html.match(/<title>(.*?)<\/title>/)?.[1] ?? "none"})`);
+  } else if (createHash("sha256").update(bytes).digest("hex") !== asset.hash) throw new Error(`Published asset differs from the checked build: ${asset.path}`);
 }
 console.log(JSON.stringify({ status: "verified", sourceCommit: live.sourceCommit, sourceTree: live.sourceTree, buildId: live.buildId, url: config.origin }));
