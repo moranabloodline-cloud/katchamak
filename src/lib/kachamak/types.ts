@@ -45,6 +45,10 @@ export interface NoteNode {
   icon?: string; // note icon, chosen by the user (see NOTE_ICONS)
   hidden?: boolean; // "Hide" in the note menu — hidden from the tree
   collapsed?: boolean;
+  /* Details tab (arhitektura §11) — links to Codex notes; only ids are stored,
+     titles resolve live from the Codex section. Optional — older stores and
+     backups simply lack the field. */
+  links?: string[];
   createdAt: number;
   updatedAt: number;
   children: NoteNode[];

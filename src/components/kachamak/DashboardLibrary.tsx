@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, HelpCircle, Layers, LayoutGrid, List, Minus, MoreVertical, Plus, Search, UserCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, HelpCircle, Layers, LayoutGrid, List, MoreVertical, Plus, Search, UserCircle2 } from "lucide-react";
 import { exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
@@ -164,11 +164,6 @@ export function DashboardLibrary(props: Props) {
     <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#a97f33]/25 bg-[#0c0906] px-4 py-1.5">
       <button type="button" aria-label="KATCHAMAK — Library home" onClick={() => navigate(null)} className="flex items-center gap-2.5 py-1 text-[#e8c265]"><Feather className="h-5 w-5" /><span className="font-serif text-lg font-semibold tracking-[0.25em]">KATCHAMAK</span></button>
       <div className="ml-auto flex items-center gap-1">
-        <div aria-label="Cover size" title="Ctrl + scroll over the library to resize covers" className="mr-2 flex items-center rounded-md border border-[#a97f33]/40 text-[#e8c265]">
-          <button aria-label="Smaller covers" disabled={coverZoom <= 60} onClick={() => prefs.changeCoverZoom(-10)} className="p-1.5 hover:bg-white/10 disabled:opacity-40"><Minus className="h-3.5 w-3.5" /></button>
-          <button aria-label="Reset cover size" onClick={prefs.resetCoverZoom} className="min-w-10 px-1 text-xs tabular-nums">{coverZoom}%</button>
-          <button aria-label="Larger covers" disabled={coverZoom >= 180} onClick={() => prefs.changeCoverZoom(10)} className="p-1.5 hover:bg-white/10 disabled:opacity-40"><Plus className="h-3.5 w-3.5" /></button>
-        </div>
         <button onClick={props.onHelp} className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-white/5"><HelpCircle className="h-4 w-4" />Help</button>
         <span className="mx-1 h-5 w-px bg-white/10" />
         <button onClick={props.onAccount} className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-white/5"><UserCircle2 className="h-4 w-4 text-[#e8c265]" />Account<ChevronDown className="h-3.5 w-3.5" /></button>
@@ -176,9 +171,8 @@ export function DashboardLibrary(props: Props) {
     </header>
     <div className="flex min-h-0 flex-1">
       <aside aria-label="Collections" className="flex min-w-0 shrink-0 flex-col bg-[#090b0f]" style={{ width: `min(${prefs.sidebarWidth}px, 45vw)` }}>
-        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-white/[0.07] px-3"><Folder className="h-5 w-5 shrink-0 text-[#d5ad61]" /><h2 className="min-w-0 flex-1 truncate font-serif text-lg text-[#f2ead9]">Collections</h2><button aria-label="New collection" onClick={props.onCreateCollection} className="rounded-md border border-[#a97f33]/40 p-1 text-[#e8c265] hover:bg-white/5"><Plus className="h-4 w-4" /></button></div>
+        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-white/[0.07] px-3"><h2 className="min-w-0 flex-1 truncate font-serif text-lg text-[#f2ead9]">Collections</h2><button aria-label="New collection" onClick={props.onCreateCollection} className="rounded-md border border-[#a97f33]/40 p-1 text-[#e8c265] hover:bg-white/5"><Plus className="h-4 w-4" /></button></div>
         <nav aria-label="Collection tree" className="min-h-0 flex-1 overflow-auto p-2 kachamak-scroll">
-          <button {...dropZone(null)} onClick={() => navigate(null)} className={`mb-2 flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm ${dropTarget === null ? "bg-amber-400/25 ring-1 ring-amber-300" : !location ? "bg-amber-400/10 text-[#f5d99d]" : "text-muted-foreground hover:bg-white/5"}`}><LayoutGrid className="h-4 w-4 shrink-0" />Library</button>
           {tree(null)}
           {!collections.length && !novels.length && <p className="px-2 py-4 text-xs leading-relaxed text-muted-foreground">Create a collection or project to start your library.</p>}
         </nav>

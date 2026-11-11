@@ -61,6 +61,12 @@ interface KachamakState {
   setEditorSize: (n: number) => void;
   setEditorSpacing: (s: string) => void;
 
+  /* Info tab Inspektora — koliko visine uzima Synopsis (0.15–0.85). Razdelnik
+     između Synopsis i Notes se vuče (arhitektura §11); ?? 0.5 zbog starih
+     sačuvanih store-ova. */
+  infoSynopsisRatio: number;
+  setInfoSynopsisRatio: (r: number) => void;
+
   /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
      uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
      da linije trake 2 ostaju poravnate (persisted preference).
@@ -325,6 +331,13 @@ export const useKachamak = create<KachamakState>()(
       setEditorFont: (f) => set({ editorFont: f }),
       setEditorSize: (n) => set({ editorSize: n }),
       setEditorSpacing: (sp) => set({ editorSpacing: sp }),
+
+      infoSynopsisRatio: 0.5,
+      setInfoSynopsisRatio: (r) =>
+        set({
+          infoSynopsisRatio:
+            Math.round(Math.min(0.85, Math.max(0.15, r)) * 1000) / 1000,
+        }),
 
       leftZoom: 1,
       midZoom: 1,
@@ -770,7 +783,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -778,7 +791,9 @@ export const useKachamak = create<KachamakState>()(
          v3 → v4: everything is a NOTE on every tab — the old Codex
          categories/entries become plain notes in the Codex section
          v4 → v5: the Grid view becomes the Corkboard (Scrivener index cards)
-         v5 → v6: older Trash items have no recorded position and keep the old append behavior */
+         v5 → v6: older Trash items have no recorded position and keep the old append behavior
+         v6 → v7: Details tab — optional links to Codex notes on NoteNode
+         (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
         // Version 6 only adds optional Trash metadata. Do not rerun older
