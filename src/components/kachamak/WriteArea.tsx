@@ -1,20 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   AlignCenter,
   AlignJustify,
   AlignLeft,
   AlignRight,
   Bold,
+  Copy,
   Eye,
   EyeOff,
   Highlighter,
   Italic,
+  Link as LinkIcon,
   List,
   ListOrdered,
   Palette,
   Quote,
   Strikethrough,
+  Trash2,
   Underline,
   RemoveFormatting,
 } from "lucide-react";
@@ -25,6 +29,27 @@ import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 const FONTS = ["Segoe UI", "Georgia", "Garamond", "Courier New", "Verdana", "Times New Roman"];
 const SIZES = [12, 14, 16, 18, 20, 24];
 const SPACINGS = ["1.0", "1.15", "1.5", "2.0"];
+
+/* Text Style (tačka 8, spec §8): dropdown ISpred font kontrola,
+   podrazumevano „Normal“. formatBlock radi nad blokom u kome je kursor/
+   selekcija; `div` je Chrome-ov podrazumevani blok = tretira se kao Normal. */
+const BLOCK_STYLES = [
+  { value: "normal", label: "Normal", block: "<p>" },
+  { value: "h1", label: "Heading 1", block: "<h1>" },
+  { value: "h2", label: "Heading 2", block: "<h2>" },
+  { value: "h3", label: "Heading 3", block: "<h3>" },
+  { value: "h4", label: "Heading 4", block: "<h4>" },
+  { value: "h5", label: "Heading 5", block: "<h5>" },
+  { value: "h6", label: "Heading 6", block: "<h6>" },
+  { value: "quote", label: "Quote", block: "<blockquote>" },
+] as const;
+
+function normalizeBlock(tag: string): string {
+  const v = (tag || "").toLowerCase().replace(/[<>]/g, "");
+  if (/^h[1-6]$/.test(v)) return v;
+  if (v === "blockquote") return "quote";
+  return "normal"; /* p, div, prazno */
+}
 
 function ToolBtn({
   onClick,
@@ -68,8 +93,41 @@ export function EditorToolbar() {
   const spacing = useKachamak((s) => s.editorSpacing ?? "1.5");
   const setSpacing = useKachamak((s) => s.setEditorSpacing);
 
+  /* Tekući blok selekcije se osvežava na svaku promenu selekcije, da dropdown
+     uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
+  const [blockStyle, setBlockStyle] = useState<string>("normal");
+  useEffect(() => {
+    const sync = () => {
+      try {
+        setBlockStyle(normalizeBlock(document.queryCommandValue("formatBlock")));
+      } catch {
+        /* stariji pretraživači bez queryCommandValue — ostaje poslednja vrednost */
+      }
+    };
+    document.addEventListener("selectionchange", sync);
+    return () => document.removeEventListener("selectionchange", sync);
+  }, []);
+
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
+      <select
+        aria-label="Text style"
+        title="Text style"
+        value={blockStyle}
+        onChange={(e) => {
+          const style = BLOCK_STYLES.find((s) => s.value === e.target.value);
+          if (!style) return;
+          cmd("formatBlock", style.block);
+          setBlockStyle(style.value);
+        }}
+        className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
+      >
+        {BLOCK_STYLES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </select>
       <select
         aria-label="Font"
         value={font}
@@ -106,6 +164,35 @@ export function EditorToolbar() {
           </option>
         ))}
       </select>
+      <span className="mx-1 h-5 w-px bg-white/10" />
+      {/* Copy / Delete / Link (tačka 8, spec §8): rade nad selekcijom u editoru;
+         ToolBtn već čuva selekciju (onMouseDown preventDefault). Link pita za
+         URL (prazno/Esc = odustani) pa primeni createLink. */}
+      <ToolBtn
+        title="Copy"
+        onClick={() => {
+          try {
+            document.execCommand("copy");
+          } catch {
+            /* bez selekcije/dozvole — ništa */
+          }
+        }}
+      >
+        <Copy className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Delete" onClick={() => cmd("delete")}>
+        <Trash2 className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Link"
+        onClick={() => {
+          const url = window.prompt("Link URL");
+          if (!url) return;
+          cmd("createLink", url);
+        }}
+      >
+        <LinkIcon className="h-4 w-4" />
+      </ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
       <ToolBtn title="Bold" onClick={() => cmd("bold")}>
         <Bold className="h-4 w-4" />

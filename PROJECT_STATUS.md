@@ -63,21 +63,18 @@ Store **v5** · zadnji poznati build: **čist** (09.11.2026, uz Grid zadatak).
 
 ## 2. Šta je U TOKU
 
-- **Tačka 7 — Inspector reorg: OBJAVLJENO na GitHub `main`, commit `e304525`** (detalji u Dnevniku); Actions automatski gradi i objavljuje na postojećem Sites-u.
+- **Tačka 8 — Toolbar dopune: URADENA I TESTIRANA (lokalno), commit + push slede prijavi** (detalji u Dnevniku).
 - Kontinuitet i backup infrastruktura — **ZAVRŠENO 09.11.** (`AGENTS.md`,
-  `PROJECT_STATUS.md`, `scripts/backup.sh`, dnevni cron ID 517453 u 03:00,
-  sigurnosni fix `.env`; sve verifikovano — vidi §6 i Dnevnik). Ovaj odeljak
-  se puni novim započetim zadatkom, a prazni posle svakog završenog.
+  `PROJECT_STATUS.md`, `scripts/backup.sh`, dnevni cron u 03:00 — nakon
+  restarta okruženja 11.11. cron ponovo kreiran kao **ID 524156**
+  (stari 517453 je nestao sa starom sesijom), sigurnosni fix `.env`; sve
+  verifikovano — vidi §6 i Dnevnik). Ovaj odeljak se puni novim započetim
+  zadatkom, a prazni posle svakog završenog.
 
 ## 3. Šta je SLEDEĆE (po redu — „ajmo redom")
 
-Tačke 1–7 završene i objavljene (tačka 7 na GitHubu, commit `e304525` — detalji u Dnevniku). Sledeća je **tačka 8**:
+Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevniku). Sledeća je **tačka 9**:
 
-7. **Inspector reorg** — desni panel u 3 taba: Info (Synopsis + Notes vertikalno,
-   draggable razdelnik), Details (povezivanje sa Codex notama, pretraživo),
-   Mentions; panel ostaje collapsible.
-8. **Toolbar dopune** — postojeći dizajn ostaje; dodati Text Style dropdown
-   (podrazumevano „Normal") + dugmad Copy, Delete, Link.
 9. **Tabovi — pravila**: obavezni (ne mogu se brisati ni preimenovati): Binder, Codex,
    Trash; brisljivi: Planning, Research, Templates, Prompts; korisnički custom tabovi.
 10. **Top bar — „Current Note" dropdown** (ime aktivne note desno u topbaru).
@@ -118,7 +115,7 @@ Tačke 1–7 završene i objavljene (tačka 7 na GitHubu, commit `e304525` — d
 | 4 | `download/kachamak-aplikacija.zip` — kopija za Nikolu | prenos izvan radnog prostora | osvežava skript |
 | 4b | `download/kachamak-backup-<datum>.zip` — datumovane kopije | istorija za Nikolu | ručno |
 | 5 | `public/kachamak-aplikacija.zip` — cloud kopija na preview deploymentu | gubitak celog workspace-a | osvežava skript |
-| 6 | **Cron „Kachamak — dnevni backup", 03:00 (Europe/Belgrade)** | zaboravljena ručna kopija | konfigurisan (ID 517453) |
+| 6 | **Cron „Kachamak — dnevni backup", 03:00 (Europe/Belgrade)** | zaboravljena ručna kopija | konfigurisan (ID 524156, ponovo kreiran 11.11. nakon restarta okruženja) |
 
 - **Restore postupak:** `PROJEKT-KONTEKST.md` §0 (prvo cloud link, onda
   Nikolaov zip; uvek `bun install && bun run build` posle raspakivanja).
@@ -134,6 +131,7 @@ Tačke 1–7 završene i objavljene (tačka 7 na GitHubu, commit `e304525` — d
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-11 (tačka 8 — Toolbar dopune) — URADENO, LOKALNO TESTIRANO:** po spec §8 na postojećoj formatnoj traci (traka 2, dizajn nepromenjen) dodato: **Text Style dropdown ISpred font kontrola**, podrazumevano „Normal" (opcije: Normal, Heading 1–6, Quote — spec ne nabraja opcije, ovaj skup je predlog za potvrdu; primenjuje `formatBlock` na blok u kome je kursor/selekcija; Chrome-ov podrazumevani blok `div` tretira se kao Normal; dropdown prati blok selekcije kroz `selectionchange` + `queryCommandValue('formatBlock')`) i grupa **Copy, Delete, Link** odmah iza font kontrola (iza razdelnika, pre B I U S): Copy = `execCommand('copy')` nad selekcijom (ToolBtn već čuva selekciju preko `onMouseDown preventDefault`), Delete = `execCommand('delete')`, Link = `window.prompt` za URL (prazno/Esc = odustajanje) pa `createLink`. Store NIJE diran (nema promene šeme — stilovi žive u HTML sadržaju note). Verifikacija: `bun run build` čist (49 assets, build `103ae99c2d6f`); `bunx tsc --noEmit` čist (samo postojeće 2 greške u `examples/websocket`); production build na localhost:3000 kroz agent-browser: Text Style je prvi u traci; selektovan tekst → „Heading 1" daje `<h1>…</h1>`, „Normal" vraća `<p>`, dropdown se osvežava na promenu selekcije; Link ubacuje `<a href>` i sadržaj je sačuvan u store-u (provereno u localStorage); Delete briše selektovanu reč; Copy kroz stvarni klik (trusted gesture) vraća `execCommand('copy') = true` (sistemsko ograničenje headless-a: čitanje clipboarda van klika nije moguće, pa je proverena povratna vrednost komande). Screenshot-provera trake urađena (`/tmp/toolbar-crop.png`). Repo je pre zadatka sinhronizovan sa `origin/main` (`abca6b1`), kredencijal u `~/.git-credentials` (0600, van projekta).
 - **2026-11-11 (tačka 7 — Inspector reorg) — OBJAVLJENO NA GITHUB:** po arhitekturi §11 završena reorganizacija desnog panela. **Info tab:** Synopsis i Notes vertikalno, svako polje skroluje svoj sadržaj nezavisno; između njih **draggable razdelnik** (1px linija, `role="separator"`, po defaultu 50%/50%, granice 15–85%, vuče se gore/dole — isti obrazac pointer-capture stilova kao postojeći vertikalni Resizer-i panela). Proporcija se čuva kao nova preferencija `infoSynopsisRatio` (`?? 0.5` za stare store-ove) i preživi reload. **Details tab:** sada povezuje notu sa **Codex notama** — lista „Linked Codex notes“ (ikona + naslov rešen uživo iz Codex sekcije pa se preimenovanja provlače; klik na red otvara Codex notu — prelazak na Codex tab + selekcija; X skida vezu; obrisana Codex nota ostaje kao „missing note“ dok se veza ne skine) + **pretraživi birač** „Link a Codex note“ (pretraga po naslovu, bez ove note i bez već povezanih, max 8 rezultata, klik povezuje i čisti polje). Osnovni podaci note (Type/Words/Created/Updated/Sub-notes) ostaju ispod veza — postojeći prikaz, ništa nije uklonjeno. **Store v6→v7:** `NoteNode.links?: string[]` (opciono polje, bez data migracije — stari store-ovi i backupovi ga jednostavno nemaju; `duplicateNode`, JSON eksport i import prenose veze automatski). Mentions tab i collapsible ponašanje panela nisu menjani (već postojali). Verifikacija: `bunx tsc --noEmit` čist; `bun run build` prolazi (49 assets, build `99ebfb402c18`); Playwright E2E (`scripts/verify_inspector.py`): vučenje razdelnika 50%→68.6%, persist posle reload-a, pretraga „dec“ → „Declan“, povezivanje, persist veze posle reload-a, klik na vezu → prelazak na Codex tab — **sve PASS**; screenshotovi u `scripts/inspector7/`. Nikola je odobrio trenutno stanje i naredio prenos na GitHub („sada treba da se apdejtuje i github — ako tamo ne bude ovo sada čemu sve ovo“). Push iz GLM okruženja: commit `e3045257e263d8353710e18e424aa04ffc19c1d9`, fast-forward `fea7ee0..e304525` na `main`, bez force-a; remote SHA verifikovan API-jem; identitet objave potvrđen i na sajtu — `/api/app-version` i `/app-version.json` vraćaju isti `sourceCommit` `8c10d1c…` i `sourceTree` `68e11ebf77a2e33e1e953808ce1d9210a4e73d14529f45d9d8da17ca6c34dc3f` kao lokalna CI-simulacija (sadržajni hash ulaza, `dirty:false`; napomena: `sourceTree` NIJE git tree hash vec sadržajni hash iz `source-version.mjs`). Uz Inspektor izmene, commit sadrži i `DashboardLibrary.tsx` iz trenutnog stanja (sklonjene Cover-size dugmadi, „Library“ dugme u sidebaru, Folder ikona uz naslov „Collections“) i ovu evidenciju. Sajt-side potvrdu identiteta daje Kachamak alat u razgovoru (`/api/app-version`) kada Actions objava stigne.
 - **2026-11-11 (automatizacija razvoja i objave) — ZAVRŠENO:** uveden GitHub Actions → OIDC → R2 tok na istom Sites-u. Prihvata samo konfigurisan repozitorijum, `main` i workflow, proverava potpis, identitet i sadržaj, upisuje sve resurse pre atomske aktivacije, odbija starije workflow-e i zadržava prethodnu verziju pri neuspehu. Produkcioni prikaz učitava isti paket preko sajta i MCP iframe-a; proverava se nova verzija na 15s uz odlaganje tokom uređivanja/dijaloga/nesačuvanog postojećeg browser stanja. `sync-workspace` preuzima tuđe izmene sa `main`, prethodno čuva lokalne commitove u recovery grani i radni sadržaj u stash-u, bez force-pusha i izmene `upload/`. Završene lokalne izmene automatski proverava, commit-uje, gradi i push-uje. `bun run dev` uključuje ovu sinhronizaciju, a u postojećem okruženju pokrenut je zaseban watcher; pauza za agentski rad je dokumentovana. Unit testovi koriste stvarne RSA potpise i izolovane git repozitorijume; svi testovi i TypeScript/build prolaze lokalno i na GitHubu. Native Sites adapter v172 uspešno objavljen. Stvaran GitHub workflow `42998803144` samostalno je objavio commit `42ecfbb`, proverio učitane app reference i identične JS/CSS fajlove, a MCP potvrdio isti commit/build. Završna evidencija ide kroz lokalnu automatiku kao dodatna provera commit/push toka. R2 nije skladište korisničkih projekata. Konačan JSON sistem i prazna početna biblioteka su poseban kasniji zadatak po Nikolinoj odluci; u ovom zadatku nisu menjani editor, rukopisi ni njihov store.
 
