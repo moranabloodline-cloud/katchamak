@@ -1,6 +1,6 @@
 [package]
 name = "katchamak"
-version = "0.2.3"
+version = "0.2.4"
 description = "Katchamak private offline writing workspace"
 edition = "2021"
 

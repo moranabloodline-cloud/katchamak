@@ -6,7 +6,6 @@ import { BookOpen, FileText, Calendar, MoreVertical } from "lucide-react";
 import { exportNovelJson, projectsSavedLocally, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
-import { AccountDialog } from "./AccountDialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +54,6 @@ export function Dashboard() {
   const setMembership = useCollections((s) => s.setMembership);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAuthor, setNewAuthor] = useState(defaultAuthor);
   const [collectionDialog, setCollectionDialog] = useState<"new" | string | null>(null);
@@ -76,7 +74,6 @@ export function Dashboard() {
       onCreateCollection={openNewCollection}
       onCreateProject={() => { setNewTitle(""); setNewAuthor(defaultAuthor); setCreateOpen(true); }}
       onImport={() => fileRef.current?.click()}
-      onAccount={() => setAccountOpen(true)}
       onRenameCollection={(c) => { setCollectionName(c.name); setCollectionDialog(c.id); }}
       onDeleteCollection={setPendingDelete}
       onDeleteProject={setPendingProjectDelete}
@@ -135,7 +132,6 @@ export function Dashboard() {
           </form>
         </DialogContent>
       </Dialog>
-      <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
       <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader><form onSubmit={(event) => { event.preventDefault(); const name = collectionName.trim(); if (!name) return; if (collectionDialog === "new") { const id = addCollection(name, selectedCollection); if (id) setSelectedCollection(id, [id, ...(selectedCollection ? [selectedCollection] : [])]); } else if (collectionDialog) renameCollection(collectionDialog, name); setCollectionDialog(null); }}><Label htmlFor="collection-name">Name</Label><Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" /><DialogFooter className="mt-4"><button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button><button type="submit" disabled={creating} className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503]">Save</button></DialogFooter></form></DialogContent></Dialog>
       <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete collection?</AlertDialogTitle><AlertDialogDescription>The collection will be removed. Its subcollections and projects will move to its parent location. Project contents will be preserved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingDelete) { const parentId = collections.find((c) => c.id === pendingDelete)?.parentId ?? null; removeCollection(pendingDelete); if (selectedCollection === pendingDelete) setSelectedCollection(parentId); } setPendingDelete(null); }}>Delete collection</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open) setPendingProjectDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>{isDesktop() ? "Remove from library: " : "Delete "}{pendingProjectDelete?.title}?</AlertDialogTitle><AlertDialogDescription>{isDesktop() ? "This removes the project from the recent-project library. Its folder and manuscripts remain on your computer." : "This permanently removes the project, all its notes and trash from this browser. Export a backup first if you want to keep it."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={async () => { if (pendingProjectDelete) { try { if (isDesktop()) await removeFileProject(pendingProjectDelete.id); else deleteNovel(pendingProjectDelete.id); collections.forEach((c) => setMembership(c.id, pendingProjectDelete.id, false)); toast.success(isDesktop() ? "Project removed from library. Its folder is preserved." : "Project deleted."); } catch (error) { toast.error(String(error)); } } setPendingProjectDelete(null); }}>{isDesktop() ? "Remove from library" : "Delete project"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>

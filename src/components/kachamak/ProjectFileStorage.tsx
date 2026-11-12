@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { initializeProjectFiles, isDesktop, useProjectFiles, migrateExistingProjects, openFileProject, flushProjectFiles } from "@/lib/kachamak/project-files";
+import { relocateCurrentProject, initializeProjectFiles, isDesktop, useProjectFiles, migrateExistingProjects, openFileProject, flushProjectFiles } from "@/lib/kachamak/project-files";
 import { useKachamak, exportNovelJson } from "@/lib/kachamak/store";
 import { toast } from "sonner";
 
@@ -44,7 +44,7 @@ export function ProjectFileStorage({ children }: { children: ReactNode }) {
   </main>;
   return <>
     {children}
-    {state.error && <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex items-center gap-3 bg-red-950 p-3 text-sm text-red-100"><span className="flex-1">Project file could not be saved: {state.error}</span><button onClick={() => void run(flushProjectFiles)} className="underline">Retry save</button><button onClick={() => void run(openFileProject)} className="underline">Open project file</button><button onClick={() => { const n = useKachamak.getState().novels.find(n => n.id === useKachamak.getState().activeNovelId); if (n) exportNovelJson(n); }} className="underline">Export backup</button></div>}
+    {state.error && <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex items-center gap-3 bg-red-950 p-3 text-sm text-red-100"><span className="flex-1">Project file could not be saved: {state.error}</span><button onClick={() => void run(flushProjectFiles)} className="underline">Retry save</button><button disabled={working} onClick={() => void run(relocateCurrentProject)} className="underline">Save current edits to a new folder</button><button onClick={() => { const n = useKachamak.getState().novels.find(n => n.id === useKachamak.getState().activeNovelId); if (n) exportNovelJson(n); }} className="underline">Export backup</button></div>}
   </>;
 }
 

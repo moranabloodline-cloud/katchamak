@@ -10,7 +10,7 @@ const run = (command, args) => {
 };
 run(process.execPath, ["node_modules/typescript/bin/tsc", "--noEmit", "-p", "tsconfig.app.json"]);
 const bun = process.platform === "win32" ? "bun.exe" : "bun";
-for (const file of ["rehydration", "library", "dashboard-zoom", "release-store", "application-updates", "workspace-sync", "desktop-sync", "project-files"]) run(bun, ["run", `tests/${file}.test.mjs`]);
+for (const file of ["rehydration", "library", "dashboard-zoom", "release-store", "application-updates", "desktop-releases", "account-preferences", "workspace-sync", "desktop-sync", "project-files"]) run(bun, ["run", `tests/${file}.test.mjs`]);
 run(process.execPath, ["scripts/build-project.mjs"]);
 run(process.execPath, ["scripts/check-desktop.mjs"]);
 run("cargo", ["test", "--manifest-path", "src-tauri/Cargo.toml"]);

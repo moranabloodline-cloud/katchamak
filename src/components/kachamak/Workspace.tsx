@@ -8,6 +8,7 @@ import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
 import { NotesSection } from "./NotesSection";
 import { TrashView } from "./TrashView";
+import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
 import { AccountDialog } from "./AccountDialog";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import { stripHtml } from "@/lib/kachamak/utils";
@@ -197,6 +198,7 @@ export function Workspace() {
   const treeScope = useKachamak((s) => s.treeScope);
   const setTreeScope = useKachamak((s) => s.setTreeScope);
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
+  const { displayName, photo } = useAccountPreferences();
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
   const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
   const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
@@ -210,7 +212,7 @@ export function Workspace() {
   if (!novel) return null;
 
   const initials =
-    defaultAuthor
+    (displayName || defaultAuthor)
       .trim()
       .split(/\s+/)
       .map((w) => w[0])
@@ -329,7 +331,7 @@ export function Workspace() {
                 onClick={() => setAccountOpen(true)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-[11px] font-bold text-stone-200 transition-colors hover:border-white/50"
               >
-                {initials}
+                {photo ? <img src={photo} alt="" className="h-full w-full rounded-full object-cover" /> : initials}
               </button>
               <button
                 type="button"

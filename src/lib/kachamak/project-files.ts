@@ -144,3 +144,17 @@ export async function importFileProject(json: string): Promise<string | null> {
   install(loaded, true);
   return novel.id;
 }
+
+// Recover an unavailable/moved project path without replacing current edits with an older disk copy.
+export async function relocateCurrentProject() {
+  if (running) { try { await running; } catch {} }
+  const state = useKachamak.getState();
+  const novel = state.novels.find(n => n.id === state.activeNovelId);
+  if (!novel) throw new Error("Open the project you want to save first.");
+  const snapshot = JSON.parse(JSON.stringify(novel));
+  const loaded = await invoke<Loaded | null>("create_disk_project", { document: wrap(snapshot) });
+  if (!loaded) return;
+  remember(loaded);
+  // Edits made while the folder picker was open are still in memory and are flushed next.
+  await flushProjectFiles();
+}

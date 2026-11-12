@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search, UserCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import { exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
@@ -9,6 +9,7 @@ import { canMoveCollection, useCollections, type Collection } from "@/lib/kacham
 import { useLibraryPreferences } from "@/lib/kachamak/library-preferences";
 import { bindDashboardZoom } from "@/lib/kachamak/dashboard-zoom";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AccountMenu } from "./AccountMenu";
 import { HelpCenter } from "./HelpCenter";
 import { ProjectFileStatus } from "./ProjectFileStorage";
 import { toast } from "sonner";
@@ -40,7 +41,7 @@ function collectionPath(collections: Collection[], id: string | null): Collectio
 
 function Cover({ novel, small = false }: { novel: Novel; small?: boolean }) {
   // The existing project cover is a background + icon; keep that user data intact.
-  return <span aria-hidden="true" className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-r-md border border-[#d7b469]/20 shadow-[4px_5px_14px_#0007] ${small ? "h-12 w-8 text-xl" : "aspect-[2/3] w-full text-5xl"}`} style={{ background: novel.cover?.bg || "linear-gradient(135deg,#30291f,#171717)" }}>
+  return <span data-project-cover aria-hidden="true" className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-r-md border border-[#d7b469]/20 shadow-[4px_5px_14px_#0007] ${small ? "h-12 w-8 text-xl" : "aspect-[2/3] w-full text-5xl"}`} style={{ background: novel.cover?.bg || "linear-gradient(135deg,#30291f,#171717)" }}>
     <span className="absolute inset-y-0 left-0 w-[7%] border-r border-black/30 bg-black/20" />
     <span className="absolute inset-[8%] border border-white/15" />
     <span className="drop-shadow-lg">{novel.cover?.icon || <BookOpen className={small ? "h-4 w-4" : "h-12 w-12 text-[#dbc38d]"} />}</span>
@@ -54,7 +55,6 @@ interface Props {
   onCreateProject: () => void;
   onImport: () => void;
   onOpenFile?: () => void;
-  onAccount: () => void;
   onRenameCollection: (collection: Collection) => void;
   onDeleteCollection: (id: string) => void;
   onDeleteProject: (novel: Novel) => void;
@@ -168,7 +168,7 @@ export function DashboardLibrary(props: Props) {
       <div className="ml-auto flex items-center gap-1">
         <HelpCenter />
         <span className="mx-1 h-5 w-px bg-white/10" />
-        <button onClick={props.onAccount} className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-white/5"><UserCircle2 className="h-4 w-4 text-[#e8c265]" />Account<ChevronDown className="h-3.5 w-3.5" /></button>
+        <AccountMenu />
       </div>
     </header>
     <div className="flex min-h-0 flex-1">

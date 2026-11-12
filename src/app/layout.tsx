@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./fonts.css";
-import { Toaster } from "sonner";
+import { LocalToaster } from "@/components/kachamak/LocalToaster";
+import { AppearanceSettings } from "@/components/kachamak/AppearanceSettings";
 import { ApplicationUpdates } from "@/components/kachamak/ApplicationUpdates";
 import "./globals.css";
 
@@ -26,7 +27,8 @@ export default function RootLayout({
       >
         {children}
         <ApplicationUpdates />
-        <Toaster theme="dark" position="bottom-right" duration={3500} />
+        <AppearanceSettings />
+        <LocalToaster />
       </body>
     </html>
   );

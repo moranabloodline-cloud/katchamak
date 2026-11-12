@@ -24,6 +24,10 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
+      - name: Test local account settings
+        run: bun run tests/account-preferences.test.mjs
+      - name: Test desktop release checks
+        run: bun run tests/desktop-releases.test.mjs
       - name: Test application refresh
         run: bun run tests/application-updates.test.mjs
       - name: Test workspace synchronization and recovery

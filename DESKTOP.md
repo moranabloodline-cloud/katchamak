@@ -95,3 +95,15 @@ push više ne pokreće automatsku objavu na Sites. Postojeća objava ostaje dost
 
 Tehnička osnova: [Tauri sa Next.js](https://v2.tauri.app/start/frontend/nextjs/)
 i [Windows preduslovi](https://v2.tauri.app/start/prerequisites/).
+
+## Account Settings (0.2.4)
+
+Account meni otvara Profile, Appearance, Storage & Backup i About. Fotografija (PNG/JPG/WebP/GIF do 1 MB), prikazano ime i izgled čuvaju se samo u lokalnom WebView2 profilu. Pseudonim koristi postojeći defaultAuthor za nove projekte; postojeći autori u rukopisima se ne menjaju.
+
+Dark/Light i Small/Normal/Large primenjuju se klikom na Save. Zatvaranje bez Save odbacuje izmene tog taba. Svetla paleta ne menja korisničke korice ni boje u sadržaju beležaka.
+
+Storage podešavanja su u `%LOCALAPPDATA%\com.katchamak.desktop\storage-settings.json`. Podrazumevano je Documents/Katchamak; Browse bira početnu lokaciju u dijalogu kreiranja/uvoza novog projekta. Postojeći folderi se ne premeštaju. Save potvrđuje lokaciju i opciju backupa; folder izvornog koda/Git repozitorijumi odbijaju se.
+
+Automatic local backups je podrazumevano uključen. Zasebne verzije `project.json` čuvaju se u `%LOCALAPPDATA%\com.katchamak.desktop\backups\<hash-ID-a>` pri kreiranju i izmenama, uz deduplikaciju i najviše 20 kopija po projektu. Stara i nova verzija se obezbeđuju pre zamene rukopisa; greška backupa zaustavlja upis i ostavlja edit u recovery cache-u. Isključivanje ne briše postojeće kopije. `project.json.bak` ostaje sigurnosna prethodna verzija i kad je opcija isključena. Open backups folder otvara lokalni Explorer; obnoviti kopiju preko Dashboard Open. Profil, projekti i backup podaci nisu deo GitHub izvornog koda ili installera.
+
+About prikazuje verziju i lokalne novosti/licencne informacije. Check for updates jedino na klik poziva GitHub releases/latest bez autentifikacije, sa timeout-om. Privatni repozitorijum bez javnog feed-a prikazuje objašnjenje da se installer preuzme od dobavljača; nema automatske instalacije i nikakvi tokeni nisu ugrađeni. Offline neuspeh ne utiče na lokalni rad.

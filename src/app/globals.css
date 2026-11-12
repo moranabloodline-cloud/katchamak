@@ -188,3 +188,69 @@ body {
 body {
   font-family: Georgia, "Times New Roman", serif;
 }
+
+/* Account appearance: explicit light palette, preserving user-supplied cover and editor colors. */
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="light"] .kachamak-scroll::-webkit-scrollbar-thumb { background: #0003; }
+html[data-theme="light"] .kachamak-editor:empty::before { color: #777; }
+html[data-theme="light"] .kachamak-editor blockquote { color: #555; }
+html[data-theme="light"] [class~="bg-[#080808]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#090b0f]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#0a0c10]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#0c0906]"]:not([data-project-cover], [data-project-cover] *) { background-color: #eee5d7 !important; }
+html[data-theme="light"] [class~="bg-[#0c0e12]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#0c0f14]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#0d0d0d]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#10151d]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#151515]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#161616]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#181818]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#18181b]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#18202c]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#1b1b1b]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#211a10]"]:not([data-project-cover], [data-project-cover] *) { background-color: #eee5d7 !important; }
+html[data-theme="light"] [class~="bg-[#241c12]"]:not([data-project-cover], [data-project-cover] *) { background-color: #eee5d7 !important; }
+html[data-theme="light"] [class~="bg-[#27272b]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#2c2c31]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#303030]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
+html[data-theme="light"] [class~="bg-[#3a2c18]"]:not([data-project-cover], [data-project-cover] *) { background-color: #eee5d7 !important; }
+html[data-theme="light"] [class~="text-[#8d7548]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#a1a1aa]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#aaa]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#b09a72]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#b1b1b8]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#b4b4bb]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#b5b5bd]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#b7b7bf]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#b9b9c1]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#bbb]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#bcb8b0]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#bfae8c]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#bfbfbf]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#c9a55c]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#c9c9cf]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#cba457]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#ccc]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#ccccd1]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#d1ac60]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#d4d1c9]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#d9c394]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#dbc38d]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#ddd]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#dfb34f]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#e5e5e5]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#e7bc58]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#e7e7e9]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#e8bc55]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#e8c265]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#e9dfcb]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#eee7d8]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#f2ead9]"]:not([data-project-cover], [data-project-cover] *) { color: #393733 !important; }
+html[data-theme="light"] [class~="text-[#f3d589]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#f5d99d]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] [class~="text-[#fbe4a6]"]:not([data-project-cover], [data-project-cover] *) { color: #85601d !important; }
+html[data-theme="light"] :is([class~="bg-black/20"], [class~="bg-black/30"]) { background-color: #00000008; }
+html[data-theme="light"] :is([class~="bg-white/5"], [class~="bg-white/10"]) { background-color: #00000012; }
+html[data-theme="light"] [class*="border-white/"]:not([data-project-cover], [data-project-cover] *) { border-color: #0003; }
+html[data-theme="light"] :is([class~="text-white"], [class~="text-stone-100"], [class~="text-stone-200"], [class~="text-stone-300"]) { color: #37342f; }
+html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0000000c; }

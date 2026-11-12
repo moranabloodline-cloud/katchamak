@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { newerRelease, checkDesktopRelease } from "../src/lib/kachamak/desktop-releases.ts";
+assert(newerRelease("0.2.4", "v0.3.0"));
+assert(!newerRelease("0.2.4", "0.2.3"));
+assert(!newerRelease("0.2.4", "0.2.4"));
+assert(!newerRelease("0.2.4", "0.3.0-beta"));
+assert.match(await checkDesktopRelease("0.2.4", async () => new Response("", {status:404})), /No public update feed/);
+assert.match(await checkDesktopRelease("0.2.4", async () => Response.json({tag_name:"v0.2.5"})), /0.2.5 is available/);
+await assert.rejects(checkDesktopRelease("0.2.4", async () => new Response("", {status:500})));
+await assert.rejects(checkDesktopRelease("0.2.4", async () => { throw new Error("offline"); }));
+console.log("Desktop release comparison and offline/unavailable feed checks passed.");
