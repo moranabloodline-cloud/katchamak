@@ -7,6 +7,7 @@ import { watchApplicationUpdates } from "@/lib/kachamak/application-updates";
 export function ApplicationUpdates() {
   useEffect(() => {
     const current = process.env.NEXT_PUBLIC_APPLICATION_SOURCE_TREE;
+    if (!("__TAURI_INTERNALS__" in window)) return; // A web session keeps its folder permissions until the user reloads.
     if (process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP === "1" || process.env.NODE_ENV !== "production" || !current) return;
     let lastInteraction = Date.now();
     const activity = () => { lastInteraction = Date.now(); };

@@ -1,4 +1,5 @@
 "use client";
+import { projectStorage } from "./session-storage";
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -32,4 +33,4 @@ export const useLibraryPreferences = create<LibraryPreferences>()(persist((set) 
   setLayout: (layout) => set({ layout }),
   setSort: (sort) => set({ sort }),
   setGroup: (group) => set({ group }),
-}), { name: "kachamak-library-preferences-v1", version: 1, storage: createJSONStorage(() => localStorage) }));
+}), { name: "kachamak-library-preferences-v1", version: 1, storage: createJSONStorage(() => projectStorage) }));

@@ -1,6 +1,7 @@
 "use client";
 
 /** Project dialogs reuse the existing manuscript actions; the library owns navigation. */
+import { createWebCollection, createWebProject, prepareWebImport, importWebProject, flushWebLibrary, connectWebFolder } from "@/lib/kachamak/web-library";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, FileText, Calendar, MoreVertical } from "lucide-react";
 import { exportNovelJson, projectsSavedLocally, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
@@ -39,7 +40,7 @@ function relativeTime(ts: number): string {
 export function Dashboard() {
   useEffect(() => {
     // Browser storage is a recovery cache; native projects use their selected disk folders.
-    if (!projectsSavedLocally() && !saveProjectsLocally()) toast.error("Projects could not be saved. Export a JSON backup before refreshing.");
+    if (isDesktop() && !projectsSavedLocally() && !saveProjectsLocally()) toast.error("Projects could not be saved. Export a JSON backup before refreshing.");
   }, []);
   const novels = useKachamak((s) => s.novels);
   const openNovel = useKachamak((s) => s.openNovel);
@@ -52,6 +53,7 @@ export function Dashboard() {
   const renameCollection = useCollections((s) => s.renameCollection);
   const removeCollection = useCollections((s) => s.removeCollection);
   const setMembership = useCollections((s) => s.setMembership);
+  const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -70,10 +72,10 @@ export function Dashboard() {
     <DashboardLibrary
       novels={novels}
       onOpenProject={(id) => { if (isDesktop()) void openRecentProject(id).catch(error => toast.error(String(error))); else openNovel(id); }}
-      onOpenFile={isDesktop() ? () => { void openFileProject().catch(error => toast.error(String(error))); } : undefined}
+      onOpenFile={() => { void (isDesktop() ? openFileProject() : connectWebFolder()).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
       onCreateCollection={openNewCollection}
       onCreateProject={() => { setNewTitle(""); setNewAuthor(defaultAuthor); setCreateOpen(true); }}
-      onImport={() => fileRef.current?.click()}
+      onImport={() => { if (isDesktop() || selectedCollection) { fileRef.current?.click(); return; } void prepareWebImport(null).then(() => setImportOpen(true)).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
       onRenameCollection={(c) => { setCollectionName(c.name); setCollectionDialog(c.id); }}
       onDeleteCollection={setPendingDelete}
       onDeleteProject={setPendingProjectDelete}
@@ -91,10 +93,7 @@ export function Dashboard() {
               if (!id) return;
               if (destination) setMembership(destination, id, true);
             } else {
-              const result = importNovel(String(reader.result));
-              if (!result.ok) throw new Error(result.error ?? "Import failed.");
-              const id = useKachamak.getState().activeNovelId;
-              if (id && destination) setMembership(destination, id, true);
+              await importWebProject(String(reader.result), destination);
             }
             toast.success("Project imported from backup.");
           } catch (error) { toast.error(String(error)); }
@@ -102,6 +101,7 @@ export function Dashboard() {
         reader.onerror = () => toast.error("Could not read the backup file.");
         reader.readAsText(file);
       }} />
+      <Dialog open={importOpen} onOpenChange={setImportOpen}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>Import project</DialogTitle></DialogHeader><p>Your destination is selected. Choose a JSON backup to copy into a new project folder.</p><button className="rounded bg-amber-400 p-2 text-black" onClick={() => { setImportOpen(false); fileRef.current?.click(); }}>Choose JSON backup</button></DialogContent></Dialog>
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="border-white/10 bg-[#1b1b1b]">
           <DialogHeader><DialogTitle>Create a new project</DialogTitle></DialogHeader>
@@ -113,11 +113,11 @@ export function Dashboard() {
             try {
               let id: string | null;
               if (isDesktop()) id = await createFileProject(title, newAuthor.trim());
-              else { createNovel(title, newAuthor.trim()); id = useKachamak.getState().activeNovelId; }
+              else id = await createWebProject(title, newAuthor.trim(), selectedCollection);
               if (!id) return;
-              if (selectedCollection) setMembership(selectedCollection, id, true);
+              if (isDesktop() && selectedCollection) setMembership(selectedCollection, id, true);
               setCreateOpen(false);
-              toast.success(isDesktop() ? "Project folder created on your computer." : "Project created.");
+              toast.success("Project folder created on your computer.");
             } catch (error) { toast.error(String(error)); }
             finally { setCreating(false); }
           }}>
@@ -132,9 +132,9 @@ export function Dashboard() {
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader><form onSubmit={(event) => { event.preventDefault(); const name = collectionName.trim(); if (!name) return; if (collectionDialog === "new") { const id = addCollection(name, selectedCollection); if (id) setSelectedCollection(id, [id, ...(selectedCollection ? [selectedCollection] : [])]); } else if (collectionDialog) renameCollection(collectionDialog, name); setCollectionDialog(null); }}><Label htmlFor="collection-name">Name</Label><Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" /><DialogFooter className="mt-4"><button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button><button type="submit" disabled={creating} className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503]">Save</button></DialogFooter></form></DialogContent></Dialog>
+      <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader><form onSubmit={async (event) => { event.preventDefault(); const name = collectionName.trim(); if (!name) return; if (collectionDialog === "new") { let id: string | null; if (creating) return; setCreating(true); try { id = isDesktop() ? addCollection(name, selectedCollection) : await createWebCollection(name, selectedCollection); } catch (error) { if ((error as Error).name !== "AbortError") toast.error(String(error)); return; } finally { setCreating(false); } if (id) setSelectedCollection(id, [id, ...(selectedCollection ? [selectedCollection] : [])]); } else if (collectionDialog) renameCollection(collectionDialog, name); setCollectionDialog(null); }}><Label htmlFor="collection-name">Name</Label><Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" /><DialogFooter className="mt-4"><button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button><button type="submit" disabled={creating} className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503]">Save</button></DialogFooter></form></DialogContent></Dialog>
       <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete collection?</AlertDialogTitle><AlertDialogDescription>The collection will be removed. Its subcollections and projects will move to its parent location. Project contents will be preserved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingDelete) { const parentId = collections.find((c) => c.id === pendingDelete)?.parentId ?? null; removeCollection(pendingDelete); if (selectedCollection === pendingDelete) setSelectedCollection(parentId); } setPendingDelete(null); }}>Delete collection</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-      <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open) setPendingProjectDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>{isDesktop() ? "Remove from library: " : "Delete "}{pendingProjectDelete?.title}?</AlertDialogTitle><AlertDialogDescription>{isDesktop() ? "This removes the project from the recent-project library. Its folder and manuscripts remain on your computer." : "This permanently removes the project, all its notes and trash from this browser. Export a backup first if you want to keep it."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={async () => { if (pendingProjectDelete) { try { if (isDesktop()) await removeFileProject(pendingProjectDelete.id); else deleteNovel(pendingProjectDelete.id); collections.forEach((c) => setMembership(c.id, pendingProjectDelete.id, false)); toast.success(isDesktop() ? "Project removed from library. Its folder is preserved." : "Project deleted."); } catch (error) { toast.error(String(error)); } } setPendingProjectDelete(null); }}>{isDesktop() ? "Remove from library" : "Delete project"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open) setPendingProjectDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>{isDesktop() ? "Remove from library: " : "Delete "}{pendingProjectDelete?.title}?</AlertDialogTitle><AlertDialogDescription>{isDesktop() ? "This removes the project from the recent-project library. Its folder and manuscripts remain on your computer." : "This removes the project from the library. Its folder is moved to .katchamak-history beside its previous location for recovery."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={async () => { if (pendingProjectDelete) { try { if (isDesktop()) await removeFileProject(pendingProjectDelete.id); else deleteNovel(pendingProjectDelete.id); collections.forEach((c) => setMembership(c.id, pendingProjectDelete.id, false)); if (!isDesktop()) await flushWebLibrary(); toast.success(isDesktop() ? "Project removed from library. Its folder is preserved." : "Project archived on your computer."); } catch (error) { toast.error(String(error)); } } setPendingProjectDelete(null); }}>{isDesktop() ? "Remove from library" : "Delete project"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </DashboardLibrary>
   );
 }

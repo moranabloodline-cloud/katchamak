@@ -1,5 +1,6 @@
 "use client";
 
+import { WebFolderControls } from "./WebLibraryStorage";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppearancePreferences, saveAppearance, type Appearance } from "@/lib/kachamak/appearance-preferences";
@@ -104,7 +105,7 @@ export function AccountDialog({
     try {
       saveLocalProfile({ displayName: name.trim(), photo });
       setDefaultAuthor(draft.trim());
-      if (!saveProjectsLocally()) throw new Error("Could not persist author settings.");
+      if (isDesktop() && !saveProjectsLocally()) throw new Error("Could not persist author settings.");
       toast.success("Account settings saved locally.");
       onOpenChange(false);
     } catch { toast.error("Could not save settings. Check available local storage and try again."); }
@@ -150,8 +151,9 @@ export function AccountDialog({
               <DialogFooter><button type="button" disabled={!storageReady || saving || !location.trim()} className="rounded-full bg-[#eee] px-4 py-2 text-xs font-semibold text-[#222] hover:bg-white disabled:opacity-40" onClick={async () => { setSaving(true); try { await flushProjectFiles(); const settings = await invoke<{ default_project_location: string }>("set_storage_settings", { settings: { default_project_location: location.trim(), automatic_backups: backups } }); setLocation(displayPath(settings.default_project_location)); toast.success("Storage settings saved locally."); } catch (error) { toast.error(String(error)); } finally { setSaving(false); } }}>{saving ? "Saving…" : "Save"}</button></DialogFooter>
               <p className="text-xs leading-relaxed text-[#aaa]">New project dialogs start in this location. Automatic backups keep up to 20 local versions per project, separate from the application and GitHub.</p>
             </>}
-            {!isDesktop() && <p className="text-xs leading-relaxed text-[#aaa]">Folder selection and automatic file backups are available in the Windows desktop app. In the browser, use the project menu to export JSON backups to your computer.</p>}
+            {!isDesktop() && <p className="text-xs leading-relaxed text-[#aaa]">Your selected folders hold your projects. Use the controls below to reconnect or reload them, and the project menu to export JSON backups.</p>}
           </TabsContent>
+          {!isDesktop() && tab === "storage" && <WebFolderControls />}
           <TabsContent value="about" className="space-y-5 border-t border-white/[0.07] pt-6 text-sm">
             <div><h3 className="text-lg font-semibold">KATCHAMAK</h3><p className="mt-2 text-xs">Version {packageInfo.version}</p></div>
             <button type="button" disabled={checking} className={`${pill} w-full`} onClick={async () => { setChecking(true); setUpdateMessage("Checking for updates…"); try { setUpdateMessage(await checkDesktopRelease(packageInfo.version)); } catch { setUpdateMessage("Could not check for updates. Check your connection and try again. Your local work is available offline."); } finally { setChecking(false); } }}>{checking ? "Checking…" : "Check for updates"}</button>

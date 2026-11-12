@@ -1,3 +1,4 @@
+// Web adaptation of desktop 0.2.3: invalidate older remote application packages.
 const uiUri = (build) => "ui://kachamak/github-" + build + ".html";
 const studioTool = (resourceUri) => ({
   name: "open_novel_studio", title: "Open Kachamak",

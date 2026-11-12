@@ -24,6 +24,8 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
+      - name: Test folder rename and local library saving
+        run: bun run tests/web-library.test.mjs
       - name: Test local account settings
         run: bun run tests/account-preferences.test.mjs
       - name: Test desktop release checks

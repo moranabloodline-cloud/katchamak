@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
+import { flushWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/web-library";
 import { isDesktop, flushProjectFiles, importFileProject, useProjectFiles } from "@/lib/kachamak/project-files";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
@@ -131,6 +132,7 @@ function SettingsDialog({
   const importNovel = useKachamak((s) => s.importNovel);
   const novel = novels.find((n) => n.id === activeNovelId);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [importDestinationReady, setImportDestinationReady] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,10 +155,10 @@ function SettingsDialog({
           </button>
           <button
             type="button"
-            onClick={() => fileRef.current?.click()}
+            onClick={() => { if (isDesktop() || importDestinationReady) fileRef.current?.click(); else void prepareWebImport(null).then(() => setImportDestinationReady(true)).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
             className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5"
           >
-            <Upload className="h-4 w-4" /> Import backup
+            <Upload className="h-4 w-4" /> {isDesktop() ? "Import backup" : importDestinationReady ? "Choose JSON backup" : "Choose import destination"}
           </button>
           <input
             ref={fileRef}
@@ -169,16 +171,14 @@ function SettingsDialog({
               const reader = new FileReader();
               reader.onload = async () => {
                 if (isDesktop()) { try { const id = await importFileProject(String(reader.result)); if (id) toast.success("Project saved to its own folder."); } catch (error) { toast.error(String(error)); } return; }
-                const res = importNovel(String(reader.result));
-                if (res.ok) toast.success("Novel imported from backup.");
-                else toast.error(res.error ?? "Import failed.");
+                try { await importWebProject(String(reader.result), null); toast.success("Project imported to your folder."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
               };
               reader.readAsText(f);
               e.target.value = "";
             }}
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {isDesktop() ? "Projects are saved in their own folders on your computer. Export a JSON backup from" : "Everything is saved locally in this browser. Export a JSON backup from"}
+            {isDesktop() ? "Projects are saved in their own folders on your computer. Export a JSON backup from" : "Projects are saved in your selected folders. Export an additional JSON backup from"}
             time to time to keep it safe.
           </p>
         </div>
@@ -311,14 +311,7 @@ export function Workspace() {
                 title={isDesktop() && filePath ? `Save · ${filePath}` : "Save"}
                 onClick={async () => {
                   if (isDesktop()) { try { await flushProjectFiles(); toast.success("Saved to project file."); } catch (error) { toast.error(String(error)); } return; }
-                  if (saveProjectsLocally()) {
-                    toast.success(`Saved locally · ${new Date().toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}`);
-                  } else {
-                    toast.error("Could not save projects in this browser. Export a JSON backup before closing.", { duration: 10000 });
-                  }
+                  try { await flushWebLibrary(); toast.success("Saved to your project folders."); } catch (error) { toast.error(String(error)); }
                 }}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >

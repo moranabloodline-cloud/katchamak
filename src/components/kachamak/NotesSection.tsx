@@ -110,7 +110,7 @@ function SaveInfoButton() {
         <p className="mb-2 font-semibold text-foreground">Save information</p>
         <dl className="space-y-1 text-muted-foreground">
           <div className="flex justify-between gap-2">
-            <dt>{isDesktop() ? "Project files:" : "Browser storage:"}</dt>
+            <dt>{"Project folders:"}</dt>
             <dd className={saved ? "text-foreground" : "text-red-400"}>
               {saved ? "up to date" : "not verified"}
             </dd>
@@ -120,8 +120,8 @@ function SaveInfoButton() {
             <dd>export manually</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt>{isDesktop() ? "Previous save:" : "Vault:"}</dt>
-            <dd>{isDesktop() ? "project.json.bak" : "not available"}</dd>
+            <dt>{"Previous save:"}</dt>
+            <dd>{"project.json.bak"}</dd>
           </div>
         </dl>
         {!saved && <p className="mt-2 text-red-400">Try Save and export a JSON backup before closing.</p>}
