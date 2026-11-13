@@ -154,8 +154,38 @@ const topFile = await findFile(a, n => n === 'project.json');
 assert.ok(topFile);
 assert.equal(pickCount,countBefore,'top-level project also uses the existing vault');
 assert.ok(useKachamak.getState().novels.some(n=>n.id===topProject));
+// Load the same on-disk library through a directory input, with no writable handles.
+const previewFiles = [];
+async function collectPreview(dir, prefix = 'drive-a/') {
+  for (const entry of await fs.readdir(dir, {withFileTypes:true})) {
+    if (entry.name === '.katchamak-history') continue;
+    const location = path.join(dir, entry.name), relative = prefix + entry.name;
+    if (entry.isDirectory()) await collectPreview(location, relative + '/');
+    else { const file = new File([await fs.readFile(location)], entry.name); Object.defineProperty(file, 'webkitRelativePath', {value: relative}); previewFiles.push(file); }
+  }
+}
+await collectPreview(a);
+const locationsBefore = [...records.entries()];
+await web.loadPreviewLibrary(previewFiles);
+assert.equal(web.useWebLibrary.getState().preview, true);
+assert.equal(useKachamak.getState().novels.length, 2);
+assert.ok(useCollections.getState().collections.some(c=>c.id===first));
+useKachamak.getState().openNovel(novelId);
+const diskNote = await findFile(a,n=>n.endsWith('.md'));
+const originalDiskText = await fs.readFile(diskNote, 'utf8');
+useKachamak.getState().updateNode('binder',noteId,{content:'<p>Preview-only edit</p>'});
+await web.flushWebLibrary();
+assert.equal(web.useWebLibrary.getState().previewDirty,true);
+assert.equal(await fs.readFile(diskNote,'utf8'), originalDiskText, 'preview edits never overwrite originals');
+await web.createWebCollection('Preview collection',null);
+assert.deepEqual([...records.entries()],locationsBefore,'preview does not replace remembered writable handles or persist manuscript contents');
+await web.initializeWebLibrary();
+assert.equal(web.useWebLibrary.getState().preview,false);
+assert.ok(!useCollections.getState().collections.some(c=>c.name==='Preview collection'));
+assert.doesNotMatch(useKachamak.getState().novels.find(n=>n.id===novelId).sections.binder[0].content,/Preview-only/);
 identity = null;
 await assert.rejects(web.initializeWebLibrary(), /Sign in/);
 assert.equal(web.useWebLibrary.getState().ready, false, 'signed-out users cannot open the library');
 await fs.rm(temp, { recursive: true, force: true });
 console.log('Folder library: one vault per account, nested folders, Markdown, attachments, disk reload, failure retry, moves, removal, privacy and permission renewal passed.');
+

@@ -1,9 +1,10 @@
 'use client';
 import { create } from 'zustand';
+import { PreviewFolder, previewFolder } from './preview-folder';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { useKachamak, isUsableBackup, normalizeNovelSections } from './store';
+import { useKachamak, exportNovelJson, isUsableBackup, normalizeNovelSections } from './store';
 import { useCollections, type Collection } from './collections-store';
 import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
@@ -16,7 +17,7 @@ type Root = { id: string; kind: 'collection' | 'project'; handle: Handle; parent
 type Location = { id: string; kind: Root['kind']; handle: DiskFolder; parent: DiskFolder; name: string; key: string; rootId: string };
 type NoteFile = { path: string; markdown: string };
 type Document = { format: string; version: number; storeVersion: number; novel: Novel; webNotes?: Record<string, NoteFile> };
-export const useWebLibrary = create<{ rootName: string; email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; reconnect: boolean; supported: boolean }>(() => ({ rootName: '', email: '', ready: false, busy: false, pending: false, error: null, reconnect: false, supported: false }));
+export const useWebLibrary = create<{ preview: boolean; previewDirty: boolean; rootName: string; email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; reconnect: boolean; supported: boolean }>(() => ({ preview: false, previewDirty: false, rootName: '', email: '', ready: false, busy: false, pending: false, error: null, reconnect: false, supported: false }));
 let vault: Handle | null = null;
 let roots: Root[] = [], locations = new Map<string, Location>();
 let expected = new Map<string, string | null>();
@@ -155,8 +156,8 @@ export async function initializeWebLibrary(reconnect = false) {
     useWebLibrary.setState({ email: identity.email ?? '' });
     const supported = 'showDirectoryPicker' in window;
     useWebLibrary.setState({ supported, busy: true, error: null });
-    if (!supported) { useWebLibrary.setState({ busy: false, ready: false }); return; }
-    vault = (await registry())[0]?.handle ?? null;
+    useWebLibrary.setState({ preview: !supported, previewDirty: false });
+    vault = supported ? (await registry())[0]?.handle ?? null : new PreviewFolder('Preview library');
     useWebLibrary.setState({ rootName: vault?.name ?? '' });
     if (vault) {
       const permission = reconnect ? await vault.requestPermission({ mode: 'readwrite' }) : await vault.queryPermission({ mode: 'readwrite' });
@@ -170,7 +171,7 @@ export async function initializeWebLibrary(reconnect = false) {
         const a = account(); const author = useKachamak.getState().defaultAuthor;
         if (a.author !== author) localStorage.setItem(accountKey(), JSON.stringify({ ...a, author }));
         if (snapshot() === savedSnapshot) return;
-        useWebLibrary.setState({ pending: true });
+        useWebLibrary.setState({ pending: true, ...(useWebLibrary.getState().preview ? { previewDirty: true } : {}) });
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; void flushWebLibrary().catch(setError); }, 500);
       };
@@ -216,6 +217,21 @@ export async function importWebProject(json: string, collectionId: string | null
   } finally { applying = false; }
   await flushWebLibrary();
 }
+export async function loadPreviewLibrary(files: File[]) {
+  if (!signedInId) throw new Error('Sign in first.');
+  if (!files.length) return;
+  if (!useWebLibrary.getState().preview && useWebLibrary.getState().ready) await flushWebLibrary();
+  if (running) await running.catch(() => {});
+  if (timer) { clearTimeout(timer); timer = null; }
+  const previous = { vault, roots, locations, expected, savedSnapshot };
+  vault = await previewFolder(files);
+  try { await loadAll(); useWebLibrary.setState({ preview: true, previewDirty: false, rootName: vault.name }); }
+  catch (error) { vault = previous.vault; roots = previous.roots; locations = previous.locations; expected = previous.expected; savedSnapshot = previous.savedSnapshot; throw error; }
+}
+export function exportPreviewChanges() {
+  for (const novel of useKachamak.getState().novels) exportNovelJson(novel);
+  useWebLibrary.setState({ previewDirty: false });
+}
 export async function chooseWebLibraryRoot() {
   const handle = await pickParent(); // Keep the picker on the button's user gesture.
   if (running) await running;
@@ -225,7 +241,7 @@ export async function chooseWebLibraryRoot() {
   try {
     await loadAll();
     await registry([{ id: 'vault', kind: 'collection', handle, parent: handle, name: handle.name }]);
-    useWebLibrary.setState({ rootName: handle.name });
+    useWebLibrary.setState({ rootName: handle.name, preview: false, previewDirty: false });
   } catch (error) {
     vault = previous.vault; roots = previous.roots; locations = previous.locations; expected = previous.expected; savedSnapshot = previous.savedSnapshot;
     applying = true; useKachamak.setState(previous.state); useCollections.setState(previous.collections); applying = false;
@@ -239,6 +255,7 @@ export const connectWebFolder = chooseWebLibraryRoot;
  * Do not reinitialize the library: that would discard the open editor's unsaved text.
  */
 export async function saveWebLibrary(): Promise<void> {
+  if (useWebLibrary.getState().preview) { await flushWebLibrary(); exportPreviewChanges(); return; }
   try {
     const permissions = vault ? [await vault.queryPermission({ mode: 'readwrite' }) === 'granted' ? 'granted' : await vault.requestPermission({ mode: 'readwrite' })] : [];
     if (permissions.some(permission => permission !== 'granted')) {
@@ -405,5 +422,6 @@ export async function addProjectAttachment(file: File) {
   try { await stream.write(file); await stream.close(); } catch (error) { await stream.abort?.(); throw error; }
 }
 registerFolderStorage(() => useWebLibrary.getState().ready && !useWebLibrary.getState().pending && !useWebLibrary.getState().error && snapshot() === savedSnapshot, flushWebLibrary);
+
 
 

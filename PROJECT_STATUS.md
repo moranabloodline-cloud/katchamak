@@ -1,6 +1,8 @@
 # PROJECT_STATUS — Kachamak
 
 > **2026-11-13 — Prijava:** Sites zahteva ChatGPT prijavu. Lokalni folderi vezani su za platformski user ID na tom browseru i uređaju. Novi nalog počinje prazno; stari anonimni profil se ne prisvaja. Account prikazuje email i odjavu nakon čuvanja. Testovi proveravaju anonimni pristup i izolaciju dva naloga.
+> **2026-11-13 — Ista biblioteka u Preview-u:** dodat Load library for Preview preko directory inputa. Fajlovi se čitaju lokalno u memorijsku radnu kopiju kroz isti loader i isti UI; nema upload-a ili browser perzistencije rukopisa. U Preview-u izmene idu samo u memoriju, Save izvozi project JSON backup-e i status to jasno prikazuje; beforeunload štiti neizvezene izmene. Normalni vault handle i fajlovi ostaju netaknuti. Test pokriva učitavanje realne biblioteke, iste kolekcije/projekte, uređivanje, nezavisnost diska i povratak normalnom root-u.
+
 > **2026-11-13 — Jedan library root po nalogu:** Account → Storage nudi Choose library root i prikazuje naziv foldera. Bira se jednom; sve nove kolekcije i projekti se automatski gnezde u vault. Novi registry ključ po nalogu čuva samo root handle; stari višestruki koreni ostaju sačuvani ali se ne prisvajaju. Save koristi postojeću dozvolu i traži obnovu samo kada browser više ne daje pristup; ne otvara ponovo picker. Testovi proveravaju više kolekcija i root projekat uz jedan izbor, reload, dozvole, premeštanje, privatnost i odvojene naloge.
 
 > **2026-11-13 — Account Settings i Admin:** Profile sa avatarom i imenom, Membership sa serverskom licencom, Security preko ChatGPT prijave, Notifications sa sačuvanim preferencijama bez email slanja, Storage. Admin određen serverskim KATCHAMAK_ADMIN_EMAIL (vlasnik Sites-a), member nema admin API pristup. D1 čuva isključivo profile, licence i audit, nikada rukopise ili lokalne putanje. Admin može dodeliti lifetime/vremensku licencu po emailu, opozvati licencu, suspendovati/vratiti pristup. Vlasnik je zaštićen. Dodate schema-only Drizzle migracije i testovi autorizacije, CSRF-a, licenci i izolacije naloga. Naplata i automatske pretplate još nisu uključene.
@@ -622,5 +624,6 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - Zamenjen raniji Dashboard help dijalog panelom HelpCenter, vezanim za postojeće Help dugme. Tamna podloga, zaobljen okvir, žute ikonice, grupisane stavke i tipografija prate referencu.
 - Lokalna pretraga filtrira naslove, opise i tekst članaka. Svih devet stavki imaju lokalni sadržaj; About prikazuje verziju iz package.json. Nije izmišljena adresa podrške niti se bilo šta šalje drugim servisima.
 - Provereno u izolovanoj Windows aplikaciji uz blokiranu mrežu: otvaranje, vizuelni raspored svih stavki, pretraga keyboard, otvaranje članka Keyboard Shortcuts i zatvaranje Escape tasterom. TypeScript i statički build prolaze; sledi standardna završna provera, commit/push i installer.
+
 
 

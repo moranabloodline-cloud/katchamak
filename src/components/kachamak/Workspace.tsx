@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
-import { saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/web-library";
+import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/web-library";
 import { isDesktop, flushProjectFiles, importFileProject, useProjectFiles } from "@/lib/kachamak/project-files";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
@@ -311,7 +311,7 @@ export function Workspace() {
                 title={isDesktop() && filePath ? `Save · ${filePath}` : "Save"}
                 onClick={async () => {
                   if (isDesktop()) { try { await flushProjectFiles(); toast.success("Saved to project file."); } catch (error) { toast.error(String(error)); } return; }
-                  try { await saveWebLibrary(); toast.success("Saved to your project folders."); } catch (error) { toast.error(String(error)); }
+                  try { await saveWebLibrary(); toast.success(useWebLibrary.getState().preview ? "Preview backups exported." : "Saved to your project folders."); } catch (error) { toast.error(String(error)); }
                 }}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
@@ -362,4 +362,5 @@ export function Workspace() {
     </div>
   );
 }
+
 
