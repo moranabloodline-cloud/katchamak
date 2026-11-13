@@ -487,6 +487,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
+  const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const updateNode = useKachamak((s) => s.updateNode);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
@@ -634,7 +635,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
           type="button"
           aria-label="Add note"
           title="Add note"
-          onClick={() => addNode(section, null, "doc")}
+          onClick={() => addNode(section, selectedNodeId && findNode(roots, selectedNodeId) ? selectedNodeId : null, "doc")}
           className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
           <SquarePlus className="h-4 w-4" />

@@ -51,7 +51,7 @@ export function syncWorkspace(cwd, { publish = false, checks, quietMs = 30000, n
     if (!status && local === remote) return save({ busy: false, status: "up_to_date", remote });
     if (state.failedCommit === local && !status && now - (state.failedAt ?? 0) < 60000) return save({ busy: false, status: "retry_pending", remote });
     const commands = checks ?? [
-      ["bun", "run", "typecheck"], ["bun", "run", "tests/cloud-library.test.mjs"], ["bun", "run", "tests/account-auth.test.mjs"], ["bun", "run", "tests/rehydration.test.mjs"], ["bun", "run", "tests/library.test.mjs"],
+      ["bun", "run", "typecheck"], ["bun", "run", "tests/note-tree-add.test.mjs"], ["bun", "run", "tests/cloud-library.test.mjs"], ["bun", "run", "tests/account-auth.test.mjs"], ["bun", "run", "tests/rehydration.test.mjs"], ["bun", "run", "tests/library.test.mjs"],
       ["bun", "run", "tests/release-store.test.mjs"], ["bun", "run", "tests/application-updates.test.mjs"],
     ];
     const run = (command) => { const result = spawnSync(command[0], command.slice(1), { cwd, stdio: "inherit", env: process.env }); if (result.status !== 0) throw new Error(`${command.join(" ")} failed.`); };
