@@ -16,7 +16,8 @@ type Root = { id: string; kind: 'collection' | 'project'; handle: Handle; parent
 type Location = { id: string; kind: Root['kind']; handle: DiskFolder; parent: DiskFolder; name: string; key: string; rootId: string };
 type NoteFile = { path: string; markdown: string };
 type Document = { format: string; version: number; storeVersion: number; novel: Novel; webNotes?: Record<string, NoteFile> };
-export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; reconnect: boolean; supported: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, reconnect: false, supported: false }));
+export const useWebLibrary = create<{ rootName: string; email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; reconnect: boolean; supported: boolean }>(() => ({ rootName: '', email: '', ready: false, busy: false, pending: false, error: null, reconnect: false, supported: false }));
+let vault: Handle | null = null;
 let roots: Root[] = [], locations = new Map<string, Location>();
 let expected = new Map<string, string | null>();
 let running: Promise<void> | null = null, initializing: Promise<void> | null = null;
@@ -44,7 +45,7 @@ async function registry(write?: Root[]) {
   });
   try { return await new Promise<Root[]>((resolve, reject) => {
     const tx = db.transaction('accounts', write ? 'readwrite' : 'readonly');
-    const req = write ? tx.objectStore('accounts').put(write, a.id) : tx.objectStore('accounts').get(a.id);
+    const req = write ? tx.objectStore('accounts').put(write, a.id + ':vault-v1') : tx.objectStore('accounts').get(a.id + ':vault-v1');
     let result: Root[] = [];
     req.onsuccess = () => { result = write ?? req.result ?? []; };
     tx.oncomplete = () => resolve(result); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
@@ -96,7 +97,22 @@ async function loadProject(loc: Location): Promise<Novel> {
   }
   return novel;
 }
+async function vaultRoots(): Promise<Root[]> {
+  const result: Root[] = [];
+  if (!vault) return result;
+  for await (const child of vault.values()) {
+    if (child.kind !== 'directory' || child.name.startsWith('.')) continue;
+    const project = await readText(child, 'project.json');
+    const marker = project ?? await readText(child, '.collection.json');
+    if (!marker) continue;
+    const meta = JSON.parse(marker), id = project ? (meta.novel ?? meta).id : meta.id;
+    if (typeof id !== 'string') throw new Error('Invalid library folder: ' + child.name);
+    result.push({ id, kind: project ? 'project' : 'collection', handle: child as Handle, parent: vault, name: child.name });
+  }
+  return result;
+}
 async function loadAll() {
+  roots = await vaultRoots();
   const nextLocations = new Map<string, Location>(), collections: Collection[] = [], novels: Novel[] = [];
   expected = new Map();
   async function scan(loc: Location, parentId: string | null) {
@@ -140,9 +156,10 @@ export async function initializeWebLibrary(reconnect = false) {
     const supported = 'showDirectoryPicker' in window;
     useWebLibrary.setState({ supported, busy: true, error: null });
     if (!supported) { useWebLibrary.setState({ busy: false, ready: false }); return; }
-    roots = await registry();
-    for (const root of roots) {
-      const permission = reconnect ? await root.parent.requestPermission({ mode: 'readwrite' }) : await root.parent.queryPermission({ mode: 'readwrite' });
+    vault = (await registry())[0]?.handle ?? null;
+    useWebLibrary.setState({ rootName: vault?.name ?? '' });
+    if (vault) {
+      const permission = reconnect ? await vault.requestPermission({ mode: 'readwrite' }) : await vault.queryPermission({ mode: 'readwrite' });
       if (permission !== 'granted') { useWebLibrary.setState({ busy: false, reconnect: true, ready: false }); return; }
     }
     await loadAll();
@@ -168,29 +185,15 @@ async function pickParent(): Promise<Handle> {
   try { return await picker.call(window, { mode: 'readwrite' }); }
   catch (error) { if (['NotAllowedError', 'SecurityError'].includes((error as Error).name)) throw new Error('Folder access was blocked. Open Katchamak directly in a desktop Chrome or Edge tab and allow access to the selected folder.'); throw error; }
 }
-async function attachRoot(id: string, kind: Root['kind'], title: string, parent?: Handle, novel?: Novel) {
-  parent ??= await pickParent();
-  const name = folderName(title, id);
-  const handle = await parent.getDirectoryHandle(name, { create: true }) as Handle;
-  const root: Root = { id, kind, name, handle, parent };
-  if (kind === "collection") await writeText(handle, ".collection.json", JSON.stringify({ id, name: title }, null, 2));
-  else if (novel) await writeText(handle, "project.json", JSON.stringify({ format: "katchamak-project", version: 1, storeVersion: 7, novel }, null, 2));
-  roots = [...roots, root]; await registry(roots);
-  return root;
-}
+async function ensureVault() { if (!vault) await chooseWebLibraryRoot(); }
 export async function createWebCollection(name: string, parentId: string | null) {
-  if (!parentId) {
-    const id = noteId();
-    const root = await attachRoot(id, 'collection', name);
-    await writeText(root.handle, '.collection.json', JSON.stringify({ id, name }, null, 2));
-    useCollections.setState(s => ({ collections: [...s.collections, { id, name, parentId: null, projectIds: [], createdAt: Date.now(), updatedAt: Date.now() }] }));
-    await flushWebLibrary(); return id;
-  }
-  const id = useCollections.getState().addCollection(name, parentId); await flushWebLibrary(); return id;
+  await ensureVault();
+  const id = useCollections.getState().addCollection(name, parentId);
+  await flushWebLibrary(); return id;
 }
 export async function createWebProject(title: string, author: string, collectionId: string | null) {
   const novel = newNovel(title, author);
-  if (!collectionId) await attachRoot(novel.id, 'project', title, undefined, novel);
+  await ensureVault();
   applying = true;
   try {
     useKachamak.setState(s => ({ novels: [...s.novels, novel], activeNovelId: novel.id, activeTab: 'binder', selectedNodeId: null, paneAId: null, paneBId: null }));
@@ -198,41 +201,46 @@ export async function createWebProject(title: string, author: string, collection
   } finally { applying = false; }
   await flushWebLibrary(); return novel.id;
 }
-/** Pick destination on the Import button's user gesture; import file contents later. */
-let importParent: Handle | undefined;
-export async function prepareWebImport(collectionId: string | null) { importParent = collectionId ? undefined : await pickParent(); }
+/** Import uses the account's existing vault. Only the first use chooses a root. */
+export async function prepareWebImport(_collectionId: string | null) { await ensureVault(); }
 export async function importWebProject(json: string, collectionId: string | null) {
   const input = JSON.parse(json); const value = input?.format === 'katchamak-project' ? input.novel : input;
   if (!isUsableBackup(value)) throw new Error('Not a Katchamak project.');
   normalizeNovelSections(value);
   const novel = { ...value, id: noteId() } as Novel;
-  if (!collectionId) { if (!importParent) throw new Error('Select a destination folder first.'); await attachRoot(novel.id, 'project', novel.title, importParent, novel); }
+  await ensureVault();
   applying = true;
   try {
     useKachamak.setState(s => ({ novels: [...s.novels, novel], activeNovelId: novel.id, selectedNodeId: null }));
     if (collectionId) useCollections.getState().setMembership(collectionId, novel.id, true);
-  } finally { applying = false; importParent = undefined; }
+  } finally { applying = false; }
   await flushWebLibrary();
 }
-export async function connectWebFolder() {
-  const handle = await pickParent();
-  const raw = await readText(handle, 'project.json');
-  const meta = raw ? JSON.parse(raw) : JSON.parse(await readText(handle, '.collection.json') ?? '{}');
-  const id = raw ? (meta.novel ?? meta).id : meta.id ?? noteId();
-  if (roots.some(r => r.id === id) || locations.has(id)) throw new Error('This folder is already in your library.');
-  await flushWebLibrary();
-  const previous = roots;
-  roots = [...roots, { id, kind: raw ? 'project' : 'collection', handle, parent: handle, name: handle.name }];
-  try { await loadAll(); await registry(roots); }
-  catch (error) { roots = previous; throw error; }
+export async function chooseWebLibraryRoot() {
+  const handle = await pickParent(); // Keep the picker on the button's user gesture.
+  if (running) await running;
+  if (useWebLibrary.getState().ready) await flushWebLibrary();
+  const previous = { vault, roots, locations, expected, savedSnapshot, state: useKachamak.getState(), collections: useCollections.getState() };
+  vault = handle;
+  try {
+    await loadAll();
+    await registry([{ id: 'vault', kind: 'collection', handle, parent: handle, name: handle.name }]);
+    useWebLibrary.setState({ rootName: handle.name });
+  } catch (error) {
+    vault = previous.vault; roots = previous.roots; locations = previous.locations; expected = previous.expected; savedSnapshot = previous.savedSnapshot;
+    applying = true; useKachamak.setState(previous.state); useCollections.setState(previous.collections); applying = false;
+    throw error;
+  }
 }
+// Dashboard Open and Account Choose both select the single library root.
+export const connectWebFolder = chooseWebLibraryRoot;
 
 /** Called directly by Save/Retry so the browser can renew access on a user gesture.
  * Do not reinitialize the library: that would discard the open editor's unsaved text.
  */
 export async function saveWebLibrary(): Promise<void> {
   try {
-    const permissions = await Promise.all(roots.map(root => root.parent.requestPermission({ mode: 'readwrite' })));
+    const permissions = vault ? [await vault.queryPermission({ mode: 'readwrite' }) === 'granted' ? 'granted' : await vault.requestPermission({ mode: 'readwrite' })] : [];
     if (permissions.some(permission => permission !== 'granted')) {
       throw new Error('Folder access was not allowed. Allow access, then choose Retry save. Your unsaved changes are still open.');
     }
@@ -286,7 +294,6 @@ async function refreshFolderLocations() {
     await scan({ id: root.id, kind: root.kind, handle, parent: root.parent, name: handle.name, key: root.id + '/' + handle.name, rootId: root.id });
   }
   for (const id of locations.keys()) if (!fresh.has(id)) throw new Error('A project folder is missing. Restore it before saving. Current edits are preserved.');
-  await registry(refreshed);
   roots = refreshed; locations = fresh;
 }
 async function saveSnapshot() {
@@ -310,8 +317,8 @@ async function saveSnapshot() {
     const previous = old.get(id), root = rootFor(id);
     const parentLoc = parentId ? next.get(parentId) : undefined;
     if (parentId && !parentLoc) throw new Error('Invalid collection hierarchy.');
-    if (!parentLoc && !root && !previous) throw new Error('Select a location for the top-level item.');
-    const parent = parentLoc?.handle ?? root?.parent ?? promotedParent(previous!);
+    if (!vault) throw new Error('Choose your library root first.');
+    const parent = parentLoc?.handle ?? vault ?? root?.parent ?? promotedParent(previous!);
     // An attached existing folder may not grant access to its parent: keep that root in place.
     const attached = root && root.parent === root.handle;
     const name = previous?.name ?? (attached ? root.name : folderName(title, id));
@@ -364,7 +371,6 @@ async function saveSnapshot() {
       expected.delete(token);
     }
   }
-  await registry(nextRoots);
   // Copy succeeded and the location registry is durable before retiring old folders.
   const obsolete = [...old.values()].filter(loc => !next.has(loc.id) || next.get(loc.id)!.key !== loc.key);
   for (const loc of obsolete.filter(loc => !obsolete.some(parent => parent.id !== loc.id && loc.key.startsWith(parent.key + '/')))) {
@@ -399,4 +405,5 @@ export async function addProjectAttachment(file: File) {
   try { await stream.write(file); await stream.close(); } catch (error) { await stream.abort?.(); throw error; }
 }
 registerFolderStorage(() => useWebLibrary.getState().ready && !useWebLibrary.getState().pending && !useWebLibrary.getState().error && snapshot() === savedSnapshot, flushWebLibrary);
+
 

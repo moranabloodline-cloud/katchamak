@@ -28,11 +28,11 @@ const groups: { title?: string; articles: Article[] }[] = [
 ];
 
 const webParagraphs: Record<string, string[]> = {
-  "getting-started": ["Create a top-level Collection or Project and choose where its folder should be created. Each top-level item may be on a different drive or location.", "Inside a collection, new projects and subcollections are saved inside its folder automatically, without asking for another location. Use Open to connect an existing collection or project folder."],
+  "getting-started": ["Choose your library root once in Account → Storage. This account remembers the folder on this browser and device.", "All collections and projects are created inside your library root automatically. Each project has its own folder, Markdown notes and files."],
   saving: ["Your account remembers folder permissions and locations in this browser, but not manuscripts or file contents. Sites hosts only the application. Collection folders contain subcollections and project folders.", "Each project has project.json for structure and rich-text metadata, Notes for Markdown notes, and Files for attachments. Edits are saved automatically to those folders. Save finishes pending writes.", "Keep a separate backup of your folders. project.json.bak retains the preceding project document. Moves and removals preserve retired folders in .katchamak-history. If saving fails, keep the page open and export a backup."],
   recovery: ["Use Open to connect a collection folder or a project folder containing project.json. Your account remembers the selection. The browser may ask you to allow access again after reopening.", "Import copies a JSON backup into the current collection. At the top level, choose its destination first. The original backup remains unchanged.", "Markdown notes are read when folders are opened. After editing files outside the app, save pending app changes first, then use Account → Reload folders. Conflicting external changes stop the save so they are not silently overwritten."],
   troubleshooting: ["Use desktop Chrome or Edge for direct folder access. Other browsers may not support reading and writing local folders.", "If the browser asks to reconnect, allow access to the remembered folders. No need to select their locations again. A different browser or cleared browser data requires connecting your existing folders again.", "Keep your drives connected while writing. If a folder was moved or renamed outside the app and cannot be opened, reconnect it with Open. Export any unsaved edits before reloading."],
-  "whats-new": ["The web application uses the updated 0.2.3 interface, including the searchable Help Center, project library, editor and Inspector.", "Folder-backed libraries: choose locations once for top-level collections and projects. Nested items are created inside their parent's folder. Your account remembers locations; content stays on your device."],
+  "whats-new": ["The web application uses the updated 0.2.3 interface, including the searchable Help Center, project library, editor and Inspector.", "One library root per account: choose once and create all collections and projects inside it. Content stays on your device."],
   about: ["Katchamak is a writing workspace with a project library, Binder, Codex, shared editor and Inspector.", `Version ${packageInfo.version} · Web. Sites hosts the empty application. Manuscripts, Markdown notes and attachments stay in your selected folders. Your local account remembers locations on this browser.`],
 };
 
@@ -71,3 +71,4 @@ export function HelpCenter() {
     </PopoverContent>
   </Popover>;
 }
+

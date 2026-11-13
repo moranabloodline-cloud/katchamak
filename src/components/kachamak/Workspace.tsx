@@ -158,7 +158,7 @@ function SettingsDialog({
             onClick={() => { if (isDesktop() || importDestinationReady) fileRef.current?.click(); else void prepareWebImport(null).then(() => setImportDestinationReady(true)).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
             className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5"
           >
-            <Upload className="h-4 w-4" /> {isDesktop() ? "Import backup" : importDestinationReady ? "Choose JSON backup" : "Choose import destination"}
+            <Upload className="h-4 w-4" /> {isDesktop() ? "Import backup" : importDestinationReady ? "Choose JSON backup" : "Import into library"}
           </button>
           <input
             ref={fileRef}
@@ -362,3 +362,4 @@ export function Workspace() {
     </div>
   );
 }
+
