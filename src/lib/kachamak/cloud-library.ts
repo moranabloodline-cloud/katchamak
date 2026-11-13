@@ -2,18 +2,25 @@
 import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections } from './store';
 import { useCollections, type Collection } from './collections-store';
+import { findNode } from './utils';
+import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
 import type { Novel, ViewMode } from './types';
 import { registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 
-type Snapshot = { novels: Novel[]; collections: Collection[]; view?: ViewMode };
+type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
+type Snapshot = { novels: Novel[]; collections: Collection[]; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
 export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, conflict: false }));
 let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
-const snapshot = () => JSON.stringify({ novels: useKachamak.getState().novels, collections: useCollections.getState().collections, view: useKachamak.getState().view });
+const snapshot = () => {
+  const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
+  const {selectedCollection, expanded} = useLibraryPreferences.getState();
+  return JSON.stringify({novels, collections: useCollections.getState().collections, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
+};
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
 async function api(path: string, init?: RequestInit) {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init });
@@ -26,8 +33,24 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
   data.snapshot.novels.forEach(normalizeNovelSections);
   const active = useKachamak.getState().activeNovelId;
   const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list'].includes(data.snapshot.view ?? '') ? { view: data.snapshot.view! } : {};
+  const navigation: Partial<Navigation> = {};
+  if (!useWebLibrary.getState().ready && data.snapshot.navigation) {
+    const saved = data.snapshot.navigation;
+    const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
+    const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
+    navigation.activeNovelId = novel?.id ?? null;
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','trash'].includes(saved.activeTab) ? saved.activeTab : 'binder';
+    navigation.selectedNodeId = note(saved.selectedNodeId);
+    navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);
+    navigation.activePane = saved.activePane === 'b' ? 'b' : 'a';
+  }
+  if (!useWebLibrary.getState().ready && data.snapshot.location) {
+    const location = data.snapshot.location;
+    const exists = (id: string) => data.snapshot.collections.some(c => c.id === id);
+    useLibraryPreferences.setState({selectedCollection: location.selectedCollection && exists(location.selectedCollection) ? location.selectedCollection : null, expanded: Array.isArray(location.expanded) ? location.expanded.filter(exists) : []});
+  }
   applying = true;
-  try { useKachamak.setState({ ...restoredView, novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null }); useCollections.setState({ collections: data.snapshot.collections }); }
+  try { useKachamak.setState({ ...restoredView, novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null, ...navigation }); useCollections.setState({ collections: data.snapshot.collections }); }
   finally { applying = false; }
   revision = data.revision; saved = snapshot();
   useWebLibrary.setState({ ready: true, busy: false, pending: false, error: null, conflict: false });
@@ -51,7 +74,7 @@ export async function initializeWebLibrary() {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
-      useKachamak.subscribe(changed); useCollections.subscribe(changed);
+      useKachamak.subscribe(changed); useCollections.subscribe(changed); useLibraryPreferences.subscribe(changed);
     }
   })().catch(error => { fail(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
