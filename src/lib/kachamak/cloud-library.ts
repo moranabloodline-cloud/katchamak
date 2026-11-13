@@ -3,17 +3,17 @@ import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections } from './store';
 import { useCollections, type Collection } from './collections-store';
 import { newNovel } from './seed';
-import type { Novel } from './types';
+import type { Novel, ViewMode } from './types';
 import { registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 
-type Snapshot = { novels: Novel[]; collections: Collection[] };
+type Snapshot = { novels: Novel[]; collections: Collection[]; view?: ViewMode };
 export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, conflict: false }));
 let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
-const snapshot = () => JSON.stringify({ novels: useKachamak.getState().novels, collections: useCollections.getState().collections });
+const snapshot = () => JSON.stringify({ novels: useKachamak.getState().novels, collections: useCollections.getState().collections, view: useKachamak.getState().view });
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
 async function api(path: string, init?: RequestInit) {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init });
@@ -25,8 +25,9 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
   if (!data.snapshot?.novels?.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
   data.snapshot.novels.forEach(normalizeNovelSections);
   const active = useKachamak.getState().activeNovelId;
+  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list'].includes(data.snapshot.view ?? '') ? { view: data.snapshot.view! } : {};
   applying = true;
-  try { useKachamak.setState({ novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null }); useCollections.setState({ collections: data.snapshot.collections }); }
+  try { useKachamak.setState({ ...restoredView, novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null }); useCollections.setState({ collections: data.snapshot.collections }); }
   finally { applying = false; }
   revision = data.revision; saved = snapshot();
   useWebLibrary.setState({ ready: true, busy: false, pending: false, error: null, conflict: false });
