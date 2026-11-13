@@ -5,6 +5,8 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { Dashboard } from "@/components/kachamak/Dashboard";
 import { ProjectFileStorage } from "@/components/kachamak/ProjectFileStorage";
 import { Workspace } from "@/components/kachamak/Workspace";
+import { FolderAccessWindow } from "@/components/kachamak/FolderAccessWindow";
+import { isFolderAccessWindow } from "@/lib/kachamak/folder-access";
 
 const emptySubscribe = () => () => {};
 
@@ -47,5 +49,7 @@ export default function Page() {
     );
   }
 
+  if (isFolderAccessWindow()) return <FolderAccessWindow />;
   return <ProjectFileStorage>{activeNovelId ? <Workspace /> : <Dashboard />}</ProjectFileStorage>;
 }
+

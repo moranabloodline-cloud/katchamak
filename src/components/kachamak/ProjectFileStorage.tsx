@@ -55,7 +55,8 @@ export function ProjectFileStatus() {
   const activeId = useKachamak(s => s.activeNovelId);
   const web = useWebLibrary();
   if (!isDesktop() && web.preview) return <>Preview · {web.previewDirty ? "Unsaved edits — export backup" : "Working copy in memory"}</>;
-  if (!isDesktop()) return <>{web.error ? "Folder save failed" : web.busy || web.pending ? "Saving to your folders…" : "Saved to your folders"}</>;
+  if (!isDesktop()) return <>{web.error ? "Folder save failed" : web.busy || web.pending ? "Saving to your folders…" : !web.rootName ? "Choose your library root" : "Saved to your folders"}</>;
   return <span title={activeId ? state.paths[activeId] : Object.values(state.paths).join("\n")}>{state.error ? "File save failed" : state.busy || state.pending ? "Saving project files…" : "Saved to project folders"}</span>;
 }
+
 

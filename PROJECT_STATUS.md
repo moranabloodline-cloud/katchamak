@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-13 — Stvarni folderi u ugrađenom prikazu:** ukinuto automatsko pokretanje zasebne memorijske biblioteke kada picker nije dostupan i uklonjeno Load library for Preview iz normalnog interfejsa. Isti Dashboard i isti storage adapter koriste stvarne directory handle-ove. Cross-origin iframe otvara top-level permission prozor sa istog origin-a; proveravaju se origin, source, nonce i isti prijavljeni nalog, zatim se granted handle vraća Preview-u i pamti po nalogu. SecurityError/NotAllowedError direktnog pickera nudi isti tok. Otkazivanje ne stvara kolekciju. Povratak u prozor ponovo čita isti vault bez zamene nesnimljenih izmena i uz očuvanu lokaciju. Status prazne biblioteke više ne tvrdi da je nešto sačuvano. Jedinični testovi: dozvole, poruke, izolacija, disk reload, kreiranje, prava lokalna struktura. Ograničenje verifikacije: cloud Chrome je i u top-level testu odbio native picker sa NotAllowedError; stvarna Windows ChatGPT host podrška nije potvrđena i ne tvrdi se da je platformska blokada uklonjena.
+
 > **2026-11-13 — Prijava:** Sites zahteva ChatGPT prijavu. Lokalni folderi vezani su za platformski user ID na tom browseru i uređaju. Novi nalog počinje prazno; stari anonimni profil se ne prisvaja. Account prikazuje email i odjavu nakon čuvanja. Testovi proveravaju anonimni pristup i izolaciju dva naloga.
 > **2026-11-13 — Ista biblioteka u Preview-u:** dodat Load library for Preview preko directory inputa. Fajlovi se čitaju lokalno u memorijsku radnu kopiju kroz isti loader i isti UI; nema upload-a ili browser perzistencije rukopisa. U Preview-u izmene idu samo u memoriju, Save izvozi project JSON backup-e i status to jasno prikazuje; beforeunload štiti neizvezene izmene. Normalni vault handle i fajlovi ostaju netaknuti. Test pokriva učitavanje realne biblioteke, iste kolekcije/projekte, uređivanje, nezavisnost diska i povratak normalnom root-u.
 
@@ -158,6 +160,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-13 — Preview koristi dozvolu stvarnog foldera:** zamenjen automatski memory fallback top-level permission handoff-om; dodate provere naloga/porekla i čitanje diska pri povratku u prozor. Native picker u cloud QA blokira host; ovaj test nije predstavljen kao uspešan.
 - **2026-11-11 — Account 0.2.4:** povezana sva četiri taba sa lokalnim profilom, temom, veličinom, lokacijom i nezavisnim backup kopijama. Dodati testovi lokalnih podešavanja, oporavka pri neuspelom upisu, čuvanja rukopisa i provere izdanja; Rust proverava zadržavanje i izolaciju backup kopija.
 
 - **2026-11-11 (okruženje — vraćanje na korenski raspored) — ZAVRŠENO:** nova sandbox sesija došla je prazna; repo kloniran sa GitHub-a (`abca6b1`) u podfolder `katchamak/`, pa **vraćen u koren radnog prostora `/home/z/my-project`** — dokumentovani raspored koji očekuju `scripts/backup.sh` (`cd /home/z/my-project`), `scripts/crop_bottom.py` (putanje ka `upload/` i `scripts/crops`), restore postupak i sve putanje u kontekst-dokumentima. Pri spajanju fascikli platforma je forsirala exec bit na `upload/download.png` (ostali fajlovi u `upload/` već imaju 755 u indeksu — platformski mount) — usklađen `update-index --chmod=+x`, **sadržaj svih Nikolaovih ulaznih materijala netaknut**. Posle vraćanja: build čist (build `0f192a23cbdb`), aplikacija served iz korena, backup skripta radi na pravom mestu (snapshot 32M, kopije u `download/` i `public/` osvežene, auto-backup commit `7bd1ba9` push-ovan). Kredencijal ponovo u `~/.git-credentials` (0600, van projekta), dnevni backup cron ponovo kreiran (ID 524156, 03:00 Europe/Belgrade) — stari je nestao sa starom sesijom.
@@ -624,6 +627,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - Zamenjen raniji Dashboard help dijalog panelom HelpCenter, vezanim za postojeće Help dugme. Tamna podloga, zaobljen okvir, žute ikonice, grupisane stavke i tipografija prate referencu.
 - Lokalna pretraga filtrira naslove, opise i tekst članaka. Svih devet stavki imaju lokalni sadržaj; About prikazuje verziju iz package.json. Nije izmišljena adresa podrške niti se bilo šta šalje drugim servisima.
 - Provereno u izolovanoj Windows aplikaciji uz blokiranu mrežu: otvaranje, vizuelni raspored svih stavki, pretraga keyboard, otvaranje članka Keyboard Shortcuts i zatvaranje Escape tasterom. TypeScript i statički build prolaze; sledi standardna završna provera, commit/push i installer.
+
 
 
 

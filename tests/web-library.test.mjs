@@ -154,6 +154,29 @@ const topFile = await findFile(a, n => n === 'project.json');
 assert.ok(topFile);
 assert.equal(pickCount,countBefore,'top-level project also uses the existing vault');
 assert.ok(useKachamak.getState().novels.some(n=>n.id===topProject));
+// Returning from another view reads its newly created folders and keeps location.
+const { useLibraryPreferences } = await import('../src/lib/kachamak/library-preferences.ts');
+useLibraryPreferences.getState().setLocation(first, [first]);
+const externalId = crypto.randomUUID();
+const externalFolder = path.join(a, 'Created in other view');
+await fs.mkdir(externalFolder);
+await fs.writeFile(path.join(externalFolder, '.collection.json'), JSON.stringify({id:externalId,name:'Created in other view'}));
+await web.refreshWebLibrary();
+assert.ok(useCollections.getState().collections.some(c=>c.id===externalId));
+assert.equal(useLibraryPreferences.getState().selectedCollection, first);
+assert.equal(useKachamak.getState().activeNovelId, topProject);
+// No API in this browser is not permission to invent an in-memory vault.
+const picker = window.showDirectoryPicker;
+delete window.showDirectoryPicker;
+identity = 'fresh-no-picker';
+await web.initializeWebLibrary();
+assert.equal(web.useWebLibrary.getState().preview, false);
+assert.equal(web.useWebLibrary.getState().rootName, '');
+assert.equal(useCollections.getState().collections.length, 0);
+await assert.rejects(web.createWebCollection('Must not be a fake folder', null), /does not provide writable/);
+assert.equal(useCollections.getState().collections.length, 0);
+window.showDirectoryPicker = picker;
+identity = 'user-a'; await web.initializeWebLibrary();
 // Load the same on-disk library through a directory input, with no writable handles.
 const previewFiles = [];
 async function collectPreview(dir, prefix = 'drive-a/') {
@@ -188,4 +211,5 @@ await assert.rejects(web.initializeWebLibrary(), /Sign in/);
 assert.equal(web.useWebLibrary.getState().ready, false, 'signed-out users cannot open the library');
 await fs.rm(temp, { recursive: true, force: true });
 console.log('Folder library: one vault per account, nested folders, Markdown, attachments, disk reload, failure retry, moves, removal, privacy and permission renewal passed.');
+
 
