@@ -2,8 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
-import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/web-library";
-import { isDesktop, flushProjectFiles, importFileProject, useProjectFiles } from "@/lib/kachamak/project-files";
+import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/cloud-library";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
@@ -155,10 +154,10 @@ function SettingsDialog({
           </button>
           <button
             type="button"
-            onClick={() => { if (isDesktop() || importDestinationReady) fileRef.current?.click(); else void prepareWebImport(null).then(() => setImportDestinationReady(true)).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
+            onClick={() => { if (importDestinationReady) fileRef.current?.click(); else void prepareWebImport(null).then(() => setImportDestinationReady(true)).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
             className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5"
           >
-            <Upload className="h-4 w-4" /> {isDesktop() ? "Import backup" : importDestinationReady ? "Choose JSON backup" : "Import into library"}
+            <Upload className="h-4 w-4" /> {importDestinationReady ? "Choose JSON backup" : "Import into library"}
           </button>
           <input
             ref={fileRef}
@@ -170,7 +169,6 @@ function SettingsDialog({
               if (!f) return;
               const reader = new FileReader();
               reader.onload = async () => {
-                if (isDesktop()) { try { const id = await importFileProject(String(reader.result)); if (id) toast.success("Project saved to its own folder."); } catch (error) { toast.error(String(error)); } return; }
                 try { await importWebProject(String(reader.result), null); toast.success("Project imported to your folder."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
               };
               reader.readAsText(f);
@@ -178,7 +176,7 @@ function SettingsDialog({
             }}
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {isDesktop() ? "Projects are saved in their own folders on your computer. Export a JSON backup from" : "Projects are saved in your selected folders. Export an additional JSON backup from"}
+            Projects are saved to your account in the cloud. Export a JSON backup from
             time to time to keep it safe.
           </p>
         </div>
@@ -204,7 +202,6 @@ export function Workspace() {
   const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
   const rightPanelWidth = useKachamak((s) => s.rightPanelWidth);
 
-  const filePath = useProjectFiles(state => activeNovelId ? state.paths[activeNovelId] : undefined);
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -308,10 +305,9 @@ export function Workspace() {
               <button
                 type="button"
                 aria-label="Save"
-                title={isDesktop() && filePath ? `Save · ${filePath}` : "Save"}
+                title="Save"
                 onClick={async () => {
-                  if (isDesktop()) { try { await flushProjectFiles(); toast.success("Saved to project file."); } catch (error) { toast.error(String(error)); } return; }
-                  try { await saveWebLibrary(); toast.success(useWebLibrary.getState().preview ? "Preview backups exported." : "Saved to your project folders."); } catch (error) { toast.error(String(error)); }
+                  try { await saveWebLibrary(); toast.success("Saved to your account."); } catch (error) { toast.error(String(error)); }
                 }}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >

@@ -10,7 +10,7 @@ import { AccountDialog, type AccountTab } from "./AccountDialog";
 const entries = [
   { tab: "profile", label: "Profile", icon: UserRound },
   { tab: "appearance", label: "Appearance", icon: Palette },
-  { tab: "storage", label: "Storage & Backup", icon: Folder },
+  { tab: "storage", label: "Cloud storage", icon: Folder },
   { tab: "about", label: "About Katchamak", icon: Info },
 ] as const;
 
@@ -35,7 +35,7 @@ export function AccountMenu() {
       <DropdownMenuContent align="end" sideOffset={10} className="w-[310px] max-w-[calc(100vw-24px)] rounded-xl border-[#494949] bg-[#303030] p-3 text-[#e5e5e5] shadow-2xl [font-family:Arial,sans-serif]">
         <div className="flex items-center gap-3 px-2 py-4">
           <AccountAvatar photo={photo} />
-          <div className="min-w-0"><p className="truncate text-sm font-semibold">{displayName || author || "User Name"}</p><p className="mt-1 text-xs text-[#bfbfbf]">Local profile</p></div>
+          <div className="min-w-0"><p className="truncate text-sm font-semibold">{displayName || author || "User Name"}</p><p className="mt-1 text-xs text-[#bfbfbf]">Account profile</p></div>
         </div>
         <DropdownMenuSeparator className="my-2 bg-white/10" />
         {entries.map(({ tab, label, icon: Icon }) => <DropdownMenuItem key={tab} onSelect={() => { setTab(tab); setOpen(true); }} className="h-12 cursor-pointer gap-3 rounded-md px-2 focus:bg-white/10 focus:text-white">

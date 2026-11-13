@@ -13,6 +13,10 @@ Object.defineProperty(globalThis, "localStorage", { configurable: true, value: s
 
 const { useKachamak, projectsSavedLocally, saveProjectsLocally } = await import("../src/lib/kachamak/store.ts");
 const key = "kachamak-store-v1";
+// Exercise legacy schema migration in an explicitly injected recovery adapter.
+// Production projectStorage is memory-only; the account cloud API owns persistence.
+useKachamak.persist.setOptions({storage:{getItem:key=>{const raw=storage.getItem(key);return raw?JSON.parse(raw):null;},setItem:(key,value)=>storage.setItem(key,JSON.stringify(value)),removeItem:key=>storage.removeItem(key)}});
+
 
 assert.deepEqual(useKachamak.getState().novels, [], "new installation has no bundled user projects");
 assert.equal(useKachamak.getState().defaultAuthor, "", "new installation has no owner identity");

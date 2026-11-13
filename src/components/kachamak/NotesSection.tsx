@@ -9,7 +9,7 @@ import { SplitEditors } from "./SplitEditors";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { CtrlZoom } from "./CtrlZoom";
-import { isDesktop, useProjectFiles } from "@/lib/kachamak/project-files";
+import { useWebLibrary } from "@/lib/kachamak/cloud-library";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNodeInNovel, novelWords, ownWords } from "@/lib/kachamak/utils";
@@ -86,12 +86,11 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
 
 /* bottom of the left panel: circled "i" opens save information */
 function SaveInfoButton() {
-  const [isSaved, setIsSaved] = useState(false);
-  const files = useProjectFiles();
-  const saved = isDesktop() ? files.ready && !files.pending && !files.busy && !files.error : isSaved;
+  const cloud = useWebLibrary();
+  const saved = cloud.ready && !cloud.pending && !cloud.busy && !cloud.error;
 
   return (
-    <Popover onOpenChange={(open) => { if (open) setIsSaved(projectsSavedLocally()); }}>
+    <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -110,7 +109,7 @@ function SaveInfoButton() {
         <p className="mb-2 font-semibold text-foreground">Save information</p>
         <dl className="space-y-1 text-muted-foreground">
           <div className="flex justify-between gap-2">
-            <dt>{"Project folders:"}</dt>
+            <dt>{"Cloud save:"}</dt>
             <dd className={saved ? "text-foreground" : "text-red-400"}>
               {saved ? "up to date" : "not verified"}
             </dd>
@@ -121,7 +120,7 @@ function SaveInfoButton() {
           </div>
           <div className="flex justify-between gap-2">
             <dt>{"Previous save:"}</dt>
-            <dd>{"project.json.bak"}</dd>
+            <dd>{"retained in cloud"}</dd>
           </div>
         </dl>
         {!saved && <p className="mt-2 text-red-400">Try Save and export a JSON backup before closing.</p>}

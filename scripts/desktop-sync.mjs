@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const inputs = ["src", "src-tauri", "public", "scripts", "tests", ".github", ".openai", "README.md", "DESKTOP.md", "PROJECT_STATUS.md", "PROJEKT-KONTEKST.md", "KACHAMAK-ARHITEKTURA.md", "package.json", "bun.lock", "next.config.ts", "tsconfig.json", "tsconfig.app.json", "tailwind.config.ts", "postcss.config.mjs", ".gitignore", "Start-Katchamak.cmd", "Develop-Katchamak.cmd"];
+const inputs = ["db", "drizzle", "drizzle.config.ts", "src", "src-tauri", "public", "scripts", "tests", ".github", ".openai", "README.md", "DESKTOP.md", "PROJECT_STATUS.md", "PROJEKT-KONTEKST.md", "KACHAMAK-ARHITEKTURA.md", "package.json", "bun.lock", "next.config.ts", "tsconfig.json", "tsconfig.app.json", "tailwind.config.ts", "postcss.config.mjs", ".gitignore", "Start-Katchamak.cmd", "Develop-Katchamak.cmd"];
 const forbidden = /(^|\/)(?:\.env[^/]*|\.git-credentials|[^/]*\.(?:key|pem)|user-projects|vaults|backups)(?:\/|$)/i;
 const secret = /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-(?:proj-)?[A-Za-z0-9_-]{30,})\b|-{5}BEGIN [A-Z ]*PRIVATE KEY-{5}/;
 
@@ -62,7 +62,7 @@ export function verifiedSave(cwd, { commands, enforceRemote = true } = {}) {
       const remote = git("rev-parse", "origin/main");
       if (remote === startHead) return state("up_to_date", { commit: startHead });
       if (prior?.pendingCommit === startHead && spawnSync("git", ["merge-base", "--is-ancestor", remote, startHead], { cwd }).status === 0) {
-        for (const command of commands ?? [[process.execPath, "scripts/verify-desktop.mjs"]]) {
+        for (const command of commands ?? [[process.execPath, "scripts/verify-cloud.mjs"]]) {
           if (spawnSync(command[0], command.slice(1), { cwd, stdio: "inherit" }).status !== 0) throw new Error("Pending commit verification failed.");
         }
         if (fingerprint() !== start) return state("changed_during_checks");
@@ -75,7 +75,7 @@ export function verifiedSave(cwd, { commands, enforceRemote = true } = {}) {
       // No automatic pull, reset, stash, merge or branch switch.
       throw new Error("Local and remote commits differ. Review and integrate explicitly; local work was preserved.");
     }
-    for (const command of commands ?? [[process.execPath, "scripts/verify-desktop.mjs"]]) {
+    for (const command of commands ?? [[process.execPath, "scripts/verify-cloud.mjs"]]) {
       const result = spawnSync(command[0], command.slice(1), { cwd, stdio: "inherit", env: process.env });
       if (result.status !== 0) throw new Error("Verification failed; no commit or push was made.");
     }

@@ -14,6 +14,7 @@ const legacy = [
 ];
 storage.setItem(key, JSON.stringify({ version: 1, state: { collections: legacy } }));
 const { useCollections } = await import("../src/lib/kachamak/collections-store.ts");
+useCollections.persist.setOptions({storage:{getItem:key=>{const raw=storage.getItem(key);return raw?JSON.parse(raw):null;},setItem:(key,value)=>storage.setItem(key,JSON.stringify(value)),removeItem:key=>storage.removeItem(key)}});
 await useCollections.persist.rehydrate();
 assert.deepEqual(useCollections.getState().collections, legacy.map((c) => ({ ...c, parentId: null })), "migration retains IDs, names and all memberships");
 const actions = useCollections.getState();

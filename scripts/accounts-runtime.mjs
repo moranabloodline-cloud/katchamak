@@ -26,7 +26,7 @@ export async function accountApi(request, env) {
     const name = body.displayName ?? user.display_name, avatar = body.avatar ?? user.avatar;
     if (typeof name !== 'string' || name.length > 100 || typeof avatar !== 'string' || avatar.length > 200000 || (avatar && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar))) return accountJson({ error: 'Invalid profile or avatar (maximum 150 KB)' }, 400);
     const prefs = body.preferences ?? JSON.parse(user.preferences);
-    if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs) || Object.entries(prefs).some(([key,value]) => !['tips','updates','changelog'].includes(key) || typeof value !== 'boolean')) return accountJson({ error: 'Invalid notification preferences' }, 400);
+    if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs) || Object.entries(prefs).some(([key,value]) => !['tips','updates','changelog','lightTheme','smallInterface','largeInterface'].includes(key) || typeof value !== 'boolean')) return accountJson({ error: 'Invalid notification preferences' }, 400);
     await q('UPDATE accounts SET display_name=?,avatar=?,preferences=? WHERE id=?',name.trim(),avatar,JSON.stringify(prefs),id).run();
     return accountJson({ ok: true });
   }

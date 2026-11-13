@@ -1,4 +1,4 @@
-name: Verify Katchamak desktop
+name: Verify Katchamak cloud
 on:
   push:
     branches: [main]
@@ -24,8 +24,10 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
-      - name: Test folder rename and local library saving
-        run: bun run tests/web-library.test.mjs
+      - name: Test authenticated cloud storage and cross-view saves
+        run: bun run tests/cloud-library.test.mjs
+      - name: Test account authorization
+        run: bun run tests/account-auth.test.mjs
       - name: Test local account settings
         run: bun run tests/account-preferences.test.mjs
       - name: Test desktop release checks
@@ -40,12 +42,13 @@ jobs:
         run: bun run tests/project-files.test.mjs
       - name: Type-check application
         run: bun run typecheck
-      - name: Build offline application
+      - name: Build Sites application
         if: ${{ always() && steps.install.outcome == 'success' }}
-        run: bun run build
-      - name: Verify offline application assets
-        run: node scripts/check-desktop.mjs
+        run: node scripts/run-target.mjs sites scripts/build-project.mjs
+      - name: Verify Sites application assets
+        run: bun run check:release
   windows-desktop:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

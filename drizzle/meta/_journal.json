@@ -8,6 +8,13 @@
       "when": 1794593070062,
       "tag": "0000_cold_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794600982765,
+      "tag": "0001_worthless_kid_colt",
+      "breakpoints": true
     }
   ]
 }

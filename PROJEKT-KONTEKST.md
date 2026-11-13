@@ -1,3 +1,5 @@
+> **Važeća odluka 13.11.2026:** razvojna aplikacija koristi isključivo Sites cloud storage po ChatGPT nalogu. Preview i browser dele biblioteku. Ne vraćati root pickere, lokalni Save ili installer dok korisnik ponovo ne zatraži lokalnu fazu. D1 indeks + R2 privatni sadržaj, optimistička revizija za zaštitu od konflikata. Postojeći lokalni fajlovi ostaju netaknuti. Istorijske lokalne upute ispod nisu trenutni zahtev.
+
 # PROJEKT-KONTEKST — Kachamak (pročitaj ovo prvo!)
 
 > **Aktuelni razvoj: Windows desktop, `C:\Katchamak`.** Koristiti postojeći GitHub main i [DESKTOP.md](DESKTOP.md). Korisnik je 11.11.2026. odobrio lokalni razvoj, Tauri, offline rad i automatski commit/push tek posle provera. Istorijske Sites/GLM instrukcije ispod ne određuju novi razvojni tok. Rukopisi ostaju u odvojenom lokalnom profilu, izvan Git backupa.

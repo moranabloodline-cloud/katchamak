@@ -4,7 +4,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
-const paths = ["src", "public", "scripts", "tests", ".github", ".openai", "README.md", "PROJECT_STATUS.md", "PROJEKT-KONTEKST.md", "KACHAMAK-ARHITEKTURA.md", "package.json", "bun.lock", "next.config.ts", "tsconfig.json", "tsconfig.app.json", "tailwind.config.ts", "postcss.config.mjs", ".gitignore"];
+const paths = ["db", "drizzle", "drizzle.config.ts", "src", "public", "scripts", "tests", ".github", ".openai", "README.md", "PROJECT_STATUS.md", "PROJEKT-KONTEKST.md", "KACHAMAK-ARHITEKTURA.md", "package.json", "bun.lock", "next.config.ts", "tsconfig.json", "tsconfig.app.json", "tailwind.config.ts", "postcss.config.mjs", ".gitignore"];
 const secretName = /(^|\/)(\.env[^/]*|\.git-credentials|[^/]*\.(pem|key))$/i;
 const secretValue = /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-(?:proj-)?[A-Za-z0-9_-]{30,})\b|-{5}BEGIN [A-Z ]*PRIVATE KEY-{5}/;
 
@@ -51,7 +51,7 @@ export function syncWorkspace(cwd, { publish = false, checks, quietMs = 30000, n
     if (!status && local === remote) return save({ busy: false, status: "up_to_date", remote });
     if (state.failedCommit === local && !status && now - (state.failedAt ?? 0) < 60000) return save({ busy: false, status: "retry_pending", remote });
     const commands = checks ?? [
-      ["bun", "run", "typecheck"], ["bun", "run", "tests/rehydration.test.mjs"], ["bun", "run", "tests/library.test.mjs"],
+      ["bun", "run", "typecheck"], ["bun", "run", "tests/cloud-library.test.mjs"], ["bun", "run", "tests/account-auth.test.mjs"], ["bun", "run", "tests/rehydration.test.mjs"], ["bun", "run", "tests/library.test.mjs"],
       ["bun", "run", "tests/release-store.test.mjs"], ["bun", "run", "tests/application-updates.test.mjs"],
     ];
     const run = (command) => { const result = spawnSync(command[0], command.slice(1), { cwd, stdio: "inherit", env: process.env }); if (result.status !== 0) throw new Error(`${command.join(" ")} failed.`); };
@@ -64,7 +64,7 @@ export function syncWorkspace(cwd, { publish = false, checks, quietMs = 30000, n
     if (status) { git("add", "-A", "--", ...new Set([...changed, ...untracked])); git("commit", "-m", "Auto-sync verified Katchamak changes"); }
     const commit = git("rev-parse", "HEAD");
     save({ status: "building", pendingCommit: commit });
-    if (!checks) { run(["bun", "run", "build"]); run(["bun", "run", "check:release"]); }
+    if (!checks) { run([process.execPath, "scripts/run-target.mjs", "sites", "scripts/build-project.mjs"]); run(["bun", "run", "check:release"]); }
     if (existsSync(path.join(directory, "sync.paused"))) return save({ busy: false, status: "paused", pendingCommit: commit });
     // A simultaneous upstream push makes this fail safely. The next pass backs up and pulls it.
     git("push", "origin", `HEAD:${config.branch}`);

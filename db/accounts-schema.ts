@@ -12,3 +12,9 @@ export const accountAudit = sqliteTable('account_audit', {
   id: text('id').primaryKey(), actor: text('actor').notNull(), target: text('target').notNull(),
   action: text('action').notNull(), detail: text('detail').notNull(), createdAt: integer('created_at').notNull(),
 });
+export const cloudLibraries = sqliteTable('cloud_libraries', {
+  accountId: text('account_id').primaryKey().references(() => accounts.id),
+  revision: integer('revision').notNull().default(0),
+  snapshotKey: text('snapshot_key'),
+  updatedAt: integer('updated_at').notNull().default(0),
+});
