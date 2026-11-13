@@ -47,7 +47,8 @@ assert.equal((await (await call(a,'/api/library/files/'+novel.id)).json()).files
 // A second account using the same project ID still has a separate private file namespace.
 await call(b,'/api/library','POST',{revision:0,snapshot});
 assert.equal((await call(b,'/api/library/files/'+novel.id+'/'+attachment.id)).status,404);
-const dom=new Window({url:'https://test.local'});globalThis.window=dom;globalThis.document=dom.document;globalThis.localStorage=dom.localStorage;
+const dom=new Window({url:'https://test.local'});globalThis.window=dom;globalThis.document=dom.document;let browserStorageWrites=0;
+globalThis.localStorage={getItem(){throw new DOMException('Storage denied','SecurityError');},setItem(){browserStorageWrites++;throw new DOMException('Storage full','QuotaExceededError');},removeItem(){throw new DOMException('Storage denied','SecurityError');}};
 globalThis.fetch=async(path,init={})=>{
  const body=init.body?JSON.parse(init.body):undefined;
  return path==='/api/account'?accountApi(new Request('https://test.local/api/account',{headers:{'oai-authenticated-user-id':a,'oai-authenticated-user-email':a}}),env):call(a,path,init.method||'GET',body);
@@ -55,7 +56,7 @@ globalThis.fetch=async(path,init={})=>{
 const cloud=await import('../src/lib/kachamak/cloud-library.ts');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
 const {useCollections}=await import('../src/lib/kachamak/collections-store.ts');
-await cloud.initializeWebLibrary();assert.equal(useKachamak.getState().novels[0].title,'Cloud test');
+await cloud.initializeWebLibrary();assert.equal(cloud.useWebLibrary.getState().ready,true,'Cloud library opens when browser storage is full and blocked');assert.equal(useKachamak.getState().novels[0].title,'Cloud test');
 const collection=await cloud.createWebCollection('From Preview',null);
 const project=await cloud.createWebProject('Same account project','Tester',collection);
 assert.ok((await (await call(a)).json()).snapshot.collections.some(c=>c.id===collection&&c.projectIds.includes(project)));
@@ -73,5 +74,5 @@ await assert.rejects(()=>cloud.saveWebLibrary(),/Another window/);
 assert.equal(useKachamak.getState().novels[0].title,'Unsaved local edit');assert.ok(cloud.useWebLibrary.getState().conflict);
 assert.equal((await (await call(a)).json()).snapshot.novels[0].title,'Newer browser edit');
 await cloud.reloadWebLibrary(true);assert.equal(useKachamak.getState().novels[0].title,'Newer browser edit');
-assert.ok(![...Array(localStorage.length)].map((_,i)=>localStorage.key(i)).includes('kachamak-store-v1'));
+assert.equal(browserStorageWrites,0,'Cloud startup, saving and refreshing work without browser storage writes');
 console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, nested library, Unicode manuscript roundtrip, attachments, failed-save recovery, two-view refresh and conflict preservation.');
