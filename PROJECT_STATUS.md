@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-13 — Kreiranje kolekcije:** čuvanje najpre proverava izabrani folder bez pregledanja drugih foldera na lokaciji. Test pokriva nedostupne susedne foldere i preimenovanje.
+
 > **2026-11-13 — Sites Save popravka:** preneta GitHub ispravka pronalaženja foldera po ID-u posle preimenovanja u Exploreru. Save i Retry save obnavljaju dozvolu za upis bez ponovnog učitavanja ili gubitka otvorenih izmena. Test lokalnih foldera potvrđuje oba slučaja, Markdown, priloge, premeštanje i zaštitu od spoljnih izmena. TypeScript provera prolazi.
 
 > **2026-11-12 — Save posle preimenovanja foldera:** usklađen desktop Account 0.2.4 sa novom web bibliotekom. Pri čuvanju se folderi ponovo pronalaze preko ID-a u metapodacima, bez učitavanja stare verzije preko trenutnih izmena. Naziv foldera ostaje nezavisan od naslova projekta/kolekcije. Testovi na disku proveravaju preimenovanje projekta i roditeljske kolekcije u Exploreru, zatim Save i premeštanje uz očuvane priloge.

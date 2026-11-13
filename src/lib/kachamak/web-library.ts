@@ -259,9 +259,11 @@ async function refreshFolderLocations() {
   const refreshed: Root[] = [];
   for (const root of roots) {
     let handle: DiskFolder | undefined;
-    if (root.parent === root.handle) {
-      if ((await identity(root.handle))?.id === root.id) handle = root.handle;
-    } else {
+    // Most saves can use the chosen folder directly. Scanning every sibling
+    // can fail on protected or unrelated folders and block creation entirely.
+    try { if ((await identity(root.handle))?.id === root.id) handle = root.handle; }
+    catch (error) { if ((error as Error).name !== 'NotFoundError') throw error; }
+    if (!handle && root.parent !== root.handle) {
       for await (const child of root.parent.values()) {
         if (child.kind !== 'directory' || child.name.startsWith('.')) continue;
         if ((await identity(child))?.id === root.id) { if (handle) throw new Error('Duplicate project or collection ID on disk.'); handle = child; }

@@ -18,14 +18,14 @@ globalThis.indexedDB = { open() {
   } };
   queueMicrotask(() => { req.onupgradeneeded?.(); req.onsuccess?.(); }); return req;
 } };
-let permit = true, failWrite = false, pickCount = 0;
+let permit = true, failWrite = false, pickCount = 0, failParentScan = false;
 const notFound = () => new DOMException('Missing', 'NotFoundError');
 class Folder {
   kind = 'directory';
   constructor(p) { this.p = p; this.name = path.basename(p); }
   async queryPermission() { return permit ? 'granted' : 'prompt'; }
   async requestPermission() { permit = true; return 'granted'; }
-  async *values() { for (const d of await fs.readdir(this.p, { withFileTypes: true })) yield d.isDirectory() ? new Folder(path.join(this.p, d.name)) : new DiskFile(path.join(this.p, d.name)); }
+  async *values() { if (failParentScan && this.p === a) throw new DOMException('Cannot enumerate unrelated folders', 'NotAllowedError'); for (const d of await fs.readdir(this.p, { withFileTypes: true })) yield d.isDirectory() ? new Folder(path.join(this.p, d.name)) : new DiskFile(path.join(this.p, d.name)); }
   async getDirectoryHandle(name, { create = false } = {}) { const p = path.join(this.p, name); if (create) await fs.mkdir(p, { recursive: true }); try { if (!(await fs.stat(p)).isDirectory()) throw new Error('not directory'); } catch { throw notFound(); } return new Folder(p); }
   async getFileHandle(name, { create = false } = {}) { const p = path.join(this.p, name); try { await fs.access(p); } catch { if (!create) throw notFound(); await fs.writeFile(p, ''); } return new DiskFile(p); }
   async removeEntry(name, { recursive = false } = {}) { await fs.rm(path.join(this.p, name), { recursive }); }
@@ -45,7 +45,10 @@ const { useKachamak } = await import('../src/lib/kachamak/store.ts');
 const { useCollections } = await import('../src/lib/kachamak/collections-store.ts');
 await web.initializeWebLibrary();
 assert.equal(useKachamak.getState().novels.length, 0);
+failParentScan = true;
 const first = await web.createWebCollection('Books', null);
+failParentScan = false;
+assert.ok(useCollections.getState().collections.some(c => c.id === first), 'new collection is visible without scanning unrelated sibling folders');
 picked = b;
 const second = await web.createWebCollection('Games', null);
 assert.equal(pickCount, 2, 'each top-level collection asks for its own location');
