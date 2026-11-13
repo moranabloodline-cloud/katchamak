@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Kachamak
 
+> **2026-11-13 — Prijava:** Sites zahteva ChatGPT prijavu. Lokalni folderi vezani su za platformski user ID na tom browseru i uređaju. Novi nalog počinje prazno; stari anonimni profil se ne prisvaja. Account prikazuje email i odjavu nakon čuvanja. Testovi proveravaju anonimni pristup i izolaciju dva naloga.
+
 > **2026-11-13 — Kreiranje kolekcije:** čuvanje najpre proverava izabrani folder bez pregledanja drugih foldera na lokaciji. Test pokriva nedostupne susedne foldere i preimenovanje.
 
 > **2026-11-13 — Sites Save popravka:** preneta GitHub ispravka pronalaženja foldera po ID-u posle preimenovanja u Exploreru. Save i Retry save obnavljaju dozvolu za upis bez ponovnog učitavanja ili gubitka otvorenih izmena. Test lokalnih foldera potvrđuje oba slučaja, Markdown, priloge, premeštanje i zaštitu od spoljnih izmena. TypeScript provera prolazi.

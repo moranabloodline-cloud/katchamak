@@ -12,7 +12,9 @@ assert.equal(version.sourceTree, expected.sourceTree, "The package must match al
 assert.equal(version.dirty, false);
 const snapshot = await (await app.fetch(new Request("https://kachamak.invalid/app-version.json"))).json();
 assert.deepEqual(snapshot, expected);
-const root = await app.fetch(new Request("https://kachamak.invalid/"));
+const anonymous = await app.fetch(new Request("https://kachamak.invalid/"));
+assert.equal(anonymous.status, 302);
+const root = await app.fetch(new Request("https://kachamak.invalid/", { headers: { "oai-authenticated-user-id": "release-test" } }));
 assert.equal(root.status, 200);
 const tool = await (await app.fetch(new Request("https://kachamak.invalid/mcp", {
   method: "POST", headers: { "Content-Type": "application/json" },

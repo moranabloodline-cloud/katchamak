@@ -16,7 +16,7 @@ type Root = { id: string; kind: 'collection' | 'project'; handle: Handle; parent
 type Location = { id: string; kind: Root['kind']; handle: DiskFolder; parent: DiskFolder; name: string; key: string; rootId: string };
 type NoteFile = { path: string; markdown: string };
 type Document = { format: string; version: number; storeVersion: number; novel: Novel; webNotes?: Record<string, NoteFile> };
-export const useWebLibrary = create<{ ready: boolean; busy: boolean; pending: boolean; error: string | null; reconnect: boolean; supported: boolean }>(() => ({ ready: false, busy: false, pending: false, error: null, reconnect: false, supported: false }));
+export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; reconnect: boolean; supported: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, reconnect: false, supported: false }));
 let roots: Root[] = [], locations = new Map<string, Location>();
 let expected = new Map<string, string | null>();
 let running: Promise<void> | null = null, initializing: Promise<void> | null = null;
@@ -25,11 +25,15 @@ let applying = false, subscribed = false, savedSnapshot = '';
 const initialState = useKachamak.getInitialState();
 const snapshot = () => JSON.stringify({ novels: useKachamak.getState().novels, collections: useCollections.getState().collections });
 const setError = (error: unknown) => useWebLibrary.setState({ busy: false, pending: true, error: error instanceof Error ? error.message : String(error) });
-const accountKey = 'katchamak-local-account';
+let signedInId: string | null = null;
+const accountKey = () => {
+  if (!signedInId) throw new Error('Sign in to open your library.');
+  return 'katchamak-account:' + signedInId;
+};
 function account() {
-  const raw = localStorage.getItem(accountKey);
-  if (raw) { const a = JSON.parse(raw); if (typeof a.id === 'string') return a as { id: string; author: string }; }
-  const a = { id: crypto.randomUUID(), author: '' }; localStorage.setItem(accountKey, JSON.stringify(a)); return a;
+  const raw = localStorage.getItem(accountKey());
+  const profile = raw ? JSON.parse(raw) : {};
+  return { id: signedInId!, author: typeof profile.author === 'string' ? profile.author : '' };
 }
 async function registry(write?: Root[]) {
   const a = account();
@@ -125,6 +129,13 @@ async function loadAll() {
 export async function initializeWebLibrary(reconnect = false) {
   if (initializing) return initializing;
   initializing = (async () => {
+    useWebLibrary.setState({ ready: false, busy: true, error: null });
+    const response = await fetch('/api/account', { cache: 'no-store', credentials: 'same-origin' });
+    if (!response.ok) { signedInId = null; throw new Error('Sign in to open your library.'); }
+    const identity = await response.json();
+    if (typeof identity.id !== 'string' || !identity.id) throw new Error('Sign in to open your library.');
+    signedInId = identity.id;
+    useWebLibrary.setState({ email: identity.email ?? '' });
     const supported = 'showDirectoryPicker' in window;
     useWebLibrary.setState({ supported, busy: true, error: null });
     if (!supported) { useWebLibrary.setState({ busy: false, ready: false }); return; }
@@ -139,7 +150,7 @@ export async function initializeWebLibrary(reconnect = false) {
       const changed = () => {
         if (applying || !useWebLibrary.getState().ready) return;
         const a = account(); const author = useKachamak.getState().defaultAuthor;
-        if (a.author !== author) localStorage.setItem(accountKey, JSON.stringify({ ...a, author }));
+        if (a.author !== author) localStorage.setItem(accountKey(), JSON.stringify({ ...a, author }));
         if (snapshot() === savedSnapshot) return;
         useWebLibrary.setState({ pending: true });
         if (timer) clearTimeout(timer);

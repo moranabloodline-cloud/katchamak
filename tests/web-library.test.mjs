@@ -6,6 +6,8 @@ import { Window } from 'happy-dom';
 const dom = new Window({ url: 'https://kachamak.test' });
 globalThis.window = dom; globalThis.document = dom.document; globalThis.DOMParser = dom.DOMParser;
 globalThis.localStorage = dom.localStorage;
+let identity = 'user-a';
+globalThis.fetch = async () => identity ? Response.json({ id: identity, email: identity + '@test.local' }) : Response.json({}, { status: 401 });
 const records = new Map();
 // IndexedDB stores opaque handles; this adapter keeps the test's native disk handles usable.
 globalThis.indexedDB = { open() {
@@ -135,5 +137,16 @@ window.showDirectoryPicker = async () => { throw new DOMException('Cancelled', '
 const beforeCancel = JSON.stringify(useCollections.getState().collections);
 await assert.rejects(web.createWebCollection('Cancelled', null), /Cancelled/);
 assert.equal(JSON.stringify(useCollections.getState().collections), beforeCancel);
+// Switching signed-in users must not inherit another user's local directory grants.
+identity = 'user-b';
+await web.initializeWebLibrary();
+assert.equal(useKachamak.getState().novels.length, 0);
+assert.equal(useCollections.getState().collections.length, 0);
+identity = 'user-a';
+await web.initializeWebLibrary();
+assert.ok(useKachamak.getState().novels.some(n => n.id === novelId));
+identity = null;
+await assert.rejects(web.initializeWebLibrary(), /Sign in/);
+assert.equal(web.useWebLibrary.getState().ready, false, 'signed-out users cannot open the library');
 await fs.rm(temp, { recursive: true, force: true });
 console.log('Folder library: separate roots, nested folders, Markdown, attachments, disk reload, failure retry, moves, removal, privacy and permission renewal passed.');

@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+globalThis.publishedRelease = async () => null;
+globalThis.releaseAsset = async () => null;
+globalThis.SOURCE_VERSION = {};
+globalThis.APP_BUILD = 'a'.repeat(64);
+globalThis.DEPLOY_CONFIG = { runtimeHash: 'test' };
+globalThis.ASSETS = { '/index.html': btoa('empty application shell') };
+const { default: app } = await import('../scripts/sites-runtime.mjs');
+const anonymous = await app.fetch(new Request('https://test.local/'));
+assert.equal(anonymous.status, 302);
+assert.equal(anonymous.headers.get('Location'), '/signin-with-chatgpt?return_to=%2F');
+assert.equal((await app.fetch(new Request('https://test.local/api/account'))).status, 401);
+const headers = { 'oai-authenticated-user-id': 'user-a', 'oai-authenticated-user-email': 'a@test.local' };
+const identity = await app.fetch(new Request('https://test.local/api/account', { headers }));
+assert.deepEqual(await identity.json(), { id: 'user-a', email: 'a@test.local' });
+assert.match(identity.headers.get('Cache-Control'), /no-store/);
+assert.equal((await app.fetch(new Request('https://test.local/', { headers }))).status, 200);
+console.log('Authentication: anonymous app access blocked, identity authenticated, no-store account response passed.');
