@@ -1,3 +1,5 @@
+> **2026-11-13 — Reload bez čekanja cloud snimka:** radna lokacija se sinhrono zapisuje u URL fragment (#workspace sa projektom, sekcijom, notom, panelima i view-om; #library za Dashboard). Pri učitavanju URL ima prednost nad cloud navigacijom; reference se proveravaju prema autentifikovanoj biblioteci. Nema localStorage-a. Regresioni test proverava reload pre debounce/cloud upisa i povratak iste note i Write prikaza.
+
 > **2026-11-13 — Reload vraća radnu lokaciju:** cloud snapshot pamti aktivni projekat, sekciju, otvorenu notu, oba Split panela i lokaciju kolekcije na Dashboard-u. Pri otvaranju se vraćaju postojeće reference; obrisani projekti/note se bezbedno preskaču. Pozadinski refresh ne menja trenutnu navigaciju. Test proverava povratak projekta, Binder sekcije i iste note posle ponovnog otvaranja.
 
 > **2026-11-13 — Poslednji view:** Write/Split/Grid/List čuva se uz cloud biblioteku naloga i vraća pri ponovnom otvaranju. Promena ekrana već zadržava globalni view; osvežavanje podataka iz drugog prozora ne prebacuje trenutni prikaz. Regresioni test proverava Write posle ponovnog otvaranja i List posle reload-a.

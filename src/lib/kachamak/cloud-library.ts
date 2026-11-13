@@ -1,11 +1,12 @@
 'use client';
+import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
 import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections } from './store';
 import { useCollections, type Collection } from './collections-store';
 import { findNode } from './utils';
 import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
-import type { Novel, ViewMode } from './types';
+import type { Novel, ViewMode, TabKey } from './types';
 import { registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
@@ -32,14 +33,16 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
   if (!data.snapshot?.novels?.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
   data.snapshot.novels.forEach(normalizeNovelSections);
   const active = useKachamak.getState().activeNovelId;
-  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list'].includes(data.snapshot.view ?? '') ? { view: data.snapshot.view! } : {};
+  const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
+  const preferredView = route?.view ?? data.snapshot.view;
+  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list'].includes(preferredView ?? '') ? { view: preferredView! } : {};
   const navigation: Partial<Navigation> = {};
-  if (!useWebLibrary.getState().ready && data.snapshot.navigation) {
-    const saved = data.snapshot.navigation;
+  if (!useWebLibrary.getState().ready && (route || data.snapshot.navigation)) {
+    const saved = route?.navigation ?? data.snapshot.navigation!;
     const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
-    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','trash'].includes(saved.activeTab) ? saved.activeTab : 'binder';
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : 'binder';
     navigation.selectedNodeId = note(saved.selectedNodeId);
     navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);
     navigation.activePane = saved.activePane === 'b' ? 'b' : 'a';
@@ -66,10 +69,13 @@ export async function initializeWebLibrary() {
     useAppearancePreferences.setState({theme: account.preferences?.lightTheme?'light':'dark',interfaceSize:account.preferences?.smallInterface?'small':account.preferences?.largeInterface?'large':'normal'});
     useKachamak.setState({ defaultAuthor: account.displayName || '' });
     apply(await api('/api/library'));
+    writeWorkspaceRoute();
     if (!subscribed) {
       subscribed = true;
       const changed = () => {
-        if (applying || !useWebLibrary.getState().ready || snapshot() === saved) return;
+        if (applying || !useWebLibrary.getState().ready) return;
+        writeWorkspaceRoute();
+        if (snapshot() === saved) return;
         useWebLibrary.setState({ pending: true });
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);

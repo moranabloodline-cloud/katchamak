@@ -73,6 +73,18 @@ useKachamak.getState().setView('list');
 await cloud.saveWebLibrary();
 await cloud.reloadWebLibrary();
 assert.equal(useKachamak.getState().view,'list','Library reload preserves the current view');
+// Reload immediately after navigation, before the debounce/cloud save completes.
+const beforeRoute=(await (await call(a)).json()).revision;
+useKachamak.getState().setView('write');
+useKachamak.setState({activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'note-1',paneAId:'note-1'});
+assert.ok(window.location.hash.includes('project='+novel.id));
+assert.equal((await (await call(a)).json()).revision,beforeRoute);
+cloud.useWebLibrary.setState({ready:false});
+useKachamak.setState({activeNovelId:null,selectedNodeId:null,paneAId:null,view:'split'});
+await cloud.initializeWebLibrary();
+assert.equal(useKachamak.getState().activeNovelId,novel.id,'URL restores project before a cloud navigation save');
+assert.equal(useKachamak.getState().selectedNodeId,'note-1');
+assert.equal(useKachamak.getState().view,'write');
 const collection=await cloud.createWebCollection('From Preview',null);
 const project=await cloud.createWebProject('Same account project','Tester',collection);
 assert.ok((await (await call(a)).json()).snapshot.collections.some(c=>c.id===collection&&c.projectIds.includes(project)));
