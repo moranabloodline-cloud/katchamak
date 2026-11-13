@@ -224,19 +224,22 @@ export function exportPreviewChanges() {
   for (const novel of useKachamak.getState().novels) exportNovelJson(novel);
   useWebLibrary.setState({ previewDirty: false });
 }
-export async function chooseWebLibraryRoot(choose = true) {
+export async function chooseWebLibraryRoot(choose = true, signal?: AbortSignal) {
   if (!signedInId) throw new Error('Sign in first.');
   const selectingAccount = signedInId;
-  const handle = await requestFolder(selectingAccount, vault, choose);
+  const handle = await requestFolder(selectingAccount, vault, choose, signal);
+  if (signal?.aborted) throw new DOMException('Folder selection cancelled', 'AbortError');
   if (signedInId !== selectingAccount) throw new Error('The signed-in account changed. Choose your library again.');
   if (await handle.queryPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('Allow read and write access before connecting this folder.');
   if (running) await running;
   if (refreshing) await refreshing;
   if (useWebLibrary.getState().ready) await flushWebLibrary();
   const previous = { vault, roots, locations, expected, savedSnapshot, state: useKachamak.getState(), collections: useCollections.getState() };
+  if (signal?.aborted) throw new DOMException('Folder selection cancelled', 'AbortError');
   vault = handle;
   try {
     await loadAll();
+    if (signal?.aborted) throw new DOMException('Folder selection cancelled', 'AbortError');
     await rememberedFolder(selectingAccount, handle);
     useWebLibrary.setState({ rootName: handle.name, preview: false, previewDirty: false });
   } catch (error) {

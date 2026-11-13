@@ -55,4 +55,13 @@ window.open = () => null;
 await assert.rejects(requestFolderWindow('owner', null, true), /Allow the folder connection window/);
 delete window.showDirectoryPicker;
 await assert.rejects(requestFolder('owner'), /does not provide writable local folders/);
+// Preview can abandon a host picker that never responds, without accepting a late handle.
+let finishPicker;
+window.showDirectoryPicker = () => new Promise(resolve => { finishPicker = resolve; });
+const controller = new AbortController();
+const waiting = requestFolder('owner', null, true, controller.signal);
+controller.abort();
+await assert.rejects(waiting, { name:'AbortError' });
+finishPicker(handle);
+await new Promise(resolve => setTimeout(resolve,0));
 console.log('Folder access: real handle transfer, origin/window/nonce/account checks, cancellation, blocked popup and permission reuse passed.');

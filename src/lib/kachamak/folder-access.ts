@@ -39,6 +39,7 @@ export async function pickNativeFolder(): Promise<FolderHandle> {
 }
 
 let pending: Promise<FolderHandle> | null = null;
+let cancelPending: (() => void) | null = null;
 /** The top-level window grants access, then sends the actual handle back to Preview.
  * File System Access disallows pickers in cross-origin iframes, but permits using
  * an already-granted handle received from a same-origin window. No file copying. */
@@ -51,7 +52,7 @@ export function requestFolderWindow(accountId: string, current: FolderHandle | n
   if (!child) return Promise.reject(new Error('Allow the folder connection window, then try again. Your library has not changed.'));
   pending = new Promise<FolderHandle>((resolve, reject) => {
     const done = (error?: Error, handle?: FolderHandle) => {
-      window.removeEventListener('message', receive); clearInterval(closed); clearTimeout(timeout);
+      window.removeEventListener('message', receive); clearInterval(closed); clearTimeout(timeout); cancelPending = null;
       if (error) { child.close(); reject(error); } else resolve(handle!);
     };
     const receive = (event: MessageEvent) => {
@@ -67,6 +68,7 @@ export function requestFolderWindow(accountId: string, current: FolderHandle | n
       if (data.action === 'cancel') done(new DOMException('Folder selection cancelled', 'AbortError'));
       if (data.action === 'error') done(new Error(data.error || 'The folder connection failed.'));
     };
+    cancelPending = () => done(new DOMException('Folder selection cancelled', 'AbortError'));
     window.addEventListener('message', receive);
     const closed = setInterval(() => { if (child.closed) done(new DOMException('Folder connection window closed', 'AbortError')); }, 500);
     const timeout = setTimeout(() => done(new Error('The folder window could not connect to Preview. This host may open links in a separate browser. Open the application directly to use your local library.')), 120000);
@@ -75,7 +77,7 @@ export function requestFolderWindow(accountId: string, current: FolderHandle | n
 }
 
 /** Must be called directly from the click handler, before any network/IDB awaits. */
-export async function requestFolder(accountId: string, current: FolderHandle | null = null, choose = true): Promise<FolderHandle> {
+async function requestFolderImpl(accountId: string, current: FolderHandle | null = null, choose = true): Promise<FolderHandle> {
   if (needsFolderWindow()) return requestFolderWindow(accountId, current, choose);
   try {
     if (!choose && current) {
@@ -87,4 +89,16 @@ export async function requestFolder(accountId: string, current: FolderHandle | n
     if (['SecurityError', 'NotAllowedError'].includes((error as Error).name)) return requestFolderWindow(accountId, current, choose);
     throw error;
   }
+}
+
+/** Cancellation abandons only this selection; it never changes the remembered root. */
+export function requestFolder(accountId: string, current: FolderHandle | null = null, choose = true, signal?: AbortSignal): Promise<FolderHandle> {
+  if (signal?.aborted) return Promise.reject(new DOMException('Folder selection cancelled', 'AbortError'));
+  const selection = requestFolderImpl(accountId, current, choose);
+  if (!signal) return selection;
+  return new Promise((resolve, reject) => {
+    const cancel = () => { cancelPending?.(); signal.removeEventListener('abort', cancel); reject(new DOMException('Folder selection cancelled', 'AbortError')); };
+    signal.addEventListener('abort', cancel, {once:true});
+    selection.then(handle => { signal.removeEventListener('abort', cancel); if (!signal.aborted) resolve(handle); }, error => { signal.removeEventListener('abort', cancel); reject(error); });
+  });
 }
