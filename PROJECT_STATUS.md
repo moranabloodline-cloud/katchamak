@@ -1,6 +1,9 @@
 # PROJECT_STATUS — Kachamak
 
 > **2026-11-13 — Prijava:** Sites zahteva ChatGPT prijavu. Lokalni folderi vezani su za platformski user ID na tom browseru i uređaju. Novi nalog počinje prazno; stari anonimni profil se ne prisvaja. Account prikazuje email i odjavu nakon čuvanja. Testovi proveravaju anonimni pristup i izolaciju dva naloga.
+> **2026-11-13 — Account Settings i Admin:** Profile sa avatarom i imenom, Membership sa serverskom licencom, Security preko ChatGPT prijave, Notifications sa sačuvanim preferencijama bez email slanja, Storage. Admin određen serverskim KATCHAMAK_ADMIN_EMAIL (vlasnik Sites-a), member nema admin API pristup. D1 čuva isključivo profile, licence i audit, nikada rukopise ili lokalne putanje. Admin može dodeliti lifetime/vremensku licencu po emailu, opozvati licencu, suspendovati/vratiti pristup. Vlasnik je zaštićen. Dodate schema-only Drizzle migracije i testovi autorizacije, CSRF-a, licenci i izolacije naloga. Naplata i automatske pretplate još nisu uključene.
+
+> **2026-11-13 — Prijava i izolacija biblioteke:** Sites zahteva ChatGPT prijavu pre serviranja aplikacije. /api/account vraća identitet iz platformskih headera, bez keširanja. Lokalni direktorijumi u IndexedDB-u vezani su za taj ID, svaki nalog počinje prazno i pamti samo sopstvene dozvole na konkretnom browseru/uređaju. Stari anonimni profil se ne prisvaja automatski. Account omogućava odjavu nakon uspešnog čuvanja. Testovi pokrivaju anonimni pristup, razdvajanje dva naloga i povratak na sopstvene foldere.
 
 > **2026-11-13 — Kreiranje kolekcije:** čuvanje najpre proverava izabrani folder bez pregledanja drugih foldera na lokaciji. Test pokriva nedostupne susedne foldere i preimenovanje.
 
@@ -617,3 +620,4 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 - Zamenjen raniji Dashboard help dijalog panelom HelpCenter, vezanim za postojeće Help dugme. Tamna podloga, zaobljen okvir, žute ikonice, grupisane stavke i tipografija prate referencu.
 - Lokalna pretraga filtrira naslove, opise i tekst članaka. Svih devet stavki imaju lokalni sadržaj; About prikazuje verziju iz package.json. Nije izmišljena adresa podrške niti se bilo šta šalje drugim servisima.
 - Provereno u izolovanoj Windows aplikaciji uz blokiranu mrežu: otvaranje, vizuelni raspored svih stavki, pretraga keyboard, otvaranje članka Keyboard Shortcuts i zatvaranje Escape tasterom. TypeScript i statički build prolaze; sledi standardna završna provera, commit/push i installer.
+

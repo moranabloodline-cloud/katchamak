@@ -131,10 +131,11 @@ export async function initializeWebLibrary(reconnect = false) {
   initializing = (async () => {
     useWebLibrary.setState({ ready: false, busy: true, error: null });
     const response = await fetch('/api/account', { cache: 'no-store', credentials: 'same-origin' });
-    if (!response.ok) { signedInId = null; throw new Error('Sign in to open your library.'); }
+    if (!response.ok) { signedInId = null; const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Sign in to open your library.'); }
     const identity = await response.json();
     if (typeof identity.id !== 'string' || !identity.id) throw new Error('Sign in to open your library.');
     signedInId = identity.id;
+    if (!localStorage.getItem(accountKey()) && identity.displayName) localStorage.setItem(accountKey(), JSON.stringify({ author: identity.displayName }));
     useWebLibrary.setState({ email: identity.email ?? '' });
     const supported = 'showDirectoryPicker' in window;
     useWebLibrary.setState({ supported, busy: true, error: null });
@@ -398,3 +399,4 @@ export async function addProjectAttachment(file: File) {
   try { await stream.write(file); await stream.close(); } catch (error) { await stream.abort?.(); throw error; }
 }
 registerFolderStorage(() => useWebLibrary.getState().ready && !useWebLibrary.getState().pending && !useWebLibrary.getState().error && snapshot() === savedSnapshot, flushWebLibrary);
+

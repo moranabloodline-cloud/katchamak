@@ -17,12 +17,13 @@ export async function packageSite(manifest) {
   await visit("out");
   const build = createHash("sha256").update(JSON.stringify(assets)).digest("hex");
   const runtime = await readFile("scripts/sites-runtime.mjs", "utf8");
+  const accounts = await readFile("scripts/accounts-runtime.mjs", "utf8");
   const oidc = await readFile("scripts/github-oidc.mjs", "utf8");
   const store = await readFile("scripts/release-store.mjs", "utf8");
   const automation = JSON.parse(await readFile(".openai/automation.json", "utf8"));
   const deployConfig = { repository: automation.repository, branch: automation.branch, origin: automation.origin, workflow: automation.workflow };
-  deployConfig.runtimeHash = createHash("sha256").update(oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
-  const modules = oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import .*github-oidc.*\n/m, "").replace(/^export /gm, "");
+  deployConfig.runtimeHash = createHash("sha256").update(accounts + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
+  const modules = accounts.replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import .*github-oidc.*\n/m, "").replace(/^export /gm, "");
   await mkdir("dist/server", { recursive: true });
   await mkdir("dist/.openai", { recursive: true });
   await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + modules + "\n" + runtime);
@@ -31,3 +32,4 @@ export async function packageSite(manifest) {
   await writeFile(".sites-runtime/github-release.json", JSON.stringify({ version, buildId: build, runtimeHash: deployConfig.runtimeHash, assets: Object.entries(assets).map(([file, data]) => ({ path: file, data, hash: createHash("sha256").update(Buffer.from(data, "base64")).digest("hex") })) }));
   console.log(`Packaged GitHub application for Sites: ${Object.keys(assets).length} assets, build ${build.slice(0, 12)}`);
 }
+

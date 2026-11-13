@@ -1,5 +1,6 @@
 "use client";
 
+import { WebAccountDialog } from "./WebAccountDialog";
 import { WebFolderControls } from "./WebLibraryStorage";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -111,6 +112,8 @@ export function AccountDialog({
     } catch { toast.error("Could not save settings. Check available local storage and try again."); }
   };
 
+  if (!isDesktop()) return <WebAccountDialog open={open} onOpenChange={onOpenChange} />;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onEscapeKeyDown={event => { if (browsing) event.preventDefault(); }} className="max-h-[calc(100dvh-32px)] overflow-y-auto rounded-xl border-white/15 bg-[#080808] p-5 text-[#ddd] sm:max-w-3xl [font-family:Arial,sans-serif]">
@@ -168,3 +171,4 @@ export function AccountDialog({
     </Dialog>
   );
 }
+
