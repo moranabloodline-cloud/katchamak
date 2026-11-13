@@ -34,7 +34,7 @@ class DiskFile {
   kind = 'file';
   constructor(p) { this.p = p; this.name = path.basename(p); }
   async getFile() { return new File([await fs.readFile(this.p)], this.name); }
-  async createWritable() { let data; return { write: async value => { if (failWrite && this.name.endsWith('.md')) { failWrite = false; throw new Error('Disk temporarily unavailable'); } data = typeof value === 'string' ? value : Buffer.from(await value.arrayBuffer()); }, close: async () => fs.writeFile(this.p, data), abort: async () => {} }; }
+  async createWritable() { if (!permit) throw new DOMException('Folder access expired', 'NotAllowedError'); let data; return { write: async value => { if (failWrite && this.name.endsWith('.md')) { failWrite = false; throw new Error('Disk temporarily unavailable'); } data = typeof value === 'string' ? value : Buffer.from(await value.arrayBuffer()); }, close: async () => fs.writeFile(this.p, data), abort: async () => {} }; }
 }
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'katchamak-folders-'));
 const a = path.join(temp, 'drive-a'), b = path.join(temp, 'drive-b'); await fs.mkdir(a); await fs.mkdir(b);
@@ -78,6 +78,14 @@ await assert.rejects(web.flushWebLibrary(), /temporarily unavailable/);
 assert.equal(web.useWebLibrary.getState().pending, true);
 await web.flushWebLibrary();
 assert.equal(web.useWebLibrary.getState().pending, false);
+// A permission revoked while the editor is open must be recoverable without reload.
+useKachamak.getState().updateNode('binder', noteId, { content: '<p>Keep this unsaved text.</p>' });
+permit = false;
+await assert.rejects(web.flushWebLibrary(), /Folder access expired/);
+await web.saveWebLibrary();
+assert.equal(web.useWebLibrary.getState().error, null);
+assert.match(await fs.readFile(mdPath, 'utf8'), /Keep this unsaved text/);
+assert.equal(pickCount, 2, 'Save renews permission without choosing another folder');
 // Explorer folder names are independent of titles; reacquire stale handles by ID.
 const oldFolder = path.dirname(await findFile(a, n => n === 'project.json'));
 const renamedFolder = path.join(path.dirname(oldFolder), 'Renamed in Explorer');

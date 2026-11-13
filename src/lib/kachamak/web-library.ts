@@ -215,11 +215,24 @@ export async function connectWebFolder() {
   catch (error) { roots = previous; throw error; }
 }
 
+/** Called directly by Save/Retry so the browser can renew access on a user gesture.
+ * Do not reinitialize the library: that would discard the open editor's unsaved text.
+ */
+export async function saveWebLibrary(): Promise<void> {
+  try {
+    const permissions = await Promise.all(roots.map(root => root.parent.requestPermission({ mode: 'readwrite' })));
+    if (permissions.some(permission => permission !== 'granted')) {
+      throw new Error('Folder access was not allowed. Allow access, then choose Retry save. Your unsaved changes are still open.');
+    }
+    await flushWebLibrary();
+  } catch (error) { setError(error); throw error; }
+}
+
 export async function flushWebLibrary(): Promise<void> {
   if (!useWebLibrary.getState().ready) throw new Error('Reconnect your library folders first.');
   if (timer) { clearTimeout(timer); timer = null; }
   if (running) { await running; if (snapshot() !== savedSnapshot) return flushWebLibrary(); return; }
-  if (snapshot() === savedSnapshot) return;
+  if (snapshot() === savedSnapshot) { useWebLibrary.setState({ busy: false, pending: false, error: null }); return; }
   running = (async () => { if (navigator.locks) await navigator.locks.request("katchamak-folder-save-" + account().id, saveSnapshot); else await saveSnapshot(); })().catch(error => { setError(error); throw error; }).finally(() => { running = null; });
   await running;
   if (snapshot() !== savedSnapshot) await flushWebLibrary();
