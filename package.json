@@ -111,9 +111,9 @@
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "happy-dom": "^21.0.4",
+    "jsdom": "^31.0.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
   }
 }
-

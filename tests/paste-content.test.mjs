@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body></body></html>').window;globalThis.window=dom;globalThis.document=dom.document;globalThis.DOMParser=dom.DOMParser;
+const {preparePastedContent}=await import('../src/lib/kachamak/paste-content.ts');
+const root=document.createElement('div');
+root.innerHTML=preparePastedContent('<style>.source { margin-bottom:18pt; font-family:Georgia; color:red; background:white; }</style><p class="source"><b>First</b></p><p>&nbsp;</p><p style="text-align:center; margin-left:36pt; color:black;background-color:white"><i>Last</i></p><ul><li>Item</li></ul>','');
+assert.equal(root.querySelectorAll('p').length,3);assert.ok(root.querySelectorAll('p')[1].querySelector('br'));
+assert.ok(root.querySelector('b'));assert.ok(root.querySelector('i'));assert.ok(root.querySelector('li'));
+assert.equal(root.querySelector('p').style.marginBottom,'18pt');assert.equal(root.querySelector('p').style.fontFamily,'Georgia');assert.equal(root.querySelectorAll('p')[2].style.textAlign,'center');
+assert.ok(!/color:|background|class=/.test(root.innerHTML));
+root.innerHTML=preparePastedContent('','First\r\n\r\n\r\nLast');assert.equal(root.querySelectorAll('br').length,3);
+const clean=preparePastedContent('<script>alert(1)</script><p onclick="bad()" style="background:url(https://bad.test);color:red">Safe<a href="javascript:bad()">link</a></p>','');assert.ok(!/onclick|javascript:|<script|url\(/.test(clean));
+console.log('Paste formatting: empty lines, source paragraph spacing, font, bold/italic, lists, indentation and theme color isolation passed.');

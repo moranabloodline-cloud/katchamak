@@ -1,5 +1,6 @@
 "use client";
 
+import { preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useRef } from "react";
 
 interface RichEditorProps {
@@ -44,6 +45,12 @@ export function RichEditor({
         ref={ref}
         contentEditable
         suppressContentEditableWarning
+        onPaste={event => {
+          event.preventDefault();
+          const content = preparePastedContent(event.clipboardData.getData('text/html'), event.clipboardData.getData('text/plain'));
+          document.execCommand('insertHTML', false, content);
+          handleInput();
+        }}
         onInput={handleInput}
         onBlur={handleInput}
         data-placeholder={placeholder}

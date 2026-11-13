@@ -254,3 +254,6 @@ html[data-theme="light"] :is([class~="bg-white/5"], [class~="bg-white/10"]) { ba
 html[data-theme="light"] [class*="border-white/"]:not([data-project-cover], [data-project-cover] *) { border-color: #0003; }
 html[data-theme="light"] :is([class~="text-white"], [class~="text-stone-100"], [class~="text-stone-200"], [class~="text-stone-300"]) { color: #37342f; }
 html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0000000c; }
+
+/* Empty paragraphs pasted from writing tools retain their blank line. */
+.kachamak-editor p:empty, .kachamak-editor div:empty { min-height: 1em; }

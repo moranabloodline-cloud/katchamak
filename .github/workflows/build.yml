@@ -24,6 +24,8 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
+      - name: Test pasted formatting and theme colors
+        run: bun run tests/paste-content.test.mjs
       - name: Test adding notes inside the selected item
         run: bun run tests/note-tree-add.test.mjs
       - name: Test authenticated cloud storage and cross-view saves
