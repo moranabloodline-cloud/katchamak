@@ -10,8 +10,9 @@ export function WorkspaceTabs({novel}:{novel:Novel}) {
   const active=useKachamak(s=>s.activeTab), setTab=useKachamak(s=>s.setTab), closeTab=useKachamak(s=>s.closeTab);
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const fixed=['binder','codex','trash'];
-  const tabs=[...TABS.filter(t=>fixed.includes(t.key)),...TABS.filter(t=>!fixed.includes(t.key)&&!novel.hiddenSections?.includes(t.key as SectionKey)),...(novel.openNoteTabs||[]).flatMap(id=>{const hit=findNodeInNovel(novel,id);return hit?[{key:`note:${id}` as TabKey,label:hit.node.title}]:[];})];
-  return <nav aria-label="Workspace sections" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2">
+  const tabs=[...TABS.filter(t=>fixed.includes(t.key)&&t.key!=='trash'),...TABS.filter(t=>!fixed.includes(t.key)&&!novel.hiddenSections?.includes(t.key as SectionKey)),...(novel.openNoteTabs||[]).flatMap(id=>{const hit=findNodeInNovel(novel,id);return hit?[{key:`note:${id}` as TabKey,label:hit.node.title}]:[];})];
+  return <nav aria-label="Workspace sections" className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-2">
+    <div className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     {tabs.map(t=><div key={t.key} className={`flex shrink-0 items-center rounded-md border ${active===t.key?'border-[#ad7e2e]/70 bg-[#3a2c18] text-[#fbe4a6]':'border-transparent text-muted-foreground'}`}>
       <button type="button" onClick={()=>setTab(t.key)} aria-current={active===t.key?'page':undefined} title={t.label} className="max-w-44 truncate whitespace-nowrap px-2.5 py-1 text-sm hover:text-white">{t.label}</button>
       {!fixed.includes(t.key)&&<button type="button" title="Close tab — keeps all notes" aria-label={`Close ${t.label} tab`} onClick={()=>closeTab(t.key)} className="mr-1 rounded p-0.5 hover:bg-white/10"><X className="h-3 w-3"/></button>}
@@ -21,5 +22,9 @@ export function WorkspaceTabs({novel}:{novel:Novel}) {
       <form className="flex gap-2" onSubmit={e=>{e.preventDefault();if(!name.trim())return;const state=useKachamak.getState();const id=state.addNode('binder',null,'doc',name.trim());if(id){state.updateNode('binder',id,{icon:'folder'});state.openNoteTab(id);state.select(id);state.setRenamingNode(null);}setName('');setOpen(false);}}><input aria-label="New folder tab name" placeholder="Research, World, Marketing…" value={name} onChange={e=>setName(e.target.value)} className="min-w-0 flex-1 rounded border border-white/15 bg-black/20 px-2 py-1.5 text-xs"/><button className="rounded bg-amber-400 px-2 text-xs text-black">Create</button></form>
       {!!novel.hiddenSections?.length&&<div className="mt-3 border-t border-white/10 pt-2">{TABS.filter(t=>novel.hiddenSections?.includes(t.key as SectionKey)).map(t=><button key={t.key} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-white/10" onClick={()=>{useKachamak.getState().showSection(t.key as SectionKey);setOpen(false);}}><FolderOpen className="h-3.5 w-3.5"/>Show {t.label}</button>)}</div>}
     </PopoverContent></Popover>
+    </div>
+    <div className="flex shrink-0 items-center border-l border-white/15 pl-2">
+      <button type="button" onClick={()=>setTab('trash')} aria-current={active==='trash'?'page':undefined} title="Trash" className={`rounded-md border px-2.5 py-1 text-sm ${active==='trash'?'border-[#ad7e2e]/70 bg-[#3a2c18] text-[#fbe4a6]':'border-transparent text-muted-foreground hover:text-white'}`}>Trash</button>
+    </div>
   </nav>;
 }
