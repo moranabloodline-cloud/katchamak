@@ -29,6 +29,10 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
+      - name: Test connected note creation and navigation
+        run: bun run tests/note-workflow.test.mjs
+      - name: Test selected text linking and note preview
+        run: bun run tests/note-link-dialog.test.mjs
       - name: Test editor paste, safe HTML and internal navigation
         run: bun run tests/rich-editor.test.mjs
       - name: Test knowledge links, aliases, manuscript export and migration

@@ -45,3 +45,11 @@ Napredni PDF/EPUB/DOCX compile i tipizirane relacije ostaju budući rad. Ova ver
 - Izvoz: redosled Binder-a, izbor nota, isključivanje Codexa, brojanje sopstvenog teksta bez dupliranja.
 - Browser QA koristi poseban lokalni probni server i sintetičku biblioteku. Korisnikovi projekti nisu testni fixture-i i nisu menjani radi provera.
 - GitHub čuva izvor aplikacije. Privatni cloud podaci korisnika ostaju van repozitorijuma i instalacionih/build paketa.
+
+## Nadogradnja 0.3.1 — Codex uz rukopis
+
+- Iz označenog teksta Link/Ctrl+K bira postojeću notu ili pravi novu praznu Codex notu; naslov i roditelj su izbor autora. Nema posebnih Character/Place klasa niti generisanja sadržaja.
+- Nova nota se povezuje sa izvornom, a rukopis ostaje otvoren. HTML selekcije, prazni pasusi i granice reči ostaju sačuvani.
+- Klik na ručno umetnut link daje pregled; Open beside radi u oba smera između bilo kojih nota. Strelica za povratak vraća prethodni tab foldera, note i Write/Split raspored. Trag je kratkotrajan i ne menja šemu projekta.
+- Mentions izdvaja reference iz rukopisa i filtrira po naslovu, putanji ili isečku. Novi pregled koristi isti Note sistem i prikazuje sinopsis, tekst i aliase.
+- Regresije pokrivaju kreiranje podnote bez gubitka izvornog teksta, nevažeće ciljeve, povratak u oba Split panela, obrisane note i odvajanje projekata. React test proverava stvarni dialog i DOM selekciju; browser provera potvrđuje Save/reload i očuvan sadržaj povezane note.

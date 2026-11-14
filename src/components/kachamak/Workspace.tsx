@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
 import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/cloud-library";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
+import {openProjectNote,returnToPreviousNote,useNoteTrail} from '@/lib/kachamak/note-navigation';
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { ManuscriptExport } from "./ManuscriptExport";
@@ -33,11 +34,18 @@ import { toast } from "sonner";
 
 /* ---------- project search (top bar, left panel zone) ---------- */
 
+function NoteBackButton() {
+  const active=useKachamak(s=>s.activeNovelId),novels=useKachamak(s=>s.novels);
+  const trail=useNoteTrail();
+  const previous=trail.projectId===active?trail.entries.at(-1):null;
+  if(!previous)return null;
+  const novel=novels.find(n=>n.id===active),name=novel&&previous.selectedNodeId?findNodeInNovel(novel,previous.selectedNodeId)?.node.title:null;
+  return <button type="button" aria-label="Back to previous note" title={name?'Back to '+name:'Back to previous view'} onClick={returnToPreviousNote} className="shrink-0 rounded p-1 text-sky-400 hover:bg-white/10"><ArrowLeft className="h-4 w-4"/></button>;
+}
+
 function ProjectSearch() {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
-  const setTab = useKachamak((s) => s.setTab);
-  const select = useKachamak((s) => s.select);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -48,10 +56,7 @@ function ProjectSearch() {
   useEffect(()=>setHighlight(0),[q]);
 
   const go = (r: { node: NoteNode; section: SectionKey }) => {
-    setTab(r.section);
-    select(r.node.id);
-    const state = useKachamak.getState();
-    if (state.view !== 'split') state.setView('write');
+    openProjectNote(r.node.id);
     setQ("");
     setOpen(false);
   };
@@ -248,6 +253,7 @@ export function Workspace() {
           >
             <House className="h-5 w-5" />
           </button>
+          {leftPanelOpen && <NoteBackButton />}
           {leftPanelOpen && <ProjectSearch />}
         </div>
 

@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, Link2, PanelsLeftRight, X } from 'lucide-react';
+import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import { useKachamak } from '@/lib/kachamak/store';
 import { contentText, flattenNotes, indexText, rangeForMatch, scanLinks, type NoteMatch } from '@/lib/kachamak/note-links';
 import { findNodeInNovel, stripHtml } from '@/lib/kachamak/utils';
@@ -72,9 +73,7 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
     state.updateNode(currentHit.section,noteId,{linkChoices:choices});setPopup(null);
   };
   const open=(id:string,beside=false)=>{
-    const state=useKachamak.getState();
-    if(beside){const sourcePane=state.activePane;state.setView('split');state.setActivePane(sourcePane==='a'?'b':'a');}
-    state.setTab('codex');state.select(id);setPopup(null);
+    if(openProjectNote(id,beside))setPopup(null);
   };
   const target=popup?.match.targetId?findNodeInNovel(novel,popup.match.targetId)?.node:null;
   const count=matches.filter(m=>m.targetId&&!m.missing).length;
