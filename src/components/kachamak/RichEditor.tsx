@@ -8,6 +8,7 @@ import { preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useRef, useState } from "react";
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
+import {applyBlockStyle} from '@/lib/kachamak/editor-blocks';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 
 interface RichEditorProps {
@@ -60,6 +61,9 @@ export function RichEditor({
         aria-multiline="true"
         suppressContentEditableWarning
         onKeyDown={event => {
+          if((event.ctrlKey||event.metaKey)&&event.altKey&&!event.shiftKey&&/^[0-6]$/.test(event.key)){
+            event.preventDefault();const selection=window.getSelection();applyBlockStyle(selection?.rangeCount?selection.getRangeAt(0):null,event.key==='0'?'normal':'h'+event.key);return;
+          }
           if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.dispatchEvent(new Event('katchamak-link')); }
         }}
         onClick={event => {

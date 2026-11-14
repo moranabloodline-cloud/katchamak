@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlignCenter,
   AlignJustify,
@@ -22,6 +22,7 @@ import {
   Underline,
   RemoveFormatting,
 } from "lucide-react";
+import {editorForRange,selectionBlock,applyBlockStyle} from "@/lib/kachamak/editor-blocks";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -44,12 +45,6 @@ const BLOCK_STYLES = [
   { value: "quote", label: "Quote", block: "<blockquote>" },
 ] as const;
 
-function normalizeBlock(tag: string): string {
-  const v = (tag || "").toLowerCase().replace(/[<>]/g, "");
-  if (/^h[1-6]$/.test(v)) return v;
-  if (v === "blockquote") return "quote";
-  return "normal"; /* p, div, prazno */
-}
 
 function ToolBtn({
   onClick,
@@ -96,20 +91,22 @@ export function EditorToolbar() {
   /* Tekući blok selekcije se osvežava na svaku promenu selekcije, da dropdown
      uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
   const [blockStyle, setBlockStyle] = useState<string>("normal");
+  const savedRange=useRef<Range|null>(null);
   useEffect(() => {
     const sync = () => {
-      try {
-        setBlockStyle(normalizeBlock(document.queryCommandValue("formatBlock")));
-      } catch {
-        /* stariji pretraživači bez queryCommandValue — ostaje poslednja vrednost */
-      }
+      const focused=document.activeElement;
+      if(focused?.closest('[data-editor-toolbar]'))return;
+      if(focused?.matches('input,textarea,select')){savedRange.current=null;setBlockStyle('normal');return;}
+      const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
+      if(editorForRange(range)){savedRange.current=range!.cloneRange();setBlockStyle(selectionBlock(range));}
+      else {savedRange.current=null;setBlockStyle('normal');}
     };
-    document.addEventListener("selectionchange", sync);
-    return () => document.removeEventListener("selectionchange", sync);
-  }, []);
+    document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
+    return()=>{document.removeEventListener('selectionchange',sync);document.removeEventListener('focusin',sync);document.removeEventListener('input',sync);};
+  },[]);
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
+    <div data-editor-toolbar className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
       <select
         aria-label="Text style"
         title="Text style"
@@ -117,8 +114,7 @@ export function EditorToolbar() {
         onChange={(e) => {
           const style = BLOCK_STYLES.find((s) => s.value === e.target.value);
           if (!style) return;
-          cmd("formatBlock", style.block);
-          setBlockStyle(style.value);
+          if(applyBlockStyle(savedRange.current,style.value))setBlockStyle(style.value);
         }}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
       >

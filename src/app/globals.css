@@ -261,3 +261,16 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 /* Note identities stay stable when titles change. */
 .kachamak-editor a[href^="#note/"] { color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
+
+/* Semantic heading hierarchy, relative to the writer's chosen base text size. */
+.kachamak-editor :is(h1,h2,h3,h4,h5,h6) {
+  font-family: inherit; font-weight: 700; line-height: 1.3;
+  margin-block: 1.25em .45em; color: inherit; text-transform: none;
+}
+.kachamak-editor h1 { font-size: 2em; }
+.kachamak-editor h2 { font-size: 1.6em; }
+.kachamak-editor h3 { font-size: 1.35em; }
+.kachamak-editor h4 { font-size: 1.2em; }
+.kachamak-editor h5 { font-size: 1.1em; }
+.kachamak-editor h6 { font-size: 1em; font-weight: 600; }
+.kachamak-editor > :is(h1,h2,h3,h4,h5,h6):first-child { margin-block-start: 0; }
