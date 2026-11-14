@@ -186,9 +186,7 @@ export function EditorToolbar() {
       <ToolBtn
         title="Link"
         onClick={() => {
-          const url = window.prompt("Link URL");
-          if (!url) return;
-          cmd("createLink", url);
+          document.dispatchEvent(new Event('katchamak-link'));
         }}
       >
         <LinkIcon className="h-4 w-4" />

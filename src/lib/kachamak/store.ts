@@ -180,7 +180,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
     if (!value || typeof value !== "object" || Array.isArray(value)) return false;
     const node = value as Record<string, unknown>;
     return typeof node.id === "string" && typeof node.title === "string" &&
-      typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") && isTree(node.children);
+      typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") && (node.aliases === undefined || (Array.isArray(node.aliases) && node.aliases.every(a => typeof a === "string"))) && isTree(node.children);
   });
   if (!SECTION_KEYS.some((key) => key in sections) && !Array.isArray(n.codex)) return false;
   if (!Object.values(sections).every((nodes) => isTree(nodes))) return false;
@@ -785,7 +785,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -798,6 +798,11 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v7 → v8: optional aliases, preserving every existing note and link.
+        if (version < 8) {
+          const visit = (nodes: NoteNode[]) => { for(const node of nodes??[]) { if(!Array.isArray(node.aliases))node.aliases=[];visit(node.children); } };
+          for(const novel of s.novels??[]) { for(const nodes of Object.values(novel.sections??{}))visit(nodes);for(const item of novel.trash??[])visit([item.node]); }
+        }
         // Version 6 only adds optional Trash metadata. Do not rerun older
         // migrations on an already migrated version 5 library.
         if (version >= 5) return s;

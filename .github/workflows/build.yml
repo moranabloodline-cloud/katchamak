@@ -13,9 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.4"
+          bun-version: "1.4.4"
       - id: install
         run: bun install --frozen-lockfile
       - name: Test storage rehydration
@@ -24,6 +27,12 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
+      - name: Test editor paste, safe HTML and internal navigation
+        run: bun run tests/rich-editor.test.mjs
+      - name: Test knowledge links, aliases, manuscript export and migration
+        run: bun run tests/knowledge.test.mjs
+      - name: Test user-controlled name linking
+        run: bun run tests/link-known-names.test.mjs
       - name: Test pasted formatting and theme colors
         run: bun run tests/paste-content.test.mjs
       - name: Test adding notes inside the selected item
@@ -61,7 +70,7 @@ jobs:
           node-version: "24"
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.4"
+          bun-version: "1.4.4"
       - uses: dtolnay/rust-toolchain@stable
       - run: bun install --frozen-lockfile
       - name: Build Windows desktop installer

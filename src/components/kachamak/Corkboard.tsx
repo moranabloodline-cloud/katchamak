@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
-import { findNode } from "@/lib/kachamak/utils";
+import { findNode, stripHtml } from "@/lib/kachamak/utils";
 import { iconByName } from "@/lib/kachamak/icons";
 
 /* ---------- classic Scrivener index card: icon + title + synopsis ---------- */
@@ -95,7 +95,7 @@ function IndexCard({
         <span className="truncate text-[13px] font-semibold leading-tight">{node.title}</span>
       </div>
       <p className="flex-1 overflow-hidden px-3 py-2 text-[12px] leading-relaxed text-[#4a4036]">
-        {node.synopsis || (
+        {stripHtml(node.synopsis) || (
           <span className="italic text-[#8a7b60]">
             No synopsis yet — write it in the Info panel.
           </span>

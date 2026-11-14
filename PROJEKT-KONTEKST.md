@@ -1,3 +1,5 @@
+> **14.11.2026 — Važeći proizvodni smer:** postojeći Katchamak razvijati kao autorski studio bez ugrađenog AI-ja: slobodne note, rukopis i Codex, stabilne veze i povratne reference, jednostavna navigacija i izvoz. Korisnik je odobrio samostalno sređivanje na osnovu ranijih ideja, uz očuvanje podataka i postojećeg dizajna. PRODUCT_DIRECTION.md beleži pregledane izvore i granice aktuelne nadogradnje. Verzija 0.3.0, store v8 (opcioni aliasi); cloud ostaje dok korisnik ponovo ne odobri lokalnu fazu.
+
 > **Važeća odluka 13.11.2026:** razvojna aplikacija koristi isključivo Sites cloud storage po ChatGPT nalogu. Preview i browser dele biblioteku. Ne vraćati root pickere, lokalni Save ili installer dok korisnik ponovo ne zatraži lokalnu fazu. D1 indeks + R2 privatni sadržaj, optimistička revizija za zaštitu od konflikata. Postojeći lokalni fajlovi ostaju netaknuti. Istorijske lokalne upute ispod nisu trenutni zahtev.
 
 # PROJEKT-KONTEKST — Kachamak (pročitaj ovo prvo!)

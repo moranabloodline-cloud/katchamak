@@ -3,7 +3,7 @@ export function validCloudLibrary(value) {
   if (!value || !Array.isArray(value.novels) || !Array.isArray(value.collections)) return false;
   const ids = new Set(), collections = new Map();
   const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
-  const visit = (nodes, seen, depth = 0) => Array.isArray(nodes) && depth < 100 && nodes.every(n => n && validId(n.id) && !seen.has(n.id) && (seen.add(n.id), typeof n.title === 'string' && typeof n.content === 'string' && visit(n.children, seen, depth + 1)));
+  const visit = (nodes, seen, depth = 0) => Array.isArray(nodes) && depth < 100 && nodes.every(n => n && validId(n.id) && !seen.has(n.id) && (seen.add(n.id), typeof n.title === 'string' && typeof n.content === 'string' && (n.aliases === undefined || (Array.isArray(n.aliases) && n.aliases.length <= 100 && n.aliases.every(a => typeof a === 'string' && a.length <= 500))) && visit(n.children, seen, depth + 1)));
   for (const n of value.novels) {
     if (!n || !validId(n.id) || ids.has(n.id) || typeof n.title !== 'string' || typeof n.author !== 'string' || !n.sections) return false;
     ids.add(n.id);

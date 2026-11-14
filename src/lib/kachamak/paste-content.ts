@@ -25,12 +25,12 @@ export function preparePastedContent(html: string, text: string): string {
   doc.querySelectorAll('script,style,link,meta,iframe,object,embed,svg,img').forEach(el=>el.remove());
   for(const el of doc.body.querySelectorAll('*')) {
     const css = formatting((inherited.get(el)||'')+';'+(el.getAttribute('style')||''));
-    for(const attr of Array.from(el.attributes)) if(!['href','colspan','rowspan','start','reversed','type','face','size'].includes(attr.name))el.removeAttribute(attr.name);
+    for(const attr of Array.from(el.attributes)) if(!['data-katchamak-note','title','href','colspan','rowspan','start','reversed','type','face','size'].includes(attr.name))el.removeAttribute(attr.name);
     if(css)el.setAttribute('style',css);
     if(['P','DIV'].includes(el.tagName) && !el.textContent?.replace(/[\s\u00a0]/g,'') && !el.querySelector('br,table,ul,ol'))el.innerHTML='<br>';
     if(el.tagName==='P') { const style=(el as HTMLElement).style; if(!style.margin && !style.marginTop && !style.marginBottom)style.marginBottom='1em'; }
   }
-  DOMPurify.sanitize(doc.body,{IN_PLACE:true,ALLOWED_TAGS:['body','p','div','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','thead','tbody','tfoot','tr','th','td','a','font','hr'],ALLOWED_ATTR:['style','href','colspan','rowspan','start','reversed','type','face','size']});
+  DOMPurify.sanitize(doc.body,{IN_PLACE:true,ALLOWED_TAGS:['body','p','div','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','thead','tbody','tfoot','tr','th','td','a','font','hr'],ALLOWED_ATTR:['data-katchamak-note','title','style','href','colspan','rowspan','start','reversed','type','face','size']});
   return doc.body.innerHTML;
 }
 

@@ -257,3 +257,7 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 
 /* Empty paragraphs pasted from writing tools retain their blank line. */
 .kachamak-editor p:empty, .kachamak-editor div:empty { min-height: 1em; }
+
+/* Note identities stay stable when titles change. */
+.kachamak-editor a[href^="#note/"] { color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }

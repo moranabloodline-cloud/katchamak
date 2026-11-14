@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
 import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/cloud-library";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
+import { ManuscriptExport } from "./ManuscriptExport";
+import { NoteLinkDialog } from "./NoteLinkDialog";
+import { indexNotes, searchNotes } from "@/lib/kachamak/knowledge";
 import { NotesSection } from "./NotesSection";
 import { TrashView } from "./TrashView";
 import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
@@ -38,25 +41,9 @@ function ProjectSearch() {
 
   const novel = novels.find((n) => n.id === activeNovelId);
 
-  const results = useMemo(() => {
-    if (!novel || !q.trim()) return [];
-    const needle = q.trim().toLowerCase();
-    const out: { node: NoteNode; section: SectionKey }[] = [];
-    for (const key of Object.keys(novel.sections) as SectionKey[]) {
-      const walk = (nodes: NoteNode[]) => {
-        for (const n of nodes) {
-          if ([n.title, n.content, n.synopsis, n.notes].some((value) =>
-            stripHtml(value ?? "").toLocaleLowerCase().includes(needle)
-          )) {
-            out.push({ node: n, section: key });
-          }
-          walk(n.children);
-        }
-      };
-      walk(novel.sections[key]);
-    }
-    return out.slice(0, 8);
-  }, [novel, q]);
+  const [highlight,setHighlight]=useState(0);
+  const results = useMemo(() => novel && q.trim() ? searchNotes(indexNotes(novel),q).slice(0,20) : [], [novel,q]);
+  useEffect(()=>setHighlight(0),[q]);
 
   const go = (r: { node: NoteNode; section: SectionKey }) => {
     setTab(r.section);
@@ -75,7 +62,9 @@ function ProjectSearch() {
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
-          if (e.key === "Enter" && results[0]) go(results[0]);
+          if (e.key === "ArrowDown") {e.preventDefault();setHighlight(i=>Math.max(0,Math.min(i+1,results.length-1)));}
+          if (e.key === "ArrowUp") {e.preventDefault();setHighlight(i=>Math.max(0,i-1));}
+          if (e.key === "Enter" && results[highlight]) {e.preventDefault();go(results[highlight]);}
         }}
         placeholder="Search project."
         aria-label="Search project"
@@ -83,15 +72,16 @@ function ProjectSearch() {
       />
       {open && q.trim() && (
         <div className="absolute inset-x-0 top-11 z-50 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
-          {results.map((r) => {
+          {results.map((r, i) => {
             const Icon = iconByName(r.node.icon);
             return (
               <button
                 key={r.node.id}
+                data-highlighted={i === highlight}
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => go(r)}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-white/10"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-white/10 data-[highlighted=true]:bg-white/10"
               >
                 {Icon ? (
                   <Icon
@@ -133,6 +123,7 @@ function SettingsDialog({
   const fileRef = useRef<HTMLInputElement>(null);
   const [importDestinationReady, setImportDestinationReady] = useState(false);
 
+  const [exportOpen,setExportOpen]=useState(false);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-sm">
@@ -140,6 +131,7 @@ function SettingsDialog({
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <button type="button" disabled={!novel} onClick={()=>setExportOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-amber-400/30 px-3 py-2 text-sm hover:bg-white/5 disabled:opacity-40"><FileText className="h-4 w-4"/>Export manuscript</button>
           <button
             type="button"
             disabled={!novel}
@@ -169,7 +161,7 @@ function SettingsDialog({
               if (!f) return;
               const reader = new FileReader();
               reader.onload = async () => {
-                try { await importWebProject(String(reader.result), null); toast.success("Project imported to your folder."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
+                try { await importWebProject(String(reader.result), null); toast.success("Project imported to your account."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
               };
               reader.readAsText(f);
               e.target.value = "";
@@ -181,6 +173,7 @@ function SettingsDialog({
           </p>
         </div>
       </DialogContent>
+      <ManuscriptExport open={exportOpen} onOpenChange={setExportOpen} />
     </Dialog>
   );
 }
@@ -192,6 +185,14 @@ export function Workspace() {
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const activeTab = useKachamak((s) => s.activeTab);
   const setTab = useKachamak((s) => s.setTab);
+  useEffect(()=>{
+    const keyboard=(event:KeyboardEvent)=>{
+      if(!(event.ctrlKey||event.metaKey))return;
+      if(event.key.toLowerCase()==='s'){event.preventDefault();void saveWebLibrary().then(()=>toast.success('Saved to your account.')).catch(error=>toast.error(String(error)));}
+      if(event.shiftKey&&event.key.toLowerCase()==='f'){event.preventDefault();document.querySelector<HTMLInputElement>('[aria-label="Search project"]')?.focus();}
+    };
+    document.addEventListener('keydown',keyboard);return()=>document.removeEventListener('keydown',keyboard);
+  },[]);
   const closeNovel = useKachamak((s) => s.closeNovel);
   const treeScope = useKachamak((s) => s.treeScope);
   const setTreeScope = useKachamak((s) => s.setTreeScope);
@@ -353,6 +354,7 @@ export function Workspace() {
         <NotesSection section={activeTab as SectionKey} />
       )}
 
+      <NoteLinkDialog />
       <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>

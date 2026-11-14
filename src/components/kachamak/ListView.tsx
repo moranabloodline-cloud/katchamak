@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { FileText, FolderOpen } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
-import { findNode, locateNode, nodeWords, ownWords } from "@/lib/kachamak/utils";
+import { findNode, locateNode, nodeWords, ownWords, stripHtml } from "@/lib/kachamak/utils";
 
 function flatten(nodes: NoteNode[], out: NoteNode[] = []): NoteNode[] {
   for (const n of nodes) {
@@ -29,7 +29,7 @@ export function ListView({ section }: { section: SectionKey }) {
   const roots = novel?.sections[section] ?? [];
   const all = flatten(roots);
 
-  const total = all.reduce((a, n) => a + nodeWords(n), 0);
+  const total = all.reduce((a, n) => a + ownWords(n), 0);
 
   /* ---------- drag & drop ---------- */
   const dragSrcId = useRef<string | null>(null);
@@ -144,7 +144,7 @@ export function ListView({ section }: { section: SectionKey }) {
                     </span>
                   </td>
                   <td className={`hidden max-w-0 truncate px-4 py-2.5 text-muted-foreground md:table-cell ${dropLine}`}>
-                    {n.synopsis || "—"}
+                    {stripHtml(n.synopsis) || "—"}
                   </td>
                   <td className={`px-4 py-2.5 text-muted-foreground ${dropLine}`}>
                     {/* kontejner: reči podstabla; list: sav tekst same note

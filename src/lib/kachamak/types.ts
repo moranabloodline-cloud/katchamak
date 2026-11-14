@@ -49,6 +49,7 @@ export interface NoteNode {
      titles resolve live from the Codex section. Optional — older stores and
      backups simply lack the field. */
   links?: string[];
+  aliases?: string[]; // User-defined names for search and mentions; no AI extraction.
   createdAt: number;
   updatedAt: number;
   children: NoteNode[];

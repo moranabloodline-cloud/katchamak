@@ -12,8 +12,8 @@ export function stripHtml(html: string): string {
   if (!html) return "";
   return html
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
-    .replace(/<[^>]*>/g, " ")
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|pre|tr|td|section)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
