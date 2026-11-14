@@ -328,8 +328,8 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             <div className="min-h-0 flex-1">
               <NoteTree section={section} rootId={rootId} />
             </div>
-            {/* dno levog panela: ⓘ levo (ostaje left align), Expand all i
-                Collapse all skroz desno u istom redu — po Nikoli */}
+            {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
+                Collapse skroz desno u istom redu — po Nikoli */}
             <div className="flex h-10 shrink-0 items-center gap-1.5 border-t border-amber-500/25 px-2">
               <SaveInfoButton />
               <span className="ml-auto" />
@@ -338,14 +338,14 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
                 onClick={() => setAllNodesCollapsed(section, false)}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
-                Expand all
+                Expand
               </button>
               <button
                 type="button"
                 onClick={() => setAllNodesCollapsed(section, true)}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
-                Collapse all
+                Collapse
               </button>
             </div>
           </aside>
