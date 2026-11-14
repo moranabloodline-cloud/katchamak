@@ -29,6 +29,8 @@ jobs:
         run: bun run tests/library.test.mjs
       - name: Test release authorization and activation
         run: bun run tests/release-store.test.mjs
+      - name: Test story calendar and chronology
+        run: bun run tests/story-calendar.test.mjs
       - name: Test connected note creation and navigation
         run: bun run tests/note-workflow.test.mjs
       - name: Test selected text linking and note preview

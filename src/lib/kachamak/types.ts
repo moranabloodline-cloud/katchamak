@@ -1,3 +1,4 @@
+import type { StoryEvent, TimelinePreferences } from './story-calendar';
 /* every tab is the same note system — Codex included */
 export type SectionKey =
   | "binder"
@@ -58,6 +59,7 @@ export interface NoteNode {
   links?: string[];
   aliases?: string[];
   linkChoices?: LinkChoice[];
+  event?: StoryEvent;
   createdAt: number;
   updatedAt: number;
   children: NoteNode[];
@@ -83,7 +85,7 @@ export interface Novel {
   labels: { id: string; name: string; color: string }[];
   openNoteTabs?: string[];
   hiddenSections?: SectionKey[];
-  timeline?: { rootId: string | null; detail: "titles" | "synopsis"; compact: boolean };
+  timeline?: TimelinePreferences;
   createdAt: number;
   updatedAt: number;
 }

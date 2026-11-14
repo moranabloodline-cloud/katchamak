@@ -15,6 +15,7 @@ import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel } from "./utils";
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, scanLinks } from "./note-links";
+import { validEvent, validTimelineExtra } from './story-calendar';
 
 interface KachamakState {
   novels: Novel[];
@@ -187,6 +188,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
     return typeof node.id === "string" && typeof node.title === "string" &&
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
+      (node.event === undefined || validEvent(node.event)) &&
       (node.linkChoices === undefined || Array.isArray(node.linkChoices) && node.linkChoices.every(c => c && Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end > c.start && typeof c.text === 'string' && (c.targetId === null || typeof c.targetId === 'string'))) &&
       isTree(node.children);
   });
@@ -204,6 +206,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];
     if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;
+    if (!validTimelineExtra(t)) return false;
   }
   return true;
 }
@@ -833,7 +836,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 8,
+      version: 9,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -846,6 +849,10 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v9: calendar and event dates are optional. Never invent dates for old notes.
+        if (version < 9) {
+          // No transformation: existing Timeline preferences and manuscript order remain intact.
+        }
         // v8 adds optional aliases, occurrence choices, folder tabs and Timeline
         // preferences. Existing manuscripts and the previous migrations stay intact.
         if (version < 8) {

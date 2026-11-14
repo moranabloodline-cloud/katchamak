@@ -32,7 +32,7 @@ Pregledani su dostupni projektni razgovori i dokumentacija u repozitorijumu. Kat
 8. **Poliranje i stabilnost:** sinopsisi u List/Corkboard više ne prikazuju HTML kod. Reči potomaka ne sabiraju se dva puta; dodavanje inline linkova ne povećava broj reči. Učitani rich text se sanitizuje. Obaveštenje o novoj verziji nudi Save & reload umesto samovoljnog reload-a tokom pisanja.
 
 9. **Tabovi foldera:** Binder, Codex i Trash ostaju stalni. Folder može da se otvori kao zaseban tab bez kopiranja podataka; zatvaranje taba ne briše note. Postojeće sekcije mogu da se sakriju i ponovo prikažu.
-10. **Timeline:** sekvencijalni pregled nota i sinopsisa prati trenutnu sekciju ili otvoreni folder, sa statusima, promenom redosleda i dodavanjem podnota.
+10. **Outline (raniji Timeline):** sekvencijalni pregled nota i sinopsisa prati trenutnu sekciju ili otvoreni folder, sa statusima, promenom redosleda i dodavanjem podnota.
 
 ## Granice
 
@@ -53,3 +53,13 @@ Napredni PDF/EPUB/DOCX compile i tipizirane relacije ostaju budući rad. Ova ver
 - Klik na ručno umetnut link daje pregled; Open beside radi u oba smera između bilo kojih nota. Strelica za povratak vraća prethodni tab foldera, note i Write/Split raspored. Trag je kratkotrajan i ne menja šemu projekta.
 - Mentions izdvaja reference iz rukopisa i filtrira po naslovu, putanji ili isečku. Novi pregled koristi isti Note sistem i prikazuje sinopsis, tekst i aliase.
 - Regresije pokrivaju kreiranje podnote bez gubitka izvornog teksta, nevažeće ciljeve, povratak u oba Split panela, obrisane note i odvajanje projekata. React test proverava stvarni dialog i DOM selekciju; browser provera potvrđuje Save/reload i očuvan sadržaj povezane note.
+
+## Nadogradnja 0.3.2 — hronologija i kalendar
+
+- Najnoviji zahtev: Timeline po uzoru na LegendKeeper, sa opcijama kalendara. Jedna aktivna knjiga, tri prikaza istih događaja: vremenska osa, mesečni kalendar i hronološka lista. Dosadašnji pregled redosleda rukopisa ostaje kao Outline.
+- Svaki događaj je obična Note, sa opcionim početkom, krajem, preciznošću dan/vreme i grupom. Postojeća nota može da dobije datum bez kopiranja. Open note i povratak koriste postojeću navigaciju. Uklanjanje datuma čuva notu; uklanjanje grupe čuva događaje.
+- Osa prikazuje trajanja i preklapanja, ima obojene grupe, filtere, zum, pomeranje, Fit events i Go to date. Prevlačenje pomera datum, desna ivica menja kraj; redosled Binder-a se time ne menja. Kalendar prikazuje i događaje koji traju više dana.
+- Calendar settings: gregorijanski ili prilagođeni predložak, broj/nazivi/dužine meseci, dani nedelje, početni dan nedelje, sati u danu, minuti u satu, nazivi era pre/posle početka kalendara i periodično pravilo prestupnih dana sa izuzecima. Događaji čuvaju apsolutne minute; promena kalendara preračunava datume, ne menja njihovu vremensku poziciju.
+- Store v9 dodaje isključivo opcione podatke. Starim notama se ne izmišljaju datumi. Metapodaci prolaze JSON/cloud save, ponovno učitavanje i Trash/Restore; kalendar ne uvodi drugo skladište sadržaja.
+- Provere: kalendarska aritmetika (Gregorijanske granice, BCE/CE, prilagođeni sati, nedelja i prestupni ciklusi, 4.048 povratnih konverzija), rasponi, grupisanje, obuhvat nota, nepromenjen redosled rukopisa, neispravan uvoz, migracija v8 i cloud roundtrip. Browser QA na sintetičkom projektu potvrđuje kreiranje, datum postojeće Codex note, Open note/povratak, uklanjanje datuma i grupe bez brisanja, podešavanje kalendara i prevlačenje datuma/trajanja.
+- Ova nadogradnja ne uvodi mesečeve faze, ponavljajuće događaje niti više paralelnih kalendara u jednoj knjizi.
