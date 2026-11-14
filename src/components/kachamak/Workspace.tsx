@@ -6,6 +6,8 @@ import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } fro
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
+import { WorkspaceTabs } from "./WorkspaceTabs";
+import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { ManuscriptExport } from "./ManuscriptExport";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { indexNotes, searchNotes } from "@/lib/kachamak/knowledge";
@@ -48,6 +50,8 @@ function ProjectSearch() {
   const go = (r: { node: NoteNode; section: SectionKey }) => {
     setTab(r.section);
     select(r.node.id);
+    const state = useKachamak.getState();
+    if (state.view !== 'split') state.setView('write');
     setQ("");
     setOpen(false);
   };
@@ -122,6 +126,7 @@ function SettingsDialog({
   const novel = novels.find((n) => n.id === activeNovelId);
   const fileRef = useRef<HTMLInputElement>(null);
   const [importDestinationReady, setImportDestinationReady] = useState(false);
+
 
   const [exportOpen,setExportOpen]=useState(false);
   return (
@@ -207,6 +212,8 @@ export function Workspace() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const novel = novels.find((n) => n.id === activeNovelId);
+  const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
+  useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
 
   const initials =
@@ -245,26 +252,7 @@ export function Workspace() {
         </div>
 
         {/* tabs start at the left edge of the workspace, always in a single line */}
-        <nav
-          aria-label="Workspace sections"
-          className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-4"
-        >
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key as TabKey)}
-              aria-current={activeTab === t.key ? "page" : undefined}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1 text-base transition-colors ${
-                activeTab === t.key
-                  ? "border border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]"
-                  : "border border-transparent text-stone-300 hover:text-white"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <WorkspaceTabs novel={novel} />
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
@@ -351,7 +339,7 @@ export function Workspace() {
       {activeTab === "trash" ? (
         <TrashView />
       ) : (
-        <NotesSection section={activeTab as SectionKey} />
+        <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} />
       )}
 
       <NoteLinkDialog />

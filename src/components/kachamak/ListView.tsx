@@ -18,7 +18,7 @@ function flatten(nodes: NoteNode[], out: NoteNode[] = []): NoteNode[] {
    dole = „posle“; računa se nad stvarnim stablom sekcije */
 type DropMode = "before" | "onto" | "after";
 
-export function ListView({ section }: { section: SectionKey }) {
+export function ListView({ section, rootId }: { section: SectionKey; rootId?: string }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
@@ -27,7 +27,8 @@ export function ListView({ section }: { section: SectionKey }) {
   const midZoom = useKachamak((s) => s.midZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
-  const all = flatten(roots);
+  const scoped = rootId ? findNode(roots,rootId) : null;
+  const all = flatten(scoped ? [scoped] : roots);
 
   const total = all.reduce((a, n) => a + ownWords(n), 0);
 

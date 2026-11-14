@@ -1,4 +1,5 @@
 import { SECTION_KEYS, type Novel, type NoteNode, type SectionKey } from './types';
+import { noteMatches, scanLinks } from './note-links';
 import { stripHtml } from './utils';
 export type IndexedNote = { node: NoteNode; section: SectionKey; path: string; text: string };
 export function indexNotes(novel: Novel): IndexedNote[] {
@@ -11,19 +12,17 @@ export function indexNotes(novel: Novel): IndexedNote[] {
 }
 export const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 export function matchName(text: string, node: NoteNode): {name:string;index:number} | null {
-  const names=[node.title,...(node.aliases ?? [])].map(s=>s.trim()).filter((s,i)=>s.length >= (i===0?3:2)).sort((a,b)=>b.length-a.length);
-  for(const name of names) {
-    const match=new RegExp('(?<![\\p{L}\\p{N}_])'+escapePattern(name)+'(?![\\p{L}\\p{N}_])','iu').exec(text);
-    if(match)return {name,index:match.index};
-  }
-  return null;
+  const match=scanLinks(text,[node]).find(m=>m.targetId===node.id);
+  return match?{name:match.text,index:match.start}:null;
 }
 export function inlineNoteIds(html: string): string[] {
   return [...html.matchAll(/(?:data-katchamak-note\s*=\s*["']|href\s*=\s*["']#note\/)([a-zA-Z0-9_-]{1,128})["']/gi)].map(m=>m[1]);
 }
-export function referenceTo(source: IndexedNote, target: NoteNode) {
+export function referenceTo(source: IndexedNote, target: NoteNode, novel?: Novel) {
   const explicit=(source.node.links??[]).includes(target.id)||inlineNoteIds(source.node.content).includes(target.id);
-  const match=matchName(source.text,target);
+  const match=novel && novel.sections.codex.some(function contains(n):boolean{return n.id===target.id||n.children.some(contains);})
+    ? (()=>{const m=noteMatches(novel,source.node).find(m=>m.targetId===target.id&&!m.missing);return m?{name:m.text,index:m.start}:null;})()
+    : matchName(source.text,target);
   return explicit || match ? {source,explicit,match,snippet:source.text.slice(Math.max(0,(match?.index??0)-55),(match?.index??0)+150)} : null;
 }
 export function searchNotes(index: IndexedNote[], query: string, excludeId?: string): IndexedNote[] {

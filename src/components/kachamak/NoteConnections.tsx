@@ -2,9 +2,8 @@
 import {useDeferredValue,useEffect,useMemo,useState} from 'react';
 import {useKachamak} from '@/lib/kachamak/store';
 import type {NoteNode,SectionKey} from '@/lib/kachamak/types';
-import {indexNotes,matchName,referenceTo,searchNotes,type IndexedNote} from '@/lib/kachamak/knowledge';
-import {linkKnownNames} from '@/lib/kachamak/link-known-names';
-import {toast} from 'sonner';
+import {indexNotes,referenceTo,searchNotes,type IndexedNote} from '@/lib/kachamak/knowledge';
+import {noteMatches} from '@/lib/kachamak/note-links';
 import {stripHtml} from '@/lib/kachamak/utils';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 
@@ -18,8 +17,9 @@ export function NoteConnections({node,section,mode}:{node:NoteNode;section:Secti
   useEffect(()=>{if(!aliasDirty)setAliases((node.aliases??[]).join('\n'));},[node.aliases,aliasDirty]);
   const selected=index.find(n=>n.node.id===node.id);
   const outgoing=(node.links??[]).map(id=>({id,target:index.find(n=>n.node.id===id)}));
-  const incoming=mode==='mentions'?index.filter(n=>n.node.id!==node.id).map(n=>referenceTo(n,node)).filter(n=>n!==null):[];
-  const mentioned=mode==='mentions'&&selected?index.filter(n=>n.section==='codex'&&n.node.id!==node.id).map(n=>({target:n,match:matchName(selected.text,n.node)})).filter(n=>n.match):[];
+  const incoming=mode==='mentions'?index.filter(n=>n.node.id!==node.id).map(n=>referenceTo(n,node,deferred)).filter(n=>n!==null):[];
+  const detected=mode==='mentions'&&selected&&deferred?noteMatches(deferred,selected.node):[];
+  const mentioned=[...new Set(detected.filter(m=>m.targetId&&!m.missing).map(m=>m.targetId))].flatMap(id=>{const target=index.find(n=>n.node.id===id),m=detected.find(m=>m.targetId===id);return target&&m?[{target,match:{name:m.text}}]:[];});
   const results=searchNotes(index,query,node.id).filter(n=>!(node.links??[]).includes(n.node.id)).slice(0,12);
   const target=index.find(n=>n.node.id===preview);
   const open=(entry:IndexedNote)=>{const s=useKachamak.getState();s.setTab(entry.section);s.select(entry.node.id);setPreview(null);};
@@ -31,7 +31,7 @@ export function NoteConnections({node,section,mode}:{node:NoteNode;section:Secti
       <section><label htmlFor="note-aliases" className="text-xs font-semibold">Aliases</label><p className="mt-1 text-xs text-muted-foreground">Other names, nicknames and spellings. One per line. Used for mentions and search.</p><textarea id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);}} rows={3} className="mt-2 w-full rounded border border-white/15 bg-transparent p-2 text-xs"/><button className="mt-1 rounded border border-white/15 px-3 py-1.5 text-xs" onClick={()=>{update(section,node.id,{aliases:[...new Set(aliases.split('\n').map(n=>n.trim().slice(0,500)).filter(Boolean))].slice(0,100)});setAliasDirty(false);}}>Save aliases</button></section>
     </>:<>
       <section><h3 className="mb-2 text-xs font-semibold">Referenced by · {incoming.length}</h3><p className="mb-2 text-xs text-muted-foreground">Notes that link to this note or mention its name or aliases.</p><ul className="space-y-2">{incoming.map(ref=><li key={ref.source.node.id}>{row(ref.source,(ref.explicit?'Linked · ':'Mention · ')+ref.snippet)}</li>)}</ul>{!incoming.length&&<p className="text-xs text-muted-foreground">No references yet.</p>}</section>
-      <section><h3 className="mb-2 text-xs font-semibold">Mentioned here · {mentioned.length}</h3>{mentioned.length>0&&<button className="mb-3 rounded border border-sky-400/30 px-3 py-2 text-xs text-sky-400" onClick={()=>{const result=linkKnownNames(node.content,index.filter(n=>n.section==='codex'&&n.node.id!==node.id).map(n=>n.node));if(result.count){update(section,node.id,{content:result.html});toast.success(result.count+' mentions linked.');}else toast.info('No new unambiguous names to link.');}}>Link names in this text</button>}<ul className="space-y-2">{mentioned.map(({target,match})=><li key={target.node.id}>{row(target,'“'+match!.name+'”')}</li>)}</ul>{!mentioned.length&&<p className="text-xs text-muted-foreground">Codex names and aliases mentioned in this text appear here.</p>}</section>
+      <section><h3 className="mb-2 text-xs font-semibold">Mentioned here · {mentioned.length}</h3><ul className="space-y-2">{mentioned.map(({target,match})=><li key={target.node.id}>{row(target,'“'+match!.name+'”')}</li>)}</ul>{!mentioned.length&&<p className="text-xs text-muted-foreground">Codex names and aliases mentioned in this text appear here.</p>}</section>
     </>}
     <Dialog open={!!target} onOpenChange={v=>{if(!v)setPreview(null);}}><DialogContent className="max-h-[80vh] overflow-auto border-white/15 bg-background text-foreground"><DialogHeader><DialogTitle>{target?.node.title}</DialogTitle></DialogHeader><p className="text-xs text-muted-foreground">{target?.path}</p>{target&&<><p className="whitespace-pre-wrap text-sm">{stripHtml(target.node.synopsis)||stripHtml(target.node.content).slice(0,1800)||'This note is empty.'}</p><button className="rounded bg-amber-400 px-4 py-2 text-sm text-black" onClick={()=>open(target)}>Open in workspace</button></>}</DialogContent></Dialog>
   </div>;

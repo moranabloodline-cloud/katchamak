@@ -37,5 +37,22 @@ await React.act(async()=>{actions.select(chapter2);root.render(React.createEleme
 const codex=await clickPlus();
 assert.equal(useKachamak.getState().novels[0].sections.codex[0].id,codex);
 assert.equal(findNode(useKachamak.getState().novels[0].sections.binder,chapter2).children.length,0);
+// A folder tab must never add a note outside that folder, even if an old editor selection remains.
+await React.act(async()=>{actions.select(act2);root.render(React.createElement(NoteTree,{section:'binder',rootId:act1}));});
+const scoped=await clickPlus();
+assert.ok(findNode(findNode(useKachamak.getState().novels[0].sections.binder,act1).children,scoped));
+assert.equal(findNode(useKachamak.getState().novels[0].sections.binder,act2).children.length,0);
+// Timeline reads and writes the active section, and a folder tab stays scoped.
+const {TimelineView}=await import('../src/components/kachamak/TimelineView.tsx');
+await React.act(async()=>actions.updateNode('codex',codex,{title:'Codex timeline target'}));
+await React.act(async()=>root.render(React.createElement(TimelineView,{section:'codex'})));
+assert.ok(container.textContent.includes('Codex timeline target'));
+assert.ok(!container.textContent.includes('Act 1 — The Fall'));
+const addTimeline=container.querySelector('button[aria-label="Add note to Codex timeline target"]');
+await React.act(async()=>addTimeline.click());
+assert.equal(findNode(useKachamak.getState().novels[0].sections.codex,codex).children.length,1);
+await React.act(async()=>root.render(React.createElement(TimelineView,{section:'binder',rootId:act1})));
+assert.ok(!container.textContent.includes('Act 2'));
+assert.ok(container.textContent.includes('Chapter 1'));
 await React.act(async()=>root.unmount());
 console.log('Tree Plus UI passed: append after the selected act’s last chapter, nested notes, expansion, blank content, root fallback and section isolation.');

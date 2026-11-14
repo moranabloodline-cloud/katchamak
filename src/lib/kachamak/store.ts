@@ -13,7 +13,8 @@ import type {
 } from "./types";
 import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
-import { uid, findNode } from "./utils";
+import { uid, findNode, findNodeInNovel } from "./utils";
+import { cleanAliases, contentText, rebaseChoices, flattenNotes, scanLinks } from "./note-links";
 
 interface KachamakState {
   novels: Novel[];
@@ -101,6 +102,10 @@ interface KachamakState {
 
   /* workspace */
   setTab: (tab: TabKey) => void;
+  openNoteTab: (id: string) => void;
+  closeTab: (tab: TabKey) => void;
+  showSection: (section: SectionKey) => void;
+  setTimeline: (patch: Partial<NonNullable<Novel['timeline']>>) => void;
   setView: (v: ViewMode) => void;
   setTreeScope: (s: TreeScope) => void;
   select: (id: string | null) => void;
@@ -180,7 +185,10 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
     if (!value || typeof value !== "object" || Array.isArray(value)) return false;
     const node = value as Record<string, unknown>;
     return typeof node.id === "string" && typeof node.title === "string" &&
-      typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") && (node.aliases === undefined || (Array.isArray(node.aliases) && node.aliases.every(a => typeof a === "string"))) && isTree(node.children);
+      typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
+      (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
+      (node.linkChoices === undefined || Array.isArray(node.linkChoices) && node.linkChoices.every(c => c && Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end > c.start && typeof c.text === 'string' && (c.targetId === null || typeof c.targetId === 'string'))) &&
+      isTree(node.children);
   });
   if (!SECTION_KEYS.some((key) => key in sections) && !Array.isArray(n.codex)) return false;
   if (!Object.values(sections).every((nodes) => isTree(nodes))) return false;
@@ -191,6 +199,12 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
     typeof t.section === "string" && SECTION_KEYS.includes(t.section as SectionKey) &&
     isTree([t.node])
   ))) return false;
+  if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
+  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts'].includes(k)))) return false;
+  if (n.timeline !== undefined) {
+    const t = n.timeline as Novel['timeline'];
+    if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;
+  }
   return true;
 }
 
@@ -284,6 +298,17 @@ function removeFromNodes(
 
 function touch(novel: Novel): Novel {
   return { ...novel, updatedAt: Date.now() };
+}
+
+function resolveChoices(novel: Novel, node: NoteNode) {
+  const codex=flattenNotes(novel).filter(r=>r.section==='codex').map(r=>r.node);
+  return scanLinks(contentText(node.content),codex,node.linkChoices,node.id)
+    .filter(m=>m.explicit || m.targetId)
+    .map(({start,end,text,targetId})=>({start,end,text,targetId}));
+}
+
+function preserveCodexLinks(novel: Novel) {
+  for(const {node} of flattenNotes(novel)) node.linkChoices=resolveChoices(novel,node);
 }
 
 function makeNode(kind: NoteNode["kind"], title: string): NoteNode {
@@ -502,7 +527,21 @@ export const useKachamak = create<KachamakState>()(
       /* prelazak na drugi tab NE menja radnu površinu — selekcija ostaje
          (editor toolbar i desni panel drže tekuću notu) dok korisnik ne klikne
          novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
-      setTab: (tab) => set({ activeTab: tab, renamingNodeId: null }),
+      setTab: (tab) => set(s => ({ activeTab: tab, renamingNodeId: null,
+        ...(s.novels.find(n=>n.id===s.activeNovelId)?.hiddenSections?.includes(tab as SectionKey)
+          ? {novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:n.hiddenSections?.filter(k=>k!==tab)}):n)} : {})
+      })),
+      openNoteTab: (id) => {
+        const novel=get().novels.find(n=>n.id===get().activeNovelId);
+        if(!novel || !findNodeInNovel(novel,id)) return;
+        set(s=>({novels:s.novels.map(n=>n.id===novel.id?touch({...n,openNoteTabs:[...new Set([...(n.openNoteTabs||[]),id])]}):n),activeTab:`note:${id}`,renamingNodeId:null}));
+      },
+      closeTab: (tab) => {
+        if(['binder','codex','trash'].includes(tab)) return;
+        set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,...(tab.startsWith('note:')?{openNoteTabs:(n.openNoteTabs||[]).filter(id=>id!==tab.slice(5))}:{hiddenSections:[...new Set([...(n.hiddenSections||[]),tab as SectionKey])]})}):n),activeTab:s.activeTab===tab?'binder':s.activeTab}));
+      },
+      showSection: (section) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:(n.hiddenSections||[]).filter(k=>k!==section)}):n),activeTab:section})),
+      setTimeline: (patch) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,timeline:{rootId:null,detail:'synopsis',compact:false,...n.timeline,...patch}}):n)})),
 
       /* ulazak u Split (prvi put, kad paneli još nemaju note — kao u
          Scriveneru): oba editora kloniraju trenutno otvorenu notu; ako su
@@ -573,7 +612,13 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         if (!target) return;
+        if(section==='codex' && (patch.title!==undefined || patch.aliases!==undefined)) preserveCodexLinks(novel);
+        if(patch.content !== undefined && patch.linkChoices === undefined && target.linkChoices?.length) {
+          patch = {...patch,linkChoices:rebaseChoices(contentText(target.content),contentText(patch.content),target.linkChoices)};
+        }
+        if(patch.aliases) patch = {...patch,aliases:cleanAliases(patch.aliases,patch.title ?? target.title)};
         Object.assign(target, patch, { updatedAt: Date.now() });
+        if(patch.content !== undefined) target.linkChoices=resolveChoices(novel,target);
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
@@ -582,6 +627,7 @@ export const useKachamak = create<KachamakState>()(
       deleteNode: (section, id) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
+        if(section==='codex') preserveCodexLinks(novel);
         const { nodes, removed, parentId, originalIndex } = removeFromNodes(
           novel.sections[section],
           id
@@ -648,6 +694,7 @@ export const useKachamak = create<KachamakState>()(
           (destParentId === id || findNode([moving], destParentId))
         )
           return;
+        if(fromSection==='codex' && destSection!=='codex') preserveCodexLinks(novel);
         const { nodes, removed } = removeFromNodes(fromRoots, id);
         if (!removed) return;
         novel.sections = { ...novel.sections, [fromSection]: nodes };
@@ -683,6 +730,7 @@ export const useKachamak = create<KachamakState>()(
         if (!novel) return;
         const roots = novel.sections[section];
         if (!findNode(roots, id)) return;
+        if(section==='codex') preserveCodexLinks(novel);
         const deep = (n: NoteNode): NoteNode => ({
           ...n,
           id: uid(),
@@ -798,10 +846,11 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
-        // v7 → v8: optional aliases, preserving every existing note and link.
+        // v8 adds optional aliases, occurrence choices, folder tabs and Timeline
+        // preferences. Existing manuscripts and the previous migrations stay intact.
         if (version < 8) {
-          const visit = (nodes: NoteNode[]) => { for(const node of nodes??[]) { if(!Array.isArray(node.aliases))node.aliases=[];visit(node.children); } };
-          for(const novel of s.novels??[]) { for(const nodes of Object.values(novel.sections??{}))visit(nodes);for(const item of novel.trash??[])visit([item.node]); }
+          const visit = (nodes: NoteNode[]) => { for(const node of nodes??[]) { node.aliases ??= [];visit(node.children); } };
+          for (const n of s.novels ?? []) { n.openNoteTabs ??= []; n.hiddenSections ??= []; for(const nodes of Object.values(n.sections??{}))visit(nodes);for(const item of n.trash??[])visit([item.node]); }
         }
         // Version 6 only adds optional Trash metadata. Do not rerun older
         // migrations on an already migrated version 5 library.

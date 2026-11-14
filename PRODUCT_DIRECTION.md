@@ -25,15 +25,18 @@ Pregledani su dostupni projektni razgovori i dokumentacija u repozitorijumu. Kat
 1. **Povezano znanje:** Details povezuje note iz bilo koje sekcije. Stare veze ka Codexu ostaju iste. Link ne kopira ciljnu notu.
 2. **Aliasi:** autor unosi druge nazive, nadimke i varijante pisanja. Koriste ih pretraga i prepoznavanje pominjanja. Store v8 dodaje opciono polje; stare podatke i Trash čuva.
 3. **Povratne reference:** Mentions prikazuje note koje se pozivaju na trenutnu notu, odvojeno od Codex imena koja se pominju u njenom tekstu. Poklapanja poštuju granice reči i Unicode; Ann ne znači annex.
-4. **Kontrolisano povezivanje teksta:** autor može da pretvori pronađena Codex imena u linkove. Dvosmisleni nazivi, postojeći linkovi i code/pre blokovi preskaču se. Formatiranje i prazni pasusi ostaju.
+4. **Kontrolisano povezivanje teksta:** Codex imena i aliasi dobijaju plavo označavanje bez prepisivanja teksta. Autor bira cilj dvosmislenog pominjanja ili preskače pojedinačno pominjanje. Sačuvani izbori ostaju vezani za identitet note kroz preimenovanje. Formatiranje i prazni pasusi ostaju.
 5. **Inline veze:** Link ili Ctrl+K umeće vezu ka noti ili sajtu na mestu kursora/selekcije. Ctrl+click otvara internu notu po ID-u. Preimenovanje ne prekida vezu. Quick preview pokazuje referencu pre napuštanja trenutnog rada.
 6. **Pretraga i prečice:** naslovi i aliasi imaju viši rang od teksta. Pretražuje se ceo projekat. Strelice i Enter biraju rezultat; Ctrl+Shift+F otvara pretragu, Ctrl+S završava Save.
 7. **Izvoz rukopisa:** Settings → Export manuscript bira Binder note u postojećem redosledu i izvozi HTML ili Markdown. Codex i istraživanja ne ulaze u knjigu. JSON backup ostaje namenjen kompletnom projektu.
 8. **Poliranje i stabilnost:** sinopsisi u List/Corkboard više ne prikazuju HTML kod. Reči potomaka ne sabiraju se dva puta; dodavanje inline linkova ne povećava broj reči. Učitani rich text se sanitizuje. Obaveštenje o novoj verziji nudi Save & reload umesto samovoljnog reload-a tokom pisanja.
 
-## Granice i sledeća arhitektonska tema
+9. **Tabovi foldera:** Binder, Codex i Trash ostaju stalni. Folder može da se otvori kao zaseban tab bez kopiranja podataka; zatvaranje taba ne briše note. Postojeće sekcije mogu da se sakriju i ponovo prikažu.
+10. **Timeline:** sekvencijalni pregled nota i sinopsisa prati trenutnu sekciju ili otvoreni folder, sa statusima, promenom redosleda i dodavanjem podnota.
 
-Ovo nije tvrdnja da su sve funkcije Scrivenera ili Novelcraftera preslikane. Postojeći tabovi, slobodna hijerarhija i dizajn ostaju. Ranija ideja otvorenih tabova koji predstavljaju Binder foldere ostaje zasebna tema: uvođenje tog pogleda ne sme automatski premeštati postojeći Planning/Research/Templates/Prompts sadržaj. Timeline, tipizirane relacije i napredni PDF/EPUB/DOCX compile nisu izmišljeni kao završene mogućnosti.
+## Granice
+
+Napredni PDF/EPUB/DOCX compile i tipizirane relacije ostaju budući rad. Ova verzija unapređuje postojeći proizvod bez ugrađenog AI i bez menjanja privatnih rukopisa radi testiranja.
 
 ## Provera
 

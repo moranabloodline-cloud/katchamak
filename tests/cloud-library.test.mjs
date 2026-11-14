@@ -85,6 +85,24 @@ await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().activeNovelId,novel.id,'URL restores project before a cloud navigation save');
 assert.equal(useKachamak.getState().selectedNodeId,'note-1');
 assert.equal(useKachamak.getState().view,'write');
+// New workspace metadata must survive the same authenticated cloud save as prose.
+const writer=useKachamak.getState();
+const target=writer.addNode('codex',null,'doc','Černobog');
+writer.updateNode('codex',target,{aliases:['Cernobog']});
+writer.updateNode('binder','note-1',{content:'<p>Cernobog arrived.</p>'});
+writer.openNoteTab('note-1');writer.setView('timeline');writer.setTimeline({detail:'titles',compact:true});writer.closeTab('research');
+await cloud.saveWebLibrary();
+cloud.useWebLibrary.setState({ready:false});
+useKachamak.setState({novels:[],activeNovelId:null,activeTab:'binder',view:'write'});
+// Simulate a clean URL; persisted cloud navigation should be sufficient.
+window.history.replaceState(null,'','/');
+await cloud.initializeWebLibrary();
+assert.equal(useKachamak.getState().activeTab,'note:note-1');
+assert.equal(useKachamak.getState().view,'timeline');
+assert.equal(useKachamak.getState().novels[0].timeline.detail,'titles');
+assert.equal(useKachamak.getState().novels[0].sections.codex[0].aliases[0],'Cernobog');
+assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[0].targetId,target);
+assert.ok(useKachamak.getState().novels[0].hiddenSections.includes('research'));
 const collection=await cloud.createWebCollection('From Preview',null);
 const project=await cloud.createWebProject('Same account project','Tester',collection);
 assert.ok((await (await call(a)).json()).snapshot.collections.some(c=>c.id===collection&&c.projectIds.includes(project)));

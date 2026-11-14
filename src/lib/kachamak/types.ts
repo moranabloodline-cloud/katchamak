@@ -16,7 +16,14 @@ export const SECTION_KEYS: SectionKey[] = [
   "prompts",
 ];
 
-export type TabKey = SectionKey | "trash";
+export type TabKey = SectionKey | "trash" | `note:${string}`;
+
+export interface LinkChoice {
+  start: number;
+  end: number;
+  text: string;
+  targetId: string | null; // null explicitly skips this occurrence
+}
 
 export const TABS: { key: TabKey; label: string }[] = [
   { key: "binder", label: "Binder" },
@@ -49,7 +56,8 @@ export interface NoteNode {
      titles resolve live from the Codex section. Optional — older stores and
      backups simply lack the field. */
   links?: string[];
-  aliases?: string[]; // User-defined names for search and mentions; no AI extraction.
+  aliases?: string[];
+  linkChoices?: LinkChoice[];
   createdAt: number;
   updatedAt: number;
   children: NoteNode[];
@@ -73,11 +81,14 @@ export interface Novel {
   trash: TrashItem[];
   statuses: string[];
   labels: { id: string; name: string; color: string }[];
+  openNoteTabs?: string[];
+  hiddenSections?: SectionKey[];
+  timeline?: { rootId: string | null; detail: "titles" | "synopsis"; compact: boolean };
   createdAt: number;
   updatedAt: number;
 }
 
-export type ViewMode = "split" | "write" | "corkboard" | "list";
+export type ViewMode = "split" | "write" | "corkboard" | "list" | "timeline";
 
 /* the top-bar dropdown: which level of the tree the panel shows */
 export type TreeScope = "all" | "folders" | "top";

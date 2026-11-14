@@ -3,7 +3,7 @@ import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
 import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections } from './store';
 import { useCollections, type Collection } from './collections-store';
-import { findNode } from './utils';
+import { findNode, findNodeInNovel } from './utils';
 import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
 import type { Novel, ViewMode, TabKey } from './types';
@@ -35,14 +35,14 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
   const preferredView = route?.view ?? data.snapshot.view;
-  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list'].includes(preferredView ?? '') ? { view: preferredView! } : {};
+  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','timeline'].includes(preferredView ?? '') ? { view: preferredView! } : {};
   const navigation: Partial<Navigation> = {};
   if (!useWebLibrary.getState().ready && (route || data.snapshot.navigation)) {
     const saved = route?.navigation ?? data.snapshot.navigation!;
     const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
-    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : 'binder';
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
     navigation.selectedNodeId = note(saved.selectedNodeId);
     navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);
     navigation.activePane = saved.activePane === 'b' ? 'b' : 'a';

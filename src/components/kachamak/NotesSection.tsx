@@ -6,6 +6,7 @@ import { NoteTree } from "./NoteTree";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
 import { SplitEditors } from "./SplitEditors";
+import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { CtrlZoom } from "./CtrlZoom";
@@ -37,6 +38,7 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "write", label: "Write" },
   { key: "corkboard", label: "Grid" },
   { key: "list", label: "List" },
+  { key: "timeline", label: "Timeline" },
 ];
 
 /* ---------- zoom po panelu (Ctrl + skrol) — vidi CtrlZoom.tsx ---------- */
@@ -279,7 +281,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   );
 }
 
-export function NotesSection({ section }: { section: SectionKey }) {
+export function NotesSection({ section, rootId }: { section: SectionKey; rootId?: string }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
@@ -324,7 +326,7 @@ export function NotesSection({ section }: { section: SectionKey }) {
           >
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
-              <NoteTree section={section} />
+              <NoteTree section={section} rootId={rootId} />
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand all i
                 Collapse all skroz desno u istom redu — po Nikoli */}
@@ -384,8 +386,9 @@ export function NotesSection({ section }: { section: SectionKey }) {
           <div className="h-10 shrink-0 border-b border-white/10" />
         )}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
-          {view === "corkboard" && <Corkboard section={section} />}
-          {view === "list" && <ListView section={section} />}
+          {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
+          {view === "timeline" && <TimelineView section={section} rootId={rootId} />}
+          {view === "list" && <ListView section={section} rootId={rootId} />}
           {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
               je bira, klik na notu otvara notu samo u izabranoj. Lenjir (traka
               3) je unutar SplitEditors — JEDAN red iznad OBA panela, bez
@@ -411,16 +414,14 @@ export function NotesSection({ section }: { section: SectionKey }) {
             ))}
         </div>
 
-        {/* bottom bar of the work area: target icon on the left, word count in the
-            middle, Split / Write / Corkboard / List pinned to the right edge —
-            word count stays exactly centred because the toolbar is absolute */}
-        <div className="relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
+        {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
+        <div className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
           <Target className="absolute left-3 h-4 w-4 text-amber-400/90" aria-hidden="true" />
           {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
           <span
-            className="mx-auto text-xs text-muted-foreground"
+            className="absolute left-10 max-w-24 truncate text-xs text-muted-foreground @[680px]:left-1/2 @[680px]:-translate-x-1/2"
             title={selected ? "Words in the selected note" : "Total words in the novel"}
           >
             {selected
