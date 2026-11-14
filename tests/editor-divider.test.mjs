@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
+for(const key of ['window','document','Event','CustomEvent'])globalThis[key]=key==='window'?dom:dom[key];
+const {insertTypedDivider}=await import('../src/lib/kachamak/editor-divider.ts');
+const {applyEditorHistory}=await import('../src/lib/kachamak/editor-blocks.ts');
+const editor=document.createElement('div');editor.className='kachamak-editor';editor.contentEditable='true';document.body.append(editor);
+const other=document.createElement('div');other.className='kachamak-editor';other.innerHTML='<p>Other pane</p>';document.body.append(other);
+const caret=(el,offset)=>{const r=document.createRange();r.setStart(el,offset??el.length);r.collapse(true);const s=dom.getSelection();s.removeAllRanges();s.addRange(r);return r;};
+let commands=[];document.execCommand=(name,_unused,html)=>{commands.push(name);if(name==='insertHTML'){const r=dom.getSelection().getRangeAt(0);r.deleteContents();r.insertNode(r.createContextualFragment(html));}return true;};
+editor.innerHTML='<p>Before</p><p>---</p><p>After</p>';caret(editor.children[1].firstChild);
+assert.equal(insertTypedDivider(editor),true);assert.equal(editor.querySelectorAll('hr').length,1);assert.ok(editor.textContent.includes('Before'));assert.ok(editor.textContent.includes('After'));assert.ok(!editor.textContent.includes('---'));assert.equal(other.innerHTML,'<p>Other pane</p>');
+for(const html of ['<p>word --- word</p>','<p>----</p>','<h2>---</h2>','<pre>---</pre>','<p><code>---</code></p>','<ul><li>---</li></ul>']){editor.innerHTML=html;const walker=document.createTreeWalker(editor,dom.NodeFilter.SHOW_TEXT);const text=walker.nextNode();caret(text);assert.equal(insertTypedDivider(editor),false,html);assert.equal(editor.innerHTML,html);}
+editor.innerHTML='<p>---</p>';caret(editor.firstChild.firstChild,1);assert.equal(insertTypedDivider(editor),false,'Do not convert from the middle of a line');
+editor.innerHTML='---';caret(editor.firstChild);assert.equal(insertTypedDivider(editor),true,'Bare first line is supported');
+editor.innerHTML='<p>Undo target</p>';const range=caret(editor.firstChild.firstChild);let changes=0;
+editor.addEventListener('kachamak-history',event=>{changes++;event.detail.applied=true;});
+assert.equal(applyEditorHistory(range,'undo'),true);assert.equal(applyEditorHistory(range,'redo'),true);assert.equal(changes,2,'History is routed to this editor');
+assert.equal(applyEditorHistory(null,'undo'),false);editor.remove();assert.equal(applyEditorHistory(range,'undo'),false,'Disconnected editor is never a global undo target');
+console.log('Divider and history passed: isolated typed marker, surrounding text, other editor, prose/code/headings/list guards, caret boundary, bare line, editor-scoped undo/redo routing.');

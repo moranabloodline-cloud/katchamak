@@ -274,3 +274,5 @@ html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 .kachamak-editor h5 { font-size: 1.1em; }
 .kachamak-editor h6 { font-size: 1em; font-weight: 600; }
 .kachamak-editor > :is(h1,h2,h3,h4,h5,h6):first-child { margin-block-start: 0; }
+
+.kachamak-editor hr { border: 0; border-top: 1px solid currentColor; opacity: .3; margin: 1.25em 0; }

@@ -18,3 +18,13 @@ export function applyBlockStyle(range:Range|null,style:string) {
   if(applied){editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));}
   return applied;
 }
+
+/** Route history to this editor only, never to the document-wide browser stack. */
+export function applyEditorHistory(range:Range|null,direction:'undo'|'redo') {
+  const editor=editorForRange(range);
+  if(!editor||!range)return false;
+  const selection=window.getSelection();editor.focus();selection?.removeAllRanges();selection?.addRange(range);
+  const detail={direction,applied:false};
+  editor.dispatchEvent(new CustomEvent('kachamak-history',{detail}));
+  return detail.applied;
+}

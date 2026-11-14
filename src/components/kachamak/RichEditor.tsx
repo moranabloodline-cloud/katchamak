@@ -8,7 +8,9 @@ import { preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useRef, useState } from "react";
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
-import {applyBlockStyle} from '@/lib/kachamak/editor-blocks';
+import {EditorHistory} from '@/lib/kachamak/editor-history';
+import {insertTypedDivider} from '@/lib/kachamak/editor-divider';
+import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 
 interface RichEditorProps {
@@ -33,6 +35,8 @@ export function RichEditor({
 }: RichEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastHtml = useRef<string>("");
+  const convertingDivider=useRef(false);
+  const history=useRef(new EditorHistory());
   const [preview,setPreview]=useState<string|null>(null);
 
   useEffect(() => {
@@ -41,14 +45,38 @@ export function RichEditor({
     if (html !== lastHtml.current && html !== el.innerHTML) {
       el.innerHTML = DOMPurify.sanitize(html || "", {FORBID_TAGS:["style","script","iframe","object","embed"],FORBID_ATTR:["srcdoc"]});
       lastHtml.current = html;
+      history.current.reset(el);
     }
   }, [html]);
 
-  const handleInput = () => {
+  useEffect(()=>{if(ref.current)history.current.reset(ref.current);},[]);
+
+  const handleInput = (event?: {nativeEvent?: Event}) => {
     if (!ref.current) return;
+    const input=event?.nativeEvent as InputEvent|undefined;
+    // Only typed insertions trigger the rule; paste and undo must remain literal.
+    if(!convertingDivider.current&&input?.inputType==='insertText'&&!input.isComposing){
+      history.current.record(ref.current,input.inputType,input.data);
+      convertingDivider.current=true;
+      try{insertTypedDivider(ref.current);}finally{convertingDivider.current=false;}
+    }
+    history.current.record(ref.current,input?.inputType,input?.data);
     lastHtml.current = ref.current.innerHTML;
     onChange(lastHtml.current);
   };
+
+  useEffect(()=>{
+    const editor=ref.current;if(!editor)return;
+    const step=(direction:'undo'|'redo')=>{
+      if(!history.current.step(editor,direction))return false;
+      lastHtml.current=editor.innerHTML;onChange(lastHtml.current);
+      editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));return true;
+    };
+    const command=(event:Event)=>{const detail=(event as CustomEvent<{direction:'undo'|'redo';applied:boolean}>).detail;if(detail?.direction==='undo'||detail?.direction==='redo')detail.applied=step(detail.direction);};
+    const before=(event:Event)=>{const input=event as InputEvent;if(input.inputType==='historyUndo'||input.inputType==='historyRedo'){if(input.cancelable){input.preventDefault();step(input.inputType==='historyUndo'?'undo':'redo');}}else history.current.before(editor);};
+    editor.addEventListener('kachamak-history',command);editor.addEventListener('beforeinput',before);
+    return()=>{editor.removeEventListener('kachamak-history',command);editor.removeEventListener('beforeinput',before);};
+  },[onChange]);
 
   return (
     <div className="relative flex-1 min-h-0">
@@ -61,6 +89,11 @@ export function RichEditor({
         aria-multiline="true"
         suppressContentEditableWarning
         onKeyDown={event => {
+          const key=event.key.toLowerCase();
+          if((event.ctrlKey||event.metaKey)&&!event.altKey&&(key==='z'||(key==='y'&&!event.shiftKey))){
+            event.preventDefault();event.stopPropagation();const selection=window.getSelection();
+            applyEditorHistory(selection?.rangeCount?selection.getRangeAt(0):null,key==='y'||event.shiftKey?'redo':'undo');return;
+          }
           if((event.ctrlKey||event.metaKey)&&event.altKey&&!event.shiftKey&&/^[0-6]$/.test(event.key)){
             event.preventDefault();const selection=window.getSelection();applyBlockStyle(selection?.rangeCount?selection.getRangeAt(0):null,event.key==='0'?'normal':'h'+event.key);return;
           }
