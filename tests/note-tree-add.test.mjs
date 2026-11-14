@@ -43,7 +43,7 @@ const scoped=await clickPlus();
 assert.ok(findNode(findNode(useKachamak.getState().novels[0].sections.binder,act1).children,scoped));
 assert.equal(findNode(useKachamak.getState().novels[0].sections.binder,act2).children.length,0);
 // Timeline reads and writes the active section, and a folder tab stays scoped.
-const {TimelineView}=await import('../src/components/kachamak/TimelineView.tsx');
+const {OutlineView:TimelineView}=await import('../src/components/kachamak/OutlineView.tsx');
 await React.act(async()=>actions.updateNode('codex',codex,{title:'Codex timeline target'}));
 await React.act(async()=>root.render(React.createElement(TimelineView,{section:'codex'})));
 assert.ok(container.textContent.includes('Codex timeline target'));

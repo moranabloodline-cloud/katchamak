@@ -197,9 +197,31 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
       <div
         role="treeitem"
         aria-selected={selected}
+        aria-expanded={hasChildren ? open : undefined}
+        aria-level={depth + 1}
+        data-note-id={node.id}
         tabIndex={0}
-        onClick={() => select(node.id)}
+        onClick={(e) => { if (!renaming) { select(node.id); e.currentTarget.focus(); } }}
         onKeyDown={(e) => {
+          // Inputs and popup controls keep their own editing/navigation keys.
+          if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.nativeEvent.isComposing) return;
+          if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+            e.preventDefault();e.stopPropagation();
+            const tree=e.currentTarget.closest('[role="tree"]');
+            const rows=Array.from(tree?.querySelectorAll<HTMLElement>('[role="treeitem"]')??[]);
+            const index=rows.indexOf(e.currentTarget);
+            const go=(row:HTMLElement|undefined)=>{if(!row?.dataset.noteId)return;select(row.dataset.noteId);row.focus();row.scrollIntoView?.({block:'nearest',inline:'nearest'});};
+            if(e.key==='ArrowDown')go(rows[index+1]);
+            if(e.key==='ArrowUp')go(rows[index-1]);
+            if(e.key==='Home')go(rows[0]);
+            if(e.key==='End')go(rows.at(-1));
+            if(e.key==='ArrowRight'&&hasChildren){if(!open)updateNode(section,node.id,{collapsed:false});else if(Number(rows[index+1]?.getAttribute('aria-level'))>depth+1)go(rows[index+1]);}
+            if(e.key==='ArrowLeft'){
+              if(hasChildren&&open)updateNode(section,node.id,{collapsed:true});
+              else go(rows.slice(0,index).reverse().find(row=>Number(row.getAttribute('aria-level'))<depth+1));
+            }
+            return;
+          }
           if (e.key === "Enter") select(node.id);
           /* Delete key deletes the selected note (goes to Trash) */
           if (e.key === "Delete" && selected && !renaming) {
