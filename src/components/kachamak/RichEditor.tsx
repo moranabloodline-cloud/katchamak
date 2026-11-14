@@ -2,12 +2,14 @@
 
 import { preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useRef } from "react";
+import { LinkHighlights } from './LinkHighlights';
 
 interface RichEditorProps {
   html: string;
   onChange: (html: string) => void;
   className?: string;
   placeholder?: string;
+  noteId?: string;
   onFocusPlaceholderHide?: boolean;
 }
 
@@ -20,6 +22,7 @@ export function RichEditor({
   onChange,
   className,
   placeholder,
+  noteId,
 }: RichEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastHtml = useRef<string>("");
@@ -44,6 +47,9 @@ export function RichEditor({
       <div
         ref={ref}
         contentEditable
+        role="textbox"
+        aria-label={noteId ? "Note content" : placeholder || "Text"}
+        aria-multiline="true"
         suppressContentEditableWarning
         onPaste={event => {
           event.preventDefault();
@@ -56,6 +62,7 @@ export function RichEditor({
         data-placeholder={placeholder}
         className={`kachamak-editor outline-none ${className ?? ""}`}
       />
+      {noteId && <LinkHighlights editorRef={ref} noteId={noteId} />}
     </div>
   );
 }

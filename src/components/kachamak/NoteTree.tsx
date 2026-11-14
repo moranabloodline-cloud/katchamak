@@ -369,6 +369,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
               <DropdownMenuItem onSelect={() => setRenamingNode(node.id)}>
                 Rename
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => useKachamak.getState().openNoteTab(node.id)}>Open as tab</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => duplicateNode(section, node.id)}>
                 Duplicate
               </DropdownMenuItem>
@@ -483,7 +484,7 @@ const HEADER_ICONS: Partial<Record<SectionKey, typeof Library>> = {
   codex: ScrollText,
 };
 
-export function NoteTree({ section }: { section: SectionKey }) {
+export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: string }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
@@ -575,8 +576,8 @@ export function NoteTree({ section }: { section: SectionKey }) {
     const srcId = dragSrcId.current;
     dragSrcId.current = null;
     setDrop(null);
-    if (!srcId) return;
-    moveNodeTo(section, srcId, section, null);
+    if (!srcId || srcId === rootId) return;
+    moveNodeTo(section, srcId, section, rootId ?? null);
   };
 
   /* Hide — hidden notes (and everything inside them) leave the navigation tree.
@@ -587,7 +588,8 @@ export function NoteTree({ section }: { section: SectionKey }) {
       .filter((n) => !n.hidden)
       .map((n) => ({ ...n, children: dropHidden(n.children) }));
 
-  const shown = dropHidden(roots);
+  const scopedRoot = rootId ? findNode(roots, rootId) : null;
+  const shown = dropHidden(scopedRoot ? [scopedRoot] : roots);
 
   /* the top-bar dropdown: which level of the tree the panel shows */
   const visibleRoots = (() => {
@@ -611,7 +613,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
   collectHidden(roots);
 
   const capLabel =
-    TABS.find((t) => t.key === section)?.label ?? section.charAt(0).toUpperCase() + section.slice(1);
+    scopedRoot?.title ?? TABS.find((t) => t.key === section)?.label ?? section.charAt(0).toUpperCase() + section.slice(1);
   const HeaderIcon = HEADER_ICONS[section] ?? Library;
 
   return (
@@ -635,7 +637,7 @@ export function NoteTree({ section }: { section: SectionKey }) {
           type="button"
           aria-label="Add note"
           title="Add note"
-          onClick={() => addNode(section, selectedNodeId && findNode(roots, selectedNodeId) ? selectedNodeId : null, "doc")}
+          onClick={() => addNode(section, selectedNodeId && findNode(scopedRoot ? [scopedRoot] : roots, selectedNodeId) ? selectedNodeId : rootId ?? null, "doc")}
           className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
           <SquarePlus className="h-4 w-4" />

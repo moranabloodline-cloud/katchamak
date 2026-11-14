@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
 import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/cloud-library";
 import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
+import { WorkspaceTabs } from "./WorkspaceTabs";
+import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { NotesSection } from "./NotesSection";
 import { TrashView } from "./TrashView";
 import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
@@ -25,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { downloadManuscript } from '@/lib/kachamak/manuscript-export';
 
 /* ---------- project search (top bar, left panel zone) ---------- */
 
@@ -45,7 +48,7 @@ function ProjectSearch() {
     for (const key of Object.keys(novel.sections) as SectionKey[]) {
       const walk = (nodes: NoteNode[]) => {
         for (const n of nodes) {
-          if ([n.title, n.content, n.synopsis, n.notes].some((value) =>
+          if ([n.title, n.content, n.synopsis, n.notes, ...(n.aliases || [])].some((value) =>
             stripHtml(value ?? "").toLocaleLowerCase().includes(needle)
           )) {
             out.push({ node: n, section: key });
@@ -61,6 +64,8 @@ function ProjectSearch() {
   const go = (r: { node: NoteNode; section: SectionKey }) => {
     setTab(r.section);
     select(r.node.id);
+    const state = useKachamak.getState();
+    if (state.view !== 'split') state.setView('write');
     setQ("");
     setOpen(false);
   };
@@ -132,6 +137,7 @@ function SettingsDialog({
   const novel = novels.find((n) => n.id === activeNovelId);
   const fileRef = useRef<HTMLInputElement>(null);
   const [importDestinationReady, setImportDestinationReady] = useState(false);
+  const [exportAll, setExportAll] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,6 +146,12 @@ function SettingsDialog({
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="space-y-3 rounded-lg border border-amber-500/20 p-3">
+            <p className="text-sm font-medium text-amber-100">Export your writing</p>
+            <select aria-label="Export scope" value={exportAll?'all':'binder'} onChange={e=>setExportAll(e.target.value==='all')} className="w-full rounded border border-white/15 bg-[#151515] px-2 py-1.5 text-xs"><option value="binder">Manuscript · Binder only</option><option value="all">All sections · including Codex and research</option></select>
+            <div className="flex gap-2">{(['md','html'] as const).map(format=><button key={format} disabled={!novel} onClick={()=>{if(novel)downloadManuscript(novel,format,exportAll);}} className="flex-1 rounded border border-white/15 px-3 py-2 text-xs hover:bg-white/5">{format==='md'?'Markdown (.md)':'HTML / Print'}</button>)}</div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">Exports note titles and text in Binder order. Full backups below also keep aliases, links, synopsis, notes and workspace tabs.</p>
+          </div>
           <button
             type="button"
             disabled={!novel}
@@ -169,7 +181,7 @@ function SettingsDialog({
               if (!f) return;
               const reader = new FileReader();
               reader.onload = async () => {
-                try { await importWebProject(String(reader.result), null); toast.success("Project imported to your folder."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
+                try { await importWebProject(String(reader.result), null); toast.success("Project imported to your library."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
               };
               reader.readAsText(f);
               e.target.value = "";
@@ -206,6 +218,8 @@ export function Workspace() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const novel = novels.find((n) => n.id === activeNovelId);
+  const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
+  useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
 
   const initials =
@@ -244,26 +258,7 @@ export function Workspace() {
         </div>
 
         {/* tabs start at the left edge of the workspace, always in a single line */}
-        <nav
-          aria-label="Workspace sections"
-          className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-4"
-        >
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key as TabKey)}
-              aria-current={activeTab === t.key ? "page" : undefined}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1 text-base transition-colors ${
-                activeTab === t.key
-                  ? "border border-[#ad7e2e]/80 bg-[#3a2c18] text-[#fbe4a6]"
-                  : "border border-transparent text-stone-300 hover:text-white"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <WorkspaceTabs novel={novel} />
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
@@ -350,7 +345,7 @@ export function Workspace() {
       {activeTab === "trash" ? (
         <TrashView />
       ) : (
-        <NotesSection section={activeTab as SectionKey} />
+        <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} />
       )}
 
       <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />

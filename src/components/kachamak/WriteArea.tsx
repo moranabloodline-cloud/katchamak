@@ -368,6 +368,7 @@ export function EditorPage({ node, section }: { node: NoteNode; section: Section
             }}
           >
             <RichEditor
+              noteId={node.id}
               html={node.content}
               onChange={(html) => updateNode(section, node.id, { content: html })}
               placeholder="Write here..."

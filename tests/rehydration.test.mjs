@@ -28,7 +28,7 @@ assert.deepEqual(useKachamak.getState().novels, [], "saved empty library stays e
 
 storage.setItem(key, JSON.stringify({ state: { novels: [savedNovel] }, version: 5 }));
 await useKachamak.persist.rehydrate();
-assert.deepEqual(useKachamak.getState().novels, [savedNovel], "saved project is preserved");
+assert.deepEqual(useKachamak.getState().novels, [{...savedNovel,openNoteTabs:[],hiddenSections:[]}], "v8 adds only empty tab preferences; all saved project content is preserved");
 
 useKachamak.getState().createNovel("Trash position test", "Tester");
 const actions = useKachamak.getState();

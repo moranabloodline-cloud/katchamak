@@ -19,6 +19,7 @@ import {
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
+import { backlinks, noteMatches } from "@/lib/kachamak/note-links";
 import { ownWords, stripHtml } from "@/lib/kachamak/utils";
 import { iconByName } from "@/lib/kachamak/icons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -112,13 +113,14 @@ export function RightPanel({
 
   /* postojeće veze: naslov/ikona se rešavaju uživo iz Codexa (preimenovanje se
      provlači); obrisanu Codex notu veza i dalje pamti kao „missing note“ */
+  const automatic = useMemo(() => novel ? noteMatches(novel, node).filter(m => m.targetId) : [], [novel, node]);
   const linked = useMemo(
     () =>
-      (node.links ?? []).map((id) => ({
+      [...new Set([...(node.links ?? []), ...automatic.map(m => m.targetId!)])].map((id) => ({
         id,
         target: codexNotes.find((n) => n.id === id) ?? null,
       })),
-    [node.links, codexNotes]
+    [node.links, codexNotes, automatic]
   );
 
   /* pretraživi birač (arhitektura §11) — po naslovu, bez ove note i bez
@@ -133,30 +135,14 @@ export function RightPanel({
         (n) =>
           n.id !== node.id &&
           !linkedIds.has(n.id) &&
-          n.title.toLowerCase().includes(needle)
+          [n.title, ...(n.aliases || [])].some(v => v.toLowerCase().includes(needle))
       )
       .slice(0, 8);
   }, [query, codexNotes, node.id, node.links]);
 
   const setLinks = (links: string[]) => updateNode(section, node.id, { links });
 
-  const mentions = useMemo(() => {
-    if (!novel) return [];
-    const text = stripHtml(node.content).toLowerCase();
-    const found: { id: string; title: string; alias: string }[] = [];
-    /* every note in the Codex tab is a mention source — titles (3+ letters) */
-    const walk = (nodes: NoteNode[]) => {
-      for (const nd of nodes) {
-        const nm = nd.title.trim();
-        if (nm.length >= 3 && text.includes(nm.toLowerCase())) {
-          found.push({ id: nd.id, title: nd.title, alias: nm });
-        }
-        walk(nd.children);
-      }
-    };
-    walk(novel.sections.codex ?? []);
-    return found;
-  }, [node.content, novel]);
+  const mentions = useMemo(() => novel ? backlinks(novel, node.id) : [], [novel, node.id]);
 
   /* reči note = sav njen tekst: content + Synopsis + Notes (konzistentno sa
      Listom i brojačem na dnu radne površine) */
@@ -249,6 +235,7 @@ export function RightPanel({
         {/* Details — veze prema Codex notama + pretraživi birač
             (arhitektura §11); osnovni podaci note ostaju ispod */}
         <TabsContent value="details" className="mt-0 space-y-4">
+          {section === "codex" && <CodexAliases key={node.id} node={node} onChange={aliases => updateNode(section,node.id,{aliases})} />}
           <div>
             <Label className="text-xs text-muted-foreground">
               Linked Codex notes
@@ -274,6 +261,7 @@ export function RightPanel({
                           onClick={() => {
                             setTab("codex");
                             select(id);
+                            useKachamak.getState().setView("write");
                           }}
                           className="flex min-w-0 flex-1 items-center gap-2 rounded text-left transition-colors hover:text-foreground"
                         >
@@ -295,7 +283,8 @@ export function RightPanel({
                           <span className="truncate italic">missing note</span>
                         </span>
                       )}
-                      <button
+                      {!(node.links || []).includes(id) && <span className="text-[10px] text-amber-400/70">Auto</span>}
+                      {(node.links || []).includes(id) && <button
                         type="button"
                         aria-label="Remove link"
                         title="Remove link"
@@ -305,7 +294,7 @@ export function RightPanel({
                         className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-red-400"
                       >
                         <X className="h-3.5 w-3.5" />
-                      </button>
+                      </button>}
                     </li>
                   );
                 })}
@@ -398,27 +387,25 @@ export function RightPanel({
         </TabsContent>
 
         <TabsContent value="mentions" className="mt-0">
-          {mentions.length === 0 ? (
-            <p className="pt-2 text-xs text-muted-foreground">
-              No Codex notes mentioned in this text yet. Names of characters, places and
-              things (3+ letters) from the Codex tab appear here automatically.
-            </p>
-          ) : (
-            <ul className="space-y-1.5 pt-2">
-              {mentions.map((m) => (
-                <li
-                  key={`${m.id}-${m.alias}`}
-                  className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-xs"
-                >
-                  <AtSign className="h-3.5 w-3.5 text-orange-400" />
-                  <span className="font-medium">{m.title}</span>
-                  <span className="ml-auto text-muted-foreground">“{m.alias}”</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="mb-3 text-xs text-muted-foreground">Notes that link to “{node.title}”.</p>
+          {mentions.length === 0 ? <p className="pt-2 text-xs leading-relaxed text-muted-foreground">No incoming links yet. Add this note to Codex and use its title or aliases in your writing, or connect it from another note’s Details.</p> :
+            <ul className="space-y-2">{mentions.map(m => <li key={m.node.id} className="rounded-lg border border-white/10 bg-black/20 p-2.5">
+              <button className="flex w-full items-center gap-2 text-left text-xs font-medium hover:text-amber-300" onClick={() => {setTab(m.section);select(m.node.id);useKachamak.getState().setView('write');}}><AtSign className="h-3.5 w-3.5 shrink-0 text-amber-400"/>{m.node.title}<span className="ml-auto text-[10px] text-muted-foreground">{m.matches.length || 'Linked'}</span></button>
+              <p className="mt-1 truncate text-[10px] text-muted-foreground">{[m.section,...m.path].join(' / ')}</p>
+              {m.matches.slice(0,4).map(match => <p key={match.start} className="mt-2 text-xs leading-relaxed text-stone-400">…{match.context}…</p>)}
+            </li>)}</ul>}
         </TabsContent>
       </div>
     </Tabs>
   );
+}
+
+function CodexAliases({node,onChange}:{node:NoteNode;onChange:(aliases:string[])=>void}) {
+  const [draft,setDraft]=useState('');
+  return <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.03] p-3">
+    <Label className="text-xs text-amber-200">Aliases</Label>
+    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Nicknames and other names used in your writing. Shared aliases ask you to choose a meaning.</p>
+    <div className="my-2 flex flex-wrap gap-1">{(node.aliases||[]).map(alias=><span key={alias} className="flex items-center gap-1 rounded border border-white/15 px-2 py-1 text-xs">{alias}<button aria-label={`Remove alias ${alias}`} onClick={()=>onChange((node.aliases||[]).filter(a=>a!==alias))}><X className="h-3 w-3"/></button></span>)}</div>
+    <form className="flex gap-1" onSubmit={e=>{e.preventDefault();if(draft.trim()){onChange([...(node.aliases||[]),draft]);setDraft('');}}}><input aria-label="New alias" placeholder="Add an alias…" value={draft} onChange={e=>setDraft(e.target.value)} className="h-8 min-w-0 flex-1 rounded border border-white/15 bg-black/20 px-2 text-xs"/><button className="rounded border border-amber-500/30 px-2 text-xs text-amber-300" type="submit">Add</button></form>
+  </div>;
 }

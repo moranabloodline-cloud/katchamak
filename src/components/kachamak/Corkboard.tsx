@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
-import { findNode } from "@/lib/kachamak/utils";
+import { findNode, stripHtml } from "@/lib/kachamak/utils";
 import { iconByName } from "@/lib/kachamak/icons";
 
 /* ---------- classic Scrivener index card: icon + title + synopsis ---------- */
@@ -95,7 +95,7 @@ function IndexCard({
         <span className="truncate text-[13px] font-semibold leading-tight">{node.title}</span>
       </div>
       <p className="flex-1 overflow-hidden px-3 py-2 text-[12px] leading-relaxed text-[#4a4036]">
-        {node.synopsis || (
+        {stripHtml(node.synopsis) || (
           <span className="italic text-[#8a7b60]">
             No synopsis yet — write it in the Info panel.
           </span>
@@ -110,7 +110,7 @@ function IndexCard({
 
 type DropZone = "before" | "onto" | "after";
 
-export function Corkboard({ section }: { section: SectionKey }) {
+export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: string }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
@@ -118,15 +118,18 @@ export function Corkboard({ section }: { section: SectionKey }) {
   const moveNodeTo = useKachamak((s) => s.moveNodeTo);
   const midZoom = useKachamak((s) => s.midZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
-  const roots = novel?.sections[section] ?? [];
+  const allRoots = novel?.sections[section] ?? [];
+  const scoped = rootId ? findNode(allRoots,rootId) : null;
+  const roots = scoped ? [scoped] : allRoots;
 
   /* which level is open: children of the selected container; a leaf note
      shows itself; nothing selected shows the section roots (top level) */
-  const selected = selectedNodeId ? findNode(roots, selectedNodeId) : null;
+  const selected = (selectedNodeId ? findNode(roots, selectedNodeId) : null) ?? scoped;
   const isContainer = !!selected && selected.children.length > 0;
   const cards = selected ? (isContainer ? selected.children : [selected]) : roots;
   const reorderParentId = isContainer ? selected.id : null;
-  const levelChildren = isContainer && selected ? selected.children : [];
+  const canReorder = isContainer || !selected;
+  const levelChildren = isContainer && selected ? selected.children : !selected ? roots : [];
   const newNoteParentId = selected ? selected.id : null;
 
   const sectionLabel = TABS.find((t) => t.key === section)?.label ?? section;
@@ -149,7 +152,7 @@ export function Corkboard({ section }: { section: SectionKey }) {
       moveNodeTo(section, srcId, section, targetId);
       return;
     }
-    if (!reorderParentId) return;
+    if (!canReorder) return;
     const list = levelChildren;
     const srcIdx = list.findIndex((n) => n.id === srcId);
     const tgtIdx = list.findIndex((n) => n.id === targetId);
@@ -170,7 +173,7 @@ export function Corkboard({ section }: { section: SectionKey }) {
         const srcId = dragSrcId.current;
         dragSrcId.current = null;
         setDrop(null);
-        if (!srcId || !reorderParentId) return;
+        if (!srcId || !canReorder) return;
         const list = levelChildren;
         const srcIdx = list.findIndex((n) => n.id === srcId);
         if (srcIdx < 0 || srcIdx === list.length - 1) return;
@@ -187,7 +190,7 @@ export function Corkboard({ section }: { section: SectionKey }) {
           <IndexCard
             key={c.id}
             node={c}
-            draggable={!!reorderParentId}
+            draggable={canReorder}
             onDragStartCard={(id) => (dragSrcId.current = id)}
             onDragOverCard={(id, zone) => setDrop({ id, side: zone })}
             onDropOnCard={onCardDrop}
