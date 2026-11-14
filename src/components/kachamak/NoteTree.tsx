@@ -39,6 +39,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
 /* fallback only for old notes that never got an icon — the user picks the real one */
 const kindIcon = (n: NoteNode, open: boolean) => {
@@ -203,7 +204,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
         tabIndex={0}
         onClick={(e) => { if (!renaming) { select(node.id); e.currentTarget.focus(); } }}
         onContextMenu={(e) => {
-          if ((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]')) return;
+          if ((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]')) { e.stopPropagation(); return; }
           e.preventDefault();e.stopPropagation();
           select(node.id);e.currentTarget.focus();setMenuOpen(true);
         }}
@@ -723,6 +724,8 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         </DropdownMenu>
       </div>
 
+      <ContextMenu>
+      <ContextMenuTrigger asChild>
       <div
         className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2"
         style={{ zoom: leftZoom }}
@@ -740,6 +743,16 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
           </p>
         )}
       </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent aria-label="Tree actions" className="w-56 border-white/10 bg-[#1b1b1b] font-serif">
+        <ContextMenuItem onSelect={() => addNode(section,rootId??null,'doc')}>
+          {rootId?'Create note':'Create top-level note'}
+        </ContextMenuItem>
+        <ContextMenuSeparator className="bg-white/10" />
+        <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,false):setAllNodesCollapsed(section,false)}>Expand all</ContextMenuItem>
+        <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,true):setAllNodesCollapsed(section,true)}>Collapse all</ContextMenuItem>
+      </ContextMenuContent>
+      </ContextMenu>
     </div>
   );
 }
