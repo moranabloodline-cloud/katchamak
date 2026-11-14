@@ -410,6 +410,18 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
                 Move
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={!novel || locateNode(novel.sections[section],node.id)?.parentId == null}
+                onSelect={() => {
+                  moveNodeTo(section,node.id,section,null);
+                  const state=useKachamak.getState();
+                  if(state.activeTab.startsWith('note:'))state.setTab(section);
+                  select(node.id);
+                  toast.success(`Moved “${node.title}” to the top level.`);
+                }}
+              >
+                Move to top level
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onSelect={() => deleteNode(section, node.id)}
                 className="text-red-400 focus:text-red-300"
               >
