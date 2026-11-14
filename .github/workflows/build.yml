@@ -35,6 +35,8 @@ jobs:
         run: bun run tests/note-workflow.test.mjs
       - name: Test selected text linking and note preview
         run: bun run tests/note-link-dialog.test.mjs
+      - name: Test novel metadata, cover and archive
+        run: bun run tests/project-settings.test.mjs
       - name: Test independent editor undo history
         run: bun run tests/editor-history.test.mjs
       - name: Test typed divider and editor history

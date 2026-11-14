@@ -140,3 +140,16 @@ export async function projectAttachments(): Promise<{ id: string; name: string; 
 export async function addProjectAttachment(file: File) { await flushWebLibrary(); const data = new FormData(); data.set('file', file); await api(filesPath(), { method: 'POST', body: data }); }
 export function attachmentUrl(id: string) { return filesPath() + '/' + encodeURIComponent(id); }
 registerFolderStorage(() => useWebLibrary.getState().ready && !useWebLibrary.getState().error && !useWebLibrary.getState().pending && snapshot() === saved, flushWebLibrary);
+
+export async function removeWebProject(id:string) {
+  await flushWebLibrary();
+  const state=useKachamak.getState(),novel=state.novels.find(n=>n.id===id);if(!novel)throw new Error('Project not found.');
+  const backup=structuredClone(novel),memberships=useCollections.getState().collections.filter(c=>c.projectIds.includes(id)).map(c=>c.id);
+  const navigation={activeNovelId:state.activeNovelId,activeTab:state.activeTab,selectedNodeId:state.selectedNodeId,paneAId:state.paneAId,paneBId:state.paneBId,activePane:state.activePane};
+  state.deleteNovel(id);memberships.forEach(collectionId=>useCollections.getState().setMembership(collectionId,id,false));
+  try{await flushWebLibrary();}catch(error){
+    useKachamak.setState(s=>({novels:s.novels.some(n=>n.id===id)?s.novels:[...s.novels,backup],...(!s.activeNovelId&&navigation.activeNovelId===id?navigation:{})}));
+    useCollections.setState(s=>({collections:s.collections.map(c=>memberships.includes(c.id)?{...c,projectIds:[...new Set([...c.projectIds,id])]}:c)}));
+    throw error;
+  }
+}

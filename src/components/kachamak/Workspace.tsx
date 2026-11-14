@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, FileText, House, Save, Search, Settings, Upload } from "lucide-react";
-import { useWebLibrary, saveWebLibrary, prepareWebImport, importWebProject } from "@/lib/kachamak/cloud-library";
-import { exportNovelJson, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
+import { ArrowLeft, ChevronDown, FileText, House, Save, Search, Settings } from "lucide-react";
+import { saveWebLibrary } from "@/lib/kachamak/cloud-library";
+import { useKachamak } from "@/lib/kachamak/store";
 import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
 import {openProjectNote,returnToPreviousNote,useNoteTrail} from '@/lib/kachamak/note-navigation';
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
-import { ManuscriptExport } from "./ManuscriptExport";
+import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { indexNotes, searchNotes } from "@/lib/kachamak/knowledge";
 import { NotesSection } from "./NotesSection";
@@ -18,12 +18,6 @@ import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
 import { AccountDialog } from "./AccountDialog";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import { stripHtml } from "@/lib/kachamak/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -117,76 +111,6 @@ function ProjectSearch() {
 }
 
 /* ---------- settings (the gear) ---------- */
-
-function SettingsDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-}) {
-  const novels = useKachamak((s) => s.novels);
-  const activeNovelId = useKachamak((s) => s.activeNovelId);
-  const importNovel = useKachamak((s) => s.importNovel);
-  const novel = novels.find((n) => n.id === activeNovelId);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [importDestinationReady, setImportDestinationReady] = useState(false);
-
-
-  const [exportOpen,setExportOpen]=useState(false);
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <button type="button" disabled={!novel} onClick={()=>setExportOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-amber-400/30 px-3 py-2 text-sm hover:bg-white/5 disabled:opacity-40"><FileText className="h-4 w-4"/>Export manuscript</button>
-          <button
-            type="button"
-            disabled={!novel}
-            onClick={() => {
-              if (!novel) return;
-              exportNovelJson(novel);
-              toast.success("Backup downloaded.");
-            }}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5 disabled:opacity-40"
-          >
-            <Save className="h-4 w-4" /> Export backup of “{novel?.title ?? "—"}”
-          </button>
-          <button
-            type="button"
-            onClick={() => { if (importDestinationReady) fileRef.current?.click(); else void prepareWebImport(null).then(() => setImportDestinationReady(true)).catch(error => { if (error.name !== "AbortError") toast.error(String(error)); }); }}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm transition-colors hover:bg-white/5"
-          >
-            <Upload className="h-4 w-4" /> {importDestinationReady ? "Choose JSON backup" : "Import into library"}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              const reader = new FileReader();
-              reader.onload = async () => {
-                try { await importWebProject(String(reader.result), null); toast.success("Project imported to your account."); setImportDestinationReady(false); } catch (error) { toast.error(String(error)); }
-              };
-              reader.readAsText(f);
-              e.target.value = "";
-            }}
-          />
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Projects are saved to your account in the cloud. Export a JSON backup from
-            time to time to keep it safe.
-          </p>
-        </div>
-      </DialogContent>
-      <ManuscriptExport open={exportOpen} onOpenChange={setExportOpen} />
-    </Dialog>
-  );
-}
 
 /* ---------- workspace ---------- */
 

@@ -11,6 +11,7 @@ import type {
   TreeScope,
   ViewMode,
 } from "./types";
+import {novelSettingsPatch,validNovelMetadata,type NovelSettingsPatch} from "./project-settings";
 import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel } from "./utils";
@@ -112,6 +113,7 @@ interface KachamakState {
   select: (id: string | null) => void;
   setRenamingNode: (id: string | null) => void;
   renameNovel: (title: string) => void;
+  updateNovelSettings: (id:string,patch:NovelSettingsPatch) => boolean;
   setDefaultAuthor: (a: string) => void;
 
   /* status list (per novel, edited via the status dropdown "Edit…") */
@@ -179,7 +181,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
   if (n.author !== undefined && typeof n.author !== "string") return false;
   if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
   const cover = n.cover as Record<string, unknown>;
-  if (typeof cover.bg !== "string" || typeof cover.icon !== "string") return false;
+  if (typeof cover.bg !== "string" || typeof cover.icon !== "string" || !validNovelMetadata({series:n.series,seriesIndex:n.seriesIndex,archived:n.archived,cover:{image:cover.image}})) return false;
   if (!n.sections || typeof n.sections !== "object" || Array.isArray(n.sections)) return false;
   const sections = n.sections as Record<string, unknown>;
   const isTree = (nodes: unknown): boolean => Array.isArray(nodes) && nodes.every((value) => {
@@ -569,6 +571,12 @@ export const useKachamak = create<KachamakState>()(
 
       setRenamingNode: (id) => set({ renamingNodeId: id }),
 
+      updateNovelSettings: (id,patch) => {
+        const novel=get().novels.find(n=>n.id===id);if(!novel)return false;
+        const values=novelSettingsPatch(novel,patch);if(!values)return false;
+        set(s=>({novels:s.novels.map(n=>n.id===id?touch({...n,...values}):n)}));return true;
+      },
+
       renameNovel: (title) =>
         set((s) => ({
           novels: s.novels.map((n) =>
@@ -836,7 +844,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 9,
+      version: 10,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -849,6 +857,8 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v10: project metadata/cover are optional; old manuscripts and cover icons stay intact.
+        if(version<10){ /* Missing metadata means no series, no uploaded cover, and an active project. */ }
         // v9: calendar and event dates are optional. Never invent dates for old notes.
         if (version < 9) {
           // No transformation: existing Timeline preferences and manuscript order remain intact.

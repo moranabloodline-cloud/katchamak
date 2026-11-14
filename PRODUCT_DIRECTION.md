@@ -63,3 +63,7 @@ Napredni PDF/EPUB/DOCX compile i tipizirane relacije ostaju budući rad. Ova ver
 - Store v9 dodaje isključivo opcione podatke. Starim notama se ne izmišljaju datumi. Metapodaci prolaze JSON/cloud save, ponovno učitavanje i Trash/Restore; kalendar ne uvodi drugo skladište sadržaja.
 - Provere: kalendarska aritmetika (Gregorijanske granice, BCE/CE, prilagođeni sati, nedelja i prestupni ciklusi, 4.048 povratnih konverzija), rasponi, grupisanje, obuhvat nota, nepromenjen redosled rukopisa, neispravan uvoz, migracija v8 i cloud roundtrip. Browser QA na sintetičkom projektu potvrđuje kreiranje, datum postojeće Codex note, Open note/povratak, uklanjanje datuma i grupe bez brisanja, podešavanje kalendara i prevlačenje datuma/trajanja.
 - Ova nadogradnja ne uvodi mesečeve faze, ponavljajuće događaje niti više paralelnih kalendara u jednoj knjizi.
+
+## Podešavanja romana 0.3.4
+
+Zupčanik podešava otvoreni roman: naslov, autorsko ime, seriju i indeks, koricu, arhivu i brisanje. Serije su obični nazivi metapodataka postojećih projekata. Korica je optimizovana raster-slika uključena u privatni cloud snimak i JSON backup; stara ikonica/pozadina ostaju sačuvane. Arhivirani projekti su dostupni iz Archived i vraćaju se bez menjanja nota. Delete traži naslov za potvrdu i nudi backup; neuspešan cloud upis vraća lokalni projekat i članstva. Izvoz i import ostaju u istom prozoru. Sve note i njihove veze ostaju iste.

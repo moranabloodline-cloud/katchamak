@@ -6,6 +6,8 @@ export function validCloudLibrary(value) {
   const visit = (nodes, seen, depth = 0) => Array.isArray(nodes) && depth < 100 && nodes.every(n => n && validId(n.id) && !seen.has(n.id) && (seen.add(n.id), typeof n.title === 'string' && typeof n.content === 'string' && (n.aliases === undefined || (Array.isArray(n.aliases) && n.aliases.length <= 100 && n.aliases.every(a => typeof a === 'string' && a.length <= 500))) && visit(n.children, seen, depth + 1)));
   for (const n of value.novels) {
     if (!n || !validId(n.id) || ids.has(n.id) || typeof n.title !== 'string' || typeof n.author !== 'string' || !n.sections) return false;
+    if ((n.series !== undefined && (typeof n.series !== 'string' || n.series.length > 200)) || (n.seriesIndex !== undefined && (typeof n.seriesIndex !== 'string' || n.seriesIndex.length > 100)) || (n.archived !== undefined && typeof n.archived !== 'boolean')) return false;
+    if (n.cover?.image !== undefined && (typeof n.cover.image !== 'string' || n.cover.image.length > 700000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(n.cover.image))) return false;
     ids.add(n.id);
     const seen = new Set();
     for (const key of ['binder','codex','planning','research','templates','prompts']) if (!visit(n.sections[key], seen)) return false;

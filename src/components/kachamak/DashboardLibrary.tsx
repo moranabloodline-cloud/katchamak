@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
-import { exportNovelJson } from "@/lib/kachamak/store";
+import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
+import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
+import {useKachamak, exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
 import { canMoveCollection, useCollections, type Collection } from "@/lib/kachamak/collections-store";
@@ -42,9 +43,11 @@ function collectionPath(collections: Collection[], id: string | null): Collectio
 function Cover({ novel, small = false }: { novel: Novel; small?: boolean }) {
   // The existing project cover is a background + icon; keep that user data intact.
   return <span data-project-cover aria-hidden="true" className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-r-md border border-[#d7b469]/20 shadow-[4px_5px_14px_#0007] ${small ? "h-12 w-8 text-xl" : "aspect-[2/3] w-full text-5xl"}`} style={{ background: novel.cover?.bg || "linear-gradient(135deg,#30291f,#171717)" }}>
+    {novel.cover.image?<img src={novel.cover.image} alt="" className="absolute inset-0 h-full w-full object-cover"/>:<>
     <span className="absolute inset-y-0 left-0 w-[7%] border-r border-black/30 bg-black/20" />
     <span className="absolute inset-[8%] border border-white/15" />
     <span className="drop-shadow-lg">{novel.cover?.icon || <BookOpen className={small ? "h-4 w-4" : "h-12 w-12 text-[#dbc38d]"} />}</span>
+    </>}
   </span>;
 }
 
@@ -71,6 +74,7 @@ export function DashboardLibrary(props: Props) {
   const path = collectionPath(collections, location);
   const libraryRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
+  const [showArchived,setShowArchived]=useState(false);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null | undefined>();
 
@@ -136,11 +140,12 @@ export function DashboardLibrary(props: Props) {
     <DropdownMenuItem onSelect={() => props.onOpenProject(n.id)}>Open project</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => { exportNovelJson(n); toast.success("Backup downloaded."); }}>Export backup</DropdownMenuItem>
     {destinationMenu({ kind: "project", id: n.id, sourceId })}
+    <DropdownMenuItem onSelect={async()=>{useKachamak.getState().updateNovelSettings(n.id,{archived:!n.archived});try{await saveWebLibrary();toast.success(n.archived?'Project restored.':'Project archived.');}catch(error){toast.error(String(error));}}}>{n.archived?'Restore from archive':'Archive project'}</DropdownMenuItem>
     <DropdownMenuItem variant="destructive" onSelect={() => props.onDeleteProject(n)}>Delete project</DropdownMenuItem>
     <DropdownMenuSeparator />
     {collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(n.id)} onSelect={(e) => e.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, n.id, checked === true)}><span className="truncate">{collectionPath(collections, c.id).map((p) => p.name).join(" / ")}</span></DropdownMenuCheckboxItem>)}
   </DropdownMenuContent></DropdownMenu>;
-  const projectsAt = (id: string | null) => novels.filter((n) => id ? collections.find((c) => c.id === id)?.projectIds.includes(n.id) : !collections.some((c) => c.projectIds.includes(n.id)));
+  const projectsAt = (id: string | null) => novels.filter((n) => !!n.archived===showArchived).filter((n) => id ? collections.find((c) => c.id === id)?.projectIds.includes(n.id) : !collections.some((c) => c.projectIds.includes(n.id)));
   const sortedCollections = (parentId: string | null) => collections.filter((c) => c.parentId === parentId).sort((a, b) => sort === "title" ? a.name.localeCompare(b.name) : (sort === "created" ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : (b.updatedAt ?? 0) - (a.updatedAt ?? 0)));
   const tree = (parentId: string | null, depth = 0): ReactNode => <>
     {sortedCollections(parentId).map((c) => <div key={c.id}>
@@ -158,7 +163,7 @@ export function DashboardLibrary(props: Props) {
 
   const query = search.trim().toLocaleLowerCase();
   const folders = sortedCollections(location).filter((c) => c.name.toLocaleLowerCase().includes(query));
-  const projects = projectsAt(location).filter((n) => n.title.toLocaleLowerCase().includes(query) || n.author.toLocaleLowerCase().includes(query)).sort((a, b) => sort === "title" ? a.title.localeCompare(b.title) : sort === "created" ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt);
+  const projects = (showArchived&&location===null?novels.filter(n=>n.archived):projectsAt(location)).filter((n) => n.title.toLocaleLowerCase().includes(query) || n.author.toLocaleLowerCase().includes(query)).sort((a, b) => sort === "title" ? a.title.localeCompare(b.title) : sort === "created" ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt);
   const projectGroups: [string, Novel[]][] = group === "none" ? [["", projects]] : Object.entries(projects.reduce<Record<string, Novel[]>>((all, n) => { (all[n.author?.trim() || "Unknown Author"] ??= []).push(n); return all; }, {})).sort(([a], [b]) => a.localeCompare(b));
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${Math.round(156 * coverZoom / 100)}px), 1fr))` };
 
@@ -191,6 +196,7 @@ export function DashboardLibrary(props: Props) {
             <button onClick={props.onCreateProject} className={createControl}><Plus className="h-4 w-4" />Project</button>
             {props.onOpenFile && <button onClick={props.onOpenFile} className={control}><FolderOpen className="h-4 w-4" />Open</button>}
             <button onClick={props.onImport} className={control}><Download className="h-4 w-4" />Import</button>
+            <button aria-pressed={showArchived} onClick={()=>{setShowArchived(!showArchived);navigate(null);}} className={control}><Archive className="h-4 w-4"/>{showArchived?"Active projects":"Archived"}</button>
             <div className="relative min-w-[100px] flex-1 basis-40"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><input aria-label="Search library" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this location…" className="h-9 w-full rounded-md border border-white/15 bg-black/25 pl-8 pr-2 text-sm outline-none focus:border-[#c9973c]" /></div>
             <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><ArrowUpDown className="h-4 w-4" />Sort<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">{([ ["updated", "Recently modified"], ["title", "Title A–Z"], ["created", "Recently created"] ] as const).map(([value, label]) => <DropdownMenuCheckboxItem key={value} checked={sort === value} onSelect={() => prefs.setSort(value)}>{label}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><Layers className="h-4 w-4" />Group<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuCheckboxItem checked={group === "none"} onSelect={() => prefs.setGroup("none")}>None</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={group === "author"} onSelect={() => prefs.setGroup("author")}>Author</DropdownMenuCheckboxItem></DropdownMenuContent></DropdownMenu>
@@ -198,7 +204,7 @@ export function DashboardLibrary(props: Props) {
           </div>
         </div>
         <div ref={libraryRef} {...dropZone(location)} data-testid="library-content" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 kachamak-scroll ${dropTarget !== undefined && dropTarget === location ? "bg-amber-400/[0.04] ring-1 ring-inset ring-amber-400/40" : ""}`}>
-          <div className="mb-5 flex items-center gap-2"><h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-[#f2ead9]" title={active?.name ?? "Library"}>{active?.name ?? "Library"}</h1><span className="shrink-0 text-xs text-muted-foreground">{folders.length + projects.length} items</span></div>
+          <div className="mb-5 flex items-center gap-2"><h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-[#f2ead9]" title={active?.name ?? (showArchived?"Archived":"Library")}>{active?.name ?? (showArchived?"Archived":"Library")}</h1><span className="shrink-0 text-xs text-muted-foreground">{folders.length + projects.length} items</span></div>
           {folders.length > 0 && <section aria-label="Folders" className="mb-6"><div className={layout === "grid" ? "grid gap-3" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{folders.map((c) => <div key={c.id} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} {...dropZone(c.id)} data-library-collection={c.id} className={`flex min-w-0 items-center rounded-lg border px-2 py-3 ${dropTarget === c.id ? "border-amber-300 bg-amber-400/15" : "border-white/10 bg-white/[0.02] hover:border-[#a97f33]/60"}`}>
             <button type="button" onClick={() => navigate(c.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left" aria-label={`Open collection ${c.name}`}><span className={`flex shrink-0 items-center justify-center ${layout === "list" ? "h-12 w-8" : ""}`}><FolderOpen className={`shrink-0 text-[#d1ac60] ${layout === "grid" ? "h-9 w-9" : "h-6 w-6"}`} /></span><span className="min-w-0 flex-1 basis-16"><span className="block truncate text-sm text-[#e9dfcb]">{c.name}</span>{layout === "grid" && <span className="mt-0.5 block text-xs text-muted-foreground">Collection</span>}</span>{layout === "list" && <><span className="w-14 text-xs text-muted-foreground">Collection</span><span className="w-24 text-xs text-muted-foreground">—</span><span className="w-24 text-xs text-muted-foreground/70">{c.updatedAt ? modified(c.updatedAt) : "—"}</span></>}</button>{folderMenu(c)}
           </div>)}</div></section>}
@@ -206,7 +212,7 @@ export function DashboardLibrary(props: Props) {
             <div className={layout === "grid" ? "grid items-start gap-x-5 gap-y-7" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{entries.map((n) => <article key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: location })} data-library-project={n.id} className={`group relative min-w-0 ${layout === "list" ? "flex items-center gap-2 rounded-md border border-white/[0.07] bg-white/[0.02] px-2 py-2 hover:bg-white/5" : ""}`}>
               <button type="button" onClick={() => props.onOpenProject(n.id)} aria-label={`Open ${n.title}`} className={layout === "grid" ? "block w-full text-left" : "flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left"}>
                 <Cover novel={n} small={layout === "list"} />
-                <span className={layout === "grid" ? "mt-3 block pr-6" : "min-w-0 flex-1 basis-24"}><span className="block break-words font-serif text-base leading-snug text-[#eee7d8] group-hover:text-[#f5d99d]">{n.title}</span>{layout === "list" && <span className="text-xs text-muted-foreground">{n.author}</span>}</span>
+                <span className={layout === "grid" ? "mt-3 block pr-6" : "min-w-0 flex-1 basis-24"}><span className="block break-words font-serif text-base leading-snug text-[#eee7d8] group-hover:text-[#f5d99d]">{n.title}</span>{n.series&&<span className="mt-1 block text-xs text-muted-foreground">{n.series}{n.seriesIndex?" · "+n.seriesIndex:""}</span>}{layout === "list" && <span className="text-xs text-muted-foreground">{n.author}</span>}</span>
                 {layout === "list" && <span className="w-14 text-xs text-muted-foreground">Novel</span>}
                 <span className={layout === "grid" ? "mt-1.5 block text-xs leading-relaxed text-muted-foreground" : "w-24 text-xs text-muted-foreground"}>{novelWords(n).toLocaleString()} words</span>
                 <span title={new Date(n.updatedAt).toLocaleString()} className={layout === "grid" ? "block text-xs leading-relaxed text-muted-foreground/70" : "w-24 text-xs text-muted-foreground/70"}>{layout === "grid" ? "Modified " : ""}{modified(n.updatedAt)}</span>

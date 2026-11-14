@@ -78,7 +78,10 @@ export interface Novel {
   id: string;
   title: string;
   author: string;
-  cover: { bg: string; icon: string };
+  cover: { bg: string; icon: string; image?: string };
+  series?: string;
+  seriesIndex?: string;
+  archived?: boolean;
   sections: Record<SectionKey, NoteNode[]>;
   trash: TrashItem[];
   statuses: string[];
