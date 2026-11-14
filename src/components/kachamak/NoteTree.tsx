@@ -202,7 +202,15 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
         data-note-id={node.id}
         tabIndex={0}
         onClick={(e) => { if (!renaming) { select(node.id); e.currentTarget.focus(); } }}
+        onContextMenu={(e) => {
+          if ((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]')) return;
+          e.preventDefault();e.stopPropagation();
+          select(node.id);e.currentTarget.focus();setMenuOpen(true);
+        }}
         onKeyDown={(e) => {
+          if(e.target===e.currentTarget&&(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10'))){
+            e.preventDefault();e.stopPropagation();select(node.id);setMenuOpen(true);return;
+          }
           // Inputs and popup controls keep their own editing/navigation keys.
           if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.nativeEvent.isComposing) return;
           if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
