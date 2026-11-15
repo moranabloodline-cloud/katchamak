@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, PenLine, Target, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, Target, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
 import { Corkboard } from "./Corkboard";
-import { EditorToolbar, WriteArea } from "./WriteArea";
+import { EditorToolbar } from "./WriteArea";
+import {ContinuousWriteArea} from './ContinuousWriteArea';
+import {continuousNotes} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
 import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
@@ -13,7 +15,7 @@ import { CtrlZoom } from "./CtrlZoom";
 import { useWebLibrary } from "@/lib/kachamak/cloud-library";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
-import { findNodeInNovel, novelWords, ownWords } from "@/lib/kachamak/utils";
+import { findNodeInNovel, novelWords, ownWords, countWords } from "@/lib/kachamak/utils";
 import { NOTE_COLORS } from "@/lib/kachamak/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -312,7 +314,8 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const selected = hit?.node ?? null;
   const selectedSection = hit?.section ?? section;
 
-  const showEditor = view === "split" || view === "write";
+  const treeScope = useKachamak(s=>s.treeScope);
+  const manuscriptWords=continuousNotes(novel?.sections[section]??[],treeScope,rootId).reduce((total,node)=>total+countWords(node.content),0);
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -379,7 +382,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             se u Write modu sa otvorenom notom i u Split modu; u Grid / List /
             Write bez selekcije prazan h-10 red drži njenu donju liniju
             neprekinutom od leve do desne ivice */}
-        {view === "split" || (showEditor && selected) ? (
+        {view === "split" || view === "write" ? (
           <EditorToolbar />
         ) : (
           <div className="h-10 shrink-0 border-b border-white/10" />
@@ -393,24 +396,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               3) je unutar SplitEditors — JEDAN red iznad OBA panela, bez
               pozadine; deli se samo površina ispod njega */}
           {view === "split" && <SplitEditors section={section} />}
-          {view === "write" &&
-            (selected ? (
-              <WriteArea key={selected.id} node={selected} section={selectedSection} />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
-                <PenLine className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
-                  Select a note from the {section} tree to start writing.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setView("corkboard")}
-                  className="mt-2 rounded-lg border border-orange-500/40 px-3 py-1.5 text-xs text-orange-300 transition-colors hover:bg-orange-500/10"
-                >
-                  Browse Grid instead
-                </button>
-              </div>
-            ))}
+          {view === "write" && <ContinuousWriteArea key={`${activeNovelId}:${section}:${rootId??""}`} section={section} rootId={rootId}/>}
         </div>
 
         {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
@@ -421,9 +407,9 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
           <span
             className="absolute left-10 max-w-24 truncate text-xs text-muted-foreground @[680px]:left-1/2 @[680px]:-translate-x-1/2"
-            title={selected ? "Words in the selected note" : "Total words in the novel"}
+            title={view === "write" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
           >
-            {selected
+            {view === "write" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
               ? `${ownWords(selected).toLocaleString("en-US")} words`
               : novel
                 ? `${novelWords(novel).toLocaleString("en-US")} words`

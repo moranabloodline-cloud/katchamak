@@ -337,14 +337,14 @@ export function RulerRow() {
 /* Sadržaj JEDNOG editora (naslov + RichEditor) — koristi ga Write mod i
    OBA Split panela. Font/veličina/prored dolaze iz store-a (fiksna formatna
    traka iznad njih je jedina instanta). */
-export function EditorPage({ node, section }: { node: NoteNode; section: SectionKey }) {
+export function EditorPage({ node, section, continuous=false }: { node: NoteNode; section: SectionKey; continuous?:boolean }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
   const size = useKachamak((s) => s.editorSize ?? 16);
   const spacing = useKachamak((s) => s.editorSpacing ?? "1.5");
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
+    <div className={continuous ? "min-h-0" : "min-h-0 flex-1 overflow-y-auto kachamak-scroll"}>
       <div className="px-6 py-6">
         {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
             zoomu (100% je u koordinatama zoomovanog elementa) */}
@@ -371,7 +371,7 @@ export function EditorPage({ node, section }: { node: NoteNode; section: Section
               html={node.content}
               onChange={(html) => updateNode(section, node.id, { content: html })}
               placeholder="Write here..."
-              className="min-h-[50vh] text-foreground"
+              className={continuous ? "min-h-12 text-foreground" : "min-h-[50vh] text-foreground"}
             />
           </div>
         </div>
