@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  CalendarRange,
+  Diamond,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +23,7 @@ import { SECTION_KEYS, TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
 import { findNode, locateNode } from "@/lib/kachamak/utils";
+import {eventType} from "@/lib/kachamak/story-calendar";
 import { NOTE_COLORS, NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
@@ -59,6 +62,7 @@ const rowIcon = (n: NoteNode, open: boolean) => {
   if (Cmp) {
     return <Cmp className="h-3.5 w-3.5" style={{ color: n.color || "#a1a1aa" }} />;
   }
+  if(n.event){const Icon=eventType(n.event)==='period'?CalendarRange:Diamond;return <Icon className="h-3.5 w-3.5 shrink-0" style={{color:n.color||undefined}}/>;}
   return kindIcon(n, open);
 };
 

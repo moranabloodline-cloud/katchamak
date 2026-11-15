@@ -23,7 +23,15 @@ export interface StoryCalendar {
   leap: { every: number; except: number; also: number; month: number; days: number } | null;
 }
 export interface StoryDate { year: number; month: number; day: number; hour: number; minute: number }
-export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time'; banner?: string }
+export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time'; banner?: string; type?: 'event' | 'period' }
+export const eventType=(event:StoryEvent):'event'|'period'=>event.type??(event.end!==undefined&&event.end>event.start?'period':'event');
+export function eventDuration(event:StoryEvent,c:StoryCalendar) {
+  if(eventType(event)!=='period'||event.end===undefined)return '';
+  const start=minuteToDate(c,event.start),end=minuteToDate(c,event.end),years=end.year-start.year;
+  if(years>0&&start.month===end.month&&start.day===end.day&&start.hour===end.hour&&start.minute===end.minute)return years+' '+(years===1?'year':'years');
+  const total=event.end-event.start,day=c.hoursPerDay*c.minutesPerHour,days=Math.floor(total/day),hours=Math.floor(total%day/c.minutesPerHour),minutes=total%c.minutesPerHour;
+  return [days?days+'d':'',hours?hours+'h':'',minutes?minutes+'m':''].filter(Boolean).join(' ');
+}
 export interface TimelineGroup { id: string; name: string; color: string }
 export interface TimelinePreferences {
   rootId: string | null; detail: 'titles' | 'synopsis'; compact: boolean;
@@ -65,7 +73,7 @@ export function validCalendar(value:unknown):value is StoryCalendar {
 export function validEvent(value:unknown):value is StoryEvent {
   if(!value||typeof value!=='object')return false;
   const e=value as StoryEvent;
-  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision)&&validCoverImage(e.banner);
+  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision)&&validCoverImage(e.banner)&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
 }
 export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&

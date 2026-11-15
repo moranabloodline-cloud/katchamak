@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight,Plus,Settings2,ZoomIn,ZoomOut,Maximize2,Layers,BookOpen} from 'lucide-react';
 import {useKachamak} from '@/lib/kachamak/store';
 import {findNode,findNodeInNovel,stripHtml} from '@/lib/kachamak/utils';
@@ -12,6 +12,7 @@ import {CalendarSettings,timeButton,timeField} from './CalendarSettings';
 import {DateFields,TimelineEventEditor} from './TimelineEventEditor';
 import {TimelineAxis} from './TimelineAxis';
 import {TimelineGroups} from './TimelineGroups';
+import {TimelineCalendar} from './TimelineCalendar';
 import {TimelineCards} from './TimelineCards';
 import {OutlineView} from './OutlineView';
 
@@ -23,12 +24,14 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
   const selectedScope=novel&&state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const folderScope=novel&&rootId?findNodeInNovel(novel,rootId)?.node:null;
   const scopeId=selectedScope?.section===section&&(!folderScope||findNode([folderScope],selectedScope.node.id))?selectedScope.node.id:rootId;
-  useEffect(()=>{if(!novel)return;const rows=timelineRows(novel,section,scopeId,true);if(rows.length){const fit=fittedRange(rows,minutesPerDay(novel.timeline?.calendar??GREGORIAN),1);state.setTimeline(fit);}},[novel?.id,section,scopeId]);
+  const [viewport,setViewport]=useState<{key:string;center:number;span:number}|null>(null);
   if(!novel)return null;
   const prefs=novel.timeline,calendar=prefs?.calendar??GREGORIAN,groups=prefs?.groups??[],mode=prefs?.display??'chronicle';
   const all=timelineRows(novel,section,scopeId,true),hidden=prefs?.hiddenGroups??[];
   const rows=all.filter(r=>!hidden.includes(groupFor(r.event,groups)));
-  const day=minutesPerDay(calendar),fit=fittedRange(rows,day,1),center=prefs?.center??fit.center,span=prefs?.span??fit.span;
+  const day=minutesPerDay(calendar),fit=fittedRange(rows,day,1),scopeKey=novel.id+':'+section+':'+(scopeId??'all');
+  const local=viewport?.key===scopeKey?viewport:null;
+  const center=local?.center??(scopeId?fit.center:prefs?.center??fit.center),span=local?.span??(scopeId?fit.span:prefs?.span??fit.span);
   const date=minuteToDate(calendar,center),monthStart=Math.max(-1e12,center-(date.day-1)*day-date.hour*calendar.minutesPerHour-date.minute);
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
@@ -37,7 +40,8 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
   const edit=(r:EventRow)=>{setEditing({id:r.node.id,start:r.event.start});};
   const changeEvent=(r:EventRow,event:StoryEvent)=>state.updateNode(r.section,r.node.id,{event});
   const dateLabel=(r:EventRow)=>`${formatDate(calendar,r.event.start,r.event.precision)}${r.event.end!==undefined?' → '+formatDate(calendar,r.event.end,r.event.precision):''}`;
-  const changeCenter=(value:number)=>state.setTimeline({center:Math.max(-1e12,Math.min(1e12,Math.round(value)))});
+  const changeViewport=(patch:Partial<{center:number;span:number}>)=>{setViewport({key:scopeKey,center,span,...patch});state.setTimeline(patch);};
+  const changeCenter=(value:number)=>changeViewport({center:Math.max(-1e12,Math.min(1e12,Math.round(value)))});
   const monthMove=(delta:number)=>{try{changeCenter(shiftMonth(calendar,center,delta));}catch{/* Limit reached. */}};
   return <div className="flex h-full min-w-0 flex-col bg-background">
     <header className="shrink-0 space-y-3 border-b border-white/10 px-4 py-3">
@@ -52,11 +56,11 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
         <button aria-label={mode==='calendar'?'Previous month':'Earlier dates'} className={timeButton} onClick={()=>mode==='calendar'?monthMove(-1):changeCenter(center-span/2)}><ChevronLeft className="h-4 w-4"/></button>
         <button aria-label={mode==='calendar'?'Next month':'Later dates'} className={timeButton} onClick={()=>mode==='calendar'?monthMove(1):changeCenter(center+span/2)}><ChevronRight className="h-4 w-4"/></button>
         <button className={`${timeButton} mr-auto`} onClick={()=>{setJump(minuteToDate(calendar,center));setJumpError('');}}><CalendarDays className="h-3.5 w-3.5"/>{mode==='calendar'?`${calendar.months[date.month].name} ${yearText(calendar,date.year)}`:'Go to date'}</button>
-        {mode==='axis'&&<><select aria-label="Timeline scale" className={`${timeField} !py-1 !text-xs`} value="" onChange={e=>state.setTimeline({span:Number(e.target.value)*day})}><option value="" disabled>Scale…</option><option value={1}>Day</option><option value={14}>Two weeks</option><option value={baseYearDays(calendar)}>Year</option><option value={baseYearDays(calendar)*10}>Decade</option><option value={baseYearDays(calendar)*100}>Century</option></select><button aria-label="Zoom in timeline" className={timeButton} disabled={span<=60} onClick={()=>state.setTimeline({span:Math.max(60,Math.round(span/2))})}><ZoomIn className="h-4 w-4"/></button><button aria-label="Zoom out timeline" className={timeButton} disabled={span>=2e12} onClick={()=>state.setTimeline({span:Math.min(2e12,span*2)})}><ZoomOut className="h-4 w-4"/></button></>}
-        <button className={timeButton} disabled={!rows.length} onClick={()=>state.setTimeline(mode==='calendar'?{center:rows[0].event.start}:fit)}><Maximize2 className="h-3.5 w-3.5"/>{mode==='calendar'?'First event':'Fit events'}</button>
+        {mode==='axis'&&<><select aria-label="Timeline scale" className={`${timeField} !py-1 !text-xs`} value="" onChange={e=>changeViewport({span:Number(e.target.value)*day})}><option value="" disabled>Scale…</option><option value={1}>Day</option><option value={14}>Two weeks</option><option value={baseYearDays(calendar)}>Year</option><option value={baseYearDays(calendar)*10}>Decade</option><option value={baseYearDays(calendar)*100}>Century</option></select><button aria-label="Zoom in timeline" className={timeButton} disabled={span<=60} onClick={()=>changeViewport({span:Math.max(60,Math.round(span/2))})}><ZoomIn className="h-4 w-4"/></button><button aria-label="Zoom out timeline" className={timeButton} disabled={span>=2e12} onClick={()=>changeViewport({span:Math.min(2e12,span*2)})}><ZoomOut className="h-4 w-4"/></button></>}
+        <button className={timeButton} disabled={!rows.length} onClick={()=>changeViewport(mode==='calendar'?{center:rows[0].event.start}:fit)}><Maximize2 className="h-3.5 w-3.5"/>{mode==='calendar'?'First event':'Fit events'}</button>
       </div>}
-      {mode==='axis'&&<TimelineAxis calendar={calendar} rows={rows} groups={groups} center={center} span={span} compact={prefs?.compact??false} synopsis={prefs?.detail!=='titles'} onEdit={edit} onMove={changeEvent} onPan={changeCenter}/>}
-      {mode==='calendar'&&<div className="min-h-0 flex-1 overflow-auto kachamak-scroll p-4"><div className="grid overflow-hidden rounded-lg border border-white/10" style={{gridTemplateColumns:`repeat(${calendar.weekdays.length},minmax(96px,1fr))`,minWidth:calendar.weekdays.length*96}}>{calendar.weekdays.map((w,i)=><div key={i} className="border-b border-white/10 bg-card px-2 py-2 text-center text-xs font-medium text-muted-foreground">{w}</div>)}{calendarCells(calendar,center).map((cell,i)=><div key={i} className={`${prefs?.compact?'min-h-20':'min-h-32'} border-b border-r border-white/10 p-1.5 ${cell?'bg-background':'bg-muted/30'}`}>{cell&&<><button aria-label={`Add event on ${formatDate(calendar,cell.start)}`} className="mb-1 flex w-full items-center justify-between rounded px-1 py-1 text-xs text-muted-foreground hover:bg-white/10" onClick={()=>setEditing({start:cell.start})}><span>{cell.day}</span><Plus className="h-3 w-3"/></button><div className="mb-1 flex flex-wrap gap-1">{calendar.moons?.map(m=><span key={m.id} title={`${m.name} · ${Math.round(moonPhase(m,cell.start)*100)}% of cycle`} aria-label={`${m.name} phase`} style={{color:m.color}}>{['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.floor(moonPhase(m,cell.start)*8)]}</span>)}</div><div className="max-h-40 space-y-1 overflow-auto">{rows.filter(r=>eventOnDay(r.event,cell.start,calendar)).map(r=><button key={r.node.id} title={dateLabel(r)} className="block w-full truncate rounded border border-white/10 bg-card px-1.5 py-1 text-left text-[11px]" style={{borderLeftWidth:3,borderLeftColor:color(r)}} onClick={()=>edit(r)}>{r.event.start<cell.start?'← ':''}{r.node.title}{(r.event.end??r.event.start)>=cell.start+day?' →':''}</button>)}</div></>}</div>)}</div></div>}
+      {mode==='axis'&&<TimelineAxis calendar={calendar} rows={rows} groups={groups} center={center} span={span} compact={prefs?.compact??false} synopsis={prefs?.detail!=='titles'} onEdit={edit} onOpen={row=>openProjectNote(row.node.id)} onMove={changeEvent} onPan={changeCenter}/>}
+      {mode==='calendar'&&<TimelineCalendar rows={rows} calendar={calendar} groups={groups} center={center} compact={prefs?.compact??false} onOpen={row=>openProjectNote(row.node.id)} onAdd={start=>setEditing({start})}/>}
       {mode==='chronicle'&&<TimelineCards calendar={calendar} rows={rows} groups={groups} compact={prefs?.compact??false} synopsis={prefs?.detail!=='titles'} onEdit={edit} onAdd={()=>setEditing({start:rows.length?rows[rows.length-1].event.end??rows[rows.length-1].event.start:center})}/>}
       {!all.length&&mode!=='chronicle'&&<div className="shrink-0 border-t border-white/10 p-4 text-center"><p className="text-sm">Place your story in time</p><p className="mt-1 text-xs text-muted-foreground">Add a dated event or assign dates to an existing note. Undated notes remain in Binder and Outline.</p>{selected&&<button className={`${timeButton} mt-3`} onClick={()=>setEditing({id:selected.node.id,start:center})}>Date “{selected.node.title}”</button>}</div>}
     </>}

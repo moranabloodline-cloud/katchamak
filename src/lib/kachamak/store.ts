@@ -849,7 +849,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 16,
+      version: 17,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -862,6 +862,8 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v17: explicit Event/Time Period metadata is optional. Legacy date ranges are interpreted without rewriting them.
+        if(version<17){ /* Existing dates and content stay intact. */ }
         // v16: Timeline owns a note section. Move the known demo root with IDs and links intact.
         if(version<16){for(const novel of s.novels??[])normalizeNovelSections(novel);}
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {GREGORIAN as g,calendarPreset,validCalendar,validDate,validEvent,validTimelineExtra,dateToMinute,minuteToDate,monthDays,calendarCells,shiftMonth,eventOnDay,formatDate,minutesPerDay} from '../src/lib/kachamak/story-calendar.ts';
+import {GREGORIAN as g,eventType,eventDuration,calendarPreset,validCalendar,validDate,validEvent,validTimelineExtra,dateToMinute,minuteToDate,monthDays,calendarCells,shiftMonth,eventOnDay,formatDate,minutesPerDay} from '../src/lib/kachamak/story-calendar.ts';
 import {timelineRows,groupFor,eventTracks,fittedRange} from '../src/lib/kachamak/timeline-data.ts';
 import {newNovel} from '../src/lib/kachamak/seed.ts';
 import {useKachamak,isUsableBackup} from '../src/lib/kachamak/store.ts';
@@ -67,3 +67,17 @@ assert.deepEqual(timelineRows(hierarchy,'timeline','deep-event',true).map(r=>r.n
 assert.deepEqual(timelineRows(hierarchy,'binder','manuscript-event',true).map(r=>r.node.id),['manuscript-event'],'Any note in another section can be viewed as a Timeline');
 const legacyTimeline=newNovel('Legacy','');legacyTimeline.sections.planning=[note('known-root',undefined,[note('known-event',100)])];legacyTimeline.demo={key:'morrigans-ocean',version:1,timelineRootId:'known-root'};delete legacyTimeline.sections.timeline;
 const {normalizeNovelSections}=await import('../src/lib/kachamak/store.ts');normalizeNovelSections(legacyTimeline);assert.equal(legacyTimeline.sections.planning.length,0);assert.equal(legacyTimeline.sections.timeline[0].id,'known-root');assert.equal(legacyTimeline.sections.timeline[0].children[0].id,'known-event');normalizeNovelSections(legacyTimeline);assert.equal(legacyTimeline.sections.timeline.length,1,'Moving the legacy hierarchy is idempotent');
+
+assert.equal(eventType({start:0,precision:'day'}),'event');assert.equal(eventType({start:0,end:20,precision:'time'}),'period','Legacy ranges remain periods without changing saved data');
+assert.ok(validEvent({type:'event',start:0,precision:'day'}));assert.ok(!validEvent({type:'event',start:0,end:1,precision:'day'}));assert.ok(validEvent({type:'period',start:0,end:1,precision:'time'}));assert.ok(!validEvent({type:'period',start:0,end:0,precision:'time'}));assert.ok(!validEvent({type:'period',start:0,precision:'time'}));assert.ok(!validEvent({type:'other',start:0,precision:'time'}));
+assert.equal(eventDuration({type:'period',start:0,end:227,precision:'time'},g),'3h 47m');
+const {timelineCalendarWeeks}=await import('../src/lib/kachamak/timeline-calendar.ts');
+const monthCenter=dateToMinute(g,date(2026,9,14));
+const long={node:note('era',undefined),event:{type:'period',start:dateToMinute(g,date(2026,8,20)),end:dateToMinute(g,date(2026,10,4)),precision:'day'}};
+const instant={node:note('discovery',undefined),event:{type:'event',start:monthCenter,precision:'day'}};
+const weeks=timelineCalendarWeeks([long,instant],g,monthCenter);
+assert.equal(weeks.length,5);assert.ok(weeks.every(week=>week.items.some(item=>item.row.node.id==='era')),'A period spans every intersecting week');
+const point=weeks.flatMap(w=>w.items).filter(item=>item.row.node.id==='discovery');assert.equal(point.length,1);assert.equal(point[0].to-point[0].from,1,'An Event occupies one day');
+assert.ok(weeks[0].items.find(item=>item.row.node.id==='era').before);assert.ok(weeks.at(-1).items.find(item=>item.row.node.id==='era').after);
+for(const week of weeks)for(const a of week.items)for(const b of week.items)if(a!==b&&a.lane===b.lane)assert.ok(a.to<=b.from||b.to<=a.from,'Calendar bars never overlap in the same lane');
+const fantasy=calendarPreset('uniform');assert.ok(timelineCalendarWeeks([{node:note('fantasy',undefined),event:{type:'period',start:0,end:80000,precision:'day'}}],fantasy,1000).every(w=>w.dates.length===fantasy.weekdays.length));
