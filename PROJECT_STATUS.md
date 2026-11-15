@@ -1,3 +1,5 @@
+> **2026-11-15 — Mentions izabrane note u celom projektu:** prikaz sadrži samo dolazna pominjanja/referenciranja izabrane note po naslovu, aliasima i sačuvanim vezama. Uklonjen je odlazni Mentioned here i ograničavanje na Manuscript. Isto pravilo važi za svaki note u svim sekcijama, uključujući Synopsis/Notes; eksplicitne odluke/link identitet ostaju, a kontekst dolazi iz stvarnog polja pominjanja. Nema promene rukopisa ili šeme.
+
 > **2026-11-15 — Kompaktne veze u Details:** uklonjeni okviri i rastezanje redova povezanih nota; dugme × stoji odmah iza naziva sa jednim običnim razmakom. Statične grupe, boje, pregled i uklanjanje veza ostaju. Mentions prikaz i podaci nisu menjani.
 
 > **2026-11-15 — Grupe povezanih nota:** Details grupiše postojeće linkove po neposrednoj roditeljskoj noti (Characters, Locations…) kao statičnom naslovu. Naslov postoji samo kada povezana nota ima roditelja; samostalne note nemaju naslov grupe; nedostupne veze ostaju vidljive i uklonjive. Naslovi i pripadnost prate preimenovanje/premeštanje bez menjanja link ID-eva. Sve ostaje notes, bez nove šeme/tipa ili promene rukopisa.

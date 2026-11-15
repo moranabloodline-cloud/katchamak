@@ -1,5 +1,5 @@
 import { SECTION_KEYS, TABS, type Novel, type NoteNode, type SectionKey } from './types';
-import { noteMatches, scanLinks } from './note-links';
+import { contentText, flattenNotes, scanLinks } from './note-links';
 import { stripHtml } from './utils';
 export type IndexedNote = { node: NoteNode; section: SectionKey; path: string; text: string };
 export function indexNotes(novel: Novel): IndexedNote[] {
@@ -46,10 +46,13 @@ export function inlineNoteIds(html: string): string[] {
 }
 export function referenceTo(source: IndexedNote, target: NoteNode, novel?: Novel) {
   const explicit=(source.node.links??[]).includes(target.id)||inlineNoteIds(source.node.content).includes(target.id);
-  const match=novel && novel.sections.codex.some(function contains(n):boolean{return n.id===target.id||n.children.some(contains);})
-    ? (()=>{const m=noteMatches(novel,source.node).find(m=>m.targetId===target.id&&!m.missing);return m?{name:m.text,index:m.start}:null;})()
-    : matchName(source.text,target);
-  return explicit || match ? {source,explicit,match,snippet:source.text.slice(Math.max(0,(match?.index??0)-55),(match?.index??0)+150)} : null;
+  if(source.node.id===target.id)return null;
+  const candidates=novel?flattenNotes(novel).map(entry=>entry.node):[target];
+  const body=scanLinks(contentText(source.node.content),candidates,source.node.linkChoices,source.node.id);
+  const metadata=scanLinks(contentText(source.node.synopsis)+'\n'+contentText(source.node.notes),candidates,[],source.node.id);
+  const occurrence=[...body,...metadata].find(match=>match.targetId===target.id&&!match.missing);
+  const match=occurrence?{name:occurrence.text,index:occurrence.start}:null;
+  return explicit || match ? {source,explicit,match,snippet:occurrence?.context??source.text.slice(0,150)} : null;
 }
 export function searchNotes(index: IndexedNote[], query: string, excludeId?: string): IndexedNote[] {
   const q=query.trim().toLocaleLowerCase(); if(!q)return [];

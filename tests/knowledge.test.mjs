@@ -53,3 +53,19 @@ assert.deepEqual(linked,['cemetery','person','syntax','loose','missing'],'Groupi
 
 assert.deepEqual(groupLinkedNotes(groupedNovel,['people']).map(g=>g.title),[''],'A top-level parent note itself does not receive a group heading');
 assert.equal(groupLinkedNotes(groupedNovel,['nested'])[0].title,'People','A direct parent rename updates the static heading');
+
+const mentionsNovel=newNovel('Universal mentions','');
+const chapterTarget=note('target-chapter','Ch 1 - The Query');
+const personTarget=note('target-person','Mrs. Gallagher');
+mentionsNovel.sections.binder=[chapterTarget,note('body-source','Chapter 2','<p>See Ch 1 - The Query.</p>')];
+mentionsNovel.sections.codex=[personTarget,note('codex-source','Discussion','<p>Ch 1 - The Query mentions Mrs. Gallagher.</p>')];
+mentionsNovel.sections.planning=[{...note('planning-source','Plan'),synopsis:'<p>Ch 1 - The Query opens here.</p>'}];
+mentionsNovel.sections.research=[{...note('research-source','Research'),notes:'<p>Read Ch 1 - The Query.</p>'}];
+mentionsNovel.sections.templates=[{...note('linked-source','Link','<a data-katchamak-note="target-chapter" href="#note/target-chapter">opening</a>')}];
+mentionsNovel.sections.prompts=[note('unrelated','Other','<p>Mrs. Gallagher only.</p>')];
+const mentionIndex=indexNotes(mentionsNovel);
+const chapterReferences=mentionIndex.map(source=>referenceTo(source,chapterTarget,mentionsNovel)).filter(Boolean);
+assert.deepEqual(chapterReferences.map(ref=>ref.source.node.id),['body-source','codex-source','planning-source','research-source','linked-source'],'Any note can receive incoming title mentions from every section and metadata field');
+assert.ok(!chapterReferences.some(ref=>ref.source.node.id==='unrelated'),'A character mentioned in the selected chapter is not an incoming chapter mention');
+assert.deepEqual(mentionIndex.map(source=>referenceTo(source,personTarget,mentionsNovel)).filter(Boolean).map(ref=>ref.source.node.id),['codex-source','unrelated'],'Each note has its own incoming mentions');
+assert.equal(chapterReferences.find(ref=>ref.source.node.id==='planning-source').snippet,'Ch 1 - The Query opens here.');
