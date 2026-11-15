@@ -34,11 +34,10 @@ import {
 /* naziv moda je „Grid“ — po Nikoli; interno ključ ostaje corkboard (kompatibilnost
    sačuvanih podataka). Kartice (ikona+naslov+Synopsis) su iz arhitektura dokumenta */
 const VIEW_BTNS: { key: ViewMode; label: string }[] = [
-  { key: "split", label: "Split" },
   { key: "write", label: "Write" },
   { key: "corkboard", label: "Grid" },
   { key: "list", label: "List" },
-  { key: "timeline", label: "Timeline" },
+  { key: "split", label: "Split" },
 ];
 
 /* ---------- zoom po panelu (Ctrl + skrol) — vidi CtrlZoom.tsx ---------- */
