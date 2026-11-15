@@ -4,6 +4,11 @@ export const accounts = sqliteTable('accounts', {
   avatar: text('avatar').notNull().default(''), preferences: text('preferences').notNull().default('{}'),
   status: text('status').notNull().default('active'), createdAt: integer('created_at').notNull(), lastSeen: integer('last_seen').notNull(),
 });
+export const accountAccess = sqliteTable('account_access', {
+  email: text('email').primaryKey(), displayName: text('display_name').notNull().default(''),
+  status: text('status').notNull().default('active'), source: text('source').notNull().default('manual'),
+  createdAt: integer('created_at').notNull(), updatedAt: integer('updated_at').notNull(), updatedBy: text('updated_by').notNull(),
+});
 export const licenses = sqliteTable('licenses', {
   email: text('email').primaryKey(), plan: text('plan').notNull(), expiresAt: integer('expires_at'),
   updatedAt: integer('updated_at').notNull(), updatedBy: text('updated_by').notNull(),

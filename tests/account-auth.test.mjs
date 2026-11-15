@@ -12,6 +12,14 @@ assert.equal((await (await call('owner@test.local')).json()).role,'admin');
 assert.equal((await (await call('member@test.local')).json()).role,'member');
 assert.equal((await call('member@test.local','/api/admin/users')).status,403);
 assert.equal((await call('member@test.local','/api/admin/licenses')).status,403);
+env.KATCHAMAK_INVITED_USERS=JSON.stringify([{email:'invited@test.local',name:'Invited friend'}]);
+let invitedList=await (await call('owner@test.local','/api/admin/users?search=invited%40test.local')).json();
+assert.equal(invitedList.users.length,1);assert.equal(invitedList.users[0].source,'sites');assert.equal(invitedList.users[0].id,null);assert.equal(invitedList.users[0].plan,null,'Invitation import does not invent a license');
+assert.equal((await call('owner@test.local','/api/admin/status','POST',{email:'invited@test.local',status:'suspended'})).status,200);
+invitedList=await (await call('owner@test.local','/api/admin/users?search=invited%40test.local')).json();assert.equal(invitedList.users[0].status,'suspended','Reimport cannot undo a suspension');
+assert.equal((await call('invited@test.local')).status,403,'Pre-login suspension must block first sign-in');
+assert.equal((await call('owner@test.local','/api/admin/status','POST',{email:'invited@test.local',status:'active'})).status,200);
+assert.equal((await call('invited@test.local')).status,200);
 assert.equal((await call('member@test.local','/api/account','PATCH',{role:'admin'})).status,400);
 assert.equal((await call('member@test.local','/api/account','PATCH',{displayName:'Writer',preferences:{tips:true}})).status,200);
 assert.equal((await (await call('member@test.local')).json()).displayName,'Writer');
@@ -39,6 +47,20 @@ assert.equal((await call('owner@test.local','/api/admin/status','POST',{id:'memb
 assert.equal((await call('member@test.local')).status,403);
 assert.equal((await call('owner@test.local','/api/admin/status','POST',{id:'owner@test.local',status:'suspended'})).status,400);
 assert.equal((await call('owner@test.local','/api/admin/status','POST',{id:'member@test.local',status:'active'})).status,200);
+const sendBody={email:'future@test.local',requestId:'00000000-0000-4000-8000-000000000001'};
+assert.equal((await call('member@test.local','/api/admin/send-access-link','POST',sendBody)).status,403);
+assert.equal((await call('owner@test.local','/api/admin/send-access-link','POST',sendBody)).status,503,'Missing mail setup cannot report success');
+env.RESEND_API_KEY='test-only';env.KATCHAMAK_MAIL_FROM='Katchamak <sender@test.local>';
+const originalFetch=globalThis.fetch;const outgoing=[];
+try{
+  globalThis.fetch=async(url,init)=>{outgoing.push({url,headers:init.headers,body:JSON.parse(init.body)});return Response.json({id:'test-email-id'});};
+  let sent=await (await call('owner@test.local','/api/admin/send-access-link','POST',sendBody)).json();assert.equal(sent.ok,true);assert.equal(sent.link,'https://test.local/#library');assert.deepEqual(outgoing[0].body.to,['future@test.local']);assert.equal(outgoing[0].url,'https://api.resend.com/emails');assert.ok(outgoing[0].headers['Idempotency-Key'].endsWith(sendBody.requestId));assert.ok(!outgoing[0].body.text.includes('#workspace'));
+  assert.equal((await call('owner@test.local','/api/admin/send-access-link','POST',{...sendBody,email:'unknown@test.local'})).status,400);
+  await call('owner@test.local','/api/admin/status','POST',{email:'future@test.local',status:'suspended'});
+  assert.equal((await call('owner@test.local','/api/admin/send-access-link','POST',sendBody)).status,400);
+  await call('owner@test.local','/api/admin/status','POST',{email:'future@test.local',status:'active'});
+  globalThis.fetch=async()=>Response.json({message:'Provider refused'},{status:403});assert.equal((await call('owner@test.local','/api/admin/send-access-link','POST',sendBody)).status,502);
+}finally{globalThis.fetch=originalFetch;}
 const forged=new Request('https://test.local/api/admin/license',{method:'POST',headers:{'oai-authenticated-user-id':'owner@test.local','oai-authenticated-user-email':'owner@test.local','Content-Type':'application/json',Origin:'https://evil.local'},body:'{}'});
 assert.equal((await accountApi(forged,env)).status,403);
 assert.ok((await (await call('owner@test.local','/api/admin/audit')).json()).events.length>=4);
