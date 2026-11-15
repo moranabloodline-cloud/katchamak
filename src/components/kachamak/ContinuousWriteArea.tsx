@@ -7,9 +7,9 @@ import type {SectionKey} from '@/lib/kachamak/types';
 
 export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?:string}) {
   const novels=useKachamak(s=>s.novels),projectId=useKachamak(s=>s.activeNovelId);
-  const selectedId=useKachamak(s=>s.selectedNodeId),scope=useKachamak(s=>s.treeScope);
+  const selectedId=useKachamak(s=>s.selectedNodeId);
   const zoom=useKachamak(s=>s.midZoom??1),select=useKachamak(s=>s.select);
-  const novel=novels.find(n=>n.id===projectId),notes=continuousNotes(novel?.sections[section]??[],scope,rootId);
+  const novel=novels.find(n=>n.id===projectId),notes=continuousNotes(novel?.sections[section]??[],'all',rootId);
   const scrollRef=useRef<HTMLDivElement>(null),pages=useRef(new Map<string,HTMLElement>());
   const jump=(id:string|null)=>{
     const page=id?pages.current.get(id):null;if(!page)return;
@@ -17,7 +17,7 @@ export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?
     if(page.contains(document.activeElement))return;
     page.scrollIntoView?.({block:'start',inline:'nearest'});
   };
-  useEffect(()=>{jump(selectedId);},[selectedId,section,rootId,scope,projectId]);
+  useEffect(()=>{jump(selectedId);},[selectedId,section,rootId,projectId]);
   useEffect(()=>{
     // A second click on the same tree row also returns to that note.
     const click=(event:MouseEvent)=>{const row=(event.target as Element)?.closest?.('[role="treeitem"][data-note-id]');if(row)jump(row.getAttribute('data-note-id'));};

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, Target, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
 import { Corkboard } from "./Corkboard";
-import { EditorToolbar } from "./WriteArea";
+import { EditorToolbar, WriteArea } from "./WriteArea";
 import {ContinuousWriteArea} from './ContinuousWriteArea';
 import {continuousNotes} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
@@ -39,6 +39,7 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "write", label: "Write" },
   { key: "corkboard", label: "Grid" },
   { key: "list", label: "List" },
+  { key: "continuous", label: "Continious" },
   { key: "split", label: "Split" },
 ];
 
@@ -314,8 +315,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const selected = hit?.node ?? null;
   const selectedSection = hit?.section ?? section;
 
-  const treeScope = useKachamak(s=>s.treeScope);
-  const manuscriptWords=continuousNotes(novel?.sections[section]??[],treeScope,rootId).reduce((total,node)=>total+countWords(node.content),0);
+  const manuscriptWords=continuousNotes(novel?.sections[section]??[],"all",rootId).reduce((total,node)=>total+countWords(node.content),0);
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -382,7 +382,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             se u Write modu sa otvorenom notom i u Split modu; u Grid / List /
             Write bez selekcije prazan h-10 red drži njenu donju liniju
             neprekinutom od leve do desne ivice */}
-        {view === "split" || view === "write" ? (
+        {view === "split" || view === "write" || view === "continuous" ? (
           <EditorToolbar />
         ) : (
           <div className="h-10 shrink-0 border-b border-white/10" />
@@ -396,7 +396,8 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               3) je unutar SplitEditors — JEDAN red iznad OBA panela, bez
               pozadine; deli se samo površina ispod njega */}
           {view === "split" && <SplitEditors section={section} />}
-          {view === "write" && <ContinuousWriteArea key={`${activeNovelId}:${section}:${rootId??""}`} section={section} rootId={rootId}/>}
+          {view === "write" && (selected ? <WriteArea key={selected.id} node={selected} section={selectedSection}/> : <div className="p-10 text-center text-sm text-muted-foreground">Select a note from the tree to start writing.</div>)}
+          {view === "continuous" && <ContinuousWriteArea key={`${activeNovelId}:${section}:${rootId??""}`} section={section} rootId={rootId}/>}
         </div>
 
         {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
@@ -407,9 +408,9 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
           <span
             className="absolute left-10 max-w-24 truncate text-xs text-muted-foreground @[680px]:left-1/2 @[680px]:-translate-x-1/2"
-            title={view === "write" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
+            title={view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
           >
-            {view === "write" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
+            {view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
               ? `${ownWords(selected).toLocaleString("en-US")} words`
               : novel
                 ? `${novelWords(novel).toLocaleString("en-US")} words`

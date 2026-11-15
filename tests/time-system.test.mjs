@@ -30,5 +30,5 @@ assert.deepEqual(JSON.parse(JSON.stringify(novel)).timeline.calendar,c);
 const stored={...useKachamak.getInitialState(),novels:[novel]};
 useKachamak.persist.setOptions({storage:{getItem:()=>({state:stored,version:10}),setItem(){},removeItem(){}}});
 await useKachamak.persist.rehydrate();assert.deepEqual(useKachamak.getState().novels,[novel],'v10 migration must preserve every note, event and calendar field');
-assert.equal(useKachamak.persist.getOptions().version,11);
+assert.equal(useKachamak.persist.getOptions().version,12);
 console.log('Time system passed: eras/year zero, date tokens/escaping/ordinals, 12-hour time, weekday reset, fractional lunar cycles, invalid inputs, cloud/backup roundtrip and v10 migration.');

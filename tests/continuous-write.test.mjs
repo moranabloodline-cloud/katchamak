@@ -37,7 +37,7 @@ await React.act(async()=>editor(one).focus());assert.equal(useKachamak.getState(
 await React.act(async()=>{editor(one).innerHTML='<p>Edited first chapter.</p>';editor(one).dispatchEvent(new dom.Event('input',{bubbles:true}));});
 assert.equal(findNode(roots(),one).content,'<p>Edited first chapter.</p>');assert.equal(findNode(roots(),two).content,originalTwo);assert.equal(novel().sections.codex[0].content,originalCodex);
 assert.deepEqual(ids(),[act,one,two,secondAct,nested]);
-await React.act(async()=>state.setTreeScope('folders'));assert.deepEqual(ids(),[act,secondAct]);
+await React.act(async()=>state.setTreeScope('folders'));assert.deepEqual(ids(),[act,one,two,secondAct,nested],'Removed menu preferences must not filter Continuous');
 await React.act(async()=>{state.setTreeScope('all');root.render(React.createElement(ContinuousWriteArea,{section:'binder',rootId:secondAct}));});assert.deepEqual(ids(),[secondAct,nested]);
 await React.act(async()=>root.render(React.createElement(ContinuousWriteArea,{section:'codex'})));assert.deepEqual(ids(),[codex]);assert.ok(editor(codex).textContent.includes('Codex only.'));
 await React.act(async()=>root.unmount());

@@ -35,7 +35,7 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
   const preferredView = route?.view ?? data.snapshot.view;
-  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','timeline'].includes(preferredView ?? '') ? { view: preferredView! } : {};
+  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline'].includes(preferredView ?? '') ? { view: preferredView! } : {};
   const navigation: Partial<Navigation> = {};
   if (!useWebLibrary.getState().ready && (route || data.snapshot.navigation)) {
     const saved = route?.navigation ?? data.snapshot.navigation!;

@@ -93,7 +93,7 @@ export interface Novel {
   updatedAt: number;
 }
 
-export type ViewMode = "split" | "write" | "corkboard" | "list" | "timeline";
+export type ViewMode = "split" | "write" | "corkboard" | "list" | "continuous" | "timeline";
 
 /* the top-bar dropdown: which level of the tree the panel shows */
 export type TreeScope = "all" | "folders" | "top";

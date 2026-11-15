@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, FileText, House, Save, Search, Settings } from "lucide-react";
+import { ArrowLeft, FileText, House, Save, Search, Settings } from "lucide-react";
 import { saveWebLibrary } from "@/lib/kachamak/cloud-library";
 import { useKachamak } from "@/lib/kachamak/store";
-import { SCOPE_LABELS, TABS } from "@/lib/kachamak/types";
-import type { NoteNode, SectionKey, TabKey, TreeScope } from "@/lib/kachamak/types";
+import { TABS } from "@/lib/kachamak/types";
+import type { NoteNode, SectionKey, TabKey } from "@/lib/kachamak/types";
 import {openProjectNote,returnToPreviousNote,useNoteTrail} from '@/lib/kachamak/note-navigation';
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
@@ -18,12 +18,7 @@ import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
 import { AccountDialog } from "./AccountDialog";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import { stripHtml } from "@/lib/kachamak/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { toast } from "sonner";
 
 /* ---------- project search (top bar, left panel zone) ---------- */
@@ -128,8 +123,8 @@ export function Workspace() {
     document.addEventListener('keydown',keyboard);return()=>document.removeEventListener('keydown',keyboard);
   },[]);
   const closeNovel = useKachamak((s) => s.closeNovel);
-  const treeScope = useKachamak((s) => s.treeScope);
   const setTreeScope = useKachamak((s) => s.setTreeScope);
+  useEffect(()=>{if(useKachamak.getState().treeScope!=="all")setTreeScope("all");},[setTreeScope]);
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
   const { displayName, photo } = useAccountPreferences();
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
@@ -191,33 +186,7 @@ export function Workspace() {
         >
           {rightPanelOpen ? (
             <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Tree level"
-                    title="Which level of the tree to show"
-                    className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-white/15 px-3.5 text-[15px] text-stone-100 transition-colors hover:bg-white/5"
-                  >
-                    <span className="truncate">{SCOPE_LABELS[treeScope]}</span>
-                    <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-64 border-white/10 bg-[#1b1b1b]"
-                >
-                  {(Object.keys(SCOPE_LABELS) as TreeScope[]).map((s) => (
-                    <DropdownMenuItem
-                      key={s}
-                      onSelect={() => setTreeScope(s)}
-                      className={treeScope === s ? "bg-white/10" : ""}
-                    >
-                      {SCOPE_LABELS[s]}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+
 
               <span className="ml-auto" />
 
