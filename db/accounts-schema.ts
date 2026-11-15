@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
 export const accounts = sqliteTable('accounts', {
   id: text('id').primaryKey(), email: text('email').notNull(), displayName: text('display_name').notNull().default(''),
   avatar: text('avatar').notNull().default(''), preferences: text('preferences').notNull().default('{}'),
@@ -32,3 +32,10 @@ export const adminMailConnection=sqliteTable('admin_mail_connection',{
 export const adminMailSends=sqliteTable('admin_mail_sends',{
   requestId:text('request_id').primaryKey(),email:text('email').notNull(),status:text('status').notNull(),providerId:text('provider_id'),createdAt:integer('created_at').notNull(),
 });
+
+export const demoCatalog=sqliteTable('demo_catalog',{
+  demoKey:text('demo_key').primaryKey(),objectKey:text('object_key').notNull(),title:text('title').notNull(),version:integer('version').notNull(),
+});
+export const accountDemos=sqliteTable('account_demos',{
+  accountId:text('account_id').notNull(),demoKey:text('demo_key').notNull(),projectId:text('project_id').notNull(),createdAt:integer('created_at').notNull(),
+},table=>[primaryKey({columns:[table.accountId,table.demoKey]})]);

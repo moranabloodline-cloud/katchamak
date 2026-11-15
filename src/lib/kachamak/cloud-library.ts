@@ -74,7 +74,7 @@ export async function initializeWebLibrary() {
     useAccountPreferences.setState({displayName: account.displayName, photo: account.avatar || null});
     useAppearancePreferences.setState({theme: account.preferences?.lightTheme?'light':'dark',interfaceSize:account.preferences?.smallInterface?'small':account.preferences?.largeInterface?'large':'normal'});
     useKachamak.setState({ defaultAuthor: account.displayName || '' });
-    apply(await api('/api/library'));
+    apply(await api('/api/library/demo/install',{method:'POST'}));
     writeWorkspaceRoute();
     if (!subscribed) {
       subscribed = true;
@@ -165,4 +165,13 @@ export async function removeWebProject(id:string) {
     useCollections.setState(s=>({collections:s.collections.map(c=>memberships.includes(c.id)?{...c,projectIds:[...new Set([...c.projectIds,id])]}:c)}));
     throw error;
   }
+}
+
+export async function publishMorriganDemo(projectId:string) {
+  await saveWebLibrary();
+  const result=await api('/api/library/demo/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectId})});
+  await saveWebLibrary();
+  const before=snapshot(),data=await api('/api/library/demo/install',{method:'POST'});
+  if(snapshot()===before)apply(data);
+  return result as {title:string;chapterCount:number;version:number};
 }

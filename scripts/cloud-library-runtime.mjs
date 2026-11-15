@@ -1,3 +1,4 @@
+import {demoLibraryApi} from './demo-projects.mjs';
 // Included in the Sites Worker with accountApi; all keys are private to the authenticated account.
 export function validCloudLibrary(value) {
   if (!value || !Array.isArray(value.novels) || !Array.isArray(value.collections)) return false;
@@ -30,7 +31,8 @@ export async function cloudLibraryApi(request, env) {
     const gate = await accountApi(new Request(new URL('/api/account', url), { headers: request.headers }), env);
     if (!gate.ok) return gate;
     if (!env.BUCKET) return json({ error: 'Cloud storage is unavailable.' }, 503);
-    const { id } = await gate.json();
+    const account = await gate.json();
+    const { id } = account;
     const expected=request.headers.get('X-Katchamak-Account');
     if((expected&&expected!==id)||(request.method!=='GET'&&!expected))return json({error:'Your signed-in account changed. Reopen the library before saving.',accountChanged:true},409);
     const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -47,6 +49,16 @@ export async function cloudLibraryApi(request, env) {
     if (request.method !== 'GET') {
       if (request.headers.get('Origin') !== url.origin) return json({ error: 'Invalid request origin.' }, 403);
     }
+    const writeSnapshot=async(value,baseRevision)=>{
+      await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
+      const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + '.json';
+      await env.BUCKET.put(key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } });
+      const updatedAt = Date.now();
+      const result = await q('UPDATE cloud_libraries SET snapshot_key = ?, revision = revision + 1, updated_at = ? WHERE account_id = ? AND revision = ?', key, updatedAt, id, baseRevision).run();
+      if (result.meta.changes !== 1) { await env.BUCKET.delete(key); return null; }
+      return {revision:baseRevision+1,updatedAt};
+    };
+    if(url.pathname==='/api/library/demo'||url.pathname.startsWith('/api/library/demo/'))return await demoLibraryApi({request,env,account,prefix,revision,readSnapshot,writeSnapshot,json});
     if (url.pathname === '/api/library') {
       if (request.method === 'GET') return json({ revision, snapshot: await readSnapshot(), updatedAt: record?.updated_at ?? 0 });
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -56,13 +68,8 @@ export async function cloudLibraryApi(request, env) {
       let body; try { body = JSON.parse(text); } catch { return json({ error: 'Invalid JSON.' }, 400); }
       if (!Number.isSafeInteger(body.revision) || body.revision < 0 || !validCloudLibrary(body.snapshot)) return json({ error: 'Invalid library. Existing data was preserved.' }, 400);
       if (body.revision !== revision) return json({ error: 'Another window saved newer changes. Export your unsaved edits, then reload the library.', conflict: true }, 409);
-      await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
-      const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + '.json';
-      await env.BUCKET.put(key, JSON.stringify(body.snapshot), { httpMetadata: { contentType: 'application/json' } });
-      const updatedAt = Date.now();
-      const result = await q('UPDATE cloud_libraries SET snapshot_key = ?, revision = revision + 1, updated_at = ? WHERE account_id = ? AND revision = ?', key, updatedAt, id, body.revision).run();
-      if (result.meta.changes !== 1) { await env.BUCKET.delete(key); return json({ error: 'Another window saved newer changes. Export your edits before reloading.', conflict: true }, 409); }
-      return json({ revision: body.revision + 1, updatedAt });
+      const saved=await writeSnapshot(body.snapshot,body.revision);
+      return saved?json(saved):json({error:'Another window saved newer changes. Export your edits before reloading.',conflict:true},409);
     }
     const match = url.pathname.match(/^\/api\/library\/files\/([a-zA-Z0-9_-]{1,128})(?:\/([a-zA-Z0-9_-]{1,128}))?$/);
     if (!match) return json({ error: 'Not found.' }, 404);
