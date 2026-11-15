@@ -9,7 +9,6 @@ import {
 import {
   CalendarDays,
   ChevronRight,
-  Hash,
 } from "lucide-react";
 import { NoteConnections } from "./NoteConnections";
 import { RichEditor } from "./RichEditor";
@@ -174,7 +173,7 @@ export function RightPanel({
           </div>
         </TabsContent>
 
-        {/* Details — veze prema Codex notama + pretraživi birač
+        {/* Details — postojeće veze, aliasi i podaci note
             (arhitektura §11); osnovni podaci note ostaju ispod */}
         <TabsContent value="details" className="mt-0 space-y-4">
           <NoteConnections node={node} section={section} mode="details" />
@@ -204,12 +203,7 @@ export function RightPanel({
               </dt>
               <dd>{new Date(node.updatedAt).toLocaleDateString()}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground flex items-center gap-1">
-                <Hash className="h-3 w-3" /> Sub-notes
-              </dt>
-              <dd>{node.children.length}</dd>
-            </div>
+
           </dl>
         </TabsContent>
 

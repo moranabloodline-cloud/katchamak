@@ -1,3 +1,5 @@
+> **2026-11-15 — Details po označenim komentarima:** uklonjeni Linked notes naslov i prazan opis, ceo Link a note pretraživač, objašnjenje ispod Aliases i red Sub-notes. Postojeće veze/pregledi, alias polje i Save aliases, Type/Words/Created/Updated, toolbar linkovanje i Mentions ostaju. Podaci i šema ne menjaju se.
+
 > **2026-11-15 — Nula lenjira:** leva ivica produžena 12 CSS px pre nule. Nula je centrirana nad svojim podeokom kao svi ostali brojevi; polazište skale ostaje na ivici teksta, desna ivica i oko se ne pomeraju.
 
 > **2026-11-15 — Lenjir:** brojevi i podeoci dele isti početak na levoj ivici tekstualnog stupca, sa CSS centimetarskom skalom i mm/pola-cm podeocima. Uklonjene su lažne margine/pasivni trouglovi koji nisu odgovarali tekstu; brojevi imaju sopstveni red, a oko je izvan skale. ResizeObserver prilagođava broj oznaka širini, bez sečenja poslednje cifre; scrollbar-gutter poravnava lenjir i tekst u Write, Continious i Split. Tema i centralni zoom ostaju postojeći; nema promene rukopisa/šeme.
