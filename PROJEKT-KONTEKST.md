@@ -1,3 +1,5 @@
+> **2026-11-15 — Ikonice u List prikazu:** svaki red koristi sačuvanu ikonu i boju note, istim iconByName resolverom kao ostali prikazi; bez izabrane ikone koristi Note, bez boje muted temu. Podnote više ne menjaju izabranu ikonu u generički folder. Provere: TypeScript, produkcijski build i vizuelni browser QA sa tirkiznom lokacijom i ljubičastim likom.
+
 > **2026-11-15 — Širine List kolona:** tabela i kolone automatski prate najduži tekst u svakoj koloni, bez razvlačenja preko panela i prelamanja naziva/labela/statusa. Kada tabela premaši panel, dostupan je horizontalni skrol. Provere: TypeScript, produkcijski build i vizuelna browser provera.
 
 > **2026-11-15 — List prati izbor:** List prikazuje samo označenu notu i sve njene podnote, unutar aktivne sekcije/taba foldera; bez izbora prikazuje postojeći scope. Kolona Synopsis zamenjena je kolonom Label koja čita stvarnu labelu note (ili —), dok sinopsis ostaje u Info panelu. Provere: TypeScript, produkcijski build i browser QA na sintetičkom stablu sa drugim aktom, ugnježđenom notom i pojedinačnom notom; labele Revision/Final i odsustvo drugih aktova potvrđeni.

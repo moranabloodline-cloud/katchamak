@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileText, FolderOpen } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { findNode, locateNode, nodeWords, ownWords } from "@/lib/kachamak/utils";
+import { iconByName } from "@/lib/kachamak/icons";
 
 function flatten(nodes: NoteNode[], out: NoteNode[] = []): NoteNode[] {
   for (const n of nodes) {
@@ -94,6 +95,7 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
           <tbody>
             {all.map((n) => {
               const parent = n.children.length > 0;
+              const Icon = iconByName(n.icon) ?? FileText;
               const dropHere = drop && drop.id === n.id ? drop.mode : null;
               const dropLine =
                 dropHere === "before"
@@ -138,11 +140,7 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
                 >
                   <td className={`px-4 py-2.5 ${dropLine}`}>
                     <span className="flex items-center gap-2">
-                      {parent ? (
-                        <FolderOpen className="h-4 w-4 shrink-0 text-orange-400/80" />
-                      ) : (
-                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      )}
+                      <Icon className="h-4 w-4 shrink-0" style={{ color: n.color || "var(--muted-foreground)" }} />
                       <span className={parent ? "font-medium" : ""}>{n.title}</span>
                     </span>
                   </td>
