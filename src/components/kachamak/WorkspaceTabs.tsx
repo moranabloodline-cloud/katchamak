@@ -14,7 +14,7 @@ export function WorkspaceTabs({novel}:{novel:Novel}) {
   const lastNoteView=useRef(view==='timeline'?'write':view);
   useEffect(()=>{if(view!=='timeline')lastNoteView.current=view;},[view]);
   const timelineActive=view==='timeline'&&active!=='trash';
-  const openTab=(key:TabKey)=>{if(view==='timeline')setView(lastNoteView.current);setTab(key);};
+  const openTab=(key:TabKey)=>{const nextView=view==='timeline'?lastNoteView.current:view;if(view==='timeline')setView(nextView);setTab(key);if(nextView==='continuous'&&key!=='trash')useKachamak.setState({selectedNodeId:null});};
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const [pendingDelete,setPendingDelete]=useState<{key:TabKey;label:string;projectId:string}|null>(null);
   useEffect(()=>setPendingDelete(null),[novel.id]);

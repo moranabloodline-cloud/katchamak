@@ -30,6 +30,11 @@ export async function accountApi(request, env) {
     await q('UPDATE accounts SET display_name=?,avatar=?,preferences=? WHERE id=?',name.trim(),avatar,JSON.stringify(prefs),id).run();
     return accountJson({ ok: true });
   }
+  if (route === '/api/admin/licenses' && method === 'GET') {
+    const search=(url.searchParams.get('search')??'').slice(0,254),offset=Math.max(0,Math.min(1000000,Math.floor(Number(url.searchParams.get('offset'))||0)));
+    const rows=await q('SELECT email,plan,expires_at,updated_at FROM licenses WHERE email LIKE ? ORDER BY updated_at DESC,email LIMIT 51 OFFSET ?','%'+search+'%',offset).all();
+    return accountJson({licenses:rows.results.slice(0,50),hasMore:rows.results.length>50});
+  }
   if (route === '/api/admin/users' && method === 'GET') {
     const search = (url.searchParams.get('search') ?? '').slice(0,100), offset = Math.max(0, Math.min(1000000, Number(url.searchParams.get('offset')) || 0));
     const rows = await q("SELECT * FROM (SELECT a.id,a.email,a.display_name,a.status,a.created_at,a.last_seen,l.plan,l.expires_at FROM accounts a LEFT JOIN licenses l ON l.email=a.email UNION ALL SELECT NULL AS id,l.email,'' AS display_name,'pending' AS status,l.updated_at AS created_at,NULL AS last_seen,l.plan,l.expires_at FROM licenses l WHERE NOT EXISTS (SELECT 1 FROM accounts a WHERE a.email=l.email)) WHERE email LIKE ? OR display_name LIKE ? ORDER BY created_at DESC,email,id LIMIT 51 OFFSET ?", '%'+search+'%','%'+search+'%',offset).all();

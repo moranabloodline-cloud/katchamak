@@ -1,35 +1,28 @@
 'use client';
-import {useEffect,useRef} from 'react';
-import {EditorPage,RulerRow} from './WriteArea';
+import {useEffect,useRef,useState} from 'react';
+import DOMPurify from 'dompurify';
+import {RulerRow} from './WriteArea';
+import {NotePreview} from './NotePreview';
 import {useKachamak} from '@/lib/kachamak/store';
-import {continuousNotes} from '@/lib/kachamak/continuous-manuscript';
+import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
 import type {SectionKey} from '@/lib/kachamak/types';
 
 export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?:string}) {
   const novels=useKachamak(s=>s.novels),projectId=useKachamak(s=>s.activeNovelId);
   const selectedId=useKachamak(s=>s.selectedNodeId);
-  const zoom=useKachamak(s=>s.midZoom??1),select=useKachamak(s=>s.select);
-  const novel=novels.find(n=>n.id===projectId),notes=continuousNotes(novel?.sections[section]??[],'all',rootId);
-  const scrollRef=useRef<HTMLDivElement>(null),pages=useRef(new Map<string,HTMLElement>());
-  const jump=(id:string|null)=>{
-    const page=id?pages.current.get(id):null;if(!page)return;
-    // Editing a paragraph must never pull its caret or scroll position to the title.
-    if(page.contains(document.activeElement))return;
-    page.scrollIntoView?.({block:'start',inline:'nearest'});
-  };
-  useEffect(()=>{jump(selectedId);},[selectedId,section,rootId,projectId]);
-  useEffect(()=>{
-    // A second click on the same tree row also returns to that note.
-    const click=(event:MouseEvent)=>{const row=(event.target as Element)?.closest?.('[role="treeitem"][data-note-id]');if(row)jump(row.getAttribute('data-note-id'));};
-    document.addEventListener('click',click);return()=>document.removeEventListener('click',click);
-  },[]);
+  const zoom=useKachamak(s=>s.midZoom??1),font=useKachamak(s=>s.editorFont??'Segoe UI'),size=useKachamak(s=>s.editorSize??16),spacing=useKachamak(s=>s.editorSpacing??'1.5');
+  const novel=novels.find(n=>n.id===projectId),notes=continuousSelection(novel?.sections[section]??[],selectedId,rootId);
+  const scrollRef=useRef<HTMLDivElement>(null),[preview,setPreview]=useState<string|null>(null);
+  useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;},[selectedId,section,rootId,projectId]);
   return <div className="flex h-full min-h-0 flex-col" style={{zoom}}>
     <RulerRow/>
-    <div ref={scrollRef} aria-label="Continuous manuscript" className="min-h-0 flex-1 overflow-y-auto kachamak-scroll pb-[40vh]">
-      {notes.map(node=><section key={node.id} ref={el=>{if(el)pages.current.set(node.id,el);else pages.current.delete(node.id);}} data-continuous-note={node.id} aria-label={node.title||'Untitled note'} onFocusCapture={event=>{if(event.currentTarget.contains(event.target as Node)&&useKachamak.getState().selectedNodeId!==node.id)select(node.id);}} className="scroll-mt-4 [&+section]:border-t [&+section]:border-border/50">
-        <EditorPage node={node} section={section} continuous/>
+    <div ref={scrollRef} aria-label="Continuous manuscript · read only" className="min-h-0 flex-1 overflow-y-auto kachamak-scroll pb-[40vh]">
+      <p className="mx-auto max-w-3xl px-6 pt-3 text-xs text-muted-foreground">Read only · {selectedId&&notes[0]?.id===selectedId?'Selected note and sub-notes':'All notes in this tab'}</p>
+      {notes.map(node=><section key={node.id} data-continuous-note={node.id} aria-label={node.title||'Untitled note'} className="px-6 py-6 [&+section]:border-t [&+section]:border-border/50">
+        <div className="mx-auto w-full max-w-3xl"><h2 className="mb-4 text-2xl font-bold">{node.title||'Untitled note'}</h2><div contentEditable={false} data-readonly-note={node.id} className="kachamak-editor text-foreground" style={{fontFamily:`'${font}',system-ui,sans-serif`,fontSize:size,lineHeight:spacing}} onClick={event=>{const anchor=(event.target as Element).closest('a[href^="#note/"]');if(anchor){event.preventDefault();setPreview(anchor.getAttribute('href')!.slice(6));}}} dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(node.content||'',{FORBID_TAGS:['style','script','iframe','object','embed'],FORBID_ATTR:['srcdoc']})}}/></div>
       </section>)}
-      {!notes.length&&<div className="p-10 text-center text-sm text-muted-foreground"><p>No notes in this view.</p><button type="button" className="mt-4 rounded border border-border px-3 py-2 hover:bg-muted" onClick={()=>useKachamak.getState().addNode(section,rootId??null,'doc')}>Create note</button></div>}
+      {!notes.length&&<p className="p-10 text-center text-sm text-muted-foreground">No notes in this view.</p>}
     </div>
+    <NotePreview noteId={preview} onClose={()=>setPreview(null)}/>
   </div>;
 }

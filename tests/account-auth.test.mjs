@@ -11,6 +11,7 @@ assert.equal((await call(null)).status,401);
 assert.equal((await (await call('owner@test.local')).json()).role,'admin');
 assert.equal((await (await call('member@test.local')).json()).role,'member');
 assert.equal((await call('member@test.local','/api/admin/users')).status,403);
+assert.equal((await call('member@test.local','/api/admin/licenses')).status,403);
 assert.equal((await call('member@test.local','/api/account','PATCH',{role:'admin'})).status,400);
 assert.equal((await call('member@test.local','/api/account','PATCH',{displayName:'Writer',preferences:{tips:true}})).status,200);
 assert.equal((await (await call('member@test.local')).json()).displayName,'Writer');
@@ -23,6 +24,7 @@ const pendingUsers=await (await call('owner@test.local','/api/admin/users?search
 assert.equal(pendingUsers.users.length,1);assert.equal(pendingUsers.users[0].id,null);assert.equal(pendingUsers.users[0].status,'pending');assert.equal(pendingUsers.users[0].plan,'lifetime');
 const confirmed=await (await call('owner@test.local','/api/admin/license','POST',{email:'  FUTURE@test.local ',plan:'lifetime'})).json();
 assert.equal(confirmed.license.email,'future@test.local');assert.equal(confirmed.registered,false);
+const ledger=await (await call('owner@test.local','/api/admin/licenses')).json();assert.ok(ledger.licenses.some(l=>l.email==='future@test.local'&&l.plan==='lifetime'));
 assert.equal((await (await call('future@test.local')).json()).license.active,true);
 const signedInUsers=await (await call('owner@test.local','/api/admin/users?search=future%40test.local')).json();
 assert.equal(signedInUsers.users.length,1);assert.equal(signedInUsers.users[0].id,'future@test.local','Signing in replaces the pending row without duplication');
@@ -32,6 +34,7 @@ assert.equal((await (await call('member@test.local')).json()).license.expires_at
 assert.equal((await call('owner@test.local','/api/admin/license','POST',{email:'member@test.local',plan:'timed',expiresAt:1})).status,400);
 assert.equal((await call('owner@test.local','/api/admin/license','POST',{email:'member@test.local',plan:'none'})).status,200);
 assert.equal((await (await call('member@test.local')).json()).license.active,false);
+const revoked=await (await call('owner@test.local','/api/admin/licenses?search=member%40test.local')).json();assert.equal(revoked.licenses.length,1);assert.equal(revoked.licenses[0].plan,'none');
 assert.equal((await call('owner@test.local','/api/admin/status','POST',{id:'member@test.local',status:'suspended'})).status,200);
 assert.equal((await call('member@test.local')).status,403);
 assert.equal((await call('owner@test.local','/api/admin/status','POST',{id:'owner@test.local',status:'suspended'})).status,400);

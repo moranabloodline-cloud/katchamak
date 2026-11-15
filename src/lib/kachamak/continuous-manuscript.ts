@@ -13,3 +13,10 @@ export function continuousNotes(roots:NoteNode[],scope:TreeScope='all',rootId?:s
   }};
   visit(root?[root]:roots);return out;
 }
+
+export function continuousSelection(roots:NoteNode[],selectedId:string|null,rootId?:string):NoteNode[] {
+  const tabRoot=rootId?findNode(roots,rootId):null;
+  if(rootId&&!tabRoot)return [];
+  const selected=selectedId?findNode(tabRoot?[tabRoot]:roots,selectedId):null;
+  return continuousNotes(roots,'all',selected?.id??rootId);
+}

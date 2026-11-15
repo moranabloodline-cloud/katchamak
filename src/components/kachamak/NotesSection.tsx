@@ -6,7 +6,7 @@ import { NoteTree } from "./NoteTree";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
 import {ContinuousWriteArea} from './ContinuousWriteArea';
-import {continuousNotes} from '@/lib/kachamak/continuous-manuscript';
+import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
 import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
@@ -315,7 +315,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const selected = hit?.node ?? null;
   const selectedSection = hit?.section ?? section;
 
-  const manuscriptWords=continuousNotes(novel?.sections[section]??[],"all",rootId).reduce((total,node)=>total+countWords(node.content),0);
+  const manuscriptWords=continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0);
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -382,7 +382,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             se u Write modu sa otvorenom notom i u Split modu; u Grid / List /
             Write bez selekcije prazan h-10 red drži njenu donju liniju
             neprekinutom od leve do desne ivice */}
-        {view === "split" || view === "write" || view === "continuous" ? (
+        {view === "split" || view === "write" ? (
           <EditorToolbar />
         ) : (
           <div className="h-10 shrink-0 border-b border-white/10" />
