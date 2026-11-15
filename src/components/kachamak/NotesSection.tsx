@@ -438,7 +438,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               <button
                 key={b.key}
                 type="button"
-                onClick={() => setView(b.key)}
+                onClick={() => setView(view === b.key ? "write" : b.key)}
                 aria-pressed={view === b.key}
                 className={`rounded-lg px-2 py-1 text-[13px] transition-colors ${
                   view === b.key
