@@ -157,7 +157,7 @@ export function DashboardLibrary(props: Props) {
       {expanded.includes(c.id) && tree(c.id, depth + 1)}
     </div>)}
     {projectsAt(parentId).map((n) => <div key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: parentId })} data-tree-project={n.id} className="flex h-9 items-center rounded-md pr-1 text-sm text-[#bcb8b0] hover:bg-white/5" style={{ paddingLeft: 30 + depth * 16, minWidth: 150 + depth * 16 }}>
-      <button type="button" onClick={() => props.onOpenProject(n.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left" title={n.title}><BookOpen className="h-4 w-4 shrink-0 text-[#bfae8c]" /><span className="truncate">{n.title}</span></button>{projectMenu(n, parentId)}
+      <button type="button" onClick={() => props.onOpenProject(n.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left" title={n.title}><BookOpen className="h-4 w-4 shrink-0 text-[#bfae8c]" /><span className="truncate">{n.title}</span>{n.demo&&<span className="shrink-0 text-[10px] text-amber-300">Demo</span>}</button>{projectMenu(n, parentId)}
     </div>)}
   </>;
 
@@ -212,7 +212,7 @@ export function DashboardLibrary(props: Props) {
             <div className={layout === "grid" ? "grid items-start gap-x-5 gap-y-7" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{entries.map((n) => <article key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: location })} data-library-project={n.id} className={`group relative min-w-0 ${layout === "list" ? "flex items-center gap-2 rounded-md border border-white/[0.07] bg-white/[0.02] px-2 py-2 hover:bg-white/5" : ""}`}>
               <button type="button" onClick={() => props.onOpenProject(n.id)} aria-label={`Open ${n.title}`} className={layout === "grid" ? "block w-full text-left" : "flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left"}>
                 <Cover novel={n} small={layout === "list"} />
-                <span className={layout === "grid" ? "mt-3 block pr-6" : "min-w-0 flex-1 basis-24"}><span className="block break-words font-serif text-base leading-snug text-[#eee7d8] group-hover:text-[#f5d99d]">{n.title}</span>{n.series&&<span className="mt-1 block text-xs text-muted-foreground">{n.series}{n.seriesIndex?" · "+n.seriesIndex:""}</span>}{layout === "list" && <span className="text-xs text-muted-foreground">{n.author}</span>}</span>
+                <span className={layout === "grid" ? "mt-3 block pr-6" : "min-w-0 flex-1 basis-24"}><span className="block break-words font-serif text-base leading-snug text-[#eee7d8] group-hover:text-[#f5d99d]">{n.title}{n.demo&&<span className="ml-2 inline-block rounded border border-amber-400/30 px-1.5 py-0.5 align-middle font-sans text-[10px] text-amber-300">Demo</span>}</span>{n.series&&<span className="mt-1 block text-xs text-muted-foreground">{n.series}{n.seriesIndex?" · "+n.seriesIndex:""}</span>}{layout === "list" && <span className="text-xs text-muted-foreground">{n.author}</span>}</span>
                 {layout === "list" && <span className="w-14 text-xs text-muted-foreground">Novel</span>}
                 <span className={layout === "grid" ? "mt-1.5 block text-xs leading-relaxed text-muted-foreground" : "w-24 text-xs text-muted-foreground"}>{novelWords(n).toLocaleString()} words</span>
                 <span title={new Date(n.updatedAt).toLocaleString()} className={layout === "grid" ? "block text-xs leading-relaxed text-muted-foreground/70" : "w-24 text-xs text-muted-foreground/70"}>{layout === "grid" ? "Modified " : ""}{modified(n.updatedAt)}</span>

@@ -1,20 +1,55 @@
 const MORRIGAN_DEMO_KEY='morrigans-ocean';
 const demoSections=['binder','codex','planning','research','templates','prompts'];
+// Fictional demonstration dates, anchored to the novel's surveillance duration,
+// the 03:11 ledger entry and the final three-to-five-AM corridor.
+const morriganScenes=[
+  [1,14,15,10,14,15,25,"A child's grief reaches the Data Ocean","Ciarán's question becomes the violet ribbon, and Aisling makes her first crossing into Cork.",['Ciarán','Aisling','Data Ocean']],
+  [2,14,15,26,14,15,42,"The tether: Eoin's fatal crash","The crossing through a delivery van's GPS costs Eoin his life; the Rubric records the casualties.",['Eoin the Driver','Rubric','Aunt Mairead']],
+  [3,14,16,0,14,19,47,"Corrective labour at Rack B-7","Sentenced for sentimental heresy, Aisling discovers Declan's blueprint while Roche observes her for three hours and forty-seven minutes.",['Declan','Aisling','Rubric']],
+  [4,14,19,47,14,20,15,"Roche's surveillance is exposed","Aisling removes Roche's tracers, reads the Tether ledger and reaches Mairead's kitchen through a silver connection.",['Eamonn Roche','Declan','Aunt Mairead']],
+  [5,14,20,15,14,20,33,"The speaker reaches Ciarán","A moment of connection in the kitchen is interrupted by the Rubric's bleaching and the extinction protocol.",['Ciarán','Rubric','Mrs. Gallagher']],
+  [6,14,20,34,14,22,10,"The extinction monolith is destroyed","Declan's load-bearing memories lead Aisling to reject the console's offer; the Syntax reveals itself.",['Declan','Syntax','Aisling']],
+  [7,14,22,10,14,23,0,"A backdoor into the cardiac ward","Aisling watches Darragh and Mairead, then opens a seam and two pacemaker gates in the hospital network.",['Darragh','Aunt Mairead','Aisling']],
+  [8,14,23,0,15,2,50,"Declan's ghost and the forbidden ledger","The ghost from B-7 and the green cube awaken the current that begins to spool Roche's forbidden ledger.",['Declan','Eamonn Roche']],
+  [9,15,3,11,15,3,13,"Hennessey's heart stops","The hospital intervention fails; the pacemaker telemetry goes red as the inquisitor's light arrives.",['Mr. Hennessey','Rubric']],
+  [10,15,3,13,15,3,16,"Flatline: the failed resuscitation","Aisling pours bandwidth into Hennessey's dead node and recognises Declan's rhythm beyond the closing pinhole.",['Mr. Hennessey','Declan','Aisling']],
+  [11,15,3,16,15,3,20,"Erasure and the choice to lose","With coordinates gone, Aisling calculates a deliberate defeat in the dark.",['Aisling']],
+  [12,15,3,20,15,3,26,"Ogma reassembles Morrigan","The execution becomes a reassembly, and Morrigan is recognised on the other side.",['Aisling']],
+  [13,15,3,26,15,3,39,"Roche's ledger and the legacy vault","Financial evidence and the transient passage written in Declan's hand open the legacy vault.",['Declan','Eamonn Roche']],
+  [14,15,3,39,15,3,45,"Arawn warns of the administrative bloodhounds","At the desk, the survey becomes a run: Roche's filing has found the open seam.",['Eamonn Roche']],
+  [15,15,3,45,15,3,53,"The salt reveals a living presence","Behind the failing sensory render, Declan's small, particular signature is recognised as more than data.",['Declan']],
+  [16,15,3,53,15,4,3,"A breach opens into Rack B-7","The encrypted presence is brought toward B-7 as an Ogma scout tears into the room.",['Declan']],
+  [17,15,4,3,15,4,7,"The scout enters; Roche locks the rack","The room yields to the scout, then contracts as Roche's audit closes around it.",['Eamonn Roche']],
+  [18,15,4,7,15,4,16,"The fragments escape through the seam","The fragments are sent outward before Morrigan dissolves into Declan's seam and the small-hours corridor.",['Declan','Aisling']],
+  [19,15,4,16,15,4,29,"The Guardian and the Doors","Morrigan carries the fragments through the freezing Ocean and passes the Doors as the white walls close.",['Data Ocean','Aisling']],
+  [20,15,4,29,15,4,37,"The kernel: surrendering godhood","The architecture's sharp edges are given up, leaving a warm, vulnerable pulse that can be ended.",['Aisling']],
+  [21,15,4,37,15,4,58,"The threshold: letting go","After the long pause in the violet corridor, Morrigan moves toward the final threshold and lets go.",['Aisling','Ciarán']],
+];
+const demoMinute=(day,hour,minute)=>(Math.floor(Date.UTC(2026,9,day)/86400000)+719162)*1440+hour*60+minute;
 export function prepareMorriganDemo(source,version=Date.now()) {
   const novel=structuredClone(source);novel.trash=[];novel.archived=false;
-  novel.title='Morrigan’s Ocean — Demo';novel.demo={key:MORRIGAN_DEMO_KEY,version};
-  const groups=[],chapterIds=[];let position=0;
-  const visit=(nodes,act)=>{for(const node of nodes){const parent=/^Act\s+\d/i.test(node.title)?node:act;
-    if(/^(?:Ch|Chapter)\s*\d+\s*[-–—]/i.test(node.title)){
-      const groupId='demo-'+(parent?.id||'story');let group=groups.find(g=>g.id===groupId);
-      const first=!group;if(!group){group={id:groupId,name:parent?.title||'Story sequence',color:parent?.color||['#ad76ef','#ed75bf','#f18a38'][groups.length%3]};groups.push(group);}
-      node.event={start:position++*1440,precision:'day',groupId,...(first&&source.cover?.image?{banner:source.cover.image}:{})};chapterIds.push(node.id);
-    }visit(node.children,parent);
-  }};visit(novel.sections.binder,null);
-  if(!position)throw new Error('The selected novel has no numbered chapters to demonstrate.');
-  novel.timeline={rootId:null,detail:'synopsis',compact:false,display:'chronicle',eventScope:'book',groups,hiddenGroups:[],center:Math.round((position-1)*720),span:(position+2)*1440,calendar:{name:'Demo sequence — not canonical story dates',months:[{name:'Sequence',days:Math.max(31,position)}],weekdays:['Step'],epochWeekday:0,hoursPerDay:24,minutesPerHour:60,eraName:'DE',beforeEraName:'Before',leap:null,dateFormat:'[Step] D',timeFormat:'24h'}};
-  const now=Date.now();novel.sections.planning.push({id:crypto.randomUUID(),title:'Start here — demo guide',kind:'doc',content:'<h1>Morrigan’s Ocean — Demo</h1><p>This is your own editable copy of the complete novel and its notes. Changes here never affect the author’s original or another account.</p><h2>Try the Timeline</h2><p>Open Timeline and switch between Cards, Timeline, Calendar and Outline. The '+position+' chapter events follow manuscript order and are grouped by act. Step 1, Step 2 and the following steps are illustrative positions, not dates asserted by the novel. A banner is included on the first card of each act; use Edit event to change or remove it.</p><h2>Explore connected notes</h2><p>Read in Binder, explore people and places in Codex, and use Mentions to see where a selected note is referenced. You can edit or delete this demo like any project.</p>',synopsis:'A complete, independent demo. Timeline positions illustrate chapter order, not canonical dates.',notes:'',status:'',label:'',children:[],links:chapterIds.slice(0,1),icon:'info',createdAt:now,updatedAt:now});
-  novel.hiddenSections=(novel.hiddenSections||[]).filter(s=>s!=='planning');return {novel,chapterCount:position};
+  const find=(nodes,id)=>{for(const node of nodes){if(node.id===id)return node;const hit=find(node.children,id);if(hit)return hit;}return null;};
+  const previous=source.demo?.edition===2&&demoSections.map(section=>find(novel.sections[section]||[],source.demo.timelineRootId)).find(Boolean);
+  if(previous){novel.demo={...source.demo,version};delete novel.demo.source;return {novel,chapterCount:previous.children.filter(n=>n.event).length};}
+
+  const groups=[],chapters=[],all=[];
+  const walk=(nodes,act,recordChapters)=>{for(const node of nodes){all.push(node);const parent=/^Act\s+\d/i.test(node.title)?node:act;const match=node.title.match(/^(?:Ch|Chapter)\s*(\d+)\s*[-–—]/i);if(match&&recordChapters)chapters.push({node,act:parent,number:Number(match[1])});walk(node.children,parent,recordChapters);}};
+  demoSections.forEach(section=>walk(novel.sections[section]||[],null,section==='binder'));
+  const now=Date.now(),rootId=crypto.randomUUID(),events=[];
+  for(const chapter of chapters){const scene=morriganScenes.find(s=>s[0]===chapter.number);if(!scene)continue;
+    const [number,sd,sh,sm,ed,eh,em,title,synopsis,names]=scene;
+    const groupId='story-'+(chapter.act?.id||'main');let group=groups.find(g=>g.id===groupId);const first=!group;
+    if(!group){group={id:groupId,name:chapter.act?.title||'Story',color:chapter.act?.color||['#ad76ef','#ed75bf','#f18a38'][groups.length%3]};groups.push(group);}
+    const entities=all.filter(n=>names.some(name=>n.title.toLocaleLowerCase()===name.toLocaleLowerCase()));
+    const start=demoMinute(sd,sh,sm),end=demoMinute(ed,eh,em);
+    events.push({id:crypto.randomUUID(),title,kind:'doc',content:'<p>'+synopsis+'</p><p>Chapter: '+chapter.node.title.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</p>',synopsis,notes:'Dates and durations are fictional examples for the demo, based on the story sequence. They can be changed in Edit event.',children:[],links:[chapter.node.id,...entities.map(n=>n.id)],icon:'calendar',color:group.color,status:'',label:'',createdAt:now,updatedAt:now,event:{start,end,precision:'time',groupId,...(first&&source.cover?.image?{banner:source.cover.image}:{})}});
+  }
+  if(!events.length)throw new Error('The selected novel has no numbered chapters to demonstrate.');
+  novel.sections.planning.push({id:rootId,title:'Story Timeline',kind:'doc',content:'<h1>Morrigan’s Ocean — Story Timeline</h1><p>Representative fictional dates: 14–15 October 2026. These event notes are linked to the unchanged manuscript and Codex. The three-hour-forty-seven-minute surveillance, the 03:11 ledger entry and the final 03:00–05:00 corridor guide the example chronology. Dates are illustrative and editable.</p>',synopsis:'A representative dated chronology of the novel, with event durations, chapter links and banners.',notes:'',children:events,icon:'calendar',status:'',label:'',createdAt:now,updatedAt:now});
+  const start=events[0].event.start,end=events.at(-1).event.end;
+  novel.title=source.title.replace(/ — Demo$/,'');novel.demo={key:MORRIGAN_DEMO_KEY,version,edition:2,timelineRootId:rootId};
+  novel.timeline={rootId:null,detail:'synopsis',compact:false,display:'chronicle',eventScope:'book',groups,hiddenGroups:[],center:Math.round((start+end)/2),span:end-start+240,calendar:{name:'Gregorian · fictional demo dates',months:['January','February','March','April','May','June','July','August','September','October','November','December'].map((name,i)=>({name,days:[31,28,31,30,31,30,31,31,30,31,30,31][i]})),weekdays:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],epochWeekday:0,hoursPerDay:24,minutesPerHour:60,eraName:'CE',beforeEraName:'BCE',leap:{every:4,except:100,also:400,month:1,days:1},dateFormat:'D MMMM YYYY',timeFormat:'24h'}};
+  novel.hiddenSections=(novel.hiddenSections||[]).filter(s=>s!=='planning');return {novel,chapterCount:events.length};
 }
 export function cloneDemoNovel(template) {
   const ids=new Map([[template.id,crypto.randomUUID()]]);
@@ -40,13 +75,18 @@ export async function demoLibraryApi({request,env,account,prefix,revision,readSn
     const raw=await request.text();if(raw.length>1024)return json({error:'Invalid demo request.'},400);
     let body;try{body=JSON.parse(raw);}catch{return json({error:'Invalid JSON.'},400);}
     const snapshot=await readSnapshot(),source=snapshot.novels.find(n=>n.id===body.projectId);
-    if(!source||source.demo||!/morrigan/i.test(source.title))return json({error:'Choose the original Morrigan’s Ocean project from your library.'},400);
+    if(!source||(source.demo&&!source.demo.source)||!/morrigan/i.test(source.title))return json({error:'Choose the original Morrigan’s Ocean project from your library.'},400);
     const version=Date.now(),{novel,chapterCount}=prepareMorriganDemo(source,version);
     const base=`shared-demos/${MORRIGAN_DEMO_KEY}/${crypto.randomUUID()}/`;
     await copyDemoFiles(env.BUCKET,prefix+'files/'+source.id+'/',base+'files/');
     await env.BUCKET.put(base+'project.json',JSON.stringify(novel),{httpMetadata:{contentType:'application/json'}});
+    const updatedSource={...novel,trash:source.trash,demo:{...novel.demo,source:true},updatedAt:Date.now()};
+    snapshot.novels=snapshot.novels.map(n=>n.id===source.id?updatedSource:n.demo?.key===MORRIGAN_DEMO_KEY?{...n,archived:true}:n);
+    if(new TextEncoder().encode(JSON.stringify(snapshot)).length>20*1024*1024)return json({error:'This demo exceeds the library save limit. Existing projects were preserved.'},413);
+    const saved=await writeSnapshot(snapshot,revision);if(!saved)return json({error:'Another window saved newer changes. Retry publishing.',conflict:true},409);
     await q('INSERT INTO demo_catalog (demo_key,object_key,title,version) VALUES (?,?,?,?) ON CONFLICT(demo_key) DO UPDATE SET object_key=excluded.object_key,title=excluded.title,version=excluded.version',MORRIGAN_DEMO_KEY,base+'project.json',novel.title,version).run();
     await q('INSERT INTO account_audit (id,actor,target,action,detail,created_at) VALUES (?,?,?,?,?,?)',crypto.randomUUID(),account.id,MORRIGAN_DEMO_KEY,'demo.publish',JSON.stringify({version,chapterCount}),Date.now()).run();
+    await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO UPDATE SET project_id=excluded.project_id',account.id,MORRIGAN_DEMO_KEY,source.id,Date.now()).run();
     return json({published:true,title:novel.title,chapterCount,version});
   }
   if(path!=='/api/library/demo/install')return json({error:'Not found.'},404);
@@ -54,16 +94,20 @@ export async function demoLibraryApi({request,env,account,prefix,revision,readSn
   const result=()=>({revision,snapshot});
   if(!catalog)return json(result());
   const received=await q('SELECT project_id FROM account_demos WHERE account_id = ? AND demo_key = ?',account.id,MORRIGAN_DEMO_KEY).first();
-  if(received)return json(result());
-  const existing=snapshot.novels.find(n=>n.demo?.key===MORRIGAN_DEMO_KEY);
+  const previous=received&&snapshot.novels.find(n=>n.id===received.project_id);
+  if(received&&(!previous||previous.demo?.source||previous.demo?.edition===2))return json(result());
+  const existing=snapshot.novels.find(n=>n.demo?.key===MORRIGAN_DEMO_KEY&&n.demo?.edition===2);
   if(existing){await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO NOTHING',account.id,MORRIGAN_DEMO_KEY,existing.id,Date.now()).run();return json(result());}
   const object=await env.BUCKET.get(catalog.object_key);if(!object)throw new Error('The demo could not be read.');
-  const novel=cloneDemoNovel(JSON.parse(await object.text()));
+  const template=JSON.parse(await object.text());
+  if(previous&&template.demo?.edition!==2)return json(result());
+  if(previous)previous.archived=true;
+  const novel=cloneDemoNovel(template);
   snapshot.novels.push(novel);
   if(new TextEncoder().encode(JSON.stringify(snapshot)).length>20*1024*1024)return json({...result(),demoUnavailable:'The demo cannot fit within this library’s save limit. Your projects were preserved.'});
   await copyDemoFiles(env.BUCKET,catalog.object_key.slice(0,-'project.json'.length)+'files/',prefix+'files/'+novel.id+'/');
   const saved=await writeSnapshot(snapshot,revision);
   if(!saved)return json({error:'Another window saved newer changes. Retry opening the library.',conflict:true},409);
-  await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO NOTHING',account.id,MORRIGAN_DEMO_KEY,novel.id,Date.now()).run();
+  await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO UPDATE SET project_id=excluded.project_id',account.id,MORRIGAN_DEMO_KEY,novel.id,Date.now()).run();
   return json({...saved,snapshot,installed:true,projectId:novel.id});
 }

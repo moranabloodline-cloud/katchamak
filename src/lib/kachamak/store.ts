@@ -844,7 +844,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 14,
+      version: 15,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -857,6 +857,8 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v15: demo edition/source identity is optional; publishing updates only the authorized source project.
+        if(version<15){ /* No local project transformation. */ }
         // v14: demo provenance is optional. Never replace or seed projects during storage migration.
         if(version<14){ /* Demo copies are installed separately through authenticated cloud storage. */ }
         // v13: optional Timeline card banners; old events stay unchanged without an image.

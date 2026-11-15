@@ -75,7 +75,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
-  demo?: { key: string; version: number };
+  demo?: { key: string; version: number; edition?: number; source?: boolean; timelineRootId?: string };
   id: string;
   title: string;
   author: string;
