@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {newNovel} from '../src/lib/kachamak/seed.ts';
-import {indexNotes,matchName,referenceTo,searchNotes,inlineNoteIds} from '../src/lib/kachamak/knowledge.ts';
+import {indexNotes,groupLinkedNotes,matchName,referenceTo,searchNotes,inlineNoteIds} from '../src/lib/kachamak/knowledge.ts';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM().window;globalThis.window=dom;globalThis.document=dom.document;globalThis.DOMParser=dom.DOMParser;
 const {manuscriptHtml,manuscriptMarkdown,manuscriptNotes,manuscriptWords}=await import('../src/lib/kachamak/manuscript-export.ts');
@@ -41,3 +41,15 @@ assert.equal(useKachamak.getState().novels[0].sections.binder[0].children[0].con
 assert.deepEqual(useKachamak.getState().novels[0].sections.research[0].links,['chapter']);
 assert.deepEqual(useKachamak.getState().novels[0].sections.codex[0].aliases,[],'v7 migration preserves notes and adds optional aliases');
 console.log('Knowledge and manuscript export passed: Unicode/whole-name mentions, aliases, cross-section links, backlinks, renaming, ranked search, manuscript ordering, own-text totals and v7 migration.');
+
+const groupedNovel=newNovel('Groups','');
+groupedNovel.sections.codex=[note('people','Characters','',[note('person','Mrs. Gallagher'),note('nested','Nested','',[note('syntax','Syntax')])]),note('places','Locations','',[note('cemetery','Digital Cemetery')]),note('loose','Loose note')];
+const linked=['cemetery','person','syntax','loose','missing'];
+assert.deepEqual(groupLinkedNotes(groupedNovel,linked).map(g=>[g.title,g.entries.map(e=>e.id)]),[['',['loose']],['Characters',['person']],['Nested',['syntax']],['Locations',['cemetery']],['Unavailable notes',['missing']]]);
+groupedNovel.sections.codex[0].title='People';
+groupedNovel.sections.codex[1].children.push(groupedNovel.sections.codex[0].children.shift());
+assert.deepEqual(groupLinkedNotes(groupedNovel,['person','syntax']).map(g=>[g.title,g.entries.map(e=>e.id)]),[['Nested',['syntax']],['Locations',['person']]],'Renaming and moving parents updates groups without changing link IDs');
+assert.deepEqual(linked,['cemetery','person','syntax','loose','missing'],'Grouping does not mutate links');
+
+assert.deepEqual(groupLinkedNotes(groupedNovel,['people']).map(g=>g.title),[''],'A top-level parent note itself does not receive a group heading');
+assert.equal(groupLinkedNotes(groupedNovel,['nested'])[0].title,'People','A direct parent rename updates the static heading');

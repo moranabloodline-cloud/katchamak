@@ -1,3 +1,5 @@
+> **2026-11-15 — Grupe povezanih nota:** Details grupiše postojeće linkove po neposrednoj roditeljskoj noti (Characters, Locations…) kao statičnom naslovu. Naslov postoji samo kada povezana nota ima roditelja; samostalne note nemaju naslov grupe; nedostupne veze ostaju vidljive i uklonjive. Naslovi i pripadnost prate preimenovanje/premeštanje bez menjanja link ID-eva. Sve ostaje notes, bez nove šeme/tipa ili promene rukopisa.
+
 > **2026-11-15 — Pojednostavljen Details i zaglavlje stabla:** uklonjeni Type/Words iz donjeg okvira, putanja ispod povezane note u Details i Section actions dugme iz zaglavlja stabla. Created/Updated ostaju na dnu, boje/pregledi veza ostaju; vraćanje skrivenih nota je dostupno kroz postojeći desni klik na praznom delu stabla. Nema izmene podataka ili šeme.
 
 > **2026-11-15 — Boja povezanih nota i putanje:** Details/Mentions kartice koriste istu boju note i isti podrazumevani link ton kao rukopis. Putanje koriste nazive tabova iz TABS (Codex, Binder…), uz očuvana imena roditeljskih nota. Nema promene podataka ili šeme.

@@ -10,6 +10,32 @@ export function indexNotes(novel: Novel): IndexedNote[] {
   }
   return result;
 }
+export type LinkedNoteGroup = { id: string; title: string; entries: { id: string; target?: IndexedNote }[] };
+// Group by the existing immediate parent, never by a guessed name or note kind.
+export function groupLinkedNotes(novel: Novel, ids: string[]): LinkedNoteGroup[] {
+  const index = new Map(indexNotes(novel).map(entry => [entry.node.id, entry]));
+  const membership = new Map<string, { id: string; title: string }>();
+  const ordered: { id: string; title: string }[] = [];
+  for (const section of SECTION_KEYS) {
+    const ungrouped = { id: `section:${section}`, title: '' };
+    ordered.push(ungrouped);
+    const visit = (note: NoteNode, parent?: NoteNode) => {
+      membership.set(note.id, parent ? { id: `parent:${parent.id}`, title: parent.title || 'Untitled note' } : ungrouped);
+      if (note.children.length) ordered.push({ id: `parent:${note.id}`, title: note.title || 'Untitled note' });
+      note.children.forEach(child => visit(child, note));
+    };
+    (novel.sections[section] ?? []).forEach(root => visit(root));
+  }
+  const missing = { id: 'missing', title: 'Unavailable notes' };
+  ordered.push(missing);
+  const groups = new Map<string, LinkedNoteGroup>();
+  for (const id of new Set(ids)) {
+    const group = membership.get(id) ?? missing;
+    if (!groups.has(group.id)) groups.set(group.id, { ...group, entries: [] });
+    groups.get(group.id)!.entries.push({ id, target: index.get(id) });
+  }
+  return ordered.flatMap(group => { const match = groups.get(group.id); return match ? [match] : []; });
+}
 export const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 export function matchName(text: string, node: NoteNode): {name:string;index:number} | null {
   const match=scanLinks(text,[node]).find(m=>m.targetId===node.id);
