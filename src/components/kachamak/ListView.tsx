@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { FileText, FolderOpen } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
-import { findNode, locateNode, nodeWords, ownWords, stripHtml } from "@/lib/kachamak/utils";
+import { findNode, locateNode, nodeWords, ownWords } from "@/lib/kachamak/utils";
 
 function flatten(nodes: NoteNode[], out: NoteNode[] = []): NoteNode[] {
   for (const n of nodes) {
@@ -28,7 +28,9 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
   const scoped = rootId ? findNode(roots,rootId) : null;
-  const all = flatten(scoped ? [scoped] : roots);
+  const scopeRoots = scoped ? [scoped] : roots;
+  const selected = selectedNodeId ? findNode(scopeRoots, selectedNodeId) : null;
+  const all = flatten(selected ? [selected] : scopeRoots);
 
   const total = all.reduce((a, n) => a + ownWords(n), 0);
 
@@ -84,7 +86,7 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03] text-left text-xs uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-2.5 font-medium">Title</th>
-              <th className="hidden px-4 py-2.5 font-medium md:table-cell">Synopsis</th>
+              <th className="px-4 py-2.5 font-medium">Label</th>
               <th className="px-4 py-2.5 font-medium">Words</th>
               <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Status</th>
             </tr>
@@ -144,8 +146,8 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
                       <span className={parent ? "font-medium" : ""}>{n.title}</span>
                     </span>
                   </td>
-                  <td className={`hidden max-w-0 truncate px-4 py-2.5 text-muted-foreground md:table-cell ${dropLine}`}>
-                    {stripHtml(n.synopsis) || "—"}
+                  <td className={`px-4 py-2.5 text-muted-foreground ${dropLine}`}>
+                    {n.label || "—"}
                   </td>
                   <td className={`px-4 py-2.5 text-muted-foreground ${dropLine}`}>
                     {/* kontejner: reči podstabla; list: sav tekst same note
