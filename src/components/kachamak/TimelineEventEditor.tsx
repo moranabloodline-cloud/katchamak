@@ -5,17 +5,18 @@ import { useKachamak } from '@/lib/kachamak/store';
 import { openProjectNote } from '@/lib/kachamak/note-navigation';
 import { groupFor } from '@/lib/kachamak/timeline-data';
 import { flattenNotes } from '@/lib/kachamak/note-links';
-import { dateToMinute, minuteToDate, monthDays, type StoryCalendar, type StoryDate, type StoryEvent } from '@/lib/kachamak/story-calendar';
+import { absoluteYear, eraYear, dateToMinute, minuteToDate, monthDays, type StoryCalendar, type StoryDate, type StoryEvent } from '@/lib/kachamak/story-calendar';
 import type { NoteNode, Novel, SectionKey } from '@/lib/kachamak/types';
 import { timeButton, timeField } from './CalendarSettings';
 
 export function DateFields({label,calendar:c,value:d,onChange,time=false}:{label:string;calendar:StoryCalendar;value:StoryDate;onChange:(d:StoryDate)=>void;time?:boolean}) {
+  const era=eraYear(c,d.year);
   const change=(patch:Partial<StoryDate>)=>{const next={...d,...patch};next.day=Math.min(next.day,monthDays(c,next.year,next.month));onChange(next);};
   return <fieldset className="space-y-2"><legend className="mb-2 text-xs font-medium text-muted-foreground">{label}</legend><div className="grid grid-cols-[5rem_1fr_6rem_5rem] gap-2">
     <input aria-label={`${label} day`} className={timeField} type="number" min={1} max={monthDays(c,d.year,d.month)} value={d.day} onChange={e=>change({day:Number(e.target.value)})}/>
     <select aria-label={`${label} month`} className={timeField} value={d.month} onChange={e=>change({month:Number(e.target.value)})}>{c.months.map((m,i)=><option key={i} value={i}>{m.name}</option>)}</select>
-    <input aria-label={`${label} year`} className={timeField} type="number" min={1} max={2e12} value={d.year>0?d.year:1-d.year} onChange={e=>change({year:d.year>0?Math.max(1,Number(e.target.value)):1-Math.max(1,Number(e.target.value))})}/>
-    <select aria-label={`${label} era`} className={timeField} value={d.year>0?'after':'before'} onChange={e=>change({year:e.target.value==='after'?(d.year>0?d.year:1-d.year):(d.year>0?1-d.year:d.year)})}><option value="after">{c.eraName}</option><option value="before">{c.beforeEraName}</option></select>
+    <input aria-label={`${label} year`} className={timeField} type="number" min={c.yearZero?0:1} max={2e12} value={era.year} onChange={e=>change({year:absoluteYear(c,Math.max(c.yearZero?0:1,Number(e.target.value)),era.key)})}/>
+    <select aria-label={`${label} era`} className={timeField} value={era.key} onChange={e=>change({year:absoluteYear(c,era.year,e.target.value)})}><option value="before">{c.beforeEraName}</option><option value="after">{c.eraName}</option>{c.eras?.map(e=><option key={e.id} value={e.id}>{e.abbreviation}</option>)}</select>
   </div>{time&&<div className="flex items-center gap-2"><input aria-label={`${label} hour`} className={`${timeField} w-20`} type="number" min={0} max={c.hoursPerDay-1} value={d.hour} onChange={e=>change({hour:Number(e.target.value)})}/><span>:</span><input aria-label={`${label} minute`} className={`${timeField} w-20`} type="number" min={0} max={c.minutesPerHour-1} value={d.minute} onChange={e=>change({minute:Number(e.target.value)})}/><span className="text-xs text-muted-foreground">{c.hoursPerDay}-hour day</span></div>}</fieldset>;
 }
 export function TimelineEventEditor({novel,calendar,current,start=0,section,parentId,onClose,onSaved}:{novel:Novel;calendar:StoryCalendar;current?:{node:NoteNode;section:SectionKey};start?:number;section:SectionKey;parentId?:string;onClose:()=>void;onSaved:(value:number)=>void}) {
@@ -35,6 +36,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
     try {
       const start=dateToMinute(calendar,time?from:{...from,hour:0,minute:0}),end=hasEnd?dateToMinute(calendar,time?to:{...to,hour:0,minute:0}):undefined;
       if(end!==undefined&&end<start)throw new Error('The end must be on or after the start.');
+      if(calendar.range&&(start<calendar.range.start||(end??start)>calendar.range.end))throw new Error('Choose dates within the earliest and latest dates in Time System.');
       const event:StoryEvent={start,...(end!==undefined?{end}:{}),groupId:group,precision:time?'time':'day'};
       const state=useKachamak.getState();
       if(state.activeNovelId!==novel.id)throw new Error('The active book changed. Reopen the event.');

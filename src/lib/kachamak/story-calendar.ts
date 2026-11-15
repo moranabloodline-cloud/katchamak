@@ -10,6 +10,15 @@ export interface StoryCalendar {
   minutesPerHour: number;
   eraName: string;
   beforeEraName: string;
+  eraFullName?: string;
+  beforeEraFullName?: string;
+  eras?: { id: string; name: string; abbreviation: string; startYear: number }[];
+  yearZero?: boolean;
+  resetWeekdaysEachMonth?: boolean;
+  range?: { start: number; end: number };
+  moons?: { id: string; name: string; period: number; offset: number; color: string }[];
+  dateFormat?: string;
+  timeFormat?: '12h' | '24h';
   leap: { every: number; except: number; also: number; month: number; days: number } | null;
 }
 export interface StoryDate { year: number; month: number; day: number; hour: number; minute: number }
@@ -44,6 +53,12 @@ export function validCalendar(value:unknown):value is StoryCalendar {
   if(!label(c.name)||!label(c.eraName)||!label(c.beforeEraName)||!Array.isArray(c.months)||!c.months.length||c.months.length>64||!c.months.every(m=>m&&label(m.name)&&integer(m.days,1,366)))return false;
   if(!Array.isArray(c.weekdays)||!c.weekdays.length||c.weekdays.length>32||!c.weekdays.every(label)||!integer(c.epochWeekday,0,c.weekdays.length-1)||!integer(c.hoursPerDay,1,100)||!integer(c.minutesPerHour,1,100))return false;
   const l=c.leap;
+  if(c.eraFullName!==undefined&&!label(c.eraFullName)||c.beforeEraFullName!==undefined&&!label(c.beforeEraFullName))return false;
+  if(c.yearZero!==undefined&&typeof c.yearZero!=='boolean'||c.resetWeekdaysEachMonth!==undefined&&typeof c.resetWeekdaysEachMonth!=='boolean')return false;
+  if(c.eras!==undefined&&(!Array.isArray(c.eras)||c.eras.length>32||!c.eras.every((e,i)=>e&&label(e.id)&&label(e.name)&&label(e.abbreviation)&&integer(e.startYear,2,1e9)&&(!i||e.startYear>c.eras![i-1].startYear))||new Set(c.eras.map(e=>e.id)).size!==c.eras.length))return false;
+  if(c.range!==undefined&&(!c.range||!integer(c.range.start,-1e12,1e12)||!integer(c.range.end,c.range.start,1e12)))return false;
+  if(c.moons!==undefined&&(!Array.isArray(c.moons)||c.moons.length>32||!c.moons.every(m=>m&&label(m.id)&&label(m.name)&&Number.isFinite(m.period)&&m.period>=1&&m.period<=1e12&&Number.isFinite(m.offset)&&Math.abs(m.offset)<=1e12&&/^#[a-f0-9]{6}$/i.test(m.color))||new Set(c.moons.map(m=>m.id)).size!==c.moons.length))return false;
+  if(c.dateFormat!==undefined&&(typeof c.dateFormat!=='string'||!c.dateFormat.trim()||c.dateFormat.length>200)||c.timeFormat!==undefined&&!['12h','24h'].includes(c.timeFormat))return false;
   return l===null||!!l&&integer(l.every,1,10000)&&integer(l.except,0,10000)&&integer(l.also,0,10000)&&(!l.except||l.except%l.every===0)&&(!l.also||!!l.except&&l.also%l.except===0)&&integer(l.month,0,c.months.length-1)&&integer(l.days,1,30);
 }
 export function validEvent(value:unknown):value is StoryEvent {
@@ -94,14 +109,30 @@ export function minuteToDate(c:StoryCalendar,value:number):StoryDate {
   const time=((value%minutesPerDay(c))+minutesPerDay(c))%minutesPerDay(c);
   return {year:lo,month,day:remaining+1,hour:Math.floor(time/c.minutesPerHour),minute:time%c.minutesPerHour};
 }
-export const yearText=(c:StoryCalendar,year:number)=>`${year>0?year:1-year} ${year>0?c.eraName:c.beforeEraName}`;
+export function eraYear(c:StoryCalendar,year:number) {
+  const era=year>0?[...(c.eras??[])].reverse().find(e=>year>=e.startYear):undefined;
+  return {key:year<=0?'before':era?.id??'after',year:(year<=0?1-year:year-(era?.startYear??1)+1)-(c.yearZero?1:0),abbreviation:year<=0?c.beforeEraName:era?.abbreviation??c.eraName,name:year<=0?c.beforeEraFullName??c.beforeEraName:era?.name??c.eraFullName??c.eraName};
+}
+export function absoluteYear(c:StoryCalendar,year:number,key:string) {
+  const offset=c.yearZero?0:1;
+  return key==='before'?offset-year:year+(c.eras?.find(e=>e.id===key)?.startYear??1)-offset;
+}
+export const yearText=(c:StoryCalendar,year:number)=>{const e=eraYear(c,year);return `${e.year} ${e.abbreviation}`;};
+export const moonPhase=(moon:NonNullable<StoryCalendar['moons']>[number],minute:number)=>((minute-moon.offset)%moon.period+moon.period)%moon.period/moon.period;
+export function formatCalendarDate(c:StoryCalendar,value:number,pattern=c.dateFormat??'D MMMM YYYY E') {
+  const d=minuteToDate(c,value),era=eraYear(c,d.year),day=c.resetWeekdaysEachMonth?d.day-1:Math.floor(value/minutesPerDay(c)),weekday=((day+c.epochWeekday)%c.weekdays.length+c.weekdays.length)%c.weekdays.length;
+  const ordinal=(n:number)=>n%100>=11&&n%100<=13?'th':({1:'st',2:'nd',3:'rd'}[n%10]??'th');
+  const tokens:Record<string,string>={E:era.abbreviation,EE:era.name,YY:String(era.year).slice(-2).padStart(2,'0'),YYYY:String(era.year),SYYYY:String(d.year),YBIG:era.year.toLocaleString('en-US'),M:String(d.month+1),MM:String(d.month+1).padStart(2,'0'),MMM:c.months[d.month].name.slice(0,3),MMMM:c.months[d.month].name,D:String(d.day),DD:String(d.day).padStart(2,'0'),DDD:c.weekdays[weekday].slice(0,3),DDDD:c.weekdays[weekday],H:String(d.hour),HH:String(d.hour).padStart(2,'0'),m:String(d.minute),mm:String(d.minute).padStart(2,'0'),'^':ordinal(d.day)};
+  return pattern.replace(/\[[^\]]*\]|SYYYY|YYYY|YBIG|MMMM|DDDD|MMM|DDD|YY|MM|DD|EE|HH|mm|[EMDHm^]/g,t=>t.startsWith('[')?t.slice(1,-1):tokens[t]??t);
+}
 export function formatDate(c:StoryCalendar,value:number,precision:'day'|'time'='day') {
   const d=minuteToDate(c,value);
-  return `${d.day} ${c.months[d.month].name} ${yearText(c,d.year)}${precision==='time'?` · ${String(d.hour).padStart(2,'0')}:${String(d.minute).padStart(2,'0')}`:''}`;
+  const clock=c.timeFormat==='12h'&&c.hoursPerDay===24?`${d.hour%12||12}:${String(d.minute).padStart(2,'0')} ${d.hour<12?'AM':'PM'}`:`${String(d.hour).padStart(2,'0')}:${String(d.minute).padStart(2,'0')}`;
+  return `${formatCalendarDate(c,value)}${precision==='time'?` · ${clock}`:''}`;
 }
 export function calendarCells(c:StoryCalendar,value:number) {
   const d=minuteToDate(c,value),first=value-(d.day-1)*minutesPerDay(c)-d.hour*c.minutesPerHour-d.minute,day=Math.floor(first/minutesPerDay(c));
-  const offset=((day+c.epochWeekday)%c.weekdays.length+c.weekdays.length)%c.weekdays.length;
+  const offset=(((c.resetWeekdaysEachMonth?0:day)+c.epochWeekday)%c.weekdays.length+c.weekdays.length)%c.weekdays.length;
   return Array.from({length:Math.ceil((offset+monthDays(c,d.year,d.month))/c.weekdays.length)*c.weekdays.length},(_,i)=>i<offset||i>=offset+monthDays(c,d.year,d.month)?null:{day:i-offset+1,start:first+(i-offset)*minutesPerDay(c)});
 }
 export function shiftMonth(c:StoryCalendar,value:number,delta:number) {

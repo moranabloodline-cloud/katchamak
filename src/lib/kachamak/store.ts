@@ -844,7 +844,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 10,
+      version: 11,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -857,6 +857,8 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v11: time-system eras, moons, display and range are optional. Preserve all event minutes.
+        if(version<11){ /* Existing calendars retain their original arithmetic and presentation. */ }
         // v10: project metadata/cover are optional; old manuscripts and cover icons stay intact.
         if(version<10){ /* Missing metadata means no series, no uploaded cover, and an active project. */ }
         // v9: calendar and event dates are optional. Never invent dates for old notes.
