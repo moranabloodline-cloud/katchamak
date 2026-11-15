@@ -36,3 +36,10 @@ No message is sent during page rendering, builds, tests, or publication.
 
 References: https://resend.com/docs/api-reference/emails/send-email and
 https://resend.com/docs/dashboard/emails/idempotency-keys.
+
+
+## Gmail sender
+
+KATCHAMAK_GMAIL_CLIENT_ID, KATCHAMAK_GMAIL_CLIENT_SECRET and KATCHAMAK_GMAIL_SENDER are server-only Sites secrets. Admin uses Connect Gmail once, granting only gmail.send and basic email identity. The callback is /api/admin/gmail/callback at the deployed Site origin. Only the configured sender email is accepted. OAuth state is one-use, bound to the admin ID, expires after ten minutes and uses PKCE. Refresh tokens are AES-GCM encrypted in admin_mail_connection, never library exports. Do not rotate the client secret without reconnecting Gmail.
+
+Gmail send requests are deduplicated by request ID; a timeout or provider 5xx must be checked in Gmail Sent before another send. Accepted sends retain provider message IDs. Google Testing-mode refresh tokens expire after seven days; publishing/verification is a separate Google setup step. This setup does not change Sites sharing: a recipient must also have Site access to pass its outer sign-in gate.

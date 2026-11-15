@@ -23,3 +23,12 @@ export const cloudLibraries = sqliteTable('cloud_libraries', {
   snapshotKey: text('snapshot_key'),
   updatedAt: integer('updated_at').notNull().default(0),
 });
+export const adminMailOauth=sqliteTable('admin_mail_oauth',{
+  state:text('state').primaryKey(),actor:text('actor').notNull(),verifier:text('verifier').notNull(),expiresAt:integer('expires_at').notNull(),
+});
+export const adminMailConnection=sqliteTable('admin_mail_connection',{
+  provider:text('provider').primaryKey(),email:text('email').notNull(),token:text('token').notNull(),updatedAt:integer('updated_at').notNull(),
+});
+export const adminMailSends=sqliteTable('admin_mail_sends',{
+  requestId:text('request_id').primaryKey(),email:text('email').notNull(),status:text('status').notNull(),providerId:text('provider_id'),createdAt:integer('created_at').notNull(),
+});

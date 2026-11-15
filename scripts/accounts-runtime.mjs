@@ -20,6 +20,7 @@ export async function accountApi(request, env) {
   let body = {};
   if (method !== 'GET') { try { const text = await request.text(); if (text.length > 220000) return accountJson({ error: 'Request too large' }, 413); body = JSON.parse(text); } catch { return accountJson({ error: 'Invalid JSON' }, 400); } }
   const audit = (target, action, detail) => q('INSERT INTO account_audit (id,actor,target,action,detail,created_at) VALUES (?,?,?,?,?,?)', crypto.randomUUID(), id, target, action, JSON.stringify(detail), now);
+  if (route.startsWith('/api/admin/gmail/')) return gmailConnection(request, env, {q,id,body,audit});
   if (route === '/api/account' && method === 'GET') {
     const license = await q('SELECT plan,expires_at,updated_at FROM licenses WHERE email=?',email).first();
     return accountJson({ id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active: license.plan !== 'none' && (license.expires_at === null || license.expires_at > now) } : { plan: 'none', active: false } });
@@ -70,10 +71,12 @@ export async function accountApi(request, env) {
   }
   if (route === '/api/admin/send-access-link' && method === 'POST') {
     const target=typeof body.email==='string'?body.email.trim().toLowerCase():'';
+    if(!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(target)||target.length>254)return accountJson({error:'A valid recipient email is required.'},400);
     const license=await q('SELECT plan,expires_at FROM licenses WHERE email=?',target).first();
     if(!license||license.plan==='none'||license.expires_at!==null&&license.expires_at<=now)return accountJson({error:'Assign an active license before sending an access link.'},400);
     const blocked=await q("SELECT email FROM account_access WHERE email=? AND status='suspended' UNION SELECT email FROM accounts WHERE email=? AND status='suspended'",target,target).first();
     if(blocked)return accountJson({error:'Restore this account before sending an access link.'},400);
+    if(env.KATCHAMAK_GMAIL_CLIENT_ID) return gmailAccessLink(env,{q,audit,target,body,link:url.origin+'/#library'});
     if(!env.RESEND_API_KEY||!env.KATCHAMAK_MAIL_FROM)return accountJson({error:'Email sending is not configured. Set RESEND_API_KEY and KATCHAMAK_MAIL_FROM in Sites settings, then publish.'},503);
     if(typeof body.requestId!=='string'||!/^[a-zA-Z0-9-]{16,100}$/.test(body.requestId))return accountJson({error:'A valid send request is required.'},400);
     const link=url.origin+'/#library';
@@ -87,4 +90,84 @@ export async function accountApi(request, env) {
   }
   if (route === '/api/admin/audit' && method === 'GET') return accountJson({ events: (await q('SELECT * FROM account_audit ORDER BY created_at DESC LIMIT 50').all()).results });
   return accountJson({ error: 'Not found' }, 404);
+}
+
+// Sender credentials never enter a library snapshot, client bundle or API response.
+const gmailScope='https://www.googleapis.com/auth/gmail.send';
+const gmailBase64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const gmailBytes=text=>Uint8Array.from(atob(text.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+async function gmailKey(env){return crypto.subtle.importKey('raw',await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.KATCHAMAK_GMAIL_CLIENT_SECRET)),{name:'AES-GCM'},false,['encrypt','decrypt']);}
+async function gmailSeal(env,text){const iv=crypto.getRandomValues(new Uint8Array(12));return gmailBase64(iv)+'.'+gmailBase64(new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},await gmailKey(env),new TextEncoder().encode(text))));}
+async function gmailOpen(env,text){const [iv,data]=text.split('.');return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:gmailBytes(iv)},await gmailKey(env),gmailBytes(data)));}
+async function gmailTables(q){
+  await q('CREATE TABLE IF NOT EXISTS admin_mail_oauth (state TEXT PRIMARY KEY,actor TEXT NOT NULL,verifier TEXT NOT NULL,expires_at INTEGER NOT NULL)').run();
+  await q('CREATE TABLE IF NOT EXISTS admin_mail_connection (provider TEXT PRIMARY KEY,email TEXT NOT NULL,token TEXT NOT NULL,updated_at INTEGER NOT NULL)').run();
+  await q('CREATE TABLE IF NOT EXISTS admin_mail_sends (request_id TEXT PRIMARY KEY,email TEXT NOT NULL,status TEXT NOT NULL,provider_id TEXT,created_at INTEGER NOT NULL)').run();
+}
+const gmailChanged=result=>(result.meta?.changes??result.changes??0)>0;
+const gmailFetch=(url,options)=>fetch(url,{...options,signal:AbortSignal.timeout(15000)});
+function gmailPage(ok){return new Response('<!doctype html><html><head><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width"><title>Katchamak email</title></head><body style="background:#151515;color:#eee;font-family:system-ui;padding:3rem"><h1>'+ (ok?'Gmail connected':'Gmail was not connected')+'</h1><p>'+(ok?'Access links will be sent from your approved Gmail account.':'Return to Admin and connect the approved sender account again.')+'</p><a style="color:#f5d16c" href="/#library">Return to Katchamak</a></body></html>',{status:ok?200:400,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}});}
+async function gmailConnection(request,env,{q,id,body,audit}){
+  const url=new URL(request.url),route=url.pathname;
+  if(!env.KATCHAMAK_GMAIL_CLIENT_ID||!env.KATCHAMAK_GMAIL_CLIENT_SECRET||!env.KATCHAMAK_GMAIL_SENDER)return accountJson({error:'Email sender setup is not ready.'},503);
+  await gmailTables(q);
+  if(route==='/api/admin/gmail/status'&&request.method==='GET'){
+    const connected=await q("SELECT email FROM admin_mail_connection WHERE provider='gmail'").first();
+    return accountJson({connected:connected?.email===env.KATCHAMAK_GMAIL_SENDER,email:env.KATCHAMAK_GMAIL_SENDER});
+  }
+  const redirect=url.origin+'/api/admin/gmail/callback';
+  if(route==='/api/admin/gmail/connect'&&request.method==='POST'){
+    const state=gmailBase64(crypto.getRandomValues(new Uint8Array(32))),verifier=gmailBase64(crypto.getRandomValues(new Uint8Array(32)));
+    await q('DELETE FROM admin_mail_oauth WHERE expires_at<?',Date.now()).run();
+    await q('INSERT INTO admin_mail_oauth (state,actor,verifier,expires_at) VALUES (?,?,?,?)',state,id,await gmailSeal(env,verifier),Date.now()+600000).run();
+    const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    auth.search=new URLSearchParams({client_id:env.KATCHAMAK_GMAIL_CLIENT_ID,redirect_uri:redirect,response_type:'code',scope:'openid email '+gmailScope,access_type:'offline',prompt:'consent',login_hint:env.KATCHAMAK_GMAIL_SENDER,state,code_challenge:gmailBase64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier)))),code_challenge_method:'S256'}).toString();
+    return accountJson({url:auth.href});
+  }
+  if(route==='/api/admin/gmail/callback'&&request.method==='GET'){
+    const state=url.searchParams.get('state')??'',code=url.searchParams.get('code');
+    if(state.length>100||!code||code.length>5000)return gmailPage(false);
+    const pending=await q('SELECT verifier FROM admin_mail_oauth WHERE state=? AND actor=? AND expires_at>?',state,id,Date.now()).first();
+    if(!pending)return gmailPage(false);
+    const consumed=await q('DELETE FROM admin_mail_oauth WHERE state=? AND actor=?',state,id).run();if(!gmailChanged(consumed))return gmailPage(false);
+    try{
+      const tokenResponse=await gmailFetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({client_id:env.KATCHAMAK_GMAIL_CLIENT_ID,client_secret:env.KATCHAMAK_GMAIL_CLIENT_SECRET,redirect_uri:redirect,grant_type:'authorization_code',code,code_verifier:await gmailOpen(env,pending.verifier)})});
+      const token=await tokenResponse.json();
+      if(!tokenResponse.ok||!token.refresh_token||!token.scope?.split(' ').includes(gmailScope))return gmailPage(false);
+      const identityResponse=await gmailFetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+token.access_token}}),identity=await identityResponse.json();
+      if(!identityResponse.ok||identity.email_verified!==true||identity.email?.toLowerCase()!==env.KATCHAMAK_GMAIL_SENDER.toLowerCase())return gmailPage(false);
+      await q("INSERT INTO admin_mail_connection (provider,email,token,updated_at) VALUES ('gmail',?,?,?) ON CONFLICT(provider) DO UPDATE SET email=excluded.email,token=excluded.token,updated_at=excluded.updated_at",identity.email.toLowerCase(),await gmailSeal(env,token.refresh_token),Date.now()).run();
+      await audit(identity.email.toLowerCase(),'gmail-connected',{}).run();return gmailPage(true);
+    }catch{return gmailPage(false);}
+  }
+  return accountJson({error:'Not found'},404);
+}
+async function gmailAccessLink(env,{q,audit,target,body,link}){
+  if(typeof body.requestId!=='string'||!/^[a-zA-Z0-9-]{16,100}$/.test(body.requestId))return accountJson({error:'A valid send request is required.'},400);
+  if(!env.KATCHAMAK_GMAIL_CLIENT_SECRET)return accountJson({error:'Connect the sender Gmail account in Admin.'},503);
+  await gmailTables(q);
+  const connection=await q("SELECT email,token FROM admin_mail_connection WHERE provider='gmail'").first();
+  if(!connection||connection.email!==env.KATCHAMAK_GMAIL_SENDER)return accountJson({error:'Connect the sender Gmail account in Admin.'},503);
+  let access;
+  try{
+    const response=await gmailFetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({client_id:env.KATCHAMAK_GMAIL_CLIENT_ID,client_secret:env.KATCHAMAK_GMAIL_CLIENT_SECRET,refresh_token:await gmailOpen(env,connection.token),grant_type:'refresh_token'})});
+    const token=await response.json();if(!response.ok||!token.access_token)return accountJson({error:'Reconnect the sender Gmail account in Admin.',resetRequest:true},503);access=token.access_token;
+  }catch{return accountJson({error:'Could not reach Gmail. No email was sent.',resetRequest:true},502);}
+  const inserted=await q("INSERT INTO admin_mail_sends (request_id,email,status,created_at) VALUES (?,?,'sending',?) ON CONFLICT(request_id) DO NOTHING",body.requestId,target,Date.now()).run();
+  if(!gmailChanged(inserted)){
+    const previous=await q('SELECT email,status,provider_id FROM admin_mail_sends WHERE request_id=?',body.requestId).first();
+    if(previous?.email===target&&previous.status==='sent')return accountJson({ok:true,email:target,providerId:previous.provider_id,link});
+    return accountJson({error:'This send request is still pending or its result is uncertain. Check Sent in Gmail before sending again.'},409);
+  }
+  const message=['From: Katchamak <'+connection.email+'>','To: '+target,'Subject: Your Katchamak access link','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','','Your Katchamak license is ready.','','Open Katchamak: '+link,'','Sign in with the ChatGPT account for '+target+'. Your projects are private to your account.'].join('\r\n');
+  let sent;
+  try{
+    const response=await gmailFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:gmailBase64(new TextEncoder().encode(message))})});
+    sent=await response.json();
+    if(!response.ok){if(response.status>=500)throw new Error('Unknown send result');await q('DELETE FROM admin_mail_sends WHERE request_id=?',body.requestId).run();return accountJson({error:'Gmail did not accept the email. Check the sender connection and sending limits.',resetRequest:true},502);}
+    if(typeof sent.id!=='string')throw new Error('Unknown send result');
+    await q("UPDATE admin_mail_sends SET status='sent',provider_id=? WHERE request_id=?",sent.id,body.requestId).run();
+  }catch{return accountJson({error:'Could not confirm sending. Check Sent in Gmail; this request will not be sent twice.'},502);}
+  await audit(target,'access-link',{provider:'gmail',providerId:sent.id}).run();
+  return accountJson({ok:true,email:target,providerId:sent.id,link});
 }
