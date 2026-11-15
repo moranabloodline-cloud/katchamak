@@ -17,6 +17,7 @@ export const useWebLibrary = create<{ email: string; ready: boolean; busy: boole
 let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
+let accountId='';
 const snapshot = () => {
   const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
   const {selectedCollection, expanded} = useLibraryPreferences.getState();
@@ -24,8 +25,11 @@ const snapshot = () => {
 };
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
 async function api(path: string, init?: RequestInit) {
-  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init });
+  const headers=new Headers(init?.headers);
+  if(path.startsWith('/api/library')&&accountId)headers.set('X-Katchamak-Account',accountId);
+  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init, headers });
   const data = await response.json().catch(() => ({}));
+  if(data.accountChanged)useWebLibrary.setState({ready:false,busy:false,error:data.error});
   if (!response.ok) { if (response.status === 409) useWebLibrary.setState({ conflict: true }); throw new Error(data.error || 'Cloud storage could not be reached. Retry saving.'); }
   return data;
 }
@@ -64,6 +68,8 @@ export async function initializeWebLibrary() {
   initializing = (async () => {
     useWebLibrary.setState({ busy: true, error: null });
     const account = await api('/api/account');
+    if(accountId&&accountId!==account.id&&snapshot()!==saved)throw new Error('Sign back in to '+useWebLibrary.getState().email+' to save the changes left open in this window.');
+    accountId=account.id;
     useWebLibrary.setState({ email: account.email });
     useAccountPreferences.setState({displayName: account.displayName, photo: account.avatar || null});
     useAppearancePreferences.setState({theme: account.preferences?.lightTheme?'light':'dark',interfaceSize:account.preferences?.smallInterface?'small':account.preferences?.largeInterface?'large':'normal'});
@@ -106,9 +112,16 @@ export async function flushWebLibrary() {
 export const saveWebLibrary = flushWebLibrary;
 export async function refreshWebLibrary() {
   if (refreshing) return refreshing;
-  if (!useWebLibrary.getState().ready || running || useWebLibrary.getState().pending || useWebLibrary.getState().error) return;
+  if (!useWebLibrary.getState().ready) return;
   const before = snapshot();
   refreshing = (async () => {
+    const account=await api('/api/account');
+    if(account.id!==accountId){
+      const message='Your signed-in ChatGPT account changed. Reopen the library for the current account.';
+      useWebLibrary.setState({ready:false,busy:false,error:message});
+      throw new Error(message);
+    }
+    if(running||useWebLibrary.getState().pending||useWebLibrary.getState().error)return;
     const data = await api('/api/library');
     if (snapshot() === before && !useWebLibrary.getState().pending && data.revision !== revision) apply(data);
   })().finally(() => { refreshing = null; });

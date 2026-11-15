@@ -17,8 +17,8 @@ const BUCKET = {
  async list({prefix}) {return {objects:[...objects].filter(([k])=>k.startsWith(prefix)).map(([key,o])=>({key,customMetadata:o.customMetadata,size:o.data.length})),truncated:false};}
 };
 const env={DB,BUCKET,KATCHAMAK_ADMIN_EMAIL:'owner@test.local'};
-async function call(user,path='/api/library',method='GET',body,origin='https://test.local') {
- const headers={}; if(user){headers['oai-authenticated-user-id']=user;headers['oai-authenticated-user-email']=user;}
+async function call(user,path='/api/library',method='GET',body,origin='https://test.local',expected=user) {
+ const headers={'X-Katchamak-Account':expected}; if(user){headers['oai-authenticated-user-id']=user;headers['oai-authenticated-user-email']=user;}
  if(method!=='GET')headers.Origin=origin;
  if(body&&!(body instanceof FormData))headers['Content-Type']='application/json';
  const request=new Request('https://test.local'+path,{method,headers,body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
@@ -50,11 +50,14 @@ assert.equal((await (await call(a,'/api/library/files/'+novel.id)).json()).files
 // A second account using the same project ID still has a separate private file namespace.
 await call(b,'/api/library','POST',{revision:0,snapshot});
 assert.equal((await call(b,'/api/library/files/'+novel.id+'/'+attachment.id)).status,404);
+assert.equal((await call(b,'/api/library','GET',undefined,'https://test.local',a)).status,409,'A stale window cannot read another account library');
+assert.equal((await call(b,'/api/library','POST',{revision:1,snapshot},'https://test.local',a)).status,409,'A stale window cannot copy the previous account library into the new account');
 const dom=new Window({url:'https://test.local'});globalThis.window=dom;globalThis.document=dom.document;let browserStorageWrites=0;
 globalThis.localStorage={getItem(){throw new DOMException('Storage denied','SecurityError');},setItem(){browserStorageWrites++;throw new DOMException('Storage full','QuotaExceededError');},removeItem(){throw new DOMException('Storage denied','SecurityError');}};
+let browserUser=a;
 globalThis.fetch=async(path,init={})=>{
  const body=init.body?JSON.parse(init.body):undefined;
- return path==='/api/account'?accountApi(new Request('https://test.local/api/account',{headers:{'oai-authenticated-user-id':a,'oai-authenticated-user-email':a}}),env):call(a,path,init.method||'GET',body);
+ return path==='/api/account'?accountApi(new Request('https://test.local/api/account',{headers:{'oai-authenticated-user-id':browserUser,'oai-authenticated-user-email':browserUser}}),env):call(browserUser,path,init.method||'GET',body,'https://test.local',new Headers(init.headers).get('X-Katchamak-Account')||browserUser);
 };
 const cloud=await import('../src/lib/kachamak/cloud-library.ts');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
@@ -135,4 +138,8 @@ await cloud.reloadWebLibrary(true);await cloud.removeWebProject(project);
 assert.ok(!(await (await call(a)).json()).snapshot.novels.some(n=>n.id===project));
 assert.ok(useKachamak.getState().novels.some(n=>n.id===novel.id),'Deleting one project preserves the others');
 assert.equal(browserStorageWrites,0,'Cloud startup, saving and refreshing work without browser storage writes');
+browserUser=b;
+await assert.rejects(()=>cloud.refreshWebLibrary(),/account changed/);
+assert.equal(cloud.useWebLibrary.getState().ready,false,'Account switch hides the old library before rendering the next account');
+await assert.rejects(()=>cloud.saveWebLibrary(),/Open your account/);
 console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, nested library, Unicode manuscript roundtrip, attachments, failed-save recovery, two-view refresh and conflict preservation.');

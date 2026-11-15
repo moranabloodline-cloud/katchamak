@@ -31,6 +31,8 @@ export async function cloudLibraryApi(request, env) {
     if (!gate.ok) return gate;
     if (!env.BUCKET) return json({ error: 'Cloud storage is unavailable.' }, 503);
     const { id } = await gate.json();
+    const expected=request.headers.get('X-Katchamak-Account');
+    if((expected&&expected!==id)||(request.method!=='GET'&&!expected))return json({error:'Your signed-in account changed. Reopen the library before saving.',accountChanged:true},409);
     const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))].map(b => b.toString(16).padStart(2, '0')).join('');
     const prefix = `accounts/${hash}/`;
     const q = (sql, ...args) => env.DB.prepare(sql).bind(...args);
