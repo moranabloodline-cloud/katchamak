@@ -1,3 +1,5 @@
+> **2026-11-15 — Details Save/Sort i + Codex:** Save aliases preimenovan u Save, uz Sort koji sortira nacrt aliasa A–Z pre Save. + Codex otvara popover sa pretragom i grupama iz postojeće Codex hijerarhije, ikonama/bojama nota i povezivanjem postojećeg ID-a bez navigacije ili kopiranja teksta. Sopstvena nota i postojeće veze izostavljene su iz kandidata. Sačuvane veze imaju pregled i uklanjanje ispod dugmeta; sve ranije veze ostaju. Metadata okvir je uz dno Details panela, dok gornji deo nezavisno skroluje. Nema promene šeme.
+
 > **2026-11-15 — Details po označenim komentarima:** uklonjeni Linked notes naslov i prazan opis, ceo Link a note pretraživač, objašnjenje ispod Aliases i red Sub-notes. Postojeće veze/pregledi, alias polje i Save aliases, Type/Words/Created/Updated, toolbar linkovanje i Mentions ostaju. Podaci i šema ne menjaju se.
 
 > **2026-11-15 — Nula lenjira:** leva ivica produžena 12 CSS px pre nule. Nula je centrirana nad svojim podeokom kao svi ostali brojevi; polazište skale ostaje na ivici teksta, desna ivica i oko se ne pomeraju.

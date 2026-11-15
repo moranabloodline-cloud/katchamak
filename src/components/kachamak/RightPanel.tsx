@@ -127,7 +127,7 @@ export function RightPanel({
       {/* zoom desnog panela (Ctrl + skrol) — samo sadržina; red tabova (traka 2)
           i NoteMetaBar na dnu ostaju istih visina, linije ostaju poravnate */}
       <div
-        className="flex-1 overflow-y-auto kachamak-scroll p-3"
+        className="min-h-0 flex-1 overflow-y-auto kachamak-scroll p-3"
         style={{ zoom: rightZoom }}
       >
         {/* Info — Synopsis i Notes vertikalno; razdelnik između njih se vuče
@@ -175,10 +175,10 @@ export function RightPanel({
 
         {/* Details — postojeće veze, aliasi i podaci note
             (arhitektura §11); osnovni podaci note ostaju ispod */}
-        <TabsContent value="details" className="mt-0 space-y-4">
-          <NoteConnections node={node} section={section} mode="details" />
+        <TabsContent value="details" className="mt-0 h-full min-h-0 flex-col gap-4 data-[state=active]:flex">
+          <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll"><NoteConnections node={node} section={section} mode="details" /></div>
 
-          <dl className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
+          <dl className="mt-auto shrink-0 space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Type</dt>
               <dd>
