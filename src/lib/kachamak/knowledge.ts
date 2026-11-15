@@ -1,11 +1,11 @@
-import { SECTION_KEYS, type Novel, type NoteNode, type SectionKey } from './types';
+import { SECTION_KEYS, TABS, type Novel, type NoteNode, type SectionKey } from './types';
 import { noteMatches, scanLinks } from './note-links';
 import { stripHtml } from './utils';
 export type IndexedNote = { node: NoteNode; section: SectionKey; path: string; text: string };
 export function indexNotes(novel: Novel): IndexedNote[] {
   const result: IndexedNote[] = [];
   for (const section of SECTION_KEYS) {
-    const visit = (nodes: NoteNode[], ancestors: string[]) => { for(const node of nodes) { result.push({node,section,path:[section,...ancestors].join(' / '),text:stripHtml([node.content,node.synopsis,node.notes].join(' '))}); visit(node.children,[...ancestors,node.title]); } };
+    const visit = (nodes: NoteNode[], ancestors: string[]) => { for(const node of nodes) { result.push({node,section,path:[TABS.find(tab=>tab.key===section)?.label??section,...ancestors].join(' / '),text:stripHtml([node.content,node.synopsis,node.notes].join(' '))}); visit(node.children,[...ancestors,node.title]); } };
     visit(novel.sections[section] ?? [],[]);
   }
   return result;

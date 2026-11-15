@@ -12,7 +12,8 @@ novel.sections.binder=[note('act','Act One','',[note('chapter','Chapter One','<p
 novel.sections.research=[{...note('research','Cork research','<p>Background facts</p>'),links:['chapter']}];
 novel.sections.planning=[note('outline','Outline','<a href="#note/character" data-katchamak-note="character">her</a>')];
 const index=indexNotes(novel), chapter=index.find(n=>n.node.id==='chapter');
-assert.equal(index.length,8);assert.equal(chapter.path,'binder / Act One');
+assert.equal(index.find(n=>n.node.id==='character').path,'Codex');
+assert.equal(index.length,8);assert.equal(chapter.path,'Binder / Act One');
 assert.equal(matchName(chapter.text,character).name,'Morana');
 assert.equal(matchName('annex and bannister',novel.sections.codex[1]),null,'Short substrings are not mentions');
 assert.equal(matchName('It was ĆIRA.',novel.sections.codex[2]).name,'ĆIRA','Unicode case and word boundaries');
