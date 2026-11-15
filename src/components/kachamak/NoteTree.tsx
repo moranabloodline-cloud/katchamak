@@ -685,43 +685,6 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         >
           <SquarePlus className="h-4 w-4" />
         </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Section actions"
-              title="More actions"
-              className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#1b1b1b] border-white/10">
-            <DropdownMenuItem onClick={() => setAllNodesCollapsed(section, false)}>
-              Expand all
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAllNodesCollapsed(section, true)}>
-              Collapse all
-            </DropdownMenuItem>
-            {hiddenNotes.length > 0 && (
-              <>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Hidden notes
-                </DropdownMenuLabel>
-                {hiddenNotes.map((hn) => (
-                  <DropdownMenuItem
-                    key={hn.id}
-                    onSelect={() => updateNode(section, hn.id, { hidden: false })}
-                  >
-                    <Eye className="mr-2 h-3.5 w-3.5" />
-                    <span className="truncate">{hn.title}</span>
-                  </DropdownMenuItem>
-                ))}
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <ContextMenu>
@@ -751,6 +714,10 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,false):setAllNodesCollapsed(section,false)}>Expand all</ContextMenuItem>
         <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,true):setAllNodesCollapsed(section,true)}>Collapse all</ContextMenuItem>
+        {hiddenNotes.length > 0 && <>
+          <ContextMenuSeparator className="bg-white/10" />
+          {hiddenNotes.map(hn=><ContextMenuItem key={hn.id} onSelect={()=>updateNode(section,hn.id,{hidden:false})}><Eye className="mr-2 h-3.5 w-3.5"/>Show {hn.title}</ContextMenuItem>)}
+        </>}
       </ContextMenuContent>
       </ContextMenu>
     </div>

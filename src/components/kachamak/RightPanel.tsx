@@ -14,7 +14,6 @@ import { NoteConnections } from "./NoteConnections";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
-import { ownWords } from "@/lib/kachamak/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 
@@ -84,10 +83,6 @@ export function RightPanel({
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
   const infoBoxRef = useRef<HTMLDivElement | null>(null);
-
-  /* reči note = sav njen tekst: content + Synopsis + Notes (konzistentno sa
-     Listom i brojačem na dnu radne površine) */
-  const words = ownWords(node);
 
   /* tabovi bez ikonica i bez okvira — svetli samo selektovani (zlatna pilula,
      isti aktivni jezik kao tabovi u topbaru); po Nikoli. dark: parnjaci su
@@ -179,18 +174,6 @@ export function RightPanel({
           <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll"><NoteConnections node={node} section={section} mode="details" /></div>
 
           <dl className="mt-auto shrink-0 space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Type</dt>
-              <dd>
-                {node.kind === "doc"
-                  ? "Note"
-                  : node.kind.charAt(0).toUpperCase() + node.kind.slice(1)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Words</dt>
-              <dd>{words.toLocaleString()}</dd>
-            </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground flex items-center gap-1">
                 <CalendarDays className="h-3 w-3" /> Created

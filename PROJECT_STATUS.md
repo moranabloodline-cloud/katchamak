@@ -1,3 +1,5 @@
+> **2026-11-15 — Pojednostavljen Details i zaglavlje stabla:** uklonjeni Type/Words iz donjeg okvira, putanja ispod povezane note u Details i Section actions dugme iz zaglavlja stabla. Created/Updated ostaju na dnu, boje/pregledi veza ostaju; vraćanje skrivenih nota je dostupno kroz postojeći desni klik na praznom delu stabla. Nema izmene podataka ili šeme.
+
 > **2026-11-15 — Boja povezanih nota i putanje:** Details/Mentions kartice koriste istu boju note i isti podrazumevani link ton kao rukopis. Putanje koriste nazive tabova iz TABS (Codex, Binder…), uz očuvana imena roditeljskih nota. Nema promene podataka ili šeme.
 
 > **2026-11-15 — Details Save/Sort i + Codex:** Save aliases preimenovan u Save, uz Sort koji sortira nacrt aliasa A–Z pre Save. + Codex otvara popover sa pretragom i grupama iz postojeće Codex hijerarhije, ikonama/bojama nota i povezivanjem postojećeg ID-a bez navigacije ili kopiranja teksta. Sopstvena nota i postojeće veze izostavljene su iz kandidata. Sačuvane veze imaju pregled i uklanjanje ispod dugmeta; sve ranije veze ostaju. Metadata okvir je uz dno Details panela, dok gornji deo nezavisno skroluje. Nema promene šeme.
