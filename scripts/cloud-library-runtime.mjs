@@ -11,6 +11,7 @@ export function validCloudLibrary(value) {
     if (n.cover?.image !== undefined && (typeof n.cover.image !== 'string' || n.cover.image.length > 700000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(n.cover.image))) return false;
     ids.add(n.id);
     const seen = new Set();
+    if(n.sections.timeline!==undefined&&!visit(n.sections.timeline,seen))return false;
     for (const key of ['binder','codex','planning','research','templates','prompts']) if (!visit(n.sections[key], seen)) return false;
   }
   for (const c of value.collections) {

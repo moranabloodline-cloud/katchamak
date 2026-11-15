@@ -26,6 +26,7 @@ const SECTION_NAMES: Record<SectionKey, string> = {
   research: "Research",
   templates: "Templates",
   prompts: "Prompts",
+  timeline: "Timeline",
 };
 
 export function TrashView() {

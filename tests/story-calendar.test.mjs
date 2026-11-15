@@ -58,3 +58,12 @@ const withBanner=structuredClone(novel);withBanner.sections.binder[0].event.bann
 assert.ok(isUsableBackup(JSON.parse(JSON.stringify(withBanner))),'Banner survives a portable JSON backup');
 useKachamak.persist.setOptions({storage:{getItem:()=>({state:{...useKachamak.getInitialState(),novels:[old]},version:12}),setItem(){},removeItem(){}}});
 await useKachamak.persist.rehydrate();assert.deepEqual(useKachamak.getState().novels[0],old,'v13 keeps older events and manuscript unchanged');
+
+const hierarchy=newNovel('Timelines','');hierarchy.sections.timeline=[note('history-a',undefined,[note('event-a',100,[note('deep-event',120)])]),note('history-b',undefined,[note('event-b',300)])];hierarchy.sections.binder=[note('manuscript-event',500)];hierarchy.timeline={eventScope:'book',detail:'synopsis',compact:false,rootId:null};
+assert.deepEqual(timelineRows(hierarchy,'timeline',undefined,true).map(r=>r.node.id),['event-a','deep-event','event-b'],'The Timeline tree owns its events and excludes unrelated sections');
+assert.deepEqual(timelineRows(hierarchy,'timeline','history-a',true).map(r=>r.node.id),['event-a','deep-event'],'Selecting one timeline scopes to that hierarchy');
+assert.deepEqual(timelineRows(hierarchy,'timeline','event-a',true).map(r=>r.node.id),['event-a','deep-event'],'A dated parent can contain dated children');
+assert.deepEqual(timelineRows(hierarchy,'timeline','deep-event',true).map(r=>r.node.id),['deep-event'],'Selecting one event shows that event alone');
+assert.deepEqual(timelineRows(hierarchy,'binder','manuscript-event',true).map(r=>r.node.id),['manuscript-event'],'Any note in another section can be viewed as a Timeline');
+const legacyTimeline=newNovel('Legacy','');legacyTimeline.sections.planning=[note('known-root',undefined,[note('known-event',100)])];legacyTimeline.demo={key:'morrigans-ocean',version:1,timelineRootId:'known-root'};delete legacyTimeline.sections.timeline;
+const {normalizeNovelSections}=await import('../src/lib/kachamak/store.ts');normalizeNovelSections(legacyTimeline);assert.equal(legacyTimeline.sections.planning.length,0);assert.equal(legacyTimeline.sections.timeline[0].id,'known-root');assert.equal(legacyTimeline.sections.timeline[0].children[0].id,'known-event');normalizeNovelSections(legacyTimeline);assert.equal(legacyTimeline.sections.timeline.length,1,'Moving the legacy hierarchy is idempotent');

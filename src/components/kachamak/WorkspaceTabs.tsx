@@ -13,13 +13,13 @@ export function WorkspaceTabs({novel}:{novel:Novel}) {
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
   const lastNoteView=useRef(view==='timeline'?'write':view);
   useEffect(()=>{if(view!=='timeline')lastNoteView.current=view;},[view]);
-  const timelineActive=view==='timeline'&&active!=='trash';
-  const openTab=(key:TabKey)=>{const nextView=view==='timeline'?lastNoteView.current:view;if(view==='timeline')setView(nextView);setTab(key);if(nextView==='continuous'&&key!=='trash')useKachamak.setState({selectedNodeId:null});};
+  const timelineActive=active==='timeline';
+  const openTab=(key:TabKey)=>{if(key==='timeline'){setTab('timeline');setView('timeline');useKachamak.setState({selectedNodeId:null});return;}const nextView=view==='timeline'?lastNoteView.current:view;if(view==='timeline')setView(nextView);setTab(key);if(nextView==='continuous'&&key!=='trash')useKachamak.setState({selectedNodeId:null});};
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const [pendingDelete,setPendingDelete]=useState<{key:TabKey;label:string;projectId:string}|null>(null);
   useEffect(()=>setPendingDelete(null),[novel.id]);
   const fixed=['binder','codex','trash'];
-  const tabs=[...TABS.filter(t=>fixed.includes(t.key)&&t.key!=='trash'),...TABS.filter(t=>!fixed.includes(t.key)&&!novel.hiddenSections?.includes(t.key as SectionKey)),...(novel.openNoteTabs||[]).flatMap(id=>{const hit=findNodeInNovel(novel,id);return hit?[{key:`note:${id}` as TabKey,label:hit.node.title}]:[];})];
+  const tabs=[...TABS.filter(t=>fixed.includes(t.key)&&t.key!=='trash'),...TABS.filter(t=>!fixed.includes(t.key)&&t.key!=='timeline'&&!novel.hiddenSections?.includes(t.key as SectionKey)),...(novel.openNoteTabs||[]).flatMap(id=>{const hit=findNodeInNovel(novel,id);return hit?[{key:`note:${id}` as TabKey,label:hit.node.title}]:[];})];
   return <><nav aria-label="Workspace sections" className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-2">
     <div className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     {tabs.map(t=>{
@@ -28,7 +28,7 @@ export function WorkspaceTabs({novel}:{novel:Novel}) {
       </div>;
       return fixed.includes(t.key)?<div key={t.key} className="shrink-0">{tab}</div>:<ContextMenu key={t.key}><ContextMenuTrigger asChild>{tab}</ContextMenuTrigger><ContextMenuContent aria-label={`${t.label} tab actions`} className="min-w-36 border-white/15 bg-[#1b1b1b]"><ContextMenuItem variant="destructive" onSelect={()=>setPendingDelete({key:t.key,label:t.label,projectId:novel.id})}>Delete</ContextMenuItem></ContextMenuContent></ContextMenu>;
     })}
-    <button type="button" onClick={()=>{if(active==='trash')setTab('binder');setView(timelineActive?'write':'timeline');}} aria-current={timelineActive?'page':undefined} title="Timeline" className={`shrink-0 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm ${timelineActive?'border-[#ad7e2e]/70 bg-[#3a2c18] text-[#fbe4a6]':'border-transparent text-muted-foreground hover:text-white'}`}>Timeline</button>
+    <button type="button" onClick={()=>openTab('timeline')} aria-current={timelineActive?'page':undefined} title="Timeline" className={`shrink-0 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm ${timelineActive?'border-[#ad7e2e]/70 bg-[#3a2c18] text-[#fbe4a6]':'border-transparent text-muted-foreground hover:text-white'}`}>Timeline</button>
     <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button aria-label="Open workspace tab" title="Open workspace tab" className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10"><Plus className="h-4 w-4"/></button></PopoverTrigger><PopoverContent align="start" className="w-72 border-white/15 bg-[#1b1b1b] p-3">
       <p className="text-sm font-medium">Your workspace</p><p className="my-2 text-xs leading-relaxed text-muted-foreground">Open any Binder note as a tab from its ••• menu. Right-click an optional tab and choose Delete to remove it after confirmation. Its notes are kept.</p>
       <form className="flex gap-2" onSubmit={e=>{e.preventDefault();if(!name.trim())return;const state=useKachamak.getState();const id=state.addNode('binder',null,'doc',name.trim());if(id){state.updateNode('binder',id,{icon:'folder'});state.openNoteTab(id);state.select(id);state.setRenamingNode(null);}setName('');setOpen(false);}}><input aria-label="New folder tab name" placeholder="Research, World, Marketing…" value={name} onChange={e=>setName(e.target.value)} className="min-w-0 flex-1 rounded border border-white/15 bg-black/20 px-2 py-1.5 text-xs"/><button className="rounded bg-amber-400 px-2 text-xs text-black">Create</button></form>

@@ -1,5 +1,5 @@
 const MORRIGAN_DEMO_KEY='morrigans-ocean';
-const demoSections=['binder','codex','planning','research','templates','prompts'];
+const demoSections=['binder','codex','planning','research','templates','prompts','timeline'];
 // Fictional demonstration dates, anchored to the novel's surveillance duration,
 // the 03:11 ledger entry and the final three-to-five-AM corridor.
 const morriganScenes=[
@@ -26,8 +26,17 @@ const morriganScenes=[
   [21,15,4,37,15,4,58,"The threshold: letting go","After the long pause in the violet corridor, Morrigan moves toward the final threshold and lets go.",['Aisling','Ciarán']],
 ];
 const demoMinute=(day,hour,minute)=>(Math.floor(Date.UTC(2026,9,day)/86400000)+719162)*1440+hour*60+minute;
+function demoTimelineSection(novel) {
+  novel.sections.timeline??=[];
+  const rootId=novel.demo?.timelineRootId;
+  if(rootId&&!novel.sections.timeline.some(n=>n.id===rootId)){
+    const detach=nodes=>{const index=nodes.findIndex(n=>n.id===rootId);if(index>=0)return nodes.splice(index,1)[0];for(const node of nodes){const found=detach(node.children);if(found)return found;}};
+    for(const section of demoSections.filter(s=>s!=='timeline')){const found=detach(novel.sections[section]||[]);if(found){novel.sections.timeline.push(found);break;}}
+  }
+  return novel;
+}
 export function prepareMorriganDemo(source,version=Date.now()) {
-  const novel=structuredClone(source);novel.trash=[];novel.archived=false;
+  const novel=demoTimelineSection(structuredClone(source));novel.trash=[];novel.archived=false;
   const find=(nodes,id)=>{for(const node of nodes){if(node.id===id)return node;const hit=find(node.children,id);if(hit)return hit;}return null;};
   const previous=source.demo?.edition===2&&demoSections.map(section=>find(novel.sections[section]||[],source.demo.timelineRootId)).find(Boolean);
   if(previous){novel.demo={...source.demo,version};delete novel.demo.source;return {novel,chapterCount:previous.children.filter(n=>n.event).length};}
@@ -45,7 +54,7 @@ export function prepareMorriganDemo(source,version=Date.now()) {
     events.push({id:crypto.randomUUID(),title,kind:'doc',content:'<p>'+synopsis+'</p><p>Chapter: '+chapter.node.title.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</p>',synopsis,notes:'Dates and durations are fictional examples for the demo, based on the story sequence. They can be changed in Edit event.',children:[],links:[chapter.node.id,...entities.map(n=>n.id)],icon:'calendar',color:group.color,status:'',label:'',createdAt:now,updatedAt:now,event:{start,end,precision:'time',groupId,...(first&&source.cover?.image?{banner:source.cover.image}:{})}});
   }
   if(!events.length)throw new Error('The selected novel has no numbered chapters to demonstrate.');
-  novel.sections.planning.push({id:rootId,title:'Story Timeline',kind:'doc',content:'<h1>Morrigan’s Ocean — Story Timeline</h1><p>Representative fictional dates: 14–15 October 2026. These event notes are linked to the unchanged manuscript and Codex. The three-hour-forty-seven-minute surveillance, the 03:11 ledger entry and the final 03:00–05:00 corridor guide the example chronology. Dates are illustrative and editable.</p>',synopsis:'A representative dated chronology of the novel, with event durations, chapter links and banners.',notes:'',children:events,icon:'calendar',status:'',label:'',createdAt:now,updatedAt:now});
+  novel.sections.timeline.push({id:rootId,title:'Story Timeline',kind:'doc',content:'<h1>Morrigan’s Ocean — Story Timeline</h1><p>Representative fictional dates: 14–15 October 2026. These event notes are linked to the unchanged manuscript and Codex. The three-hour-forty-seven-minute surveillance, the 03:11 ledger entry and the final 03:00–05:00 corridor guide the example chronology. Dates are illustrative and editable.</p>',synopsis:'A representative dated chronology of the novel, with event durations, chapter links and banners.',notes:'',children:events,icon:'calendar',status:'',label:'',createdAt:now,updatedAt:now});
   const start=events[0].event.start,end=events.at(-1).event.end;
   novel.title=source.title.replace(/ — Demo$/,'');novel.demo={key:MORRIGAN_DEMO_KEY,version,edition:2,timelineRootId:rootId};
   novel.timeline={rootId:null,detail:'synopsis',compact:false,display:'chronicle',eventScope:'book',groups,hiddenGroups:[],center:Math.round((start+end)/2),span:end-start+240,calendar:{name:'Gregorian · fictional demo dates',months:['January','February','March','April','May','June','July','August','September','October','November','December'].map((name,i)=>({name,days:[31,28,31,30,31,30,31,31,30,31,30,31][i]})),weekdays:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],epochWeekday:0,hoursPerDay:24,minutesPerHour:60,eraName:'CE',beforeEraName:'BCE',leap:{every:4,except:100,also:400,month:1,days:1},dateFormat:'D MMMM YYYY',timeFormat:'24h'}};
@@ -56,7 +65,7 @@ export function cloneDemoNovel(template) {
   const visit=nodes=>nodes.forEach(n=>{ids.set(n.id,crypto.randomUUID());visit(n.children);});
   demoSections.forEach(s=>visit(template.sections[s]||[]));
   const remap=value=>typeof value==='string'?[...ids].reduce((text,[old,id])=>text.replaceAll(old,id),value):Array.isArray(value)?value.map(remap):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,remap(v)])):value;
-  const novel=remap(template);novel.createdAt=novel.updatedAt=Date.now();return novel;
+  const novel=demoTimelineSection(remap(template));novel.createdAt=novel.updatedAt=Date.now();return novel;
 }
 async function copyDemoFiles(bucket,from,to) {
   let cursor;

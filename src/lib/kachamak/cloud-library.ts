@@ -46,8 +46,9 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
     const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
-    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
     navigation.selectedNodeId = note(saved.selectedNodeId);
+    if(preferredView==='timeline'&&(!navigation.selectedNodeId||novel&&findNodeInNovel(novel,navigation.selectedNodeId)?.section==='timeline')&&navigation.activeTab!=='trash')navigation.activeTab='timeline';
     navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);
     navigation.activePane = saved.activePane === 'b' ? 'b' : 'a';
   }

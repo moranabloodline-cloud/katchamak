@@ -20,7 +20,7 @@ source.sections.binder=[note('manuscript','Manuscript',[note('act1','Act 1 - The
 const secret=newNovel('Bloodline Protocol','Private');const initial={novels:[source,secret],collections:[]};
 assert.equal((await call(owner,'/api/library','POST',{revision:0,snapshot:initial})).status,200);
 const original=JSON.stringify(source),prepared=prepareMorriganDemo(source,1);
-assert.equal(JSON.stringify(source),original,'Preparing demo never changes original');assert.equal(prepared.chapterCount,3);assert.ok(isUsableBackup(prepared.novel));assert.ok(validTimelineExtra(prepared.novel.timeline));assert.equal(formatDate(prepared.novel.timeline.calendar,prepared.novel.sections.planning[0].children[1].event.start,'time'),'14 October 2026 · 15:26');assert.equal(prepared.novel.trash.length,0);assert.equal(prepared.novel.sections.planning[0].children[0].event.banner,source.cover.image);
+assert.equal(JSON.stringify(source),original,'Preparing demo never changes original');assert.equal(prepared.chapterCount,3);assert.ok(isUsableBackup(prepared.novel));assert.ok(validTimelineExtra(prepared.novel.timeline));assert.equal(formatDate(prepared.novel.timeline.calendar,prepared.novel.sections.timeline[0].children[1].event.start,'time'),'14 October 2026 · 15:26');assert.equal(prepared.novel.trash.length,0);assert.equal(prepared.novel.sections.timeline[0].children[0].event.banner,source.cover.image);
 assert.equal((await call(null,'/api/library/demo/install','POST')).status,401);
 assert.equal((await call(member,'/api/library/demo/publish','POST',{projectId:source.id})).status,403);
 assert.equal((await call(owner,'/api/library/demo/publish','POST',{projectId:secret.id})).status,400);
@@ -31,7 +31,7 @@ const published=await (await call(owner,'/api/library/demo/publish','POST',{proj
 const ownerPublished=(await (await call(owner)).json()).snapshot.novels;
 assert.deepEqual(ownerPublished[0].sections.binder,source.sections.binder,'Publishing preserves the original manuscript exactly');
 assert.deepEqual(ownerPublished[0].sections.codex,source.sections.codex);assert.deepEqual(ownerPublished[0].trash,source.trash);assert.deepEqual(ownerPublished[1],secret);
-assert.equal(ownerPublished[0].demo.source,true);assert.equal(ownerPublished[0].title,source.title);assert.equal(ownerPublished[0].sections.planning.at(-1).children.length,3);
+assert.equal(ownerPublished[0].demo.source,true);assert.equal(ownerPublished[0].title,source.title);assert.equal(ownerPublished[0].sections.timeline.at(-1).children.length,3);
 const ownerInstall=await (await call(owner,'/api/library/demo/install','POST')).json();assert.equal(ownerInstall.snapshot.novels.length,2,'Owner uses the original project rather than receiving another copy');
 
 const a=await (await call(member,'/api/library/demo/install','POST')).json();assert.equal(a.installed,true);assert.equal(a.snapshot.novels.length,1);assert.ok(!JSON.stringify(a.snapshot).includes('Bloodline Protocol'));assert.ok(!JSON.stringify(a.snapshot).includes('DO NOT DISTRIBUTE'));
@@ -47,5 +47,5 @@ const legacy=newNovel('Morrigan’s Ocean — Demo','Author');legacy.demo={key:'
 await call('legacy@test.local','/api/library','POST',{revision:0,snapshot:{novels:[legacy],collections:[]}});
 await DB.prepare('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?)').bind('legacy@test.local','morrigans-ocean',legacy.id,1).run();
 const upgraded=await (await call('legacy@test.local','/api/library/demo/install','POST')).json();assert.equal(upgraded.snapshot.novels.length,2);assert.equal(upgraded.snapshot.novels[0].archived,true);assert.deepEqual(upgraded.snapshot.novels[0].sections,legacy.sections,'The earlier erroneous copy is archived with all edits preserved');assert.equal(upgraded.snapshot.novels[1].demo.edition,2);assert.equal((await (await call('legacy@test.local','/api/library/demo/install','POST')).json()).snapshot.novels.length,2);
-const republished=await call(owner,'/api/library/demo/publish','POST',{projectId:source.id});assert.equal(republished.status,200);assert.equal((await (await call(owner)).json()).snapshot.novels[0].sections.planning.length,1,'Republishing does not duplicate the story timeline');
+const republished=await call(owner,'/api/library/demo/publish','POST',{projectId:source.id});assert.equal(republished.status,200);assert.equal((await (await call(owner)).json()).snapshot.novels[0].sections.timeline.length,1,'Republishing does not duplicate the story timeline');
 console.log('Demo projects passed: owner-only publish, exact private source preservation, full-project isolated copies, remapped links/tabs, attachments, chapter chronology, banners, idempotency, editable copies, respected deletion, concurrent opens and failed-save recovery.');

@@ -6,7 +6,8 @@ export type SectionKey =
   | "planning"
   | "research"
   | "templates"
-  | "prompts";
+  | "prompts"
+  | "timeline";
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
@@ -15,6 +16,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "research",
   "templates",
   "prompts",
+  "timeline",
 ];
 
 export type TabKey = SectionKey | "trash" | `note:${string}`;
@@ -33,6 +35,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "research", label: "Research" },
   { key: "templates", label: "Templates" },
   { key: "prompts", label: "Prompts" },
+  { key: "timeline", label: "Timeline" },
   { key: "trash", label: "Trash" },
 ];
 

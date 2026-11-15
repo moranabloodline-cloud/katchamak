@@ -265,6 +265,11 @@ export function normalizeNovelSections(n: LegacyNovel): void {
   if (secs.codex!.length === 0 && Array.isArray(n.codex) && n.codex.length > 0) {
     secs.codex = n.codex.map(legacyCatToNode);
   }
+  const timelineRoot=n.demo?.timelineRootId;
+  if(timelineRoot&&!findNode(secs.timeline!,timelineRoot)) {
+    const detach=(nodes:NoteNode[]):NoteNode|undefined=>{const index=nodes.findIndex(node=>node.id===timelineRoot);if(index>=0)return nodes.splice(index,1)[0];for(const node of nodes){const found=detach(node.children);if(found)return found;}};
+    for(const key of SECTION_KEYS.filter(key=>key!=='timeline')){const found=detach(secs[key]!);if(found){secs.timeline!.push(found);break;}}
+  }
   n.sections = secs as Novel["sections"];
   delete n.codex;
 }
@@ -542,7 +547,7 @@ export const useKachamak = create<KachamakState>()(
         set(s=>({novels:s.novels.map(n=>n.id===novel.id?touch({...n,openNoteTabs:[...new Set([...(n.openNoteTabs||[]),id])]}):n),activeTab:`note:${id}`,renamingNodeId:null}));
       },
       closeTab: (tab) => {
-        if(['binder','codex','trash'].includes(tab)) return;
+        if(['binder','codex','timeline','trash'].includes(tab)) return;
         set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,...(tab.startsWith('note:')?{openNoteTabs:(n.openNoteTabs||[]).filter(id=>id!==tab.slice(5))}:{hiddenSections:[...new Set([...(n.hiddenSections||[]),tab as SectionKey])]})}):n),activeTab:s.activeTab===tab?'binder':s.activeTab}));
       },
       showSection: (section) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:(n.hiddenSections||[]).filter(k=>k!==section)}):n),activeTab:section})),
@@ -844,7 +849,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 15,
+      version: 16,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -857,6 +862,9 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v16: Timeline owns a note section. Move the known demo root with IDs and links intact.
+        if(version<16){for(const novel of s.novels??[])normalizeNovelSections(novel);}
+
         // v15: demo edition/source identity is optional; publishing updates only the authorized source project.
         if(version<15){ /* No local project transformation. */ }
         // v14: demo provenance is optional. Never replace or seed projects during storage migration.

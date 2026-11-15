@@ -1,8 +1,8 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight,Plus,Settings2,ZoomIn,ZoomOut,Maximize2,Layers,BookOpen} from 'lucide-react';
 import {useKachamak} from '@/lib/kachamak/store';
-import {findNodeInNovel,stripHtml} from '@/lib/kachamak/utils';
+import {findNode,findNodeInNovel,stripHtml} from '@/lib/kachamak/utils';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {GREGORIAN,baseYearDays,calendarCells,dateToMinute,eventOnDay,formatDate,minuteToDate,minutesPerDay,shiftMonth,yearText,moonPhase,type StoryDate,type StoryEvent} from '@/lib/kachamak/story-calendar';
 import {fittedRange,groupFor,timelineRows,type EventRow} from '@/lib/kachamak/timeline-data';
@@ -20,30 +20,34 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
   const [settings,setSettings]=useState(false),[groupsOpen,setGroupsOpen]=useState(false);
   const [editing,setEditing]=useState<{id?:string;start:number}|null>(null);
   const [jump,setJump]=useState<StoryDate|null>(null),[jumpError,setJumpError]=useState('');
+  const selectedScope=novel&&state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
+  const folderScope=novel&&rootId?findNodeInNovel(novel,rootId)?.node:null;
+  const scopeId=selectedScope?.section===section&&(!folderScope||findNode([folderScope],selectedScope.node.id))?selectedScope.node.id:rootId;
+  useEffect(()=>{if(!novel)return;const rows=timelineRows(novel,section,scopeId,true);if(rows.length){const fit=fittedRange(rows,minutesPerDay(novel.timeline?.calendar??GREGORIAN),1);state.setTimeline(fit);}},[novel?.id,section,scopeId]);
   if(!novel)return null;
   const prefs=novel.timeline,calendar=prefs?.calendar??GREGORIAN,groups=prefs?.groups??[],mode=prefs?.display??'chronicle';
-  const all=timelineRows(novel,section,rootId),hidden=prefs?.hiddenGroups??[];
+  const all=timelineRows(novel,section,scopeId,true),hidden=prefs?.hiddenGroups??[];
   const rows=all.filter(r=>!hidden.includes(groupFor(r.event,groups)));
-  const day=minutesPerDay(calendar),fit=fittedRange(rows,day),center=prefs?.center??fit.center,span=prefs?.span??fit.span;
+  const day=minutesPerDay(calendar),fit=fittedRange(rows,day,1),center=prefs?.center??fit.center,span=prefs?.span??fit.span;
   const date=minuteToDate(calendar,center),monthStart=Math.max(-1e12,center-(date.day-1)*day-date.hour*calendar.minutesPerHour-date.minute);
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
   const renderGroups=[{id:'',name:'Ungrouped',color:'#d6a64a'},...groups];
   const color=(r:EventRow)=>renderGroups.find(g=>g.id===groupFor(r.event,groups))!.color;
-  const edit=(r:EventRow)=>{state.select(r.node.id);setEditing({id:r.node.id,start:r.event.start});};
+  const edit=(r:EventRow)=>{setEditing({id:r.node.id,start:r.event.start});};
   const changeEvent=(r:EventRow,event:StoryEvent)=>state.updateNode(r.section,r.node.id,{event});
   const dateLabel=(r:EventRow)=>`${formatDate(calendar,r.event.start,r.event.precision)}${r.event.end!==undefined?' → '+formatDate(calendar,r.event.end,r.event.precision):''}`;
   const changeCenter=(value:number)=>state.setTimeline({center:Math.max(-1e12,Math.min(1e12,Math.round(value)))});
   const monthMove=(delta:number)=>{try{changeCenter(shiftMonth(calendar,center,delta));}catch{/* Limit reached. */}};
   return <div className="flex h-full min-w-0 flex-col bg-background">
     <header className="shrink-0 space-y-3 border-b border-white/10 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-2"><div className="mr-auto min-w-0"><h2 className="flex items-center gap-2 truncate text-lg font-semibold"><CalendarDays className="h-5 w-5 shrink-0"/>{novel.title}</h2><p className="text-[11px] text-muted-foreground">Story chronology · {calendar.name}</p></div><button className={timeButton} onClick={()=>setSettings(true)}><Settings2 className="h-3.5 w-3.5"/>Time System</button><button className={`${timeButton} border-amber-400/50 bg-amber-400/10 text-amber-300`} onClick={()=>setEditing({start:mode==='calendar'?monthStart:Math.max(-1e12,Math.min(1e12,Math.round(center/day)*day))})}><Plus className="h-3.5 w-3.5"/>Add event</button></div>
+      <div className="flex flex-wrap items-center gap-2"><div className="mr-auto min-w-0"><h2 className="flex items-center gap-2 truncate text-lg font-semibold"><CalendarDays className="h-5 w-5 shrink-0"/>{scopeId?findNodeInNovel(novel,scopeId)?.node.title:section==='timeline'?'All timelines':novel.title}</h2><p className="text-[11px] text-muted-foreground">{novel.title} · {calendar.name}</p></div><button className={timeButton} onClick={()=>setSettings(true)}><Settings2 className="h-3.5 w-3.5"/>Time System</button><button className={`${timeButton} border-amber-400/50 bg-amber-400/10 text-amber-300`} onClick={()=>setEditing({start:mode==='calendar'?monthStart:Math.max(-1e12,Math.min(1e12,Math.round(center/day)*day))})}><Plus className="h-3.5 w-3.5"/>Add event</button>{scopeId&&<button className={timeButton} onClick={()=>setEditing({id:scopeId,start:findNodeInNovel(novel,scopeId)?.node.event?.start??center})}>{findNodeInNovel(novel,scopeId)?.node.event?'Edit dates':'Set dates'}</button>}</div>
       <details className="rounded border border-border px-3 py-2"><summary className="cursor-pointer text-xs text-muted-foreground">View options · filters &amp; groups</summary><div className="mt-3 flex flex-wrap items-center gap-2">
-        {mode!=='outline'&&<><select aria-label="Events scope" className={`${timeField} ml-auto !py-1.5 !text-xs`} value={prefs?.eventScope==='folder'&&!rootId?'section':prefs?.eventScope??(rootId?'folder':'book')} onChange={e=>state.setTimeline({eventScope:e.target.value as 'book'|'section'|'folder'})}><option value="book">This book · all notes</option><option value="section">Current section</option>{rootId&&<option value="folder">Current folder</option>}</select><select aria-label="Event card content" className={`${timeField} !py-1.5 !text-xs`} value={prefs?.detail??'synopsis'} onChange={e=>state.setTimeline({detail:e.target.value as 'titles'|'synopsis'})}><option value="synopsis">Title + synopsis</option><option value="titles">Titles only</option></select><label className="flex items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={prefs?.compact??false} onChange={e=>state.setTimeline({compact:e.target.checked})}/>Compact</label></>}
+        {mode!=='outline'&&<><select aria-label="Event card content" className={`${timeField} !py-1.5 !text-xs`} value={prefs?.detail??'synopsis'} onChange={e=>state.setTimeline({detail:e.target.value as 'titles'|'synopsis'})}><option value="synopsis">Title + synopsis</option><option value="titles">Titles only</option></select><label className="flex items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={prefs?.compact??false} onChange={e=>state.setTimeline({compact:e.target.checked})}/>Compact</label></>}
       </div>
       </details>{mode!=='outline'&&<div className="flex flex-wrap items-center gap-1.5"><button className={timeButton} onClick={()=>setGroupsOpen(true)}><Layers className="h-3.5 w-3.5"/>Groups</button>{renderGroups.filter(g=>g.id||all.some(r=>groupFor(r.event,groups)==='')).map(g=><button key={g.id} aria-pressed={!hidden.includes(g.id)} className={`flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-1 text-[11px] ${hidden.includes(g.id)?'opacity-40 line-through':''}`} onClick={()=>state.setTimeline({hiddenGroups:hidden.includes(g.id)?hidden.filter(id=>id!==g.id):[...hidden,g.id]})}><span className="h-1.5 w-1.5 rounded-full" style={{background:g.color}}/>{g.name}</button>)}<span className="ml-auto text-[11px] text-muted-foreground">{rows.length} events</span></div>}
     </header>
-    {mode==='outline'?<div className="min-h-0 flex-1"><OutlineView section={section} rootId={rootId}/></div>:<>
+    {mode==='outline'?<div className="min-h-0 flex-1"><OutlineView section={section} rootId={scopeId}/></div>:<>
       {(mode==='axis'||mode==='calendar')&&<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2">
         <button aria-label={mode==='calendar'?'Previous month':'Earlier dates'} className={timeButton} onClick={()=>mode==='calendar'?monthMove(-1):changeCenter(center-span/2)}><ChevronLeft className="h-4 w-4"/></button>
         <button aria-label={mode==='calendar'?'Next month':'Later dates'} className={timeButton} onClick={()=>mode==='calendar'?monthMove(1):changeCenter(center+span/2)}><ChevronRight className="h-4 w-4"/></button>
@@ -59,7 +63,7 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
     <div className="flex shrink-0 justify-center border-t border-border bg-background px-3 py-2"><div role="tablist" aria-label="Chronology view" className="flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1">{([['axis','Timeline'],['calendar','Calendar'],['chronicle','Cards'],['outline','Outline']] as const).map(([key,label])=><button key={key} role="tab" aria-selected={mode===key} className={`${timeButton} ${mode===key?'border-amber-500/60 bg-amber-500/15 text-amber-300':''}`} onClick={()=>state.setTimeline({display:key})}>{label}</button>)}</div></div>
     {settings&&<CalendarSettings calendar={calendar} onClose={()=>setSettings(false)} onSave={c=>{state.setTimeline({calendar:c});setSettings(false);}}/>}
     {groupsOpen&&<TimelineGroups groups={groups} onClose={()=>setGroupsOpen(false)} onSave={g=>{state.setTimeline({groups:g,hiddenGroups:hidden.filter(id=>!id||g.some(x=>x.id===id))});setGroupsOpen(false);}}/>}
-    {editing&&<TimelineEventEditor key={editing.id||`new:${editing.start}`} novel={novel} calendar={calendar} current={current??undefined} start={editing.start} section={section} parentId={rootId} onClose={()=>setEditing(null)} onSaved={value=>changeCenter(value)}/>}
+    {editing&&<TimelineEventEditor key={editing.id||`new:${editing.start}`} novel={novel} calendar={calendar} current={current??undefined} start={editing.start} section={section} parentId={scopeId} onClose={()=>setEditing(null)} onSaved={value=>{state.select(scopeId??null);changeCenter(value);}}/>}
     {jump&&<Dialog open onOpenChange={v=>{if(!v)setJump(null);}}><DialogContent className="border-white/15 bg-background sm:max-w-xl"><DialogHeader><DialogTitle>Go to date</DialogTitle><DialogDescription>Navigate using {calendar.name}.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={e=>{e.preventDefault();try{changeCenter(dateToMinute(calendar,jump));setJump(null);}catch(err){setJumpError(err instanceof Error?err.message:String(err));}}}><DateFields label="Go to" calendar={calendar} value={jump} onChange={setJump}/>{jumpError&&<p role="alert" className="text-red-400">{jumpError}</p>}<button className="rounded-md bg-amber-400 px-4 py-2 text-sm text-black">Go</button></form></DialogContent></Dialog>}
   </div>;
 }
