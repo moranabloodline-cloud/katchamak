@@ -1,3 +1,5 @@
+> **2026-11-15 — Stalni identitet levog panela:** priloženi originalni logo i naziv Kachamak zamenjuju naziv/ikonicu sekcije u zaglavlju stabla na svim tabovima, uključujući scoped note tabove i Trash. Stablo zadržava svoj opis sekcije za pristupačnost. Uklonjeno je označeno objašnjenje iz Mentions. Bez promene podataka ili šeme.
+
 > **2026-11-15 — Mentions po tabovima:** dolazni rezultati grupisani su po izvornom tabu (Binder, Codex, Planning, Research, Templates, Prompts), u redosledu tabova, sa statičnim naslovima samo za neprazne grupe. Filtriranje, boje i pregled ostaju. Bez izmene podataka ili šeme.
 
 > **2026-11-15 — Mentions izabrane note u celom projektu:** prikaz sadrži samo dolazna pominjanja/referenciranja izabrane note po naslovu, aliasima i sačuvanim vezama. Uklonjen je odlazni Mentioned here i ograničavanje na Manuscript. Isto pravilo važi za svaki note u svim sekcijama, uključujući Synopsis/Notes; eksplicitne odluke/link identitet ostaju, a kontekst dolazi iz stvarnog polja pominjanja. Nema promene rukopisa ili šeme.

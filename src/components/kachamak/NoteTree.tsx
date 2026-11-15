@@ -13,7 +13,6 @@ import {
   Library,
   MoreHorizontal,
   MoreVertical,
-  ScrollText,
   SquarePlus,
   BookText,
 } from "lucide-react";
@@ -38,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { WorkspaceBrand } from "./WorkspaceBrand";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
@@ -523,10 +523,6 @@ function findTitle(roots: NoteNode[], id: string): string | null {
   return null;
 }
 
-const HEADER_ICONS: Partial<Record<SectionKey, typeof Library>> = {
-  codex: ScrollText,
-};
-
 export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: string }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
@@ -657,7 +653,6 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
 
   const capLabel =
     scopedRoot?.title ?? TABS.find((t) => t.key === section)?.label ?? section.charAt(0).toUpperCase() + section.slice(1);
-  const HeaderIcon = HEADER_ICONS[section] ?? Library;
 
   return (
     <div className="flex h-full flex-col">
@@ -673,8 +668,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <HeaderIcon className="h-4 w-4 shrink-0 text-orange-400" />
-        <span className="min-w-0 truncate text-sm font-bold text-foreground">{capLabel}</span>
+        <WorkspaceBrand />
         <span className="ml-auto" />
         <button
           type="button"

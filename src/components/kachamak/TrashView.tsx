@@ -1,5 +1,7 @@
 "use client";
 
+import { WorkspaceBrand } from "./WorkspaceBrand";
+
 import { useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, RotateCcw, Trash2, FileText } from "lucide-react";
 import { useKachamak } from "@/lib/kachamak/store";
@@ -75,10 +77,7 @@ export function TrashView() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <Trash2 className="h-4 w-4 shrink-0 text-orange-400" />
-          <span className="min-w-0 truncate text-sm font-bold text-foreground">
-            {novel.title}
-          </span>
+          <WorkspaceBrand />
         </div>
         <div className="space-y-1 px-2 pb-3">
           {(Object.keys(SECTION_NAMES) as SectionKey[]).map((k) => {
