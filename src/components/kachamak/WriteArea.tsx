@@ -269,12 +269,12 @@ function RulerStrip() {
     if(typeof ResizeObserver==='undefined')return;
     const observer=new ResizeObserver(measure);observer.observe(element);return()=>observer.disconnect();
   },[]);
-  const cm=96/2.54;
+  const cm=96/2.54,leading=12;
   return (
-    <div ref={strip} role="img" aria-label="Text ruler in centimeters" title="Centimeters · zero aligns with the text edge" className="relative h-7 w-full overflow-hidden rounded-[3px] bg-muted/20 text-muted-foreground ring-1 ring-inset ring-border">
+    <div ref={strip} role="img" aria-label="Text ruler in centimeters" title="Centimeters · zero aligns with the text edge" className="relative h-7 overflow-hidden rounded-[3px] bg-muted/20 text-muted-foreground ring-1 ring-inset ring-border" style={{marginLeft:-leading,width:`calc(100% + ${leading}px)`}}>
       {/* Every tick and label shares the same zero and CSS centimeter. */}
-      {[{step:cm/10,height:4,opacity:.3},{step:cm/2,height:7,opacity:.45},{step:cm,height:10,opacity:.65}].map(({step,height,opacity})=><div key={step} aria-hidden="true" className="absolute inset-x-0 bottom-0" style={{height,opacity,backgroundImage:`repeating-linear-gradient(to right, currentColor 0px, currentColor 1px, transparent 1px, transparent ${step}px)`}}/>)}
-      {Array.from({length:Math.floor(Math.max(0,width-9)/cm)+1},(_,i)=><span key={i} aria-hidden="true" className="absolute top-1 font-sans text-[10px] leading-[10px] tabular-nums" style={{left:i===0?3:i*cm,transform:i===0?undefined:'translateX(-50%)'}}>{i}</span>)}
+      {[{step:cm/10,height:4,opacity:.3},{step:cm/2,height:7,opacity:.45},{step:cm,height:10,opacity:.65}].map(({step,height,opacity})=><div key={step} aria-hidden="true" className="absolute inset-x-0 bottom-0" style={{height,opacity,backgroundPositionX:leading,backgroundSize:`${step}px 100%`,backgroundImage:`repeating-linear-gradient(to right, currentColor 0px, currentColor 1px, transparent 1px, transparent ${step}px)`}}/>)}
+      {Array.from({length:Math.floor(Math.max(0,width-leading-9)/cm)+1},(_,i)=><span key={i} aria-hidden="true" className="absolute top-1 font-sans text-[10px] leading-[10px] tabular-nums" style={{left:leading+.5+i*cm,transform:'translateX(-50%)'}}>{i}</span>)}
       <div aria-hidden="true" className="absolute inset-y-0 right-0 w-px bg-border"/>
     </div>
   );
