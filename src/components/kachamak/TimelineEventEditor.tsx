@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useKachamak } from '@/lib/kachamak/store';
 import { openProjectNote } from '@/lib/kachamak/note-navigation';
+import { readNovelCover } from '@/lib/kachamak/project-settings';
 import { groupFor } from '@/lib/kachamak/timeline-data';
 import { flattenNotes } from '@/lib/kachamak/note-links';
 import { absoluteYear, eraYear, dateToMinute, minuteToDate, monthDays, type StoryCalendar, type StoryDate, type StoryEvent } from '@/lib/kachamak/story-calendar';
@@ -29,15 +30,27 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
   const [time,setTime]=useState(current?.node.event?.precision==='time');
   const [group,setGroup]=useState(current?.node.event?groupFor(current.node.event,novel.timeline?.groups??[]):'');
   const [error,setError]=useState('');
+  const [banner,setBanner]=useState<string|undefined>(current?.node.event?.banner);
+  const [loadingBanner,setLoadingBanner]=useState(false);
+  const bannerRequest=useRef(0);
+  useEffect(()=>()=>{bannerRequest.current++;},[]);
+  const uploadBanner=async(file:File)=>{
+    const request=++bannerRequest.current;setLoadingBanner(true);setError('');
+    try{const image=await readNovelCover(file);if(request===bannerRequest.current)setBanner(image);}
+    catch(error){if(request===bannerRequest.current)setError(error instanceof Error?error.message:'The banner could not be read.');}
+    finally{if(request===bannerRequest.current)setLoadingBanner(false);}
+  };
+
   const rows=flattenNotes(novel),chosen=rows.find(r=>r.node.id===target);
-  const choose=(id:string)=>{const row=rows.find(r=>r.node.id===id);setTarget(id);setTitle(row?.node.title||'');setQuery('');if(row?.node.event){setFrom(minuteToDate(calendar,row.node.event.start));setTo(minuteToDate(calendar,row.node.event.end??row.node.event.start));setHasEnd(row.node.event.end!==undefined);setTime(row.node.event.precision==='time');setGroup(groupFor(row.node.event,novel.timeline?.groups??[]));}};
+  const choose=(id:string)=>{const row=rows.find(r=>r.node.id===id);bannerRequest.current++;setLoadingBanner(false);setBanner(row?.node.event?.banner);setTarget(id);setTitle(row?.node.title||'');setQuery('');if(row?.node.event){setFrom(minuteToDate(calendar,row.node.event.start));setTo(minuteToDate(calendar,row.node.event.end??row.node.event.start));setHasEnd(row.node.event.end!==undefined);setTime(row.node.event.precision==='time');setGroup(groupFor(row.node.event,novel.timeline?.groups??[]));}};
   const save=()=>{
+    if(loadingBanner)return;
     setError('');if(!title.trim()){setError('Give this event a title.');return;}
     try {
       const start=dateToMinute(calendar,time?from:{...from,hour:0,minute:0}),end=hasEnd?dateToMinute(calendar,time?to:{...to,hour:0,minute:0}):undefined;
       if(end!==undefined&&end<start)throw new Error('The end must be on or after the start.');
       if(calendar.range&&(start<calendar.range.start||(end??start)>calendar.range.end))throw new Error('Choose dates within the earliest and latest dates in Time System.');
-      const event:StoryEvent={start,...(end!==undefined?{end}:{}),groupId:group,precision:time?'time':'day'};
+      const event:StoryEvent={start,...(end!==undefined?{end}:{}),groupId:group,precision:time?'time':'day',...(banner?{banner}:{})};
       const state=useKachamak.getState();
       if(state.activeNovelId!==novel.id)throw new Error('The active book changed. Reopen the event.');
       const live=state.novels.find(n=>n.id===novel.id)!;
@@ -57,8 +70,9 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       <div className="flex gap-5 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={hasEnd} onChange={e=>{setHasEnd(e.target.checked);if(e.target.checked)setTo(from);}}/>End date</label><label className="flex items-center gap-2"><input type="checkbox" checked={time} onChange={e=>setTime(e.target.checked)}/>Include time</label></div>
       {hasEnd&&<DateFields label="End" calendar={calendar} value={to} onChange={setTo} time={time}/>}
       <label className="grid gap-1 text-xs text-muted-foreground">Group<select className={timeField} value={group} onChange={e=>setGroup(e.target.value)}><option value="">Ungrouped</option>{novel.timeline?.groups?.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+      <section className="space-y-2" aria-label="Event banner"><h3 className="text-xs font-medium text-muted-foreground">Banner</h3>{banner&&<img src={banner} alt="Event banner preview" className="aspect-[5/2] w-full rounded-md object-cover"/>}<div className="flex items-center gap-3"><label className={`${timeButton} cursor-pointer`}>{banner?'Change banner':'Upload banner'}<input aria-label="Upload event banner" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void uploadBanner(file);}}/></label>{banner&&<button type="button" className={timeButton} onClick={()=>{bannerRequest.current++;setLoadingBanner(false);setBanner(undefined);}}>Remove banner</button>}{loadingBanner&&<span role="status" className="text-xs text-muted-foreground">Preparing banner…</span>}</div><p className="text-xs text-muted-foreground">JPG, PNG or WebP · up to 10 MB. Shown on the event card.</p></section>
       {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
-      <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">{current?.node.event?<button type="button" className="text-xs text-red-400" onClick={()=>{useKachamak.getState().updateNode(current.section,current.node.id,{event:undefined});onClose();}}>Remove date · keep note</button>:<span/>}<button className="rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-black">Save event</button></div>
+      <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">{current?.node.event?<button type="button" className="text-xs text-red-400" onClick={()=>{useKachamak.getState().updateNode(current.section,current.node.id,{event:undefined});onClose();}}>Remove date · keep note</button>:<span/>}<button disabled={loadingBanner} className="rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-black disabled:opacity-40">Save event</button></div>
     </form>
   </DialogContent></Dialog>;
 }

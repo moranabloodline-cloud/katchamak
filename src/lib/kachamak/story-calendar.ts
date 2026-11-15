@@ -1,3 +1,4 @@
+import { validCoverImage } from './project-settings';
 /** Calendar arithmetic is independent of JavaScript Date/time zones. All event
  * positions are integer minutes from day 1 of year 1 in the chosen time system.
  * Astronomical year 0 is displayed as year 1 of the preceding era. */
@@ -22,7 +23,7 @@ export interface StoryCalendar {
   leap: { every: number; except: number; also: number; month: number; days: number } | null;
 }
 export interface StoryDate { year: number; month: number; day: number; hour: number; minute: number }
-export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time' }
+export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time'; banner?: string }
 export interface TimelineGroup { id: string; name: string; color: string }
 export interface TimelinePreferences {
   rootId: string | null; detail: 'titles' | 'synopsis'; compact: boolean;
@@ -64,7 +65,7 @@ export function validCalendar(value:unknown):value is StoryCalendar {
 export function validEvent(value:unknown):value is StoryEvent {
   if(!value||typeof value!=='object')return false;
   const e=value as StoryEvent;
-  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision);
+  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision)&&validCoverImage(e.banner);
 }
 export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&

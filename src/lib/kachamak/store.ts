@@ -844,7 +844,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 12,
+      version: 13,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -857,6 +857,8 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        // v13: optional Timeline card banners; old events stay unchanged without an image.
+        if(version<13){ /* No banner is invented or copied into existing events. */ }
         // v12: Continuous is an explicit view; Write stays single-note. The removed tree menu defaults to all.
         if(version<12){s.treeScope='all';}
         // v11: time-system eras, moons, display and range are optional. Preserve all event minutes.

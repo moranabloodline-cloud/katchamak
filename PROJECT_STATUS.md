@@ -1,3 +1,5 @@
+> **2026-11-15 — Baneri Timeline događaja:** Add/Edit event dobija Upload/Change/Remove banner i pregled slike. Kartice koriste sliku kao cover pozadinu sa tamnim slojem radi čitljivosti; bez banera zadržavaju postojeći izgled. Reused bounded raster processing (JPG/PNG/WebP, 10 MB ulaz, 700k data URL) i cloud snapshot/JSON backup. Opcioni event.banner, store v13 bez prepisivanja starih događaja; server proverava format i veličinu.
+
 > **2026-11-15 — Stalni identitet levog panela:** priloženi originalni logo i naziv Kachamak zamenjuju naziv/ikonicu sekcije u zaglavlju stabla na svim tabovima, uključujući scoped note tabove i Trash. Stablo zadržava svoj opis sekcije za pristupačnost. Uklonjeno je označeno objašnjenje iz Mentions. Bez promene podataka ili šeme.
 
 > **2026-11-15 — Mentions po tabovima:** dolazni rezultati grupisani su po izvornom tabu (Binder, Codex, Planning, Research, Templates, Prompts), u redosledu tabova, sa statičnim naslovima samo za neprazne grupe. Filtriranje, boje i pregled ostaju. Bez izmene podataka ili šeme.

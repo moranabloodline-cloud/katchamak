@@ -50,3 +50,11 @@ useKachamak.setState({novels:[structuredClone(novel)],activeNovelId:novel.id});
 const writer=useKachamak.getState();writer.deleteNode('binder','later');const trashed=useKachamak.getState().novels[0].trash.find(t=>t.node.id==='later');assert.deepEqual(trashed.node.event,novel.sections.binder[0].event);
 writer.restoreFromTrash(trashed.id);assert.deepEqual(useKachamak.getState().novels[0].sections.binder.find(n=>n.id==='later').event,novel.sections.binder[0].event);
 console.log('Story calendar passed: Gregorian centuries, custom months/clock/week/leap cycles, BCE, 4,048 date inverses, boundaries, event ranges, scope, ordering, tracks, validation, migration and Trash restore.');
+
+const banner='data:image/png;base64,aGVsbG8=';
+assert.equal(validEvent({start:0,precision:'day',banner}),true);
+for(const image of ['https://example.com/image.png','data:image/svg+xml;base64,PHN2Zz4=',`data:image/png;base64,${'A'.repeat(700001)}`,42])assert.equal(validEvent({start:0,precision:'day',banner:image}),false);
+const withBanner=structuredClone(novel);withBanner.sections.binder[0].event.banner=banner;
+assert.ok(isUsableBackup(JSON.parse(JSON.stringify(withBanner))),'Banner survives a portable JSON backup');
+useKachamak.persist.setOptions({storage:{getItem:()=>({state:{...useKachamak.getInitialState(),novels:[old]},version:12}),setItem(){},removeItem(){}}});
+await useKachamak.persist.rehydrate();assert.deepEqual(useKachamak.getState().novels[0],old,'v13 keeps older events and manuscript unchanged');
