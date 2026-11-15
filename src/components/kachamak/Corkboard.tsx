@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { FileText } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
-import { TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { findNode, stripHtml } from "@/lib/kachamak/utils";
 import { iconByName } from "@/lib/kachamak/icons";
@@ -74,29 +73,29 @@ function IndexCard({
         e.stopPropagation();
         onDropOnCard(node.id, zoneForEvent(e));
       }}
-      className={`relative flex h-60 w-60 shrink-0 cursor-pointer flex-col rounded-[3px] border text-left transition-shadow ${
+      className={`relative flex h-60 w-60 shrink-0 cursor-pointer flex-col rounded-[3px] border border-t-2 bg-card text-card-foreground text-left transition-shadow ${
         selected
           ? "border-[#ad7e2e] shadow-[0_0_0_2px_rgba(173,126,46,0.45),0_4px_10px_rgba(0,0,0,0.45)]"
-          : "border-black/30 shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:shadow-[0_5px_12px_rgba(0,0,0,0.5)]"
+          : "border-border shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:shadow-[0_5px_12px_rgba(0,0,0,0.5)]"
       } ${isDropTarget && side === "before" ? "shadow-[-4px_0_0_0_#ad7e2e]" : ""} ${
         isDropTarget && side === "after" ? "shadow-[4px_0_0_0_#ad7e2e]" : ""
       } ${isDropTarget && side === "onto" ? "shadow-[0_0_0_3px_#ad7e2e]" : ""} ${
         node.hidden ? "opacity-50" : ""
       }`}
-      style={{ backgroundColor: "#efe6cf", color: "#2a2118" }}
+      style={{ borderTopColor: node.color || undefined }}
     >
       {/* title line — icon + title, thin rule under it, like the original card */}
-      <div className="flex items-center gap-1.5 border-b border-[#2a2118]/30 px-3 py-2">
+      <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
         {Icon ? (
-          <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: node.color || "#7a6a4f" }} />
+          <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: node.color || "var(--muted-foreground)" }} />
         ) : (
-          <FileText className="h-3.5 w-3.5 shrink-0 text-[#7a6a4f]" />
+          <FileText className="h-3.5 w-3.5 shrink-0" style={{color:node.color||"var(--muted-foreground)"}} />
         )}
         <span className="truncate text-[13px] font-semibold leading-tight">{node.title}</span>
       </div>
-      <p className="flex-1 overflow-hidden px-3 py-2 text-[12px] leading-relaxed text-[#4a4036]">
+      <p className="flex-1 overflow-hidden px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
         {stripHtml(node.synopsis) || (
-          <span className="italic text-[#8a7b60]">
+          <span className="italic text-muted-foreground/70">
             No synopsis yet — write it in the Info panel.
           </span>
         )}
@@ -132,9 +131,6 @@ export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: s
   const levelChildren = isContainer && selected ? selected.children : !selected ? roots : [];
   const newNoteParentId = selected ? selected.id : null;
 
-  const sectionLabel = TABS.find((t) => t.key === section)?.label ?? section;
-  const levelName = selected ? selected.title : `${sectionLabel} — top level`;
-
   /* the id travels in a ref (HTML5 dataTransfer can't be read during dragover) */
   const dragSrcId = useRef<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; side: DropZone } | null>(null);
@@ -165,7 +161,7 @@ export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: s
 
   return (
     <div
-      className="min-h-full bg-[#241c12]"
+      className="min-h-full bg-background text-foreground"
       style={{ zoom: midZoom }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
@@ -180,12 +176,7 @@ export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: s
         moveNodeTo(section, srcId, section, reorderParentId, list.length - 1);
       }}
     >
-      <div className="px-6 pb-1 pt-5">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[#c9a55c]/80">
-          Grid · {levelName}
-        </p>
-      </div>
-      <div className="flex flex-wrap items-start gap-4 p-6 pt-3">
+      <div className="flex flex-wrap items-start gap-4 p-6">
         {cards.map((c) => (
           <IndexCard
             key={c.id}
@@ -202,14 +193,14 @@ export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: s
         <button
           type="button"
           onClick={() => addNode(section, newNoteParentId, "doc")}
-          className="flex h-60 w-60 shrink-0 flex-col items-center justify-center gap-2 rounded-[3px] border-2 border-dashed border-white/15 text-[#c9a55c]/70 transition-colors hover:border-[#c9a55c]/50 hover:text-[#c9a55c] cursor-pointer"
+          className="flex h-60 w-60 shrink-0 flex-col items-center justify-center gap-2 rounded-[3px] border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-amber-500/50 hover:text-foreground cursor-pointer"
         >
           <span className="text-lg leading-none">+</span>
           <span className="text-xs">New note</span>
         </button>
 
         {cards.length === 0 && (
-          <p className="w-full text-sm text-[#b09a72]">
+          <p className="w-full text-sm text-muted-foreground">
             Empty container — use “+” to add the first sub-note.
           </p>
         )}
