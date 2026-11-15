@@ -19,7 +19,13 @@ assert.equal((await (await call('member@test.local')).json()).preferences.lightT
 assert.equal((await call('member@test.local','/api/account','PATCH',{preferences:{role:'admin'}})).status,400);
 assert.equal((await call('member@test.local','/api/admin/license','POST',{email:'member@test.local',plan:'lifetime'})).status,403);
 assert.equal((await call('owner@test.local','/api/admin/license','POST',{email:'future@test.local',plan:'lifetime'})).status,200);
+const pendingUsers=await (await call('owner@test.local','/api/admin/users?search=future%40test.local')).json();
+assert.equal(pendingUsers.users.length,1);assert.equal(pendingUsers.users[0].id,null);assert.equal(pendingUsers.users[0].status,'pending');assert.equal(pendingUsers.users[0].plan,'lifetime');
+const confirmed=await (await call('owner@test.local','/api/admin/license','POST',{email:'  FUTURE@test.local ',plan:'lifetime'})).json();
+assert.equal(confirmed.license.email,'future@test.local');assert.equal(confirmed.registered,false);
 assert.equal((await (await call('future@test.local')).json()).license.active,true);
+const signedInUsers=await (await call('owner@test.local','/api/admin/users?search=future%40test.local')).json();
+assert.equal(signedInUsers.users.length,1);assert.equal(signedInUsers.users[0].id,'future@test.local','Signing in replaces the pending row without duplication');
 const expiresAt=Date.now()+86400000;
 assert.equal((await call('owner@test.local','/api/admin/license','POST',{email:'member@test.local',plan:'timed',expiresAt})).status,200);
 assert.equal((await (await call('member@test.local')).json()).license.expires_at,expiresAt);

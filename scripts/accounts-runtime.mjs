@@ -32,7 +32,7 @@ export async function accountApi(request, env) {
   }
   if (route === '/api/admin/users' && method === 'GET') {
     const search = (url.searchParams.get('search') ?? '').slice(0,100), offset = Math.max(0, Math.min(1000000, Number(url.searchParams.get('offset')) || 0));
-    const rows = await q('SELECT a.id,a.email,a.display_name,a.status,a.created_at,a.last_seen,l.plan,l.expires_at FROM accounts a LEFT JOIN licenses l ON l.email=a.email WHERE a.email LIKE ? OR a.display_name LIKE ? ORDER BY a.created_at DESC,a.id LIMIT 51 OFFSET ?', '%'+search+'%','%'+search+'%',offset).all();
+    const rows = await q("SELECT * FROM (SELECT a.id,a.email,a.display_name,a.status,a.created_at,a.last_seen,l.plan,l.expires_at FROM accounts a LEFT JOIN licenses l ON l.email=a.email UNION ALL SELECT NULL AS id,l.email,'' AS display_name,'pending' AS status,l.updated_at AS created_at,NULL AS last_seen,l.plan,l.expires_at FROM licenses l WHERE NOT EXISTS (SELECT 1 FROM accounts a WHERE a.email=l.email)) WHERE email LIKE ? OR display_name LIKE ? ORDER BY created_at DESC,email,id LIMIT 51 OFFSET ?", '%'+search+'%','%'+search+'%',offset).all();
     return accountJson({ users: rows.results.slice(0,50).map(u => ({ ...u, role: u.email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase() ? 'admin' : 'member' })), hasMore: rows.results.length > 50 });
   }
   if (route === '/api/admin/license' && method === 'POST') {
@@ -42,7 +42,9 @@ export async function accountApi(request, env) {
     const expires = body.plan === 'timed' ? Number(body.expiresAt) : null;
     if (body.plan === 'timed' && (!Number.isSafeInteger(expires) || expires <= now)) return accountJson({ error: 'Choose a future expiry date' }, 400);
     await db.batch([q('INSERT INTO licenses (email,plan,expires_at,updated_at,updated_by) VALUES (?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET plan=excluded.plan,expires_at=excluded.expires_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by', target,body.plan,expires,now,id), audit(target,'license',{ plan: body.plan, expiresAt: expires })]);
-    return accountJson({ ok: true });
+    const license = await q('SELECT email,plan,expires_at FROM licenses WHERE email=?',target).first();
+    const registered = Boolean(await q('SELECT id FROM accounts WHERE email=?',target).first());
+    return accountJson({ ok: true, license, registered });
   }
   if (route === '/api/admin/status' && method === 'POST') {
     const target = await q('SELECT id,email FROM accounts WHERE id=?',typeof body.id === 'string' ? body.id : '').first();
