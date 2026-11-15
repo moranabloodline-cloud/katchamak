@@ -145,9 +145,9 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   const [draft, setDraft] = useState("");
 
   return (
-    <div className="flex h-10 items-center gap-2 overflow-hidden border-t border-amber-500/25 px-2">
+    <div className="flex h-10 items-center justify-end gap-2 overflow-hidden border-t border-amber-500/25 px-2">
       {/* Label i Status „wrap“ oko svog teksta (size po broju znakova / w-fit)
-          i stoje uz levu ivicu panela — na širokom panelu ostaje prazno desno,
+          i stoje uz desnu ivicu panela — na širokom panelu ostaje prazno desno,
           na uzom se seku (overflow-hidden), po Nikolinoj odluci */}
       <Input
         value={node.label}
