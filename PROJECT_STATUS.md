@@ -1,3 +1,5 @@
+> **2026-11-15 — Širina Timeline okvira:** period se prostire tačno od početka do kraja (bez minimalne procentualne širine); okvir događaja bez kraja prati naslov umesto fiksnih 176 px. Ručica kraja je unutar vremenske trake. Bez promene datuma ili šeme.
+
 > **2026-11-15 — Event i Time Period:** datirana nota ima opcioni eksplicitni temporalni tip; Event je trenutak, Time Period zahteva kraj posle početka. Starije datume ne prepisujemo: pravi postojeći rasponi prikazuju se kao periodi. Grafikon dobija kompaktne klikabilne naslove/markere i trake trajanja, bez velikih synopsis kartica. Kalendar raspoređuje periode kao kontinuirane nedeljne trake kroz kolone dana; Event ostaje na danu događaja. Cards čuva banere i prikazuje tip/trajanje. Store v17; validacija import/cloud i čuvanje nota/veza ostaju.
 
 > **2026-11-15 — Scope prikaza bez upisa projekta:** automatsko uklapanje Timeline-a na izabranu granu/event računa se u prikazu i ne menja datume ili updatedAt projekta pri mount-u/izboru. Samo namerno pomeranje/zoom grafika čuva viewport. Otkriveni konkurentni cloud save ostaje zaštićen CAS-om; noviji tuđi prozor se ne prepisuje.
