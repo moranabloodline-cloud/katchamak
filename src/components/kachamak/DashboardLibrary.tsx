@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react";
-import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
+import { Archive, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
 import {useKachamak, exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
@@ -86,7 +86,6 @@ export function DashboardLibrary(props: Props) {
   const { selectedCollection, expanded, layout, sort, group, coverZoom } = prefs;
   const active = collections.find((c) => c.id === selectedCollection);
   const location = active?.id ?? null;
-  const path = collectionPath(collections, location);
   const libraryRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [showArchived,setShowArchived]=useState(false);
@@ -203,9 +202,6 @@ export function DashboardLibrary(props: Props) {
       <div role="separator" aria-label="Resize collections panel" aria-orientation="vertical" aria-valuemin={140} aria-valuemax={600} aria-valuenow={prefs.sidebarWidth} tabIndex={0} className="z-10 w-[5px] shrink-0 cursor-col-resize touch-none bg-white/[0.07] outline-none hover:bg-amber-400/60 focus:bg-amber-400/60" onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); prefs.setSidebarWidth(prefs.sidebarWidth + (event.key === "ArrowLeft" ? -16 : 16)); } }} onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) prefs.setSidebarWidth(Math.min(event.clientX, window.innerWidth * .45)); }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }} />
       <main aria-label="Library" className="flex min-w-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-white/[0.07] bg-[#0c0e12] px-4 py-3">
-          <div className="mb-3 flex min-w-0 items-center gap-2"><button aria-label="Parent collection" disabled={!active} onClick={() => navigate(active?.parentId ?? null)} className="rounded p-1 text-muted-foreground hover:bg-white/5 disabled:opacity-25"><ArrowLeft className="h-4 w-4" /></button>
-            <nav aria-label="Library path" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm kachamak-scroll"><button {...dropZone(null)} className="shrink-0 rounded px-1.5 py-1 text-[#e8c265] hover:bg-white/5" onClick={() => navigate(null)}>Library</button>{path.map((c) => <span key={c.id} className="flex shrink-0 items-center gap-1"><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><button {...dropZone(c.id)} onClick={() => navigate(c.id)} title={c.name} className="max-w-48 truncate rounded px-1.5 py-1 text-[#d4d1c9] hover:bg-white/5" aria-current={c.id === location ? "page" : undefined}>{c.name}</button></span>)}</nav>
-          </div>
           <div aria-label="Library toolbar" className="flex flex-wrap items-center gap-2">
             <button onClick={props.onCreateCollection} className={createControl}><Plus className="h-4 w-4" />Collection</button>
             <button onClick={props.onCreateProject} className={createControl}><Plus className="h-4 w-4" />Project</button>
