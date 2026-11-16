@@ -23,7 +23,7 @@ export interface StoryCalendar {
   leap: { every: number; except: number; also: number; month: number; days: number } | null;
 }
 export interface StoryDate { year: number; month: number; day: number; hour: number; minute: number }
-export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time'; banner?: string; type?: 'event' | 'period' }
+export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time'; banner?: string; type?: 'event' | 'period'; cardColor?: string; cardOpacity?: number; cardDetail?: 'title' | 'dates' | 'synopsis' }
 export const eventType=(event:StoryEvent):'event'|'period'=>event.type??(event.end!==undefined&&event.end>event.start?'period':'event');
 export function eventDuration(event:StoryEvent,c:StoryCalendar) {
   if(eventType(event)!=='period'||event.end===undefined)return '';
@@ -73,7 +73,7 @@ export function validCalendar(value:unknown):value is StoryCalendar {
 export function validEvent(value:unknown):value is StoryEvent {
   if(!value||typeof value!=='object')return false;
   const e=value as StoryEvent;
-  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision)&&validCoverImage(e.banner)&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
+  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision)&&validCoverImage(e.banner)&&(e.cardColor===undefined||/^#[a-f0-9]{6}$/i.test(e.cardColor))&&(e.cardOpacity===undefined||Number.isFinite(e.cardOpacity)&&e.cardOpacity>=0&&e.cardOpacity<=1)&&(e.cardDetail===undefined||['title','dates','synopsis'].includes(e.cardDetail))&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
 }
 export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&

@@ -51,7 +51,8 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       const start=dateToMinute(calendar,time?from:{...from,hour:0,minute:0}),end=hasEnd?dateToMinute(calendar,time?to:{...to,hour:0,minute:0}):undefined;
       if(end!==undefined&&end<=start)throw new Error('A Time Period must end after its start.');
       if(calendar.range&&(start<calendar.range.start||(end??start)>calendar.range.end))throw new Error('Choose dates within the earliest and latest dates in Time System.');
-      const event:StoryEvent={type:kind,start,...(end!==undefined?{end}:{}),groupId:group,precision:time?'time':'day',...(banner?{banner}:{})};
+      const event:StoryEvent={...(chosen?.node.event??{}),type:kind,start,...(end!==undefined?{end}:{}),groupId:group,precision:time?'time':'day',...(banner?{banner}:{})};
+      if(end===undefined)delete event.end;if(!banner)delete event.banner;
       const state=useKachamak.getState();
       if(state.activeNovelId!==novel.id)throw new Error('The active book changed. Reopen the event.');
       const live=state.novels.find(n=>n.id===novel.id)!;

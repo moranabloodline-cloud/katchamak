@@ -81,3 +81,6 @@ const point=weeks.flatMap(w=>w.items).filter(item=>item.row.node.id==='discovery
 assert.ok(weeks[0].items.find(item=>item.row.node.id==='era').before);assert.ok(weeks.at(-1).items.find(item=>item.row.node.id==='era').after);
 for(const week of weeks)for(const a of week.items)for(const b of week.items)if(a!==b&&a.lane===b.lane)assert.ok(a.to<=b.from||b.to<=a.from,'Calendar bars never overlap in the same lane');
 const fantasy=calendarPreset('uniform');assert.ok(timelineCalendarWeeks([{node:note('fantasy',undefined),event:{type:'period',start:0,end:80000,precision:'day'}}],fantasy,1000).every(w=>w.dates.length===fantasy.weekdays.length));
+
+assert.equal(validEvent({start:0,precision:'day',cardColor:'#a855f7',cardOpacity:.25,cardDetail:'dates'}),true);
+for(const patch of [{cardColor:'red'},{cardColor:'url(x)'},{cardOpacity:-1},{cardOpacity:2},{cardOpacity:NaN},{cardDetail:'html'}])assert.equal(validEvent({start:0,precision:'day',...patch}),false);
