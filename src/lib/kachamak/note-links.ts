@@ -120,3 +120,16 @@ export function rangeForMatch(parts: TextPart[], match: Pick<LinkChoice,'start'|
   range.setStart(first.node,match.start-first.start); range.setEnd(last.node,match.end-last.start);
   return range;
 }
+
+export function noteLinkColor(color?:string) {
+  return color&&/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)?color:'#60a5fa';
+}
+
+/** Display-only rules keep old anchors in sync without rewriting prose/history. */
+export function noteAnchorStyles(novel:Novel|undefined,scope:string) {
+  if(!novel||!/^[a-zA-Z0-9_-]+$/.test(scope))return '';
+  return flattenNotes(novel).filter(({node})=>/^[a-zA-Z0-9_-]+$/.test(node.id)).map(({node})=>{
+    const selector=`[data-note-link-scope="${scope}"] a[href="#note/${node.id}"]`;
+    return `${selector},${selector} *{color:${noteLinkColor(node.color)}!important;}`;
+  }).join('\n');
+}

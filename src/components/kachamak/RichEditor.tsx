@@ -5,7 +5,8 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { toast } from "sonner";
 import { preparePastedContent } from "@/lib/kachamak/paste-content";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import {noteAnchorStyles} from '@/lib/kachamak/note-links';
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
 import {repairListWrappers,backspaceListMarker} from '@/lib/kachamak/editor-lists';
@@ -35,6 +36,8 @@ export function RichEditor({
   noteId,
 }: RichEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const linkScope='note'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
+  const novel=useKachamak(state=>state.novels.find(novel=>novel.id===state.activeNovelId));
   const lastHtml = useRef<string>("");
   const convertingDivider=useRef(false);
   const pasting=useRef(false);
@@ -85,7 +88,9 @@ export function RichEditor({
 
   return (
     <div className="relative flex-1 min-h-0">
+      <style>{noteAnchorStyles(novel,linkScope)}</style>
       <div
+        data-note-link-scope={linkScope}
         ref={ref}
         contentEditable
         data-note-id={noteId}
