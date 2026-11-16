@@ -124,6 +124,7 @@ assert.equal(useKachamak.getState().selectedNodeId,'note-1');
 assert.equal(useKachamak.getState().view,'write');
 // New workspace metadata must survive the same authenticated cloud save as prose.
 const writer=useKachamak.getState();
+writer.updateNode('binder','note-1',{image:'data:image/png;base64,aW1hZ2U='});
 assert.equal(writer.updateNovelSettings(novel.id,{language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21,targetAudience:'Adult speculative fiction readers',tones:['Melancholic'],writingStyles:['Poetic'],plotTechniques:['Corruption Exposed'],sellingPoints:['Rich Worldbuilding'],explicitContent:true}),true);
 const target=writer.addNode('codex',null,'doc','Černobog');
 writer.updateNode('codex',target,{aliases:['Cernobog']});
@@ -142,6 +143,7 @@ useKachamak.setState({novels:[],activeNovelId:null,activeTab:'binder',view:'writ
 window.history.replaceState(null,'','/');
 await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().activeTab,'note:note-1');
+assert.equal(useKachamak.getState().novels[0].sections.binder[0].image,'data:image/png;base64,aW1hZ2U=','Note images survive authenticated cloud save/reload');
 assert.equal(useKachamak.getState().view,'timeline');
 assert.equal(useKachamak.getState().novels[0].targetAudience,'Adult speculative fiction readers');assert.deepEqual(useKachamak.getState().novels[0].tones,['Melancholic']);assert.deepEqual(useKachamak.getState().novels[0].writingStyles,['Poetic']);assert.deepEqual(useKachamak.getState().novels[0].plotTechniques,['Corruption Exposed']);assert.deepEqual(useKachamak.getState().novels[0].sellingPoints,['Rich Worldbuilding']);assert.equal(useKachamak.getState().novels[0].explicitContent,true);
 assert.equal(useKachamak.getState().novels[0].language,'en-US');assert.deepEqual(useKachamak.getState().novels[0].genres,['Science Fiction','Thriller']);assert.deepEqual(useKachamak.getState().novels[0].subgenres,['Cyberpunk','Near Future']);assert.equal(useKachamak.getState().novels[0].chapterCount,21);
@@ -188,3 +190,8 @@ console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, ne
 const invalidBannerLibrary={novels:structuredClone(useKachamak.getState().novels),collections:[]};
 invalidBannerLibrary.novels[0].sections.binder[0].event={start:0,precision:'day',banner:'data:image/svg+xml;base64,PHN2Zz4='};
 assert.equal(validCloudLibrary(invalidBannerLibrary),false,'Server refuses non-raster event banners');
+delete invalidBannerLibrary.novels[0].sections.binder[0].event;
+invalidBannerLibrary.novels[0].sections.binder[0].image='data:image/svg+xml;base64,YQ==';
+assert.equal(validCloudLibrary(invalidBannerLibrary),false,'Server refuses non-raster note images');
+invalidBannerLibrary.novels[0].sections.binder[0].image='data:image/png;base64,'+'a'.repeat(700001);
+assert.equal(validCloudLibrary(invalidBannerLibrary),false,'Server bounds note image size');

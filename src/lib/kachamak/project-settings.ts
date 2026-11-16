@@ -15,12 +15,12 @@ export function novelSettingsPatch(novel:Novel,patch:NovelSettingsPatch):NovelSe
   return {title:next.title.trim(),author:next.author.trim(),series:next.series?.trim()||'',seriesIndex:next.seriesIndex?.trim()||'',language:next.language?.trim(),genres:next.genres?.map(value=>value.trim()),subgenres:next.subgenres?.map(value=>value.trim()),chapterCount:next.chapterCount,targetAudience:next.targetAudience?.trim(),tones:next.tones?.map(value=>value.trim()),writingStyles:next.writingStyles?.map(value=>value.trim()),plotTechniques:next.plotTechniques?.map(value=>value.trim()),sellingPoints:next.sellingPoints?.map(value=>value.trim()),explicitContent:next.explicitContent,archived:next.archived??false,cover:{...next.cover}};
 }
 /** A portable, bounded raster image: included in cloud snapshots and JSON backups. */
-export async function readNovelCover(file:File):Promise<string> {
+export async function readNovelCover(file:File,bounds={width:960,height:1440}):Promise<string> {
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024)throw new Error('Choose a JPG, PNG or WebP image up to 10 MB.');
   const bitmap=await createImageBitmap(file);
   try{
     if(!bitmap.width||!bitmap.height)throw new Error('This image could not be read.');
-    const scale=Math.min(1,960/bitmap.width,1440/bitmap.height),canvas=document.createElement('canvas');
+    const scale=Math.min(1,bounds.width/bitmap.width,bounds.height/bitmap.height),canvas=document.createElement('canvas');
     canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
     const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Image processing is unavailable.');
     ctx.fillStyle='#161616';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);

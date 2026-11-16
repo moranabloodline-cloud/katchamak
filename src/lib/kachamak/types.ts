@@ -53,6 +53,7 @@ export interface NoteNode {
   status: string; // "" = none
   label: string; // free text, "" = no label
   color?: string; // document colour (the dot in the right panel), "" = none
+  image?: string; // optional portable raster portrait in Details
   icon?: string; // note icon, chosen by the user (see NOTE_ICONS)
   hidden?: boolean; // "Hide" in the note menu — hidden from the tree
   collapsed?: boolean;
