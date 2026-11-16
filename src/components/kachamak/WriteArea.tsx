@@ -26,7 +26,8 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
-import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent} from "@/lib/kachamak/editor-blocks";
+import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour} from "@/lib/kachamak/editor-blocks";
+import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -98,6 +99,8 @@ export function EditorToolbar() {
      uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
   const [blockStyle, setBlockStyle] = useState<string>("normal");
   const savedRange=useRef<Range|null>(null);
+  const colourRange=useRef<Range|null>(null);
+  const [textColour,setTextColour]=useState(''),[highlightColour,setHighlightColour]=useState('');
   useEffect(() => {
     const sync = () => {
       const focused=document.activeElement;
@@ -212,23 +215,8 @@ export function EditorToolbar() {
         <AlignJustify className="h-4 w-4" />
       </ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
-      <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Text colour" aria-label="Text colour">
-        <Palette className="h-4 w-4" />
-        <input
-          type="color"
-          className="sr-only"
-          onChange={(e) => cmd("foreColor", e.target.value)}
-        />
-      </label>
-      <label className="relative cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground" title="Highlight" aria-label="Highlight">
-        <Highlighter className="h-4 w-4" />
-        <input
-          type="color"
-          className="sr-only"
-          defaultValue="#f0883e"
-          onChange={(e) => cmd("hiliteColor", e.target.value)}
-        />
-      </label>
+      <PresetColourPicker label="Text colour" value={textColour} preserveSelection onOpenChange={open=>{if(open)colourRange.current=savedRange.current?.cloneRange()??null;}} onChange={colour=>{if(applyEditorColour(colourRange.current,'text',colour))setTextColour(colour);}} className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"><Palette className="h-4 w-4"/></PresetColourPicker>
+      <PresetColourPicker label="Highlight" value={highlightColour} preserveSelection onOpenChange={open=>{if(open)colourRange.current=savedRange.current?.cloneRange()??null;}} onChange={colour=>{if(applyEditorColour(colourRange.current,'highlight',colour))setHighlightColour(colour);}} className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"><Highlighter className="h-4 w-4"/></PresetColourPicker>
       <ToolBtn title="Clear formatting" onClick={() => cmd("removeFormat")}>
         <RemoveFormatting className="h-4 w-4" />
       </ToolBtn>

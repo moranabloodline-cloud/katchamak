@@ -24,7 +24,8 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
 import { findNode, locateNode } from "@/lib/kachamak/utils";
 import {eventType} from "@/lib/kachamak/story-calendar";
-import { NOTE_COLORS, NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
+import {ColourPalette} from "./PresetColourPicker";
+import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -332,28 +333,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
             <p className="mb-2 mt-3 text-[11px] font-semibold tracking-wide text-muted-foreground">
               Colour
             </p>
-            <div className="grid grid-cols-10 gap-1">
-              {NOTE_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`Colour ${c}`}
-                  title={`Colour ${c}`}
-                  onClick={() => updateNode(section, node.id, { color: c })}
-                  className={`mx-auto h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
-                    node.color === c ? "border-foreground" : "border-white/20"
-                  }`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => updateNode(section, node.id, { color: "" })}
-              className="mt-2 w-full rounded-md border border-white/10 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-            >
-              No colour
-            </button>
+            <ColourPalette value={node.color} onChange={color=>updateNode(section,node.id,{color})}/>
           </PopoverContent>
         </Popover>
         {renaming ? (

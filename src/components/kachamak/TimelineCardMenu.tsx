@@ -1,17 +1,17 @@
 'use client';
 import {useState,type ReactNode} from 'react';
-import {Copy,Folder,Layers,Pencil,Trash2,Plus} from 'lucide-react';
+import {Copy,Folder,Layers,Pencil,Trash2} from 'lucide-react';
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator,ContextMenuSub,ContextMenuSubTrigger,ContextMenuSubContent,ContextMenuRadioGroup,ContextMenuRadioItem} from '@/components/ui/context-menu';
 import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction} from '@/components/ui/alert-dialog';
 import type {StoryEvent,TimelineGroup} from '@/lib/kachamak/story-calendar';
 import type {EventRow} from '@/lib/kachamak/timeline-data';
 import {useKachamak} from '@/lib/kachamak/store';
-const colors=['#ffffff','#14b8a6','#3b82f6','#a855f7','#ec4899','#f59e0b'];
+import {ColourPalette} from './PresetColourPicker';
 export function TimelineCardMenu({row,groups,color,opacity,detail,onEdit,children}:{row:EventRow;groups:TimelineGroup[];color:string;opacity:number;detail:string;onEdit:()=>void;children:ReactNode}) {
   const [confirm,setConfirm]=useState(false);
   const patch=(value:Partial<StoryEvent>)=>{const state=useKachamak.getState();state.updateNode(row.section,row.node.id,{event:{...row.event,...value}});};
-  return <><ContextMenu><ContextMenuTrigger asChild>{children}</ContextMenuTrigger><ContextMenuContent aria-label={`Event actions for ${row.node.title}`} className="w-48 font-sans [&_[role=menuitem]]:text-xs">
-    <div className="flex gap-1 px-2 pt-1" role="group" aria-label="Card color">{colors.map(value=><button key={value} type="button" aria-label={`Card color ${value}`} aria-pressed={row.event.cardColor===value} title={value} className="h-5 w-5 rounded border border-white/20 outline-offset-2 aria-pressed:outline aria-pressed:outline-2" style={{background:value}} onClick={()=>patch({cardColor:value})}/>)}<label className="relative flex h-5 w-5 cursor-pointer items-center justify-center rounded bg-muted" title="Custom card color"><Plus className="h-3 w-3"/><input type="color" aria-label="Custom card color" value={color} onChange={e=>patch({cardColor:e.target.value})} className="absolute inset-0 h-full w-full cursor-pointer opacity-0"/></label></div>
+  return <><ContextMenu><ContextMenuTrigger asChild>{children}</ContextMenuTrigger><ContextMenuContent aria-label={`Event actions for ${row.node.title}`} className="w-56 font-sans [&_[role=menuitem]]:text-xs">
+    <div className="p-1"><ColourPalette label="Card color" value={row.event.cardColor} onChange={value=>patch({cardColor:value||undefined})}/></div>
     <div className="flex items-center justify-between gap-2 px-2 py-2"><span className="text-xs">Opacity</span><div className="flex gap-1" role="group" aria-label="Card opacity">{[.25,.6,1].map(value=><button key={value} type="button" aria-label={`Card opacity ${Math.round(value*100)}%`} aria-pressed={opacity===value} title={`${Math.round(value*100)}%`} className="flex h-6 w-6 items-center justify-center rounded border border-border aria-pressed:bg-accent" onClick={()=>patch({cardOpacity:value})}><span className="h-3 w-3 rounded-sm bg-foreground" style={{opacity:value}}/></button>)}</div></div>
     <ContextMenuSeparator/><ContextMenuItem onSelect={onEdit}><Pencil/>Edit event</ContextMenuItem>
     <ContextMenuItem onSelect={()=>useKachamak.getState().duplicateNode(row.section,row.node.id)}><Copy/>Duplicate event</ContextMenuItem>

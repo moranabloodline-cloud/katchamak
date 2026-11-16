@@ -38,3 +38,12 @@ export function applyEditorIndent(range:Range|null,direction:'indent'|'outdent')
   if(applied){editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));}
   return applied;
 }
+
+export function applyEditorColour(range:Range|null,kind:'text'|'highlight',colour:string) {
+  const editor=editorForRange(range);if(!editor||!range)return false;
+  const selection=window.getSelection();editor.focus();selection?.removeAllRanges();selection?.addRange(range);
+  document.execCommand('styleWithCSS',false,'true');
+  const applied=document.execCommand(kind==='text'?'foreColor':'hiliteColor',false,colour||(kind==='text'?'inherit':'transparent'));
+  if(applied){editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));}
+  return applied;
+}

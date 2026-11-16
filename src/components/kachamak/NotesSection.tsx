@@ -16,7 +16,7 @@ import { useWebLibrary } from "@/lib/kachamak/cloud-library";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNodeInNovel, novelWords, ownWords, countWords } from "@/lib/kachamak/utils";
-import { NOTE_COLORS } from "@/lib/kachamak/icons";
+import {ColourPalette} from "./PresetColourPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
@@ -46,7 +46,7 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
 /* ---------- zoom po panelu (Ctrl + skrol) — vidi CtrlZoom.tsx ---------- */
 
 /* kužić — document colour palette (shared with the tree icon picker) */
-const DOC_COLORS = NOTE_COLORS;
+
 
 /* vertical line between the panels — drag it to widen / narrow a panel */
 function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" | "right" }) {
@@ -200,27 +200,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="end" className="w-52 border-white/10 bg-[#1b1b1b] p-2.5">
-          <div className="grid grid-cols-5 gap-1.5">
-            {DOC_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                aria-label={`Colour ${c}`}
-                onClick={() => updateNode(section, node.id, { color: c })}
-                className={`mx-auto h-6 w-6 rounded-full border hover:scale-110 transition-transform ${
-                  node.color === c ? "border-foreground" : "border-transparent"
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => updateNode(section, node.id, { color: "" })}
-            className="mt-2 w-full rounded-md border border-white/10 py-1 text-[11px] text-muted-foreground hover:bg-white/5 hover:text-foreground"
-          >
-            No colour
-          </button>
+          <ColourPalette value={node.color} onChange={color=>updateNode(section,node.id,{color})}/>
         </PopoverContent>
       </Popover>
 
