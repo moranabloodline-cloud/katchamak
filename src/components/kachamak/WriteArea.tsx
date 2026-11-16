@@ -12,6 +12,8 @@ import {
   EyeOff,
   Highlighter,
   Italic,
+  IndentDecrease,
+  IndentIncrease,
   Link as LinkIcon,
   List,
   ListOrdered,
@@ -24,7 +26,7 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
-import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory} from "@/lib/kachamak/editor-blocks";
+import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent} from "@/lib/kachamak/editor-blocks";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -166,32 +168,8 @@ export function EditorToolbar() {
         ))}
       </select>
       <span className="mx-1 h-5 w-px bg-white/10" />
-      {/* Copy / Delete / Link (tačka 8, spec §8): rade nad selekcijom u editoru;
-         ToolBtn već čuva selekciju (onMouseDown preventDefault). Link pita za
-         URL (prazno/Esc = odustani) pa primeni createLink. */}
-      <ToolBtn
-        title="Copy"
-        onClick={() => {
-          try {
-            document.execCommand("copy");
-          } catch {
-            /* bez selekcije/dozvole — ništa */
-          }
-        }}
-      >
-        <Copy className="h-4 w-4" />
-      </ToolBtn>
-      <ToolBtn title="Delete" onClick={() => cmd("delete")}>
-        <Trash2 className="h-4 w-4" />
-      </ToolBtn>
-      <ToolBtn
-        title="Link"
-        onClick={() => {
-          document.dispatchEvent(new Event('katchamak-link'));
-        }}
-      >
-        <LinkIcon className="h-4 w-4" />
-      </ToolBtn>
+      <ToolBtn title="Decrease indent" onClick={()=>applyEditorIndent(savedRange.current,'outdent')}><IndentDecrease className="h-4 w-4"/></ToolBtn>
+      <ToolBtn title="Increase indent" onClick={()=>applyEditorIndent(savedRange.current,'indent')}><IndentIncrease className="h-4 w-4"/></ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
       <ToolBtn title="Bold" onClick={() => cmd("bold")}>
         <Bold className="h-4 w-4" />
@@ -252,6 +230,32 @@ export function EditorToolbar() {
       <ToolBtn title="Clear formatting" onClick={() => cmd("removeFormat")}>
         <RemoveFormatting className="h-4 w-4" />
       </ToolBtn>
+      <span className="mx-1 h-5 w-px bg-white/10" />
+      <div role="group" aria-label="Edit actions" className="flex items-center justify-start gap-1">
+      <ToolBtn
+        title="Copy"
+        onClick={() => {
+          try {
+            document.execCommand("copy");
+          } catch {
+            /* bez selekcije/dozvole — ništa */
+          }
+        }}
+      >
+        <Copy className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Delete" onClick={() => cmd("delete")}>
+        <Trash2 className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Link"
+        onClick={() => {
+          document.dispatchEvent(new Event('katchamak-link'));
+        }}
+      >
+        <LinkIcon className="h-4 w-4" />
+      </ToolBtn>
+      </div>
     </div>
   );
 }

@@ -28,3 +28,13 @@ export function applyEditorHistory(range:Range|null,direction:'undo'|'redo') {
   editor.dispatchEvent(new CustomEvent('kachamak-history',{detail}));
   return detail.applied;
 }
+
+/** Keep indentation in the editor whose selection the toolbar captured. */
+export function applyEditorIndent(range:Range|null,direction:'indent'|'outdent') {
+  const editor=editorForRange(range);
+  if(!editor||!range)return false;
+  const selection=window.getSelection();editor.focus();selection?.removeAllRanges();selection?.addRange(range);
+  const applied=document.execCommand(direction,false);
+  if(applied){editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));}
+  return applied;
+}
