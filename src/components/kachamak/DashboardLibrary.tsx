@@ -1,13 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react";
-import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
+import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
 import {useKachamak, exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
 import { canMoveCollection, useCollections, type Collection } from "@/lib/kachamak/collections-store";
 import { useLibraryPreferences } from "@/lib/kachamak/library-preferences";
+import {compareLibraryProjects,groupLibraryProjects} from '@/lib/kachamak/library-order';
 import { bindDashboardZoom } from "@/lib/kachamak/dashboard-zoom";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AccountMenu } from "./AccountMenu";
@@ -159,7 +160,7 @@ export function DashboardLibrary(props: Props) {
     {collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(n.id)} onSelect={(e) => e.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, n.id, checked === true)}><span className="truncate">{collectionPath(collections, c.id).map((p) => p.name).join(" / ")}</span></DropdownMenuCheckboxItem>)}
   </DropdownMenuContent></LibraryItemMenu>;
   const projectsAt = (id: string | null) => novels.filter((n) => !!n.archived===showArchived).filter((n) => id ? collections.find((c) => c.id === id)?.projectIds.includes(n.id) : !collections.some((c) => c.projectIds.includes(n.id)));
-  const sortedCollections = (parentId: string | null) => collections.filter((c) => c.parentId === parentId).sort((a, b) => sort === "title" ? a.name.localeCompare(b.name) : (sort === "created" ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : (b.updatedAt ?? 0) - (a.updatedAt ?? 0)));
+  const sortedCollections = (parentId: string | null) => collections.filter((c) => c.parentId === parentId).sort((a, b) => ['title','series','author'].includes(sort) ? a.name.localeCompare(b.name) : (sort === "created" ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : (b.updatedAt ?? 0) - (a.updatedAt ?? 0)));
   const tree = (parentId: string | null, depth = 0): ReactNode => <>
     {sortedCollections(parentId).map((c) => <div key={c.id}>
       <LibraryItem {...dropZone(c.id)} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} data-tree-collection={c.id} className={`group/library-item flex h-9 items-center rounded-md pr-1 text-sm ${dropTarget === c.id ? "bg-amber-400/25 ring-1 ring-inset ring-amber-300" : location === c.id ? "bg-amber-400/10 text-[#f5d99d]" : "text-[#bcb8b0] hover:bg-white/5"}`} style={{ paddingLeft: 6 + depth * 16, minWidth: 150 + depth * 16 }}>
@@ -176,13 +177,13 @@ export function DashboardLibrary(props: Props) {
 
   const query = search.trim().toLocaleLowerCase();
   const folders = sortedCollections(location).filter((c) => c.name.toLocaleLowerCase().includes(query));
-  const projects = (showArchived&&location===null?novels.filter(n=>n.archived):projectsAt(location)).filter((n) => n.title.toLocaleLowerCase().includes(query) || n.author.toLocaleLowerCase().includes(query)).sort((a, b) => sort === "title" ? a.title.localeCompare(b.title) : sort === "created" ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt);
-  const projectGroups: [string, Novel[]][] = group === "none" ? [["", projects]] : Object.entries(projects.reduce<Record<string, Novel[]>>((all, n) => { (all[n.author?.trim() || "Unknown Author"] ??= []).push(n); return all; }, {})).sort(([a], [b]) => a.localeCompare(b));
+  const projects = (showArchived&&location===null?novels.filter(n=>n.archived):projectsAt(location)).filter((n) => n.title.toLocaleLowerCase().includes(query) || n.author.toLocaleLowerCase().includes(query)).sort((a,b)=>compareLibraryProjects(a,b,sort));
+  const projectGroups=groupLibraryProjects(projects,group);
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${Math.round(156 * coverZoom / 100)}px), 1fr))` };
 
   return <div className="flex h-dvh flex-col overflow-hidden bg-[#0a0c10] text-foreground">
     <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#a97f33]/25 bg-[#0c0906] px-4 py-1.5">
-      <button type="button" aria-label="KATCHAMAK — Library home" onClick={() => navigate(null)} className="flex items-center gap-2.5 py-1 text-[#e8c265]"><Feather className="h-5 w-5" /><span className="font-serif text-lg font-semibold tracking-[0.25em]">KATCHAMAK</span></button>
+      <button type="button" aria-label="KACHAMAK — Library home" onClick={() => navigate(null)} className="flex items-center gap-2.5 py-1 text-[#e8c265]"><img src="/kachamak-logo.png" alt="" width={28} height={28} className="h-7 w-7 shrink-0 object-contain"/><span className="font-serif text-lg font-semibold tracking-[0.25em]">KACHAMAK</span></button>
       <div className="ml-auto flex items-center gap-1">
         <HelpCenter />
         <span className="mx-1 h-5 w-px bg-white/10" />
@@ -211,8 +212,8 @@ export function DashboardLibrary(props: Props) {
             <button onClick={props.onImport} className={control}><Download className="h-4 w-4" />Import</button>
             <button aria-pressed={showArchived} onClick={()=>{setShowArchived(!showArchived);navigate(null);}} className={control}><Archive className="h-4 w-4"/>{showArchived?"Active projects":"Archived"}</button>
             <div className="relative min-w-[100px] flex-1 basis-40"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><input aria-label="Search library" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this location…" className="h-9 w-full rounded-md border border-white/15 bg-black/25 pl-8 pr-2 text-sm outline-none focus:border-[#c9973c]" /></div>
-            <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><ArrowUpDown className="h-4 w-4" />Sort<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">{([ ["updated", "Recently modified"], ["title", "Title A–Z"], ["created", "Recently created"] ] as const).map(([value, label]) => <DropdownMenuCheckboxItem key={value} checked={sort === value} onSelect={() => prefs.setSort(value)}>{label}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
-            <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><Layers className="h-4 w-4" />Group<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuCheckboxItem checked={group === "none"} onSelect={() => prefs.setGroup("none")}>None</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={group === "author"} onSelect={() => prefs.setGroup("author")}>Author</DropdownMenuCheckboxItem></DropdownMenuContent></DropdownMenu>
+            <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><ArrowUpDown className="h-4 w-4" />Sort: {sort==="title"?"Name":sort==="series"?"Series":sort==="author"?"Author":"Date"}<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">{([ ["title", "Name"], ["series", "Series"], ["updated", "Date"], ["author", "Author"] ] as const).map(([value, label]) => <DropdownMenuCheckboxItem key={value} checked={sort === value || value === "updated" && sort === "created"} onSelect={() => prefs.setSort(value)}>{label}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
+            <DropdownMenu><DropdownMenuTrigger asChild><button className={control}><Layers className="h-4 w-4" />Group: {group==="none"?"None":group==="series"?"Series":group==="date"?"Date":"Author"}<ChevronDown className="h-3 w-3" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">{([["none","None"],["series","Series"],["date","Date"],["author","Author"]] as const).map(([value,label])=><DropdownMenuCheckboxItem key={value} checked={group===value} onSelect={()=>prefs.setGroup(value)}>{label}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
             <div className="flex h-9 shrink-0 overflow-hidden rounded-md border border-[#c9973c]/60">{([ ["grid", LayoutGrid], ["list", List] ] as const).map(([value, Icon]) => <button key={value} aria-label={`${value === "grid" ? "Grid" : "List"} view`} aria-pressed={layout === value} onClick={() => prefs.setLayout(value)} className={`px-2.5 ${layout === value ? "bg-[#e8b65c] text-[#221503]" : "text-[#e8c265] hover:bg-white/5"}`}><Icon className="h-4 w-4" /></button>)}</div>
           </div>
         </div>
