@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Settings } from "lucide-react";
+import { ChevronLeft, Save, Settings } from "lucide-react";
 import { AutoLinkReview, requestLinkReview } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
@@ -41,6 +41,7 @@ export function Workspace() {
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
   const { displayName, photo } = useAccountPreferences();
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
+  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
   const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
   const rightPanelWidth = useKachamak((s) => s.rightPanelWidth);
@@ -73,10 +74,11 @@ export function Workspace() {
       <header className="flex h-10 shrink-0 items-stretch border-b border-white/10">
         {/* Static program branding above the navigation row. */}
         <div
-          className={`flex shrink-0 items-center gap-1.5 overflow-hidden border-r border-white/10 bg-black/20 ${leftPanelOpen?"px-3":"px-0"}`}
+          className={`flex shrink-0 items-center gap-1.5 overflow-hidden border-r border-white/10 bg-black/20 ${leftPanelOpen?"pl-3 pr-1":"px-0"}`}
           style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
         >
           <WorkspaceBrand />
+          {leftPanelOpen&&<button type="button" aria-label="Hide left panel" title="Hide panel" onClick={toggleLeftPanel} className="ml-auto shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"><ChevronLeft className="h-4 w-4"/></button>}
         </div>
 
         {/* tabs start at the left edge of the workspace, always in a single line */}

@@ -5,7 +5,6 @@ import {
   CalendarRange,
   Diamond,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Eye,
   FileText,
@@ -514,7 +513,6 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
   const addNode = useKachamak((s) => s.addNode);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const updateNode = useKachamak((s) => s.updateNode);
-  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
   const moveNodeTo = useKachamak((s) => s.moveNodeTo);
   const treeScope = useKachamak((s) => s.treeScope);
@@ -644,15 +642,6 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
       {/* traka 2 (levo) — border-b se nastavlja preko editor toolbar-a i Info/
           Details/Mentions reda: jedna linija od leve do desne ivice ekrana */}
       <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-white/10 pl-3 pr-2">
-        <button
-          type="button"
-          aria-label="Hide panel"
-          title="Hide panel"
-          onClick={toggleLeftPanel}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
         <WorkspaceNavigation />
         <span className="ml-auto" />
         <button

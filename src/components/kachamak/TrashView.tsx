@@ -69,15 +69,6 @@ export function TrashView() {
       {leftPanelOpen && (
       <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/20 md:block">
         <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
-          <button
-            type="button"
-            aria-label="Hide panel"
-            title="Hide panel"
-            onClick={toggleLeftPanel}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
           <WorkspaceNavigation />
         </div>
         <div className="space-y-1 px-2 pb-3">
