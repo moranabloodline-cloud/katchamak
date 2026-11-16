@@ -61,6 +61,8 @@ interface KachamakState {
   editorFont: string;
   editorSize: number;
   editorSpacing: string;
+  editorSpellCheck: boolean;
+  setEditorSpellCheck: (enabled:boolean) => void;
   setEditorFont: (f: string) => void;
   setEditorSize: (n: number) => void;
   setEditorSpacing: (s: string) => void;
@@ -364,6 +366,8 @@ export const useKachamak = create<KachamakState>()(
       editorFont: "Segoe UI",
       editorSize: 16,
       editorSpacing: "1.5",
+      editorSpellCheck: true,
+      setEditorSpellCheck: (enabled) => set({editorSpellCheck:enabled}),
       setEditorFont: (f) => set({ editorFont: f }),
       setEditorSize: (n) => set({ editorSize: n }),
       setEditorSpacing: (sp) => set({ editorSpacing: sp }),
@@ -849,7 +853,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 21,
+      version: 22,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -863,6 +867,7 @@ export const useKachamak = create<KachamakState>()(
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
         // v17: explicit Event/Time Period metadata is optional. Legacy date ranges are interpreted without rewriting them.
+        if(version<22){if(typeof s.editorSpellCheck!=='boolean')s.editorSpellCheck=true;}
         if(version<21){ /* Optional audience and writing metadata; preserve manuscripts. */ }
 
         if(version<20){ /* Optional book metadata; no content or chapters are invented. */ }

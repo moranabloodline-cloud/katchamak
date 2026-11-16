@@ -7,7 +7,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  Copy,
+  SpellCheck,
   Eye,
   EyeOff,
   Highlighter,
@@ -85,6 +85,8 @@ const cmd = (command: string, value?: string) => {
    jedino bočni paneli kad se pomeraju. Font/veličina/prored žive u store-u
    (vaze za stranu u Write i u oba Split panela). */
 export function EditorToolbar() {
+  const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
+  const setSpellCheck=useKachamak(state=>state.setEditorSpellCheck);
   const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
   const setFont = useKachamak((s) => s.setEditorFont);
   const size = useKachamak((s) => s.editorSize ?? 16);
@@ -232,18 +234,7 @@ export function EditorToolbar() {
       </ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
       <div role="group" aria-label="Edit actions" className="flex items-center justify-start gap-1">
-      <ToolBtn
-        title="Copy"
-        onClick={() => {
-          try {
-            document.execCommand("copy");
-          } catch {
-            /* bez selekcije/dozvole — ništa */
-          }
-        }}
-      >
-        <Copy className="h-4 w-4" />
-      </ToolBtn>
+      <button type="button" aria-label="Spelling" aria-pressed={spellCheck} title={spellCheck?'Spelling: on — click to turn off':'Spelling: off — click to turn on'} onMouseDown={event=>event.preventDefault()} onClick={()=>setSpellCheck(!spellCheck)} className={`rounded-md p-1.5 transition-colors hover:bg-white/10 ${spellCheck?'bg-amber-400/10 text-amber-300':'text-muted-foreground'}`}><SpellCheck className="h-4 w-4"/></button>
       <ToolBtn title="Delete" onClick={() => cmd("delete")}>
         <Trash2 className="h-4 w-4" />
       </ToolBtn>

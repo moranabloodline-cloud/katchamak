@@ -36,6 +36,7 @@ export function RichEditor({
   noteId,
 }: RichEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const linkScope='note'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const novel=useKachamak(state=>state.novels.find(novel=>novel.id===state.activeNovelId));
   const lastHtml = useRef<string>("");
@@ -92,6 +93,7 @@ export function RichEditor({
       <div
         data-note-link-scope={linkScope}
         ref={ref}
+        spellCheck={spellCheck}
         contentEditable
         data-note-id={noteId}
         role="textbox"
