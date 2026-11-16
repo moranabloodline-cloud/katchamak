@@ -9,7 +9,7 @@ import {TimelineCardMenu} from './TimelineCardMenu';
 
 export function TimelineCards({rows,calendar,groups,compact,synopsis,onEdit,onAdd}:{rows:EventRow[];calendar:StoryCalendar;groups:TimelineGroup[];compact:boolean;synopsis:boolean;onEdit:(row:EventRow)=>void;onAdd:()=>void}) {
   return <div className="min-h-0 flex-1 overflow-auto px-3 py-6 sm:px-5 kachamak-scroll"><div className="mx-auto max-w-4xl">
-    {rows.map((row,index)=>{const period=eventType(row.event)==='period',Icon=iconByName(row.node.icon)??(period?CalendarRange:Diamond),group=groups.find(g=>g.id===groupFor(row.event,groups)),banner=row.event.banner&&validCoverImage(row.event.banner)?row.event.banner:undefined;
+    {rows.map((row,index)=>{const period=eventType(row.event)==='period',Icon=iconByName(row.node.icon)??(period?CalendarRange:Diamond),group=groups.find(g=>g.id===groupFor(row.event,groups)),banner=row.event.cardStyle!=='color'&&row.event.banner&&validCoverImage(row.event.banner)?row.event.banner:undefined;
       const color=row.event.cardColor??group?.color??row.node.color??'#45494a',opacity=row.event.cardOpacity??(banner ? .2 : .6),detail=row.event.cardDetail??(synopsis?'dates':'title');
       const previous=rows[index-1],overlap=previous&&row.event.start<(previous.event.end??previous.event.start),gapStart=previous?(overlap?previous.event.start:previous.event.end??previous.event.start):0,gap=previous?eventDuration({type:'period',start:gapStart,end:row.event.start,precision:row.event.precision},calendar):'';
       const dates=formatDate(calendar,row.event.start,row.event.precision)+(period&&row.event.end!==undefined?' → '+formatDate(calendar,row.event.end,row.event.precision)+' ('+eventDuration(row.event,calendar)+')':'');

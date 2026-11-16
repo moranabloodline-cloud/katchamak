@@ -84,3 +84,5 @@ const fantasy=calendarPreset('uniform');assert.ok(timelineCalendarWeeks([{node:n
 
 assert.equal(validEvent({start:0,precision:'day',cardColor:'#a855f7',cardOpacity:.25,cardDetail:'dates'}),true);
 for(const patch of [{cardColor:'red'},{cardColor:'url(x)'},{cardOpacity:-1},{cardOpacity:2},{cardOpacity:NaN},{cardDetail:'html'}])assert.equal(validEvent({start:0,precision:'day',...patch}),false);
+
+assert.equal(validEvent({start:0,precision:'day',cardStyle:'image'}),true);assert.equal(validEvent({start:0,precision:'day',cardStyle:'script'}),false);
