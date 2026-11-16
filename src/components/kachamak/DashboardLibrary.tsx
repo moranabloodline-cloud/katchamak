@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react";
-import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
+import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
 import {useKachamak, exportNovelJson } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
@@ -12,6 +12,7 @@ import {compareLibraryProjects,groupLibraryProjects} from '@/lib/kachamak/librar
 import { bindDashboardZoom } from "@/lib/kachamak/dashboard-zoom";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AccountMenu } from "./AccountMenu";
+import { CollectionIcon } from './CollectionIcon';
 import { HelpCenter } from "./HelpCenter";
 import { ProjectFileStatus } from "./ProjectFileStorage";
 import { toast } from "sonner";
@@ -165,7 +166,7 @@ export function DashboardLibrary(props: Props) {
     {sortedCollections(parentId).map((c) => <div key={c.id}>
       <LibraryItem {...dropZone(c.id)} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} data-tree-collection={c.id} className={`group/library-item flex h-9 items-center rounded-md pr-1 text-sm ${dropTarget === c.id ? "bg-amber-400/25 ring-1 ring-inset ring-amber-300" : location === c.id ? "bg-amber-400/10 text-[#f5d99d]" : "text-[#bcb8b0] hover:bg-white/5"}`} style={{ paddingLeft: 6 + depth * 16, minWidth: 150 + depth * 16 }}>
         <button type="button" aria-label={`${expanded.includes(c.id) ? "Collapse" : "Expand"} ${c.name}`} aria-expanded={expanded.includes(c.id)} onClick={() => prefs.toggleExpanded(c.id)} className="shrink-0 rounded p-1 hover:bg-white/10">{expanded.includes(c.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>
-        <button type="button" onClick={() => navigate(c.id)} aria-current={location === c.id ? "location" : undefined} className="flex min-w-0 flex-1 items-center gap-2 text-left" title={c.name}><Folder className="h-4 w-4 shrink-0 text-[#cba457]" /><span className="truncate">{c.name}</span></button>
+        <button type="button" onClick={() => navigate(c.id)} aria-current={location === c.id ? "location" : undefined} className="flex min-w-0 flex-1 items-center gap-2 text-left" title={c.name}><CollectionIcon name={c.name} className="h-4 w-4 shrink-0 text-[#cba457]" /><span className="truncate">{c.name}</span></button>
         {folderMenu(c)}
       </LibraryItem>
       {expanded.includes(c.id) && tree(c.id, depth + 1)}
@@ -220,7 +221,7 @@ export function DashboardLibrary(props: Props) {
         <div ref={libraryRef} {...dropZone(location)} data-testid="library-content" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 kachamak-scroll ${dropTarget !== undefined && dropTarget === location ? "bg-amber-400/[0.04] ring-1 ring-inset ring-amber-400/40" : ""}`}>
           <div className="mb-5 flex items-center gap-2"><h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-[#f2ead9]" title={active?.name ?? (showArchived?"Archived":"Library")}>{active?.name ?? (showArchived?"Archived":"Library")}</h1><span className="shrink-0 text-xs text-muted-foreground">{folders.length + projects.length} items</span></div>
           {folders.length > 0 && <section aria-label="Folders" className="mb-6"><div className={layout === "grid" ? "grid gap-3" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{folders.map((c) => <LibraryItem key={c.id} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} {...dropZone(c.id)} data-library-collection={c.id} className={`group/library-item flex min-w-0 items-center rounded-lg border px-2 py-3 ${dropTarget === c.id ? "border-amber-300 bg-amber-400/15" : "border-white/10 bg-white/[0.02] hover:border-[#a97f33]/60"}`}>
-            <button type="button" onClick={() => navigate(c.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left" aria-label={`Open collection ${c.name}`}><span className={`flex shrink-0 items-center justify-center ${layout === "list" ? "h-12 w-8" : ""}`}><FolderOpen className={`shrink-0 text-[#d1ac60] ${layout === "grid" ? "h-9 w-9" : "h-6 w-6"}`} /></span><span className="min-w-0 flex-1 basis-16"><span className="block truncate text-sm text-[#e9dfcb]">{c.name}</span>{layout === "grid" && <span className="mt-0.5 block text-xs text-muted-foreground">Collection</span>}</span>{layout === "list" && <><span className="w-14 text-xs text-muted-foreground">Collection</span><span className="w-24 text-xs text-muted-foreground">—</span><span className="w-24 text-xs text-muted-foreground/70">{c.updatedAt ? modified(c.updatedAt) : "—"}</span></>}</button>{folderMenu(c)}
+            <button type="button" onClick={() => navigate(c.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left" aria-label={`Open collection ${c.name}`}><span className={`flex shrink-0 items-center justify-center ${layout === "list" ? "h-12 w-8" : ""}`}><CollectionIcon name={c.name} open className={`shrink-0 text-[#d1ac60] ${layout === "grid" ? "h-9 w-9" : "h-6 w-6"}`} /></span><span className="min-w-0 flex-1 basis-16"><span className="block truncate text-sm text-[#e9dfcb]">{c.name}</span>{layout === "grid" && <span className="mt-0.5 block text-xs text-muted-foreground">Collection</span>}</span>{layout === "list" && <><span className="w-14 text-xs text-muted-foreground">Collection</span><span className="w-24 text-xs text-muted-foreground">—</span><span className="w-24 text-xs text-muted-foreground/70">{c.updatedAt ? modified(c.updatedAt) : "—"}</span></>}</button>{folderMenu(c)}
           </LibraryItem>)}</div></section>}
           {projectGroups.map(([name, entries]) => entries.length > 0 && <section key={name || "projects"} aria-label={name || "Projects"} className="mb-6">{name && <h2 className="mb-3 border-b border-white/10 pb-2 text-sm text-[#d9c394]">{name}</h2>}
             <div className={layout === "grid" ? "grid items-start gap-x-5 gap-y-7" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{entries.map((n) => <LibraryItem as="article" key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: location })} data-library-project={n.id} className={`group group/library-item relative min-w-0 ${layout === "list" ? "flex items-center gap-2 rounded-md border border-white/[0.07] bg-white/[0.02] px-2 py-2 hover:bg-white/5" : ""}`}>
