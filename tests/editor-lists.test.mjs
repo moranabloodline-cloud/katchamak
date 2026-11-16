@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body><div class="kachamak-editor" contenteditable="true"></div></body></html>').window;
+for(const key of ['window','document','Event','DOMParser'])globalThis[key]=key==='window'?dom:dom[key];
+const {repairListWrappers,backspaceListMarker}=await import('../src/lib/kachamak/editor-lists.ts');
+const {preparePastedContent}=await import('../src/lib/kachamak/paste-content.ts');
+const root=document.querySelector('div');
+root.innerHTML='<ul><li><ul><li><b>Occupation:</b> Engineer</li><li>Pronouns</li></ul><hr><h1>Description</h1><p>Keep <em>this</em> <a href="#note/test">link</a>.</p><hr><h2>Background</h2><ul><li>Details</li></ul></li><ul></ul></ul>';
+const text=root.textContent,link=root.querySelector('a'),caret=root.querySelector('em').firstChild,selection=dom.getSelection();selection.setBaseAndExtent(caret,2,caret,2);
+assert.equal(repairListWrappers(root),true);assert.equal(root.textContent,text);assert.equal(root.querySelector('a'),link);assert.equal(root.querySelectorAll('li').length,3);assert.equal(root.querySelector('h1').parentElement,root);assert.equal(selection.anchorNode,caret);assert.equal(selection.anchorOffset,2);assert.equal(repairListWrappers(root),false);
+root.innerHTML='<ul><li>Parent <ul><li>Child</li></ul></li></ul>';const nested=root.innerHTML;assert.equal(repairListWrappers(root),false);assert.equal(root.innerHTML,nested);
+root.innerHTML='<ul><li>Before</li><li><ul><li>Lift</li></ul><p>Body</p></li><li>After</li></ul>';const all=root.textContent;repairListWrappers(root);assert.equal(root.textContent,all);assert.equal(root.children[0].textContent,'Before');assert.equal(root.children[1].textContent,'Lift');assert.equal(root.children[2].textContent,'Body');assert.equal(root.children[3].textContent,'After');
+const pasted=preparePastedContent('<ul><li><ul><li>One</li></ul><hr><h1>Title</h1></li></ul>','');root.innerHTML=pasted;assert.equal(root.querySelector('h1').parentElement,root);
+root.innerHTML='<ul><li>Item</li></ul>';const node=root.querySelector('li').firstChild;let calls=0;document.execCommand=name=>{assert.equal(name,'outdent');calls++;return true;};selection.setBaseAndExtent(node,0,node,0);assert.equal(backspaceListMarker(root),true);assert.equal(calls,1);selection.setBaseAndExtent(node,1,node,1);assert.equal(backspaceListMarker(root),false);selection.setBaseAndExtent(node,0,node,2);assert.equal(backspaceListMarker(root),false);
+root.innerHTML='<ol start=5><li>Before</li><li><ul><li>Lift</li></ul></li><li>After</li></ol>';repairListWrappers(root);assert.equal(root.lastElementChild.getAttribute('start'),'7');
+root.innerHTML='<ul><li>One</li><hr><h2>Heading</h2><p>Body</p><li>Two</li></ul>';const looseText=root.textContent;repairListWrappers(root);assert.equal(root.textContent,looseText);assert.equal(root.querySelectorAll('ul>hr,ul>h2,ul>p').length,0);assert.equal(root.querySelector('h2').parentElement,root);
+console.log('List repair passed: full-document paste wrappers, preserved text/links/caret, intentional nesting, before/after siblings, idempotence and start-only Backspace.');

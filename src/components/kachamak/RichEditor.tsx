@@ -8,6 +8,7 @@ import { preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useRef, useState } from "react";
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
+import {repairListWrappers,backspaceListMarker} from '@/lib/kachamak/editor-lists';
 import {EditorHistory} from '@/lib/kachamak/editor-history';
 import {insertTypedDivider} from '@/lib/kachamak/editor-divider';
 import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
@@ -36,6 +37,7 @@ export function RichEditor({
   const ref = useRef<HTMLDivElement>(null);
   const lastHtml = useRef<string>("");
   const convertingDivider=useRef(false);
+  const pasting=useRef(false);
   const history=useRef(new EditorHistory());
   const [preview,setPreview]=useState<string|null>(null);
 
@@ -44,8 +46,10 @@ export function RichEditor({
     if (!el) return;
     if (html !== lastHtml.current && html !== el.innerHTML) {
       el.innerHTML = DOMPurify.sanitize(html || "", {FORBID_TAGS:["style","script","iframe","object","embed"],FORBID_ATTR:["srcdoc"]});
-      lastHtml.current = html;
+      const repaired=repairListWrappers(el);
+      lastHtml.current = el.innerHTML;
       history.current.reset(el);
+      if(repaired)onChange(lastHtml.current);
     }
   }, [html]);
 
@@ -54,8 +58,9 @@ export function RichEditor({
   const handleInput = (event?: {nativeEvent?: Event}) => {
     if (!ref.current) return;
     const input=event?.nativeEvent as InputEvent|undefined;
+    if(pasting.current)repairListWrappers(ref.current);
     // Only typed insertions trigger the rule; paste and undo must remain literal.
-    if(!convertingDivider.current&&input?.inputType==='insertText'&&!input.isComposing){
+    if(!pasting.current&&!convertingDivider.current&&input?.inputType==='insertText'&&!input.isComposing){
       history.current.record(ref.current,input.inputType,input.data);
       convertingDivider.current=true;
       try{insertTypedDivider(ref.current);}finally{convertingDivider.current=false;}
@@ -90,6 +95,7 @@ export function RichEditor({
         suppressContentEditableWarning
         onKeyDown={event => {
           const key=event.key.toLowerCase();
+          if(key==='backspace'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.shiftKey&&!event.nativeEvent.isComposing&&ref.current&&backspaceListMarker(ref.current)){event.preventDefault();handleInput();return;}
           if((event.ctrlKey||event.metaKey)&&!event.altKey&&(key==='z'||(key==='y'&&!event.shiftKey))){
             event.preventDefault();event.stopPropagation();const selection=window.getSelection();
             applyEditorHistory(selection?.rangeCount?selection.getRangeAt(0):null,key==='y'||event.shiftKey?'redo':'undo');return;
@@ -111,8 +117,10 @@ export function RichEditor({
         onPaste={event => {
           event.preventDefault();
           const content = preparePastedContent(event.clipboardData.getData('text/html'), event.clipboardData.getData('text/plain'));
-          document.execCommand('insertHTML', false, content);
-          handleInput();
+          if(ref.current)history.current.before(ref.current);
+          pasting.current=true;
+          try{document.execCommand('insertHTML', false, content);handleInput();}
+          finally{pasting.current=false;}
         }}
         onInput={handleInput}
         onBlur={handleInput}

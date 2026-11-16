@@ -1,5 +1,6 @@
 'use client';
 import DOMPurify from 'dompurify';
+import {repairListWrappers} from './editor-lists';
 const properties = new Set(['font-family','font-size','font-weight','font-style','font-variant','text-align','text-indent','text-transform','text-decoration-line','text-decoration-style','line-height','letter-spacing','word-spacing','white-space','vertical-align','margin','margin-top','margin-bottom','margin-left','margin-right','padding','padding-top','padding-bottom','padding-left','padding-right','list-style-type','list-style-position','border-collapse','width','height']);
 function formatting(css: string) {
   const style = document.createElement('span').style; style.cssText = css.replace(/^\s*;+/, '');
@@ -31,6 +32,7 @@ export function preparePastedContent(html: string, text: string): string {
     if(el.tagName==='P') { const style=(el as HTMLElement).style; if(!style.margin && !style.marginTop && !style.marginBottom)style.marginBottom='1em'; }
   }
   DOMPurify.sanitize(doc.body,{IN_PLACE:true,ALLOWED_TAGS:['body','p','div','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','thead','tbody','tfoot','tr','th','td','a','font','hr'],ALLOWED_ATTR:['data-katchamak-note','title','style','href','colspan','rowspan','start','reversed','type','face','size']});
+  repairListWrappers(doc.body);
   return doc.body.innerHTML;
 }
 

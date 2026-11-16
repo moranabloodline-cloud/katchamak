@@ -266,7 +266,7 @@ html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
    source sizes. Body formatting remains unchanged; levels scale with editor size. */
 .kachamak-editor :is(h1,h2,h3,h4,h5,h6) {
   font-family: inherit !important; font-weight: 700 !important;
-  line-height: 1.3 !important; margin-block: 1.25em .45em !important;
+  line-height: 1.3 !important; margin-block: .75em .35em !important;
   color: inherit; text-transform: none;
 }
 .kachamak-editor h1 { font-size: 2em !important; }
@@ -282,4 +282,7 @@ html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 .kachamak-editor :is(h1,h2,h3,h4,h5,h6) :is(span,font) { font-weight: inherit !important; }
 .kachamak-editor > :is(h1,h2,h3,h4,h5,h6):first-child { margin-block-start: 0 !important; }
 
-.kachamak-editor hr { border: 0; border-top: 1px solid currentColor; opacity: .3; margin: 1.25em 0; }
+.kachamak-editor hr { border: 0; border-top: 1px solid currentColor; opacity: .3; margin: 1.25em 0 .65em; }
+
+/* A divider already supplies spacing; keep the next heading close to it. */
+.kachamak-editor hr + :is(h1,h2,h3,h4,h5,h6) { margin-block-start: .35em !important; }
