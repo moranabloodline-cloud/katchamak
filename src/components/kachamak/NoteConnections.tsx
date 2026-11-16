@@ -9,14 +9,14 @@ import {CodexNotePicker} from './CodexNotePicker';
 export function NoteConnections({node,section,mode}:{node:NoteNode;section:SectionKey;mode:'details'|'mentions'}) {
   const novel=useKachamak(s=>s.novels.find(n=>n.id===s.activeNovelId));
   const deferred=useDeferredValue(novel);
-  const index=useMemo(()=>deferred?indexNotes(deferred):[],[deferred]);
+  const index=useMemo(()=>mode==='mentions'&&deferred?indexNotes(deferred):[],[mode,deferred]);
   const [aliases,setAliases]=useState(''),[preview,setPreview]=useState<string|null>(null),[aliasDirty,setAliasDirty]=useState(false);
   const [referenceQuery,setReferenceQuery]=useState('');
   const update=useKachamak(s=>s.updateNode);
   useEffect(()=>{setAliases((node.aliases??[]).join('\n'));setAliasDirty(false);setReferenceQuery('');setPreview(null);},[node.id]);
   useEffect(()=>{if(!aliasDirty)setAliases((node.aliases??[]).join('\n'));},[node.aliases,aliasDirty]);
-  const outgoing=useMemo(()=>novel?groupLinkedNotes(novel,node.links??[]):[],[novel,node.links]);
-  const incoming=mode==='mentions'?index.filter(n=>n.node.id!==node.id).map(n=>referenceTo(n,node,deferred)).filter(n=>n!==null):[];
+  const outgoing=useMemo(()=>mode==='details'&&novel&&node.links?.length?groupLinkedNotes(novel,node.links):[],[mode,novel,node.links]);
+  const incoming=useMemo(()=>mode==='mentions'?index.filter(n=>n.node.id!==node.id).map(n=>referenceTo(n,node,deferred)).filter(n=>n!==null):[],[mode,index,node,deferred]);
   const visibleIncoming=incoming.filter(ref=>[ref.source.node.title,ref.source.path,ref.snippet].join(' ').toLocaleLowerCase().includes(referenceQuery.trim().toLocaleLowerCase()));
   const mentionGroups=TABS.flatMap(tab=>{const entries=visibleIncoming.filter(ref=>ref.source.section===tab.key);return entries.length?[{...tab,entries}]:[];});
   const row=(entry:IndexedNote,detail?:string)=><button type="button" onClick={()=>setPreview(entry.node.id)} className={mode==='details'?"inline text-left align-baseline text-xs hover:underline":"w-full rounded-lg border border-white/10 px-3 py-2 text-left text-xs hover:bg-white/5"}><span className={mode==='details'?"font-medium":"block font-medium"} style={{color:entry.node.color && /^#[0-9a-f]{3,8}$/i.test(entry.node.color)?entry.node.color:'#60a5fa'}}>{entry.node.title}</span>{mode==='mentions'&&<span className="mt-1 block truncate text-muted-foreground">{entry.path}</span>}{detail&&<span className="mt-1 block line-clamp-2 text-muted-foreground">{detail}</span>}</button>;

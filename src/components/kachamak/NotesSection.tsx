@@ -295,7 +295,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const selected = hit?.node ?? null;
   const selectedSection = hit?.section ?? section;
 
-  const manuscriptWords=continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0);
+  const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
 
   return (
     <div className="flex min-h-0 flex-1">

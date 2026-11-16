@@ -12,7 +12,7 @@ export function NoteLinkDialog() {
   const context=useRef<{projectId:string;sourceId:string}|null>(null);
   const [newTitle,setNewTitle]=useState(''),[parentId,setParentId]=useState('');
   const novel=useKachamak(s=>s.novels.find(n=>n.id===s.activeNovelId));
-  const index=useMemo(()=>novel?indexNotes(novel):[],[novel]);
+  const index=useMemo(()=>open&&novel?indexNotes(novel):[],[open,novel]);
   const eligible=index.filter(n=>n.node.id!==context.current?.sourceId);
   const results=query.trim()?searchNotes(eligible,query).slice(0,15):eligible.slice(0,15);
   useEffect(()=>{

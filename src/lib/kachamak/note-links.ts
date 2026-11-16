@@ -52,6 +52,32 @@ export function cleanAliases(values: string[], title = '') {
   });
 }
 
+/** Editing only validates existing decisions. Name discovery belongs to Save. */
+export function validLinkChoices(text: string, choices: LinkChoice[] = []) {
+  return choices.filter(c => c.start >= 0 && c.end > c.start && !c.text.includes('\ufffc') && text.slice(c.start,c.end) === c.text);
+}
+
+export function explicitLinks(text: string, notes: NoteNode[], choices: LinkChoice[] = [], sourceId?: string): NoteMatch[] {
+  if (!choices.length) return [];
+  const decisions=validLinkChoices(text,choices);
+  const wanted=new Set(decisions.map(choice=>choice.text.toLocaleLowerCase()));
+  const aliases=new Map<string,NoteNode[]>();
+  const targets = new Map(notes.map(note => [note.id,note]));
+  for(const note of notes){
+    if(note.id===sourceId)continue;
+    for(const term of cleanAliases([note.title,...(note.aliases||[])])){
+      const key=term.toLocaleLowerCase();
+      if(wanted.has(key)){const candidates=aliases.get(key)||[];candidates.push(note);aliases.set(key,candidates);}
+    }
+  }
+  return decisions.map(choice => {
+    const target = choice.targetId ? targets.get(choice.targetId) : undefined;
+    const key = choice.text.toLocaleLowerCase();
+    const candidates = aliases.get(key)||[];
+    return {...choice,candidates:candidates.length?candidates:target?[target]:[],explicit:true,missing:!!choice.targetId&&!target,context:text.slice(Math.max(0,choice.start-48),Math.min(text.length,choice.end+64)).replace(/\s+/g,' ').trim()};
+  }).sort((a,b)=>a.start-b.start);
+}
+
 export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[] = [], sourceId?: string): NoteMatch[] {
   const terms = new Map<string, NoteNode[]>();
   for (const note of codex) {
@@ -66,8 +92,7 @@ export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[]
   const found: NoteMatch[] = [];
   const context = (start: number, end: number) => text.slice(Math.max(0, start - 48), Math.min(text.length, end + 64)).replace(/\s+/g, ' ').trim();
   // Explicit choices survive target renaming or deletion; never silently retarget.
-  for (const c of choices) {
-    if (text.slice(c.start, c.end) !== c.text || c.start < 0 || c.end <= c.start || c.text.includes('\ufffc')) continue;
+  for (const c of validLinkChoices(text,choices)) {
     const target = codex.find(n => n.id === c.targetId);
     found.push({...c, candidates: terms.get(c.text.toLocaleLowerCase()) || (target ? [target] : []), explicit: true, missing: !!c.targetId && !target, context: context(c.start,c.end)});
   }

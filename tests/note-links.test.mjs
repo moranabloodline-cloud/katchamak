@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM('<!doctype html><html><body></body></html>').window;
 globalThis.window=dom;globalThis.document=dom.document;
-const {contentText,indexText,rangeForMatch,scanLinks,rebaseChoices,noteMatches,backlinks}=await import('../src/lib/kachamak/note-links.ts');
+const {contentText,indexText,rangeForMatch,scanLinks,rebaseChoices,noteMatches,backlinks,explicitLinks}=await import('../src/lib/kachamak/note-links.ts');
 const {useKachamak,isUsableBackup}=await import('../src/lib/kachamak/store.ts');
 const {findNode}=await import('../src/lib/kachamak/utils.ts');
 const {manuscriptHtml,manuscriptMarkdown}=await import('../src/lib/kachamak/manuscript-export.ts');
@@ -27,6 +27,12 @@ assert.equal(backlinks(novel(),person)[0].matches.length,1);assert.equal(backlin
 s.updateNode('codex',person,{title:'The Warden',aliases:[]});assert.equal(noteMatches(novel(),node())[0].targetId,person,'Rename keeps selected identity');
 s.deleteNode('codex',person);assert.equal(noteMatches(novel(),node())[0].missing,true,'Deleted targets never silently retarget to same-named notes');
 s.restoreFromTrash(novel().trash[0].id);assert.equal(noteMatches(novel(),node())[0].missing,false);
+const notes=Object.values(novel().sections).flatMap(roots=>{const all=[];const walk=n=>{all.push(n);n.children.forEach(walk);};roots.forEach(walk);return all;}).filter(n=>n.id!==scene);
+const text=contentText(node().content);
+assert.deepEqual(explicitLinks(text,notes,node().linkChoices),scanLinks(text,notes,node().linkChoices,scene).filter(m=>m.explicit),'Fast display retains exact choices, candidates, ignored occurrences and context');
+assert.deepEqual(explicitLinks(text,notes,[...node().linkChoices].reverse()),explicitLinks(text,notes,node().linkChoices),'Display keeps document order even when stored choices are unordered');
+assert.equal(explicitLinks(text,notes,[]).length,0,'Display never discovers unapproved names');
+assert.equal(explicitLinks('edited away',notes,node().linkChoices).length,0);
 assert.deepEqual(rebaseChoices('Gate','Changed',[{start:0,end:4,text:'Gate',targetId:person}]),[]);
 // Confirmed links keep their target identity after a rename.
 s.updateNode('binder',scene,{content:'<p>Old Gate</p>'});s.updateNode('binder',scene,{linkChoices:[{start:0,end:8,text:'Old Gate',targetId:place}]});s.updateNode('codex',place,{title:'New Gate'});assert.equal(noteMatches(novel(),node())[0].targetId,place);

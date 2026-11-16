@@ -18,10 +18,15 @@ let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let accountId='';
+let snapshotDirty=true,cachedSnapshot='';
+// Serialize at save/verification boundaries, not for each keystroke or panel resize.
 const snapshot = () => {
+  if(subscribed&&!snapshotDirty)return cachedSnapshot;
   const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
   const {selectedCollection, expanded} = useLibraryPreferences.getState();
-  return JSON.stringify({novels, collections: useCollections.getState().collections, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
+  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
+  snapshotDirty=false;
+  return cachedSnapshot;
 };
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
 async function api(path: string, init?: RequestInit) {
@@ -60,6 +65,7 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
   applying = true;
   try { useKachamak.setState({ ...restoredView, novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null, ...navigation }); useCollections.setState({ collections: data.snapshot.collections }); }
   finally { applying = false; }
+  snapshotDirty=true;
   revision = data.revision; saved = snapshot();
   useWebLibrary.setState({ ready: true, busy: false, pending: false, error: null, conflict: false });
 }
@@ -80,14 +86,17 @@ export async function initializeWebLibrary() {
     if (!subscribed) {
       subscribed = true;
       const changed = () => {
+        snapshotDirty=true;
         if (applying || !useWebLibrary.getState().ready) return;
         writeWorkspaceRoute();
-        if (snapshot() === saved) return;
         useWebLibrary.setState({ pending: true });
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
-      useKachamak.subscribe(changed); useCollections.subscribe(changed); useLibraryPreferences.subscribe(changed);
+      const fields=['novels','view','activeNovelId','activeTab','selectedNodeId','paneAId','paneBId','activePane'] as const;
+      useKachamak.subscribe((state,before)=>{if(fields.some(field=>state[field]!==before[field]))changed();});
+      useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
+      useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
     }
   })().catch(error => { fail(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
@@ -100,10 +109,11 @@ export async function flushWebLibrary() {
     if (useWebLibrary.getState().conflict) throw new Error('Another window saved newer changes. Export your unsaved edits before reloading.');
     // A refresh begun before typing must finish before the revision is used for saving.
     if (refreshing) await refreshing;
-    while (snapshot() !== saved) {
+    while (true) {
       const value = snapshot();
+      if(value===saved)break;
       useWebLibrary.setState({ busy: true, pending: true });
-      const data = await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision, snapshot: JSON.parse(value) }) });
+      const data = await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });
       revision = data.revision; saved = value;
     }
     useWebLibrary.setState({ busy: false, pending: false, error: null });

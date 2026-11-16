@@ -15,7 +15,7 @@ import {novelSettingsPatch,validNovelMetadata,type NovelSettingsPatch} from "./p
 import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel } from "./utils";
-import { cleanAliases, contentText, rebaseChoices, flattenNotes, scanLinks } from "./note-links";
+import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import { validEvent, validTimelineExtra } from './story-calendar';
 
 interface KachamakState {
@@ -312,15 +312,12 @@ function touch(novel: Novel): Novel {
   return { ...novel, updatedAt: Date.now() };
 }
 
-function resolveChoices(novel: Novel, node: NoteNode) {
-  const codex=flattenNotes(novel).map(r=>r.node);
-  return scanLinks(contentText(node.content),codex,node.linkChoices,node.id)
-    .filter(m=>m.explicit)
-    .map(({start,end,text,targetId})=>({start,end,text,targetId}));
+function resolveChoices(node: NoteNode) {
+  return node.linkChoices?.length ? validLinkChoices(contentText(node.content),node.linkChoices) : [];
 }
 
 function preserveCodexLinks(novel: Novel) {
-  for(const {node} of flattenNotes(novel)) node.linkChoices=resolveChoices(novel,node);
+  for(const {node} of flattenNotes(novel)) node.linkChoices=resolveChoices(node);
 }
 
 function makeNode(kind: NoteNode["kind"], title: string): NoteNode {
@@ -632,13 +629,14 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         if (!target) return;
+        if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
         if(section==='codex' && (patch.title!==undefined || patch.aliases!==undefined)) preserveCodexLinks(novel);
         if(patch.content !== undefined && patch.linkChoices === undefined && target.linkChoices?.length) {
           patch = {...patch,linkChoices:rebaseChoices(contentText(target.content),contentText(patch.content),target.linkChoices)};
         }
         if(patch.aliases) patch = {...patch,aliases:cleanAliases(patch.aliases,patch.title ?? target.title)};
         Object.assign(target, patch, { updatedAt: Date.now() });
-        if(patch.content !== undefined) target.linkChoices=resolveChoices(novel,target);
+        if(patch.content !== undefined) target.linkChoices=resolveChoices(target);
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));

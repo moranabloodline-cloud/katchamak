@@ -67,6 +67,37 @@ useKachamak.setState({activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'
 useKachamak.getState().setView('write');
 await cloud.saveWebLibrary();
 assert.equal((await (await call(a)).json()).snapshot.view,'write');
+// Cloud serialization is lazy: UI-only actions do no cloud work and a typing
+// burst serializes once at Save, while edits made during a request are drained.
+const stringify=JSON.stringify;let serializations=0;
+JSON.stringify=function(value,...args){if(value?.novels===useKachamak.getState().novels&&value?.collections&&value?.navigation&&value?.location)serializations++;return stringify(value,...args);};
+try {
+ const beforeUI=(await (await call(a)).json()).revision;
+ useKachamak.getState().setEditorSize(18);
+ useKachamak.getState().setEditorSpellCheck(false);
+ assert.equal(cloud.useWebLibrary.getState().pending,false,'Formatting preferences do not dirty cloud project data');
+ await cloud.saveWebLibrary();assert.equal(serializations,0,'UI-only updates reuse the saved snapshot');
+ assert.equal((await (await call(a)).json()).revision,beforeUI);
+ for(let i=0;i<30;i++)useKachamak.getState().updateNode('binder','note-1',{content:`<p>Typing ${i}</p>`});
+ assert.equal(serializations,0,'Typing does not serialize the whole cloud library');
+ assert.equal(cloud.useWebLibrary.getState().pending,true);
+ await cloud.saveWebLibrary();assert.equal(serializations,1,'One snapshot per saved typing burst');
+ assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Typing 29</p>');
+ const stateBeforeNoop=useKachamak.getState();
+ stateBeforeNoop.updateNode('binder','note-1',{content:'<p>Typing 29</p>'});
+ assert.equal(useKachamak.getState(),stateBeforeNoop,'Blur with unchanged HTML does not update the project');
+ const fetch=globalThis.fetch;let writes=0;
+ globalThis.fetch=async(path,init)=>{
+   const response=await fetch(path,init);
+   if(path==='/api/library'&&init?.method==='POST'&&++writes===1)useKachamak.getState().updateNode('binder','note-1',{content:'<p>Typed during save</p>'});
+   return response;
+ };
+ try{useKachamak.getState().updateNode('binder','note-1',{content:'<p>First save</p>'});await cloud.saveWebLibrary();}
+ finally{globalThis.fetch=fetch;}
+ assert.equal(writes,2,'Save drains a newer edit arriving during the first request');
+ assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Typed during save</p>');
+ assert.equal(cloud.useWebLibrary.getState().pending,false);
+}finally{JSON.stringify=stringify;}
 cloud.useWebLibrary.setState({ready:false});
 useKachamak.setState({view:'split',activeNovelId:null,activeTab:'codex',selectedNodeId:null,paneAId:null});
 await cloud.initializeWebLibrary();

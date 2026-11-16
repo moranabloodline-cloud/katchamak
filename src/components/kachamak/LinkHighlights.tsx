@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { BookOpen, Link2, PanelsLeftRight, X } from 'lucide-react';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import { useKachamak } from '@/lib/kachamak/store';
-import { contentText, flattenNotes, indexText, rangeForMatch, scanLinks, type NoteMatch } from '@/lib/kachamak/note-links';
+import { contentText, flattenNotes, indexText, rangeForMatch, explicitLinks, type NoteMatch } from '@/lib/kachamak/note-links';
 import { findNodeInNovel, stripHtml } from '@/lib/kachamak/utils';
 
 export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTMLDivElement | null>; noteId: string }) {
@@ -19,6 +19,7 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
   useEffect(()=>{
     const editor=editorRef.current;
     if(!editor || !novel || !hit) return;
+    if(!hit.node.linkChoices?.length){setMatches(previous=>previous.length?[]:previous);return;}
     const style=document.createElement('style'); document.head.append(style);
     const keys:string[]=[];
     const registry=(globalThis.CSS as unknown as {highlights?: Map<string,unknown>})?.highlights;
@@ -28,7 +29,7 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
       keys.splice(0).forEach(k=>registry?.delete(k));
       const {text,parts}=indexText(editor);
       const codex=flattenNotes(novel).map(n=>n.node);
-      const found=scanLinks(text,codex,hit.node.linkChoices,noteId).filter(match=>match.explicit);
+      const found=explicitLinks(text,codex,hit.node.linkChoices,noteId);
       setMatches(found); ranged=[];
       const rules:string[]=[];
       for(const [i,match] of found.entries()){
