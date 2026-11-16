@@ -8,6 +8,7 @@ import {CodexNotePicker} from './CodexNotePicker';
 import {NoteImage} from './NoteImage';
 import {DetailsBlock,AddDetailsBlock} from './DetailsBlock';
 import type {DetailBlockKey} from '@/lib/kachamak/detail-blocks';
+import {cleanAliases} from '@/lib/kachamak/note-links';
 
 export function NoteConnections({node,section,mode}:{node:NoteNode;section:SectionKey;mode:'details'|'mentions'}) {
   const novel=useKachamak(s=>s.novels.find(n=>n.id===s.activeNovelId));
@@ -16,6 +17,12 @@ export function NoteConnections({node,section,mode}:{node:NoteNode;section:Secti
   const [aliases,setAliases]=useState(''),[preview,setPreview]=useState<string|null>(null),[aliasDirty,setAliasDirty]=useState(false);
   const [referenceQuery,setReferenceQuery]=useState('');
   const update=useKachamak(s=>s.updateNode);
+  const saveAliases=(value:string,finish=false)=>{
+    if(useKachamak.getState().activeNovelId!==novel?.id)return;
+    const next=cleanAliases(value.split('\n').map(alias=>alias.slice(0,500)),node.title).slice(0,100).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+    if(next.join('\n')!==(node.aliases??[]).join('\n'))update(section,node.id,{aliases:next});
+    if(finish){setAliases(next.join('\n'));setAliasDirty(false);}
+  };
   const hidden=node.hiddenDetailBlocks??[];
   const setBlockVisible=(key:DetailBlockKey,visible:boolean)=>{
     const state=useKachamak.getState();if(state.activeNovelId!==novel?.id)return;
@@ -32,7 +39,7 @@ export function NoteConnections({node,section,mode}:{node:NoteNode;section:Secti
   return <div className={mode==='details'?'space-y-2':'space-y-5'}>
     {mode==='details'?<>
       {!hidden.includes('image')&&<DetailsBlock block="image" onHide={()=>setBlockVisible('image',false)}><NoteImage node={node} section={section}/></DetailsBlock>}
-      {!hidden.includes('aliases')&&<DetailsBlock block="aliases" onHide={()=>setBlockVisible('aliases',false)}><textarea aria-label="Aliases" id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);}} rows={3} className="block w-full rounded border border-white/15 bg-transparent p-2 text-xs"/><div className="flex gap-2"><button type="button" className="rounded border border-white/15 px-3 py-1.5 text-xs hover:bg-white/5" onClick={()=>{update(section,node.id,{aliases:[...new Set(aliases.split('\n').map(n=>n.trim().slice(0,500)).filter(Boolean))].slice(0,100)});setAliasDirty(false);}}>Save</button><button type="button" className="rounded border border-white/15 px-3 py-1.5 text-xs hover:bg-white/5 disabled:opacity-40" title="Sort aliases A–Z" disabled={!aliases.trim()} onClick={()=>{setAliases([...new Set(aliases.split('\n').map(n=>n.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).join('\n'));setAliasDirty(true);}}>Sort</button></div></DetailsBlock>}
+      {!hidden.includes('aliases')&&<DetailsBlock block="aliases" onHide={()=>setBlockVisible('aliases',false)}><textarea aria-label="Aliases" id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);saveAliases(e.target.value);}} onBlur={e=>saveAliases(e.target.value,true)} rows={3} className="block w-full rounded border border-white/15 bg-transparent p-2 text-xs"/></DetailsBlock>}
       {!hidden.includes('codex')&&<DetailsBlock block="codex" onHide={()=>setBlockVisible('codex',false)}><CodexNotePicker node={node} section={section}/>
       {outgoing.map(group=><section key={group.id} aria-label={group.title}>{group.title&&<h3 className="mb-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground">{group.title}</h3>}<ul className="space-y-2">{group.entries.map(({id,target})=><li key={id} className="text-xs">{target?row(target):<span className="text-xs text-muted-foreground">Missing note — it may be in Trash.</span>}{' '}<button type="button" aria-label="Remove link" className="inline align-baseline text-muted-foreground hover:text-red-400" onClick={()=>update(section,node.id,{links:(node.links??[]).filter(n=>n!==id)})}>×</button></li>)}</ul></section>)}
       </DetailsBlock>}

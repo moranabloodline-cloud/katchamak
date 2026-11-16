@@ -17,6 +17,16 @@ function App(){const state=useKachamak(),hit=findNodeInNovel(state.novels[0],sta
 await React.act(async()=>root.render(React.createElement(App)));
 const blocks=()=>[...document.querySelectorAll('section[aria-label$=" block"]')].map(el=>el.getAttribute('aria-label'));
 assert.deepEqual(blocks(),['Image block','Aliases block','Codex block']);
+const aliasArea=document.querySelector('textarea[aria-label=Aliases]');
+const typeAliases=async(value)=>React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLTextAreaElement.prototype,'value').set.call(aliasArea,value);aliasArea.dispatchEvent(new dom.Event('input',{bubbles:true}));});
+assert.equal(aliasArea.closest('section').querySelectorAll('button').length,1,'Only the block menu remains, without Save or Sort');
+await typeAliases('zeta\nalpha\nAlpha\n');
+assert.deepEqual(node().aliases,['alpha','zeta'],'Aliases save and sort automatically, deduplicating case variants');
+assert.equal(aliasArea.value,'zeta\nalpha\nAlpha\n','Typing retains its cursor order and trailing newline');
+await React.act(async()=>aliasArea.dispatchEvent(new dom.FocusEvent('focusout',{bubbles:true})));
+assert.equal(aliasArea.value,'alpha\nzeta','The display sorts when input finishes');
+await typeAliases('Alternate name');
+await React.act(async()=>aliasArea.dispatchEvent(new dom.FocusEvent('focusout',{bubbles:true})));
 await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:['aliases']}));
 assert.deepEqual(blocks(),['Image block','Codex block']);
 assert.ok([...document.querySelectorAll('button')].some(button=>button.textContent==='Codex'),'The link picker remains in its own block');
