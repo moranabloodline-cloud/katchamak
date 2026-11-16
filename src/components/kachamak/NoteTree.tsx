@@ -41,7 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WorkspaceBrand } from "./WorkspaceBrand";
+import { WorkspaceNavigation } from "./WorkspaceNavigation";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
@@ -653,7 +653,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <WorkspaceBrand />
+        <WorkspaceNavigation />
         <span className="ml-auto" />
         <button
           type="button"

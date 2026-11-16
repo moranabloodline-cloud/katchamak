@@ -1,6 +1,6 @@
 "use client";
 
-import { WorkspaceBrand } from "./WorkspaceBrand";
+import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import { useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, RotateCcw, Trash2, FileText } from "lucide-react";
@@ -78,7 +78,7 @@ export function TrashView() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <WorkspaceBrand />
+          <WorkspaceNavigation />
         </div>
         <div className="space-y-1 px-2 pb-3">
           {(Object.keys(SECTION_NAMES) as SectionKey[]).map((k) => {
