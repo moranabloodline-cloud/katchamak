@@ -1,0 +1,11 @@
+.novel-settings { font-family: Arial, Helvetica, sans-serif; font-weight: 400; }
+.novel-settings label { font-weight: 400; color: #aaa9a5; line-height: 1.4; }
+.novel-settings input, .novel-settings select, .novel-settings textarea, .novel-settings button { font-family: inherit; font-weight: 400; }
+.novel-settings input:not([type="file"]), .novel-settings select, .novel-settings textarea, .novel-settings button[aria-haspopup="menu"] { color: #eeeae3; background-color: #222225; border-color: #444448; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+.novel-settings input:not([type="file"]), .novel-settings select, .novel-settings button[aria-haspopup="menu"] { min-height: 36px; }
+.novel-settings textarea { min-height: 62px; }
+.novel-settings h2 { letter-spacing: 0; }
+.novel-settings [data-slot="dialog-title"] { font-family: Georgia, serif; font-size: 24px; }
+.novel-settings [data-slot="dialog-description"] { font-size: 12px; }
+.novel-settings summary { color: #aaa9a5; }
+.novel-settings summary.text-red-300 { color: #d28f8b; }
