@@ -17,7 +17,6 @@ export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?
   return <div className="flex h-full min-h-0 flex-col" style={{zoom}}>
     <RulerRow/>
     <div ref={scrollRef} aria-label="Continuous manuscript · read only" className="min-h-0 flex-1 overflow-y-auto kachamak-scroll pb-[40vh]" style={{scrollbarGutter:'stable'}}>
-      <p className="mx-auto max-w-3xl px-6 pt-3 text-xs text-muted-foreground">Read only · {selectedId&&notes[0]?.id===selectedId?'Selected note and sub-notes':'All notes in this tab'}</p>
       {notes.map(node=><section key={node.id} data-continuous-note={node.id} aria-label={node.title||'Untitled note'} className="px-6 py-6 [&+section]:border-t [&+section]:border-border/50">
         <div className="mx-auto w-full max-w-3xl"><h2 className="mb-4 text-2xl font-bold">{node.title||'Untitled note'}</h2><div contentEditable={false} data-readonly-note={node.id} className="kachamak-editor text-foreground" style={{fontFamily:`'${font}',system-ui,sans-serif`,fontSize:size,lineHeight:spacing}} onClick={event=>{const anchor=(event.target as Element).closest('a[href^="#note/"]');if(anchor){event.preventDefault();setPreview(anchor.getAttribute('href')!.slice(6));}}} dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(node.content||'',{FORBID_TAGS:['style','script','iframe','object','embed'],FORBID_ATTR:['srcdoc']})}}/></div>
       </section>)}
