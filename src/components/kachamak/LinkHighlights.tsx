@@ -27,8 +27,8 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
     const refresh=()=>{
       keys.splice(0).forEach(k=>registry?.delete(k));
       const {text,parts}=indexText(editor);
-      const codex=flattenNotes(novel).filter(n=>n.section==='codex').map(n=>n.node);
-      const found=scanLinks(text,codex,hit.node.linkChoices,noteId);
+      const codex=flattenNotes(novel).map(n=>n.node);
+      const found=scanLinks(text,codex,hit.node.linkChoices,noteId).filter(match=>match.explicit);
       setMatches(found); ranged=[];
       const rules:string[]=[];
       for(const [i,match] of found.entries()){
@@ -80,10 +80,10 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
   const unresolved=matches.filter(m=>!m.explicit&&m.candidates.length>1).length;
   return <>
     <div className="mt-5 border-t border-white/10 pt-3 text-xs">
-      <button type="button" onClick={()=>setListOpen(!listOpen)} className="flex items-center gap-2 text-muted-foreground hover:text-amber-300" aria-expanded={listOpen}><Link2 className="h-3.5 w-3.5"/>{count} Codex links{unresolved?` · ${unresolved} to choose`:''}</button>
+      <button type="button" onClick={()=>setListOpen(!listOpen)} className="flex items-center gap-2 text-muted-foreground hover:text-amber-300" aria-expanded={listOpen}><Link2 className="h-3.5 w-3.5"/>{count} note links{unresolved?` · ${unresolved} to choose`:''}</button>
       {listOpen&&<div className="mt-2 flex flex-wrap gap-2">{matches.map(m=><button key={`${m.start}-${m.end}`} type="button" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setPopup({match:m,x:r.left,y:r.bottom+8});}} className="rounded-md border border-white/15 px-2 py-1 text-muted-foreground hover:border-amber-500/50">{m.text}{m.explicit&&!m.targetId?' · skipped':m.missing?' · missing':!m.targetId?' · choose':''}</button>)}</div>}
     </div>
-    {popup&&createPortal(<div ref={boxRef} role="dialog" aria-label="Codex link" className="fixed z-[100] w-80 max-w-[calc(100vw-24px)] max-h-[70vh] overflow-auto rounded-xl border border-amber-500/30 bg-[#181818] p-4 text-sm text-stone-200 shadow-2xl" style={{left:Math.max(12,Math.min(popup.x,window.innerWidth-332)),top:Math.max(12,Math.min(popup.y,window.innerHeight-370))}}>
+    {popup&&createPortal(<div ref={boxRef} role="dialog" aria-label="Note link" className="fixed z-[100] w-80 max-w-[calc(100vw-24px)] max-h-[70vh] overflow-auto rounded-xl border border-amber-500/30 bg-[#181818] p-4 text-sm text-stone-200 shadow-2xl" style={{left:Math.max(12,Math.min(popup.x,window.innerWidth-332)),top:Math.max(12,Math.min(popup.y,window.innerHeight-370))}}>
       <div className="mb-3 flex items-center gap-2"><Link2 className="h-4 w-4 text-amber-400"/><strong className="flex-1 truncate">{target?.title||popup.match.text}</strong><button aria-label="Close link preview" onClick={()=>setPopup(null)}><X className="h-4 w-4"/></button></div>
       {target?<><p className="mb-3 line-clamp-4 text-xs leading-relaxed text-muted-foreground">{stripHtml(target.synopsis||target.content)||'No description yet.'}</p><div className="mb-4 flex gap-2"><button className="flex items-center gap-1 rounded border border-white/15 px-2 py-1" onClick={()=>open(target.id)}><BookOpen className="h-3 w-3"/>Open</button><button className="flex items-center gap-1 rounded border border-white/15 px-2 py-1" onClick={()=>open(target.id,true)}><PanelsLeftRight className="h-3 w-3"/>Open beside</button></div></>:<p className="mb-3 text-xs text-muted-foreground">{popup.match.missing?'This linked note is in Trash or missing. Restore it to reconnect.':'Choose the meaning for this occurrence only.'}</p>}
       {popup.match.candidates.map(n=><button key={n.id} onClick={()=>choose(popup.match,n.id)} className="mb-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-white/10"><span className="h-2 w-2 rounded-full" style={{background:n.color||'#dfb65b'}}/>{n.title}</button>)}

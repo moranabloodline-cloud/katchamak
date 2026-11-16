@@ -1,0 +1,87 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
+import {useKachamak} from '@/lib/kachamak/store';
+import {saveWebLibrary} from '@/lib/kachamak/cloud-library';
+import {contentText,type NoteMatch} from '@/lib/kachamak/note-links';
+import {indexNotes} from '@/lib/kachamak/knowledge';
+import {findNodeInNovel} from '@/lib/kachamak/utils';
+import {mergeReviewChoices,pendingLinkReview,reviewDecisions} from '@/lib/kachamak/link-review';
+import {toast} from 'sonner';
+
+export const requestLinkReview=()=>{document.dispatchEvent(new Event('katchamak-save-review'));};
+type Session={projectId:string;noteId:string;html:string;title:string;matches:NoteMatch[]};
+const action='w-full rounded-md border border-white/15 px-3 py-2 text-left text-xs hover:bg-white/5 disabled:opacity-40';
+
+export function AutoLinkReview() {
+  const [session,setSession]=useState<Session|null>(null),[selected,setSelected]=useState(''),[working,setWorking]=useState(false);
+  const sessionRef=useRef<Session|null>(null),busy=useRef(false);
+  const activeProject=useKachamak(state=>state.activeNovelId);
+  const novels=useKachamak(state=>state.novels);
+  const put=(value:Session|null)=>{sessionRef.current=value;setSession(value);};
+  useEffect(()=>{
+    const save=async()=>{
+      if(busy.current||sessionRef.current)return;
+      busy.current=true;
+      const before=useKachamak.getState(),projectId=before.activeNovelId,noteId=before.selectedNodeId;
+      const canReview=before.activeTab!=='trash'&&!document.querySelector('[role=dialog]');
+      try {
+        await saveWebLibrary();
+        const state=useKachamak.getState();
+        if(state.activeNovelId!==projectId||state.selectedNodeId!==noteId)return;
+        const novel=state.novels.find(novel=>novel.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
+        const matches=canReview&&novel&&hit?pendingLinkReview(novel,hit.node):[];
+        if(novel&&hit&&matches.length)put({projectId:novel.id,noteId:hit.node.id,html:hit.node.content,title:hit.node.title,matches});
+        else toast.success('Saved. No new note links to review.');
+      }catch(error){toast.error(error instanceof Error?error.message:String(error));}
+      finally{busy.current=false;}
+    };
+    document.addEventListener('katchamak-save-review',save);
+    return()=>document.removeEventListener('katchamak-save-review',save);
+  },[]);
+  useEffect(()=>{if(session&&session.projectId!==activeProject)put(null);},[activeProject,session]);
+  const match=session?.matches[0];
+  useEffect(()=>{setSelected(match?.candidates.length===1?match.candidates[0].id:'');},[session?.noteId,match?.start,match?.text]);
+  const novel=novels.find(novel=>novel.id===session?.projectId);
+  const index=novel?indexNotes(novel):[];
+  const close=()=>{if(!busy.current)put(null);};
+  const decide=async(targetId:string|null,scope:'one'|'instances'|'remaining')=>{
+    if(!session||!match||busy.current)return;
+    busy.current=true;setWorking(true);
+    try {
+      const state=useKachamak.getState();
+      if(state.activeNovelId!==session.projectId)throw new Error('Return to the original project before reviewing links.');
+      const current=state.novels.find(novel=>novel.id===session.projectId),hit=current?findNodeInNovel(current,session.noteId):null;
+      if(!current||!hit)throw new Error('The original note is no longer available.');
+      const decisions=reviewDecisions(session.matches,match,targetId,scope);
+      if(!decisions.length){toast.info('This name has multiple targets. Choose its note before continuing.');return;}
+      const choices=mergeReviewChoices(current,hit.node,session.html,decisions);
+      state.updateNode(hit.section,hit.node.id,{linkChoices:choices});
+      await saveWebLibrary();
+      const latest=useKachamak.getState().novels.find(novel=>novel.id===session.projectId);
+      const source=latest?findNodeInNovel(latest,session.noteId):null;
+      const remaining=latest&&source?pendingLinkReview(latest,source.node):[];
+      if(useKachamak.getState().activeNovelId!==session.projectId){put(null);return;}
+      if(remaining.length)put({...session,matches:remaining});
+      else{put(null);toast.success('Link review complete. Saved to your account.');}
+    }catch(error){
+      toast.error(error instanceof Error?error.message:String(error));
+      const state=useKachamak.getState(),current=state.novels.find(novel=>novel.id===session.projectId);
+      const source=current?findNodeInNovel(current,session.noteId):null;
+      const remaining=current&&source&&source.node.content===session.html?pendingLinkReview(current,source.node):[];
+      put(state.activeNovelId===session.projectId&&remaining.length?{...session,matches:remaining}:null);
+    }
+    finally{busy.current=false;setWorking(false);}
+  };
+  const text=session?contentText(session.html):'';
+  const start=match?Math.max(0,match.start-280):0,end=match?Math.min(text.length,match.end+360):0;
+  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}><DialogContent className="max-h-[88vh] overflow-y-auto border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl"><DialogHeader><DialogTitle>Automatic link detection</DialogTitle><DialogDescription>{session?.title} · {session?.matches.length??0} remaining. Targets are searched across every tab in this project.</DialogDescription></DialogHeader>{session&&match&&<>
+    <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_208px]">
+      <div className="min-w-0 space-y-4">
+        <div aria-label="Link context" className="min-h-48 whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/20 p-5 text-sm leading-7">{start>0?'…':''}{text.slice(start,match.start)}<mark className="rounded bg-amber-400 px-1 py-0.5 font-semibold text-black">{match.text}</mark>{text.slice(match.end,end)}{end<text.length?'…':''}</div>
+        <fieldset className="space-y-2"><legend className="mb-2 text-xs font-semibold">{match.candidates.length>1?'Choose the correct note — this name has multiple targets':'Link target'}</legend>{match.candidates.map(candidate=>{const entry=index.find(entry=>entry.node.id===candidate.id);return <label key={candidate.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/15 p-3 hover:bg-white/5"><input type="radio" name="automatic-link-target" value={candidate.id} checked={selected===candidate.id} onChange={()=>setSelected(candidate.id)} disabled={working} className="mt-1 accent-amber-400"/><span className="min-w-0"><span className="block text-sm" style={{color:candidate.color||'#e7d6a8'}}>{candidate.title}</span><span className="mt-1 block break-words text-xs text-muted-foreground">{entry?.path??'Unavailable note'}</span></span></label>;})}</fieldset>
+      </div>
+      <div className="space-y-2"><button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected,'one')}>Create link</button><button type="button" className={action} disabled={working||!selected} onClick={()=>void decide(selected,'instances')}>Create all instances</button><div className="pt-2"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'one')}>Ignore link</button><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'instances')}>Ignore all instances</button><button type="button" className={action} disabled={working} onClick={close}>Decide later</button><div className="pt-3"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'remaining')}>Accept all further links</button><button type="button" className={action} disabled={working} onClick={close}>Abandon further links</button><p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">All instances applies to this name in this note. Accept all stops at an ambiguous name. Deferred links appear again on the next Save.</p></div>
+    </div>
+  </>}</DialogContent></Dialog>;
+}

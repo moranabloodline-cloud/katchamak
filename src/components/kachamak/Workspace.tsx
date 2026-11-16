@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, FileText, House, Save, Search, Settings } from "lucide-react";
-import { saveWebLibrary } from "@/lib/kachamak/cloud-library";
+import { AutoLinkReview, requestLinkReview } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
 import { TABS } from "@/lib/kachamak/types";
 import type { NoteNode, SectionKey, TabKey } from "@/lib/kachamak/types";
@@ -19,7 +19,7 @@ import { AccountDialog } from "./AccountDialog";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import { stripHtml } from "@/lib/kachamak/utils";
 
-import { toast } from "sonner";
+
 
 /* ---------- project search (top bar, left panel zone) ---------- */
 
@@ -117,7 +117,7 @@ export function Workspace() {
   useEffect(()=>{
     const keyboard=(event:KeyboardEvent)=>{
       if(!(event.ctrlKey||event.metaKey))return;
-      if(event.key.toLowerCase()==='s'){event.preventDefault();void saveWebLibrary().then(()=>toast.success('Saved to your account.')).catch(error=>toast.error(String(error)));}
+      if(event.key.toLowerCase()==='s'){event.preventDefault();requestLinkReview();}
       if(event.shiftKey&&event.key.toLowerCase()==='f'){event.preventDefault();document.querySelector<HTMLInputElement>('[aria-label="Search project"]')?.focus();}
     };
     document.addEventListener('keydown',keyboard);return()=>document.removeEventListener('keydown',keyboard);
@@ -194,9 +194,7 @@ export function Workspace() {
                 type="button"
                 aria-label="Save"
                 title="Save"
-                onClick={async () => {
-                  try { await saveWebLibrary(); toast.success("Saved to your account."); } catch (error) { toast.error(String(error)); }
-                }}
+                onClick={requestLinkReview}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Save className="h-5 w-5" />
@@ -241,6 +239,7 @@ export function Workspace() {
         <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} />
       )}
 
+      <AutoLinkReview />
       <NoteLinkDialog />
       <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

@@ -28,8 +28,8 @@ s.updateNode('codex',person,{title:'The Warden',aliases:[]});assert.equal(noteMa
 s.deleteNode('codex',person);assert.equal(noteMatches(novel(),node())[0].missing,true,'Deleted targets never silently retarget to same-named notes');
 s.restoreFromTrash(novel().trash[0].id);assert.equal(noteMatches(novel(),node())[0].missing,false);
 assert.deepEqual(rebaseChoices('Gate','Changed',[{start:0,end:4,text:'Gate',targetId:person}]),[]);
-// Pin old unambiguous links before a target rename or duplicate.
-s.updateNode('binder',scene,{content:'<p>Old Gate</p>'});s.updateNode('codex',place,{title:'New Gate'});assert.equal(noteMatches(novel(),node())[0].targetId,place);
+// Confirmed links keep their target identity after a rename.
+s.updateNode('binder',scene,{content:'<p>Old Gate</p>'});s.updateNode('binder',scene,{linkChoices:[{start:0,end:8,text:'Old Gate',targetId:place}]});s.updateNode('codex',place,{title:'New Gate'});assert.equal(noteMatches(novel(),node())[0].targetId,place);
 // Tabs are views, not copied content. Closing cannot delete source notes.
 s.openNoteTab(chapter);assert.equal(useKachamak.getState().activeTab,`note:${chapter}`);s.updateNode('binder',scene,{content:'<p>Final <em>manuscript</em>.</p>',synopsis:'PRIVATE SYNOPSIS',notes:'PRIVATE NOTES'});s.closeTab(`note:${chapter}`);assert.ok(node());assert.deepEqual(novel().openNoteTabs,[]);s.closeTab('research');assert.ok(novel().hiddenSections.includes('research'));s.showSection('research');assert.deepEqual(novel().hiddenSections,[]);s.closeTab('binder');assert.ok(!novel().hiddenSections.includes('binder'));
 s.setTimeline({compact:true,detail:'titles',rootId:chapter});const roundtrip=JSON.parse(JSON.stringify(novel()));assert.equal(roundtrip.timeline.rootId,chapter);assert.equal(roundtrip.sections.binder[0].children[0].content,node().content);

@@ -99,13 +99,13 @@ export function rebaseChoices(before: string, after: string, choices: LinkChoice
 }
 
 export function noteMatches(novel: Novel, node: NoteNode) {
-  const codex = flattenNotes(novel).filter(n=>n.section==='codex').map(n=>n.node);
+  const codex = flattenNotes(novel).map(n=>n.node);
   return scanLinks(contentText(node.content), codex, node.linkChoices, node.id);
 }
 
 export function backlinks(novel: Novel, targetId: string) {
   const rows = flattenNotes(novel);
-  const codex = rows.filter(n=>n.section==='codex').map(n=>n.node);
+  const codex = rows.map(n=>n.node);
   return rows.filter(r=>r.node.id!==targetId).flatMap(r=>{
     const matches=scanLinks(contentText(r.node.content),codex,r.node.linkChoices,r.node.id).filter(m=>m.targetId===targetId);
     return matches.length || r.node.links?.includes(targetId) ? [{...r,matches,manual:!!r.node.links?.includes(targetId)}] : [];

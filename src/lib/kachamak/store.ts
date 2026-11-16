@@ -311,9 +311,9 @@ function touch(novel: Novel): Novel {
 }
 
 function resolveChoices(novel: Novel, node: NoteNode) {
-  const codex=flattenNotes(novel).filter(r=>r.section==='codex').map(r=>r.node);
+  const codex=flattenNotes(novel).map(r=>r.node);
   return scanLinks(contentText(node.content),codex,node.linkChoices,node.id)
-    .filter(m=>m.explicit || m.targetId)
+    .filter(m=>m.explicit)
     .map(({start,end,text,targetId})=>({start,end,text,targetId}));
 }
 
