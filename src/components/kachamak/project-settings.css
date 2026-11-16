@@ -1,11 +1,54 @@
-.novel-settings { font-family: Arial, Helvetica, sans-serif; font-weight: 400; }
-.novel-settings label { font-weight: 400; color: #aaa9a5; line-height: 1.4; }
-.novel-settings input, .novel-settings select, .novel-settings textarea, .novel-settings button { font-family: inherit; font-weight: 400; }
-.novel-settings input:not([type="file"]), .novel-settings select, .novel-settings textarea, .novel-settings button[aria-haspopup="menu"] { color: #eeeae3; background-color: #222225; border-color: #444448; border-radius: 6px; font-size: 13px; line-height: 1.5; }
-.novel-settings input:not([type="file"]), .novel-settings select, .novel-settings button[aria-haspopup="menu"] { min-height: 36px; }
-.novel-settings textarea { min-height: 62px; }
-.novel-settings h2 { letter-spacing: 0; }
-.novel-settings [data-slot="dialog-title"] { font-family: Georgia, serif; font-size: 24px; }
-.novel-settings [data-slot="dialog-description"] { font-size: 12px; }
-.novel-settings summary { color: #aaa9a5; }
-.novel-settings summary.text-red-300 { color: #d28f8b; }
+.novel-settings { font-family: Arial, Helvetica, sans-serif; font-weight:400; background:#0e0e10!important; padding:24px; }
+.novel-settings .settings-header { display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:20px; padding-right:48px; border-bottom:1px solid #2d2d33; }
+.novel-settings [data-slot="dialog-title"] { font:600 30px Georgia,serif; }
+.novel-settings [data-slot="dialog-description"] { font-size:12px; }
+.settings-save { background:#ffc21a; color:#111; padding:12px 24px; border-radius:10px; font-size:13px; white-space:nowrap; }
+.settings-save:disabled { opacity:.4; }
+.settings-layout { display:grid; grid-template-columns:280px minmax(0,1fr); align-items:start; gap:28px; padding-top:12px; }
+.settings-layout aside,.settings-layout form { min-width:0; }
+.settings-layout form { display:flex; flex-direction:column; gap:20px; }
+.novel-settings .settings-card { background:#17171b; border:1px solid #2c2c33; border-radius:14px; padding:22px; min-width:0; }
+.novel-settings h2 { font-size:14px; font-weight:600; line-height:1.4; margin-bottom:14px; }
+.novel-settings label { color:#bcbcc6; font-size:12px; font-weight:400; line-height:1.5; }
+.novel-settings input:not([type=file]),.novel-settings select,.novel-settings textarea,.novel-settings button[aria-haspopup=menu] { font-family:inherit; font-weight:400; color:#f2f2f5; background:#101013; border:1px solid #33333b; border-radius:8px; font-size:13px; line-height:1.5; width:100%; min-width:0; padding:10px 12px; }
+.novel-settings input:not([type=file]),.novel-settings select,.novel-settings button[aria-haspopup=menu] { min-height:40px; }
+.novel-settings textarea { min-height:76px; resize:vertical; }
+.settings-book-fields { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.settings-book-fields>h2,.settings-book-fields>div { grid-column:1/-1; }
+.settings-book-fields>h2 { margin:0; }
+.settings-book-fields>label { margin-top:0; }
+.settings-book-fields>div { margin-top:0; display:flex; flex-wrap:nowrap; align-items:end; gap:16px; }
+.settings-book-fields>div>div { flex:1; min-width:0; }
+.settings-book-fields>div>label { width:140px; }
+.settings-book-fields>div>div>div { flex-wrap:nowrap; gap:12px; }
+.novel-settings button { font-family:inherit; font-weight:400; }
+.settings-cover { display:flex; flex-direction:column; gap:12px; }
+.settings-cover>div:not(.settings-cover-actions) { border:1px solid #33333b; border-radius:12px; }
+.settings-cover-actions { display:flex; gap:10px; }
+.settings-cover-actions button { min-height:40px; }
+.settings-cover-actions button:first-child { flex:1; }
+.settings-backups { margin-top:20px; padding-top:18px; border-top:1px solid #2d2d33; }
+.settings-backups>div { display:flex; flex-direction:column; gap:10px; }
+.settings-backups button { width:100%; justify-content:flex-start; min-height:40px; }
+.settings-language>div>div { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px 18px; }
+.settings-language>div>div>* { margin-top:0; width:100%; }
+.settings-language>div>div>:nth-child(3) { grid-column:1/-1; order:4; }
+.settings-language>div>div>:nth-child(4) { order:3; }
+.settings-audience>div,.settings-plot>div { display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; }
+.settings-audience>div>label,.settings-audience>div>div:last-child { grid-column:1/-1; }
+.settings-audience>div>label,.settings-audience>div>div,.settings-plot>div>div { margin-top:0; width:100%; min-width:0; }
+.settings-audience>div>div:last-child { justify-content:space-between; padding:12px 14px; border:1px solid #33333b; border-radius:8px; }
+.settings-chips { display:flex; flex-wrap:wrap; align-items:center; gap:5px; flex:1; min-width:0; text-align:left; }
+.settings-chip { display:inline-block; max-width:100%; overflow-wrap:anywhere; padding:3px 7px; border-radius:5px; background:#2b2b34; font-size:12px; }
+.settings-danger { border:1px solid #50302b; background:#1a1413; border-radius:12px; padding:20px 22px; }
+.novel-settings .settings-danger h2 { color:#f27666; margin-bottom:6px; }
+.settings-danger p { font-size:12px; }
+.settings-danger>div { justify-content:flex-end; }
+@media(max-width:800px) { .settings-layout { grid-template-columns:180px minmax(0,1fr); gap:18px; } .settings-book-fields,.settings-audience>div,.settings-plot>div { grid-template-columns:1fr; } .settings-language>div>div { grid-template-columns:1fr 1fr; } .settings-card { padding:16px!important; } }
+@media(max-width:600px) { .settings-layout { grid-template-columns:1fr; } .settings-layout aside { max-width:240px; } .settings-header { gap:8px!important; } .settings-save { padding:10px; } .settings-book-fields>div { flex-wrap:wrap; } }
+
+.novel-settings>button:last-child { top:24px; right:24px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border:1px solid #33333b; border-radius:9px; background:#222228; }
+.settings-danger { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 20px; align-items:center; }
+.settings-danger h2,.settings-danger p { grid-column:1; }
+.settings-danger>div { grid-column:2; grid-row:1/3; margin-top:0; }
+@media(max-width:800px) { .settings-danger { display:block; } .settings-danger>div { margin-top:12px; } }
