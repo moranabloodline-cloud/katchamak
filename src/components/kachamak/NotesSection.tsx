@@ -356,17 +356,8 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
 
       <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
         <CtrlZoom panel="mid" targetRef={mainRef} />
-        {/* traka 2 — formatna traka: JEDNA fiksna instanta (po Nikoli se NE
-            duplira po panelu u Splitu), uvek na istom mestu iznad lenjira i
-            radne površine; na njenu širinu utiču jedino bočni paneli. Prikazuje
-            se u Write modu sa otvorenom notom i u Split modu; u Grid / List /
-            Write bez selekcije prazan h-10 red drži njenu donju liniju
-            neprekinutom od leve do desne ivice */}
-        {view === "split" || view === "write" ? (
-          <EditorToolbar />
-        ) : (
-          <div className="h-10 shrink-0 border-b border-white/10" />
-        )}
+        {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
+        <EditorToolbar />
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
           {view === "timeline" && <TimelineView section={section} rootId={rootId} />}
