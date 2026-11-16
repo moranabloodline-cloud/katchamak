@@ -29,13 +29,18 @@ const snapshot = () => {
   return cachedSnapshot;
 };
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
+class LibraryConflictError extends Error {}
 async function api(path: string, init?: RequestInit) {
   const headers=new Headers(init?.headers);
   if(path.startsWith('/api/library')&&accountId)headers.set('X-Katchamak-Account',accountId);
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init, headers });
   const data = await response.json().catch(() => ({}));
   if(data.accountChanged)useWebLibrary.setState({ready:false,busy:false,error:data.error});
-  if (!response.ok) { if (response.status === 409) useWebLibrary.setState({ conflict: true }); throw new Error(data.error || 'Cloud storage could not be reached. Retry saving.'); }
+  if (!response.ok) {
+    const message=data.error || 'Cloud storage could not be reached. Retry saving.';
+    if(response.status===409&&data.conflict===true)throw new LibraryConflictError(message);
+    throw new Error(message);
+  }
   return data;
 }
 function apply(data: { revision: number; snapshot: Snapshot }) {
@@ -106,14 +111,21 @@ export async function flushWebLibrary() {
   if (running) return running;
   running = (async () => {
     if (!useWebLibrary.getState().ready) throw new Error('Open your account library before saving.');
-    if (useWebLibrary.getState().conflict) throw new Error('Another window saved newer changes. Export your unsaved edits before reloading.');
     // A refresh begun before typing must finish before the revision is used for saving.
     if (refreshing) await refreshing;
+    let retries=0;
+    if(useWebLibrary.getState().conflict)await reconcileRevision();
     while (true) {
       const value = snapshot();
       if(value===saved)break;
       useWebLibrary.setState({ busy: true, pending: true });
-      const data = await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });
+      let data;
+      try{data=await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });}
+      catch(error){
+        if(!(error instanceof LibraryConflictError))throw error;
+        if(retries++>=2){useWebLibrary.setState({conflict:true});throw error;}
+        await reconcileRevision();continue;
+      }
       revision = data.revision; saved = value;
     }
     useWebLibrary.setState({ busy: false, pending: false, error: null });
@@ -121,6 +133,22 @@ export async function flushWebLibrary() {
   return running;
 }
 export const saveWebLibrary = flushWebLibrary;
+// Navigation is window-local during reconciliation. Never overwrite competing
+// manuscript/collection edits; only retry when one content version is unchanged.
+async function reconcileRevision(){
+  const remote=await api('/api/library');
+  if(!Array.isArray(remote.snapshot?.novels)||!remote.snapshot.novels.every(isUsableBackup)||!Array.isArray(remote.snapshot.collections)||!Number.isSafeInteger(remote.revision))throw new Error('The saved library could not be read.');
+  const local=JSON.parse(snapshot()) as Snapshot,base=JSON.parse(saved) as Snapshot;
+  const content=(value:Snapshot)=>JSON.stringify([value.novels,value.collections]);
+  const localContent=content(local),remoteContent=content(remote.snapshot),baseContent=content(base);
+  if(localContent===remoteContent||localContent===baseContent){apply(remote);return;}
+  if(remoteContent!==baseContent){
+    useWebLibrary.setState({conflict:true});
+    throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
+  }
+  revision=remote.revision;saved=JSON.stringify(remote.snapshot);
+  useWebLibrary.setState({conflict:false,error:null});
+}
 export async function refreshWebLibrary() {
   if (refreshing) return refreshing;
   if (!useWebLibrary.getState().ready) return;

@@ -167,6 +167,23 @@ assert.equal((await (await call(a)).json()).snapshot.novels.find(n=>n.id===novel
 const remote=await (await call(a)).json();remote.snapshot.novels[0].title='Edited in browser';
 await call(a,'/api/library','POST',remote);
 await cloud.refreshWebLibrary();assert.equal(useKachamak.getState().novels[0].title,'Edited in browser');
+// Navigation-only saves in a second window must not strand real edits.
+const navigateRemote=await (await call(a)).json();navigateRemote.snapshot.view='split';
+await call(a,'/api/library','POST',navigateRemote);
+useKachamak.setState(s=>({novels:s.novels.map((n,i)=>i===0?{...n,title:'Local content after remote navigation'}:n),view:'list'}));
+await cloud.saveWebLibrary();
+assert.equal((await (await call(a)).json()).snapshot.novels[0].title,'Local content after remote navigation');
+assert.equal(useKachamak.getState().view,'list');assert.equal(cloud.useWebLibrary.getState().conflict,false);
+// Conversely, a window that only navigated can adopt newer content safely.
+const editRemote=await (await call(a)).json();editRemote.snapshot.novels[0].title='Remote content with local navigation';
+await call(a,'/api/library','POST',editRemote);useKachamak.getState().setView('split');
+await cloud.saveWebLibrary();
+assert.equal(useKachamak.getState().novels[0].title,'Remote content with local navigation');
+assert.equal(useKachamak.getState().view,'split');assert.equal(cloud.useWebLibrary.getState().pending,false);
+// A completed write whose response was lost may already contain our exact edit.
+useKachamak.setState(s=>({novels:s.novels.map((n,i)=>i===0?{...n,title:'Already saved edit'}:n)}));
+const sameRemote=await (await call(a)).json();sameRemote.snapshot.novels[0].title='Already saved edit';await call(a,'/api/library','POST',sameRemote);
+await cloud.saveWebLibrary();assert.equal(cloud.useWebLibrary.getState().conflict,false);
 // Unsaved text must survive a concurrent remote save and an attempted conflicting write.
 useKachamak.setState(s=>({novels:s.novels.map((n,i)=>i===0?{...n,title:'Unsaved local edit'}:n)}));
 const other=await (await call(a)).json();other.snapshot.novels[0].title='Newer browser edit';await call(a,'/api/library','POST',other);
@@ -174,6 +191,12 @@ await cloud.refreshWebLibrary();assert.equal(useKachamak.getState().novels[0].ti
 await assert.rejects(()=>cloud.saveWebLibrary(),/Another window/);
 assert.equal(useKachamak.getState().novels[0].title,'Unsaved local edit');assert.ok(cloud.useWebLibrary.getState().conflict);
 assert.equal((await (await call(a)).json()).snapshot.novels[0].title,'Newer browser edit');
+await assert.rejects(()=>cloud.saveWebLibrary(),/Another window/,'Retry rechecks a genuine conflict without overwriting either edit');
+assert.equal(useKachamak.getState().novels[0].title,'Unsaved local edit');
+// Retry can recover if the other window subsequently contains the same content.
+const resolved=await (await call(a)).json();resolved.snapshot.novels[0].title='Unsaved local edit';await call(a,'/api/library','POST',resolved);
+await cloud.saveWebLibrary();assert.equal(cloud.useWebLibrary.getState().conflict,false);assert.equal(cloud.useWebLibrary.getState().error,null);
+const restoredRemote=await (await call(a)).json();restoredRemote.snapshot.novels[0].title='Newer browser edit';await call(a,'/api/library','POST',restoredRemote);
 await cloud.reloadWebLibrary(true);assert.equal(useKachamak.getState().novels[0].title,'Newer browser edit');
 // Deletion is transactional: a failed cloud write restores the project and memberships.
 failPut=true;await assert.rejects(()=>cloud.removeWebProject(project));failPut=false;
