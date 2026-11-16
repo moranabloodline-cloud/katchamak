@@ -1,4 +1,5 @@
 import type { StoryEvent, TimelinePreferences } from './story-calendar';
+import type {DetailBlockKey} from './detail-blocks';
 /* every tab is the same note system — Codex included */
 export type SectionKey =
   | "binder"
@@ -54,6 +55,7 @@ export interface NoteNode {
   label: string; // free text, "" = no label
   color?: string; // document colour (the dot in the right panel), "" = none
   image?: string; // optional portable raster portrait in Details
+  hiddenDetailBlocks?: DetailBlockKey[]; // presentation only; hiding never deletes data
   icon?: string; // note icon, chosen by the user (see NOTE_ICONS)
   hidden?: boolean; // "Hide" in the note menu — hidden from the tree
   collapsed?: boolean;

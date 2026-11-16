@@ -16,6 +16,7 @@ import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel } from "./utils";
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
+import {validHiddenDetailBlocks} from './detail-blocks';
 import { validEvent, validTimelineExtra } from './story-calendar';
 
 interface KachamakState {
@@ -193,6 +194,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
       validCoverImage(node.image) &&
+      validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       (node.event === undefined || validEvent(node.event)) &&
       (node.linkChoices === undefined || Array.isArray(node.linkChoices) && node.linkChoices.every(c => c && Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end > c.start && typeof c.text === 'string' && (c.targetId === null || typeof c.targetId === 'string'))) &&
       isTree(node.children);
@@ -631,6 +633,7 @@ export const useKachamak = create<KachamakState>()(
         const target = findNode(roots, id);
         if (!target) return;
         if (!validCoverImage(patch.image)) return;
+        if (!validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
         if(section==='codex' && (patch.title!==undefined || patch.aliases!==undefined)) preserveCodexLinks(novel);
         if(patch.content !== undefined && patch.linkChoices === undefined && target.linkChoices?.length) {
@@ -853,7 +856,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 23,
+      version: 24,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -866,6 +869,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<24){ /* Optional per-note block visibility; preserve all existing content. */ }
         if(version<23){ /* Optional note image; existing notes remain untouched. */ }
         // v17: explicit Event/Time Period metadata is optional. Legacy date ranges are interpreted without rewriting them.
         if(version<22){if(typeof s.editorSpellCheck!=='boolean')s.editorSpellCheck=true;}
