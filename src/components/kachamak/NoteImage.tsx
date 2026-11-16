@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {UserCircle2,X} from 'lucide-react';
+import {ImagePlus,X} from 'lucide-react';
 import type {NoteNode,SectionKey} from '@/lib/kachamak/types';
 import {useKachamak} from '@/lib/kachamak/store';
 import {readNovelCover} from '@/lib/kachamak/project-settings';
@@ -29,8 +29,8 @@ export function NoteImage({node,section}:{node:NoteNode;section:SectionKey}) {
   });
   const button='rounded border border-white/20 bg-[#3b3b40] px-2 py-0.5 text-[10px] leading-4 text-white hover:bg-[#505057] disabled:opacity-50';
   return <section aria-label="Note image">
-    <div role="group" aria-label="Note image — upload or paste" tabIndex={0} onPaste={event=>{const file=event.clipboardData.files[0];if(file){event.preventDefault();void read(async()=>file);}}} className="group/note-image relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-md bg-[#302518] outline-none focus-visible:ring-1 focus-visible:ring-amber-500">
-      {node.image?<img src={node.image} alt={`${node.title} image`} className="h-full w-full object-cover"/>:<UserCircle2 aria-hidden="true" className="h-12 w-12 text-amber-600/80"/>}
+    <div role="group" aria-label="Note image — upload or paste" tabIndex={0} onPaste={event=>{const file=event.clipboardData.files[0];if(file){event.preventDefault();void read(async()=>file);}}} className="group/note-image relative flex aspect-[6/5] w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-white/15 bg-black/15 outline-none focus-visible:ring-1 focus-visible:ring-amber-500">
+      {node.image?<img src={node.image} alt={`${node.title} image`} className="h-full w-full object-contain"/>:<span className="flex items-center gap-2 text-xs text-muted-foreground"><ImagePlus aria-hidden="true" className="h-5 w-5"/>Add an image</span>}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/45 opacity-0 transition-opacity group-hover/note-image:pointer-events-auto group-hover/note-image:opacity-100 group-focus-within/note-image:pointer-events-auto group-focus-within/note-image:opacity-100">
         <button type="button" className={button} disabled={loading} onClick={()=>input.current?.click()}>Upload</button>
         <button type="button" className={button} disabled={loading} onClick={()=>void paste()}>Paste</button>
