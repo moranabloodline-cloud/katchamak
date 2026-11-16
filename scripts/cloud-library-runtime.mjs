@@ -9,6 +9,7 @@ export function validCloudLibrary(value) {
   for (const n of value.novels) {
     if (!n || !validId(n.id) || ids.has(n.id) || typeof n.title !== 'string' || typeof n.author !== 'string' || !n.sections) return false;
     if ((n.series !== undefined && (typeof n.series !== 'string' || n.series.length > 200)) || (n.seriesIndex !== undefined && (typeof n.seriesIndex !== 'string' || n.seriesIndex.length > 100)) || (n.archived !== undefined && typeof n.archived !== 'boolean')) return false;
+    if((n.targetAudience!==undefined&&(typeof n.targetAudience!=='string'||n.targetAudience.length>2000))||(n.explicitContent!==undefined&&typeof n.explicitContent!=='boolean')||!metadataLabels(n.tones,8)||!metadataLabels(n.writingStyles,12)||!metadataLabels(n.plotTechniques,12)||!metadataLabels(n.sellingPoints,12))return false;
     if((n.language!==undefined&&(typeof n.language!=='string'||n.language.length>100))||!metadataLabels(n.genres,4)||!metadataLabels(n.subgenres,12)||(n.chapterCount!==undefined&&(!Number.isSafeInteger(n.chapterCount)||n.chapterCount<1||n.chapterCount>1000)))return false;
     if (n.cover?.image !== undefined && (typeof n.cover.image !== 'string' || n.cover.image.length > 700000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(n.cover.image))) return false;
     ids.add(n.id);

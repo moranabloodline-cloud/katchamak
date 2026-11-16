@@ -93,7 +93,7 @@ assert.equal(useKachamak.getState().selectedNodeId,'note-1');
 assert.equal(useKachamak.getState().view,'write');
 // New workspace metadata must survive the same authenticated cloud save as prose.
 const writer=useKachamak.getState();
-assert.equal(writer.updateNovelSettings(novel.id,{language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21}),true);
+assert.equal(writer.updateNovelSettings(novel.id,{language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21,targetAudience:'Adult speculative fiction readers',tones:['Melancholic'],writingStyles:['Poetic'],plotTechniques:['Corruption Exposed'],sellingPoints:['Rich Worldbuilding'],explicitContent:true}),true);
 const target=writer.addNode('codex',null,'doc','Černobog');
 writer.updateNode('codex',target,{aliases:['Cernobog']});
 writer.updateNode('binder','note-1',{content:'<p>Cernobog arrived.</p>'});
@@ -107,6 +107,7 @@ window.history.replaceState(null,'','/');
 await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().activeTab,'note:note-1');
 assert.equal(useKachamak.getState().view,'timeline');
+assert.equal(useKachamak.getState().novels[0].targetAudience,'Adult speculative fiction readers');assert.deepEqual(useKachamak.getState().novels[0].tones,['Melancholic']);assert.deepEqual(useKachamak.getState().novels[0].writingStyles,['Poetic']);assert.deepEqual(useKachamak.getState().novels[0].plotTechniques,['Corruption Exposed']);assert.deepEqual(useKachamak.getState().novels[0].sellingPoints,['Rich Worldbuilding']);assert.equal(useKachamak.getState().novels[0].explicitContent,true);
 assert.equal(useKachamak.getState().novels[0].language,'en-US');assert.deepEqual(useKachamak.getState().novels[0].genres,['Science Fiction','Thriller']);assert.deepEqual(useKachamak.getState().novels[0].subgenres,['Cyberpunk','Near Future']);assert.equal(useKachamak.getState().novels[0].chapterCount,21);
 assert.equal(useKachamak.getState().novels[0].timeline.detail,'titles');
 assert.equal(useKachamak.getState().novels[0].timeline.display,'calendar');

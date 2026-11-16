@@ -181,7 +181,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
   if (n.author !== undefined && typeof n.author !== "string") return false;
   if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
   const cover = n.cover as Record<string, unknown>;
-  if (typeof cover.bg !== "string" || typeof cover.icon !== "string" || !validNovelMetadata({series:n.series,seriesIndex:n.seriesIndex,language:n.language,genres:n.genres,subgenres:n.subgenres,chapterCount:n.chapterCount,archived:n.archived,cover:{image:cover.image}})) return false;
+  if (typeof cover.bg !== "string" || typeof cover.icon !== "string" || !validNovelMetadata({series:n.series,seriesIndex:n.seriesIndex,language:n.language,genres:n.genres,subgenres:n.subgenres,chapterCount:n.chapterCount,targetAudience:n.targetAudience,tones:n.tones,writingStyles:n.writingStyles,plotTechniques:n.plotTechniques,sellingPoints:n.sellingPoints,explicitContent:n.explicitContent,archived:n.archived,cover:{image:cover.image}})) return false;
   if (!n.sections || typeof n.sections !== "object" || Array.isArray(n.sections)) return false;
   const sections = n.sections as Record<string, unknown>;
   const isTree = (nodes: unknown): boolean => Array.isArray(nodes) && nodes.every((value) => {
@@ -849,7 +849,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 20,
+      version: 21,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -863,6 +863,8 @@ export const useKachamak = create<KachamakState>()(
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
         // v17: explicit Event/Time Period metadata is optional. Legacy date ranges are interpreted without rewriting them.
+        if(version<21){ /* Optional audience and writing metadata; preserve manuscripts. */ }
+
         if(version<20){ /* Optional book metadata; no content or chapters are invented. */ }
 
         if(version<19){ /* Optional card style; existing banners remain visible. */ }

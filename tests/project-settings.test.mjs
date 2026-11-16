@@ -5,7 +5,7 @@ const actions=useKachamak.getState();actions.createNovel('Original','Author');
 const id=useKachamak.getState().activeNovelId,note=actions.addNode('binder',null,'doc','Chapter');
 actions.updateNode('binder',note,{content:'<p>Keep my manuscript.</p>',links:['reference'],aliases:['Other name']});
 const before=structuredClone(useKachamak.getState().novels[0]);
-assert.equal(actions.updateNovelSettings(id,{title:'New title',author:'Pen Name',series:'Saga',seriesIndex:'Book 2',language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21,cover:{...before.cover,image:'data:image/png;base64,aGVsbG8='}}),true);
+assert.equal(actions.updateNovelSettings(id,{title:'New title',author:'Pen Name',series:'Saga',seriesIndex:'Book 2',language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21,targetAudience:'Adult readers of speculative fiction',tones:['Intense','Bittersweet'],writingStyles:['First Person','Atmospheric'],plotTechniques:['Race Against Time','Sacrifice'],sellingPoints:['Thought-Provoking','Unique Premise'],explicitContent:true,cover:{...before.cover,image:'data:image/png;base64,aGVsbG8='}}),true);
 let novel=useKachamak.getState().novels[0];
 assert.equal(novel.language,'en-US');assert.deepEqual(novel.genres,['Science Fiction','Thriller']);assert.deepEqual(novel.subgenres,['Cyberpunk','Near Future']);assert.equal(novel.chapterCount,21);
 assert.equal(novel.title,'New title');assert.equal(novel.author,'Pen Name');assert.equal(novel.series,'Saga');assert.equal(novel.seriesIndex,'Book 2');
@@ -27,3 +27,7 @@ console.log('Project settings passed: title/author/series, cover validation and 
 for(const patch of [{genres:['A','B','C','D','E']},{genres:['Fantasy','fantasy']},{subgenres:['']},{chapterCount:0},{chapterCount:1.5},{language:'x'.repeat(101)}])assert.equal(novelSettingsPatch(novel,patch),null);
 assert.equal(isUsableBackup({...novel,genres:['A','A']}),false);
 assert.equal(useKachamak.getState().novels[0].chapterCount,21,'Archive/restore preserves book metadata');
+
+assert.equal(novel.targetAudience,'Adult readers of speculative fiction');assert.deepEqual(novel.tones,['Intense','Bittersweet']);assert.deepEqual(novel.writingStyles,['First Person','Atmospheric']);assert.deepEqual(novel.plotTechniques,['Race Against Time','Sacrifice']);assert.deepEqual(novel.sellingPoints,['Thought-Provoking','Unique Premise']);assert.equal(novel.explicitContent,true);
+for(const patch of [{targetAudience:'x'.repeat(2001)},{tones:Array.from({length:9},(_,i)=>'Tone '+i)},{writingStyles:['A','a']},{plotTechniques:['']},{sellingPoints:['x'.repeat(101)]},{explicitContent:'yes'}])assert.equal(novelSettingsPatch(novel,patch),null);
+assert.equal(useKachamak.getState().novels[0].explicitContent,true,'Partial archive updates preserve writing metadata');

@@ -89,6 +89,12 @@ export interface Novel {
   genres?: string[];
   subgenres?: string[];
   chapterCount?: number;
+  targetAudience?: string;
+  tones?: string[];
+  writingStyles?: string[];
+  plotTechniques?: string[];
+  sellingPoints?: string[];
+  explicitContent?: boolean;
   archived?: boolean;
   sections: Record<SectionKey, NoteNode[]>;
   trash: TrashItem[];
