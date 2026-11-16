@@ -5,8 +5,9 @@ const actions=useKachamak.getState();actions.createNovel('Original','Author');
 const id=useKachamak.getState().activeNovelId,note=actions.addNode('binder',null,'doc','Chapter');
 actions.updateNode('binder',note,{content:'<p>Keep my manuscript.</p>',links:['reference'],aliases:['Other name']});
 const before=structuredClone(useKachamak.getState().novels[0]);
-assert.equal(actions.updateNovelSettings(id,{title:'New title',author:'Pen Name',series:'Saga',seriesIndex:'Book 2',cover:{...before.cover,image:'data:image/png;base64,aGVsbG8='}}),true);
+assert.equal(actions.updateNovelSettings(id,{title:'New title',author:'Pen Name',series:'Saga',seriesIndex:'Book 2',language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21,cover:{...before.cover,image:'data:image/png;base64,aGVsbG8='}}),true);
 let novel=useKachamak.getState().novels[0];
+assert.equal(novel.language,'en-US');assert.deepEqual(novel.genres,['Science Fiction','Thriller']);assert.deepEqual(novel.subgenres,['Cyberpunk','Near Future']);assert.equal(novel.chapterCount,21);
 assert.equal(novel.title,'New title');assert.equal(novel.author,'Pen Name');assert.equal(novel.series,'Saga');assert.equal(novel.seriesIndex,'Book 2');
 assert.deepEqual(novel.sections,before.sections,'Metadata updates cannot rewrite notes, hierarchy or links');
 assert.equal(novel.id,before.id);assert.equal(novel.cover.icon,before.cover.icon);
@@ -22,3 +23,7 @@ const old=structuredClone(before);delete old.series;delete old.seriesIndex;delet
 const migrated=useKachamak.persist.getOptions().migrate({novels:[old]},9);assert.deepEqual(migrated.novels[0],old,'v9 projects retain their exact existing content and icon cover');
 await assert.rejects(()=>readNovelCover(new File(['<svg/>'],'cover.svg',{type:'image/svg+xml'})),/JPG, PNG or WebP/);
 console.log('Project settings passed: title/author/series, cover validation and backup, archive/restore, unchanged manuscripts, invalid metadata and v9 migration.');
+
+for(const patch of [{genres:['A','B','C','D','E']},{genres:['Fantasy','fantasy']},{subgenres:['']},{chapterCount:0},{chapterCount:1.5},{language:'x'.repeat(101)}])assert.equal(novelSettingsPatch(novel,patch),null);
+assert.equal(isUsableBackup({...novel,genres:['A','A']}),false);
+assert.equal(useKachamak.getState().novels[0].chapterCount,21,'Archive/restore preserves book metadata');

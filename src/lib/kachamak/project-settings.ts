@@ -1,17 +1,18 @@
 import type {Novel} from './types';
-export type NovelSettingsPatch=Partial<Pick<Novel,'title'|'author'|'series'|'seriesIndex'|'archived'|'cover'>>;
+export type NovelSettingsPatch=Partial<Pick<Novel,'title'|'author'|'series'|'seriesIndex'|'language'|'genres'|'subgenres'|'chapterCount'|'archived'|'cover'>>;
 export function validCoverImage(value:unknown) {
   return value===undefined||typeof value==='string'&&value.length<=700_000&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(value);
 }
-export function validNovelMetadata(value:{series?:unknown;seriesIndex?:unknown;archived?:unknown;cover?:{image?:unknown}}) {
-  return (value.series===undefined||typeof value.series==='string'&&value.series.length<=200)&&
+const labels=(value:unknown,limit:number)=>value===undefined||Array.isArray(value)&&value.length<=limit&&value.every(item=>typeof item==='string'&&!!item.trim()&&item.length<=100)&&new Set(value.map(item=>item.trim().toLocaleLowerCase())).size===value.length;
+export function validNovelMetadata(value:{series?:unknown;seriesIndex?:unknown;language?:unknown;genres?:unknown;subgenres?:unknown;chapterCount?:unknown;archived?:unknown;cover?:{image?:unknown}}) {
+  return (value.language===undefined||typeof value.language==='string'&&value.language.length<=100)&&labels(value.genres,4)&&labels(value.subgenres,12)&&(value.chapterCount===undefined||Number.isSafeInteger(value.chapterCount)&&Number(value.chapterCount)>=1&&Number(value.chapterCount)<=1000)&&(value.series===undefined||typeof value.series==='string'&&value.series.length<=200)&&
     (value.seriesIndex===undefined||typeof value.seriesIndex==='string'&&value.seriesIndex.length<=100)&&
     (value.archived===undefined||typeof value.archived==='boolean')&&validCoverImage(value.cover?.image);
 }
 export function novelSettingsPatch(novel:Novel,patch:NovelSettingsPatch):NovelSettingsPatch|null {
   const next={...novel,...patch};
   if(typeof next.title!=='string'||!next.title.trim()||next.title.length>200||typeof next.author!=='string'||next.author.length>200||!next.cover||typeof next.cover.bg!=='string'||typeof next.cover.icon!=='string'||!validNovelMetadata(next))return null;
-  return {title:next.title.trim(),author:next.author.trim(),series:next.series?.trim()||'',seriesIndex:next.seriesIndex?.trim()||'',archived:next.archived??false,cover:{...next.cover}};
+  return {title:next.title.trim(),author:next.author.trim(),series:next.series?.trim()||'',seriesIndex:next.seriesIndex?.trim()||'',language:next.language?.trim(),genres:next.genres?.map(value=>value.trim()),subgenres:next.subgenres?.map(value=>value.trim()),chapterCount:next.chapterCount,archived:next.archived??false,cover:{...next.cover}};
 }
 /** A portable, bounded raster image: included in cloud snapshots and JSON backups. */
 export async function readNovelCover(file:File):Promise<string> {

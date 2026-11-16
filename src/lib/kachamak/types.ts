@@ -85,6 +85,10 @@ export interface Novel {
   cover: { bg: string; icon: string; image?: string };
   series?: string;
   seriesIndex?: string;
+  language?: string;
+  genres?: string[];
+  subgenres?: string[];
+  chapterCount?: number;
   archived?: boolean;
   sections: Record<SectionKey, NoteNode[]>;
   trash: TrashItem[];

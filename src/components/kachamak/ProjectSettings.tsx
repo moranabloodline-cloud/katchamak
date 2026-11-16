@@ -6,6 +6,7 @@ import {saveWebLibrary,prepareWebImport,importWebProject,removeWebProject} from 
 import {readNovelCover} from '@/lib/kachamak/project-settings';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel} from '@/components/ui/alert-dialog';
+import {BookMetadataFields} from './BookMetadataFields';
 import {ManuscriptExport} from './ManuscriptExport';
 import {toast} from 'sonner';
 
@@ -15,17 +16,18 @@ const card='rounded-md border border-white/15 bg-[#1e1e20] p-4';
 export function ProjectSettings({open,onOpenChange}:{open:boolean;onOpenChange:(open:boolean)=>void}) {
   const novels=useKachamak(s=>s.novels),active=useKachamak(s=>s.activeNovelId),novel=novels.find(n=>n.id===active);
   const [title,setTitle]=useState(''),[author,setAuthor]=useState(''),[series,setSeries]=useState(''),[seriesIndex,setSeriesIndex]=useState('');
+  const [language,setLanguage]=useState(''),[genres,setGenres]=useState<string[]>([]),[subgenres,setSubgenres]=useState<string[]>([]),[chapterCount,setChapterCount]=useState('');
   const [image,setImage]=useState<string|undefined>(),[newSeries,setNewSeries]=useState<string|null>(null),[working,setWorking]=useState(false);
   const [exportOpen,setExportOpen]=useState(false),[deleteOpen,setDeleteOpen]=useState(false),[confirmTitle,setConfirmTitle]=useState(''),[importReady,setImportReady]=useState(false);
   const imageInput=useRef<HTMLInputElement>(null),backupInput=useRef<HTMLInputElement>(null),openedAt=useRef(0);
-  useEffect(()=>{if(open&&novel){setTitle(novel.title);setAuthor(novel.author);setSeries(novel.series||'');setSeriesIndex(novel.seriesIndex||'');setImage(novel.cover.image);setNewSeries(null);setDeleteOpen(false);setConfirmTitle('');openedAt.current=novel.updatedAt;}},[open,novel?.id]);
+  useEffect(()=>{if(open&&novel){setTitle(novel.title);setAuthor(novel.author);setSeries(novel.series||'');setSeriesIndex(novel.seriesIndex||'');setImage(novel.cover.image);setLanguage(novel.language??'');setGenres(novel.genres??[]);setSubgenres(novel.subgenres??[]);setChapterCount(novel.chapterCount?.toString()??'');setNewSeries(null);setDeleteOpen(false);setConfirmTitle('');openedAt.current=novel.updatedAt;}},[open,novel?.id]);
   if(!novel)return null;
   const seriesNames=[...new Set(novels.map(n=>n.series?.trim()).filter((s):s is string=>!!s).concat(series?[series]:[]))].sort((a,b)=>a.localeCompare(b));
   const persist=async(archived=novel.archived??false)=>{
     const current=useKachamak.getState().novels.find(n=>n.id===novel.id);
     if(!current)throw new Error('This project is no longer available.');
     if(current.updatedAt!==openedAt.current)throw new Error('This project changed while Settings was open. Reopen Settings to review the latest version.');
-    if(!useKachamak.getState().updateNovelSettings(novel.id,{title,author,series,seriesIndex,archived,cover:{...current.cover,image}}))throw new Error('Enter a novel title and check the metadata fields.');
+    if(!useKachamak.getState().updateNovelSettings(novel.id,{title,author,series,seriesIndex,language,genres,subgenres,chapterCount:chapterCount?Number(chapterCount):undefined,archived,cover:{...current.cover,image}}))throw new Error('Enter a novel title and check the metadata fields.');
     openedAt.current=useKachamak.getState().novels.find(n=>n.id===novel.id)!.updatedAt;
     await saveWebLibrary();
   };
@@ -44,6 +46,7 @@ export function ProjectSettings({open,onOpenChange}:{open:boolean;onOpenChange:(
               <label className="text-xs">Series index<input aria-label="Series index" maxLength={100} placeholder="e.g. Book 1" className={field} value={seriesIndex} onChange={e=>setSeriesIndex(e.target.value)} disabled={working}/></label>
             </div>
             {newSeries!==null&&<div className="mt-3 flex gap-2"><input autoFocus aria-label="New series name" placeholder="Series name" maxLength={200} className={field+' mt-0'} value={newSeries} onChange={e=>setNewSeries(e.target.value)}/><button type="button" className={button} disabled={!newSeries.trim()} onClick={()=>{setSeries(seriesNames.find(s=>s.toLocaleLowerCase()===newSeries.trim().toLocaleLowerCase())||newSeries.trim());setNewSeries(null);}}>Add</button><button type="button" className={button} onClick={()=>setNewSeries(null)}>Cancel</button></div>}
+            <BookMetadataFields language={language} genres={genres} subgenres={subgenres} chapterCount={chapterCount} onLanguage={setLanguage} onGenres={setGenres} onSubgenres={setSubgenres} onChapterCount={setChapterCount} disabled={working} extraGenres={novels.flatMap(value=>value.genres??[])} extraSubgenres={novels.flatMap(value=>value.subgenres??[])}/>
             <div className="mt-4 flex justify-end"><button type="submit" disabled={working||!title.trim()} className="rounded bg-amber-400 px-4 py-2 text-xs font-medium text-black disabled:opacity-40">{working?'Saving…':'Save changes'}</button></div>
           </form>
           <section className={card}><h2 className="text-xs font-bold uppercase tracking-wide">Danger Zone</h2><p className="mt-2 text-xs leading-relaxed text-[#cfb77d]">Archiving keeps all your work. Deleting removes this novel from your library and cannot be undone here. Export a backup first.</p><div className="mt-3 flex flex-wrap justify-between gap-2"><button className={button} disabled={working} onClick={()=>void run(async()=>{await persist(!novel.archived);onOpenChange(false);useKachamak.getState().closeNovel();toast.success(novel.archived?'Novel restored to the library.':'Novel archived. Find it under Archived in the library.');})}><Archive className="h-3.5 w-3.5"/>{novel.archived?'Unarchive Novel':'Archive Novel'}</button><button className={button+' text-red-400'} disabled={working} onClick={()=>{setConfirmTitle('');setDeleteOpen(true);}}><Trash2 className="h-3.5 w-3.5"/>Delete Novel</button></div></section>
