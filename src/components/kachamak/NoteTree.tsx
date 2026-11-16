@@ -376,7 +376,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
             documentation; the dots stay visible while a menu/picker is open */}
         <span
           className={`${
-            menuOpen || pickerOpen ? "flex" : "hidden group-hover:flex"
+            menuOpen || pickerOpen ? "flex" : "hidden group-hover:flex group-focus-within:flex"
           } shrink-0 items-center`}
         >
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

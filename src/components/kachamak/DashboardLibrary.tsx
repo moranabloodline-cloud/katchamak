@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react";
 import { Archive, ArrowLeft, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, Feather, Folder, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
 import {useKachamak, exportNovelJson } from "@/lib/kachamak/store";
@@ -14,6 +14,19 @@ import { AccountMenu } from "./AccountMenu";
 import { HelpCenter } from "./HelpCenter";
 import { ProjectFileStatus } from "./ProjectFileStorage";
 import { toast } from "sonner";
+
+// Each surface owns one menu, shared by right-click and its ellipsis button.
+const ItemMenuContext = createContext<{open:boolean;setOpen:(open:boolean)=>void}|null>(null);
+function LibraryItem({as:Tag='div',children,...props}:HTMLAttributes<HTMLElement>&{as?:'div'|'article'}) {
+  const [open,setOpen]=useState(false);
+  const openMenu=(event:React.SyntheticEvent)=>{event.preventDefault();event.stopPropagation();setOpen(true);};
+  return <ItemMenuContext.Provider value={{open,setOpen}}><Tag {...props} onContextMenu={openMenu} onKeyDown={event=>{if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10')openMenu(event);}}>{children}</Tag></ItemMenuContext.Provider>;
+}
+function LibraryItemMenu({children}:{children:ReactNode}) {
+  const menu=useContext(ItemMenuContext)!;
+  return <DropdownMenu open={menu.open} onOpenChange={menu.setOpen}>{children}</DropdownMenu>;
+}
+const itemActions='opacity-0 group-hover/library-item:opacity-100 group-focus-within/library-item:opacity-100 data-[state=open]:opacity-100 focus-visible:opacity-100';
 
 type DragItem = { kind: "collection" | "project"; id: string; sourceId: string | null };
 const DRAG_TYPE = "application/x-katchamak-library";
@@ -130,13 +143,13 @@ export function DashboardLibrary(props: Props) {
     <DropdownMenuItem onSelect={() => move(item, null)}>Library</DropdownMenuItem>
     {collections.map((c) => <DropdownMenuItem key={c.id} disabled={item.kind === "collection" && !canMoveCollection(collections, item.id, c.id)} onSelect={() => move(item, c.id)}><span className="truncate">{collectionPath(collections, c.id).map((p) => p.name).join(" / ")}</span></DropdownMenuItem>)}
   </DropdownMenuSubContent></DropdownMenuSub>;
-  const folderMenu = (c: Collection) => <DropdownMenu><DropdownMenuTrigger asChild><button aria-label={`Options for collection ${c.name}`} className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">
+  const folderMenu = (c: Collection) => <LibraryItemMenu><DropdownMenuTrigger asChild><button aria-label={`Options for collection ${c.name}`} className={`${itemActions} shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10`}><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">
     <DropdownMenuItem onSelect={() => navigate(c.id)}>Open collection</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => props.onRenameCollection(c)}>Rename</DropdownMenuItem>
     {destinationMenu({ kind: "collection", id: c.id, sourceId: c.parentId })}
     <DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onSelect={() => props.onDeleteCollection(c.id)}>Delete collection</DropdownMenuItem>
-  </DropdownMenuContent></DropdownMenu>;
-  const projectMenu = (n: Novel, sourceId: string | null) => <DropdownMenu><DropdownMenuTrigger asChild><button aria-label={`Options for project ${n.title}`} className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-96 max-w-80 overflow-y-auto">
+  </DropdownMenuContent></LibraryItemMenu>;
+  const projectMenu = (n: Novel, sourceId: string | null) => <LibraryItemMenu><DropdownMenuTrigger asChild><button aria-label={`Options for project ${n.title}`} className={`${itemActions} shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10`}><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-96 max-w-80 overflow-y-auto">
     <DropdownMenuItem onSelect={() => props.onOpenProject(n.id)}>Open project</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => { exportNovelJson(n); toast.success("Backup downloaded."); }}>Export backup</DropdownMenuItem>
     {destinationMenu({ kind: "project", id: n.id, sourceId })}
@@ -144,21 +157,21 @@ export function DashboardLibrary(props: Props) {
     <DropdownMenuItem variant="destructive" onSelect={() => props.onDeleteProject(n)}>Delete project</DropdownMenuItem>
     <DropdownMenuSeparator />
     {collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(n.id)} onSelect={(e) => e.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, n.id, checked === true)}><span className="truncate">{collectionPath(collections, c.id).map((p) => p.name).join(" / ")}</span></DropdownMenuCheckboxItem>)}
-  </DropdownMenuContent></DropdownMenu>;
+  </DropdownMenuContent></LibraryItemMenu>;
   const projectsAt = (id: string | null) => novels.filter((n) => !!n.archived===showArchived).filter((n) => id ? collections.find((c) => c.id === id)?.projectIds.includes(n.id) : !collections.some((c) => c.projectIds.includes(n.id)));
   const sortedCollections = (parentId: string | null) => collections.filter((c) => c.parentId === parentId).sort((a, b) => sort === "title" ? a.name.localeCompare(b.name) : (sort === "created" ? (b.createdAt ?? 0) - (a.createdAt ?? 0) : (b.updatedAt ?? 0) - (a.updatedAt ?? 0)));
   const tree = (parentId: string | null, depth = 0): ReactNode => <>
     {sortedCollections(parentId).map((c) => <div key={c.id}>
-      <div {...dropZone(c.id)} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} data-tree-collection={c.id} className={`flex h-9 items-center rounded-md pr-1 text-sm ${dropTarget === c.id ? "bg-amber-400/25 ring-1 ring-inset ring-amber-300" : location === c.id ? "bg-amber-400/10 text-[#f5d99d]" : "text-[#bcb8b0] hover:bg-white/5"}`} style={{ paddingLeft: 6 + depth * 16, minWidth: 150 + depth * 16 }}>
+      <LibraryItem {...dropZone(c.id)} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} data-tree-collection={c.id} className={`group/library-item flex h-9 items-center rounded-md pr-1 text-sm ${dropTarget === c.id ? "bg-amber-400/25 ring-1 ring-inset ring-amber-300" : location === c.id ? "bg-amber-400/10 text-[#f5d99d]" : "text-[#bcb8b0] hover:bg-white/5"}`} style={{ paddingLeft: 6 + depth * 16, minWidth: 150 + depth * 16 }}>
         <button type="button" aria-label={`${expanded.includes(c.id) ? "Collapse" : "Expand"} ${c.name}`} aria-expanded={expanded.includes(c.id)} onClick={() => prefs.toggleExpanded(c.id)} className="shrink-0 rounded p-1 hover:bg-white/10">{expanded.includes(c.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>
         <button type="button" onClick={() => navigate(c.id)} aria-current={location === c.id ? "location" : undefined} className="flex min-w-0 flex-1 items-center gap-2 text-left" title={c.name}><Folder className="h-4 w-4 shrink-0 text-[#cba457]" /><span className="truncate">{c.name}</span></button>
         {folderMenu(c)}
-      </div>
+      </LibraryItem>
       {expanded.includes(c.id) && tree(c.id, depth + 1)}
     </div>)}
-    {projectsAt(parentId).map((n) => <div key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: parentId })} data-tree-project={n.id} className="flex h-9 items-center rounded-md pr-1 text-sm text-[#bcb8b0] hover:bg-white/5" style={{ paddingLeft: 30 + depth * 16, minWidth: 150 + depth * 16 }}>
+    {projectsAt(parentId).map((n) => <LibraryItem key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: parentId })} data-tree-project={n.id} className="group/library-item flex h-9 items-center rounded-md pr-1 text-sm text-[#bcb8b0] hover:bg-white/5" style={{ paddingLeft: 30 + depth * 16, minWidth: 150 + depth * 16 }}>
       <button type="button" onClick={() => props.onOpenProject(n.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left" title={n.title}><BookOpen className="h-4 w-4 shrink-0 text-[#bfae8c]" /><span className="truncate">{n.title}</span>{n.demo&&<span className="shrink-0 text-[10px] text-amber-300">Demo</span>}</button>{projectMenu(n, parentId)}
-    </div>)}
+    </LibraryItem>)}
   </>;
 
   const query = search.trim().toLocaleLowerCase();
@@ -205,11 +218,11 @@ export function DashboardLibrary(props: Props) {
         </div>
         <div ref={libraryRef} {...dropZone(location)} data-testid="library-content" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 kachamak-scroll ${dropTarget !== undefined && dropTarget === location ? "bg-amber-400/[0.04] ring-1 ring-inset ring-amber-400/40" : ""}`}>
           <div className="mb-5 flex items-center gap-2"><h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-[#f2ead9]" title={active?.name ?? (showArchived?"Archived":"Library")}>{active?.name ?? (showArchived?"Archived":"Library")}</h1><span className="shrink-0 text-xs text-muted-foreground">{folders.length + projects.length} items</span></div>
-          {folders.length > 0 && <section aria-label="Folders" className="mb-6"><div className={layout === "grid" ? "grid gap-3" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{folders.map((c) => <div key={c.id} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} {...dropZone(c.id)} data-library-collection={c.id} className={`flex min-w-0 items-center rounded-lg border px-2 py-3 ${dropTarget === c.id ? "border-amber-300 bg-amber-400/15" : "border-white/10 bg-white/[0.02] hover:border-[#a97f33]/60"}`}>
+          {folders.length > 0 && <section aria-label="Folders" className="mb-6"><div className={layout === "grid" ? "grid gap-3" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{folders.map((c) => <LibraryItem key={c.id} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} {...dropZone(c.id)} data-library-collection={c.id} className={`group/library-item flex min-w-0 items-center rounded-lg border px-2 py-3 ${dropTarget === c.id ? "border-amber-300 bg-amber-400/15" : "border-white/10 bg-white/[0.02] hover:border-[#a97f33]/60"}`}>
             <button type="button" onClick={() => navigate(c.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left" aria-label={`Open collection ${c.name}`}><span className={`flex shrink-0 items-center justify-center ${layout === "list" ? "h-12 w-8" : ""}`}><FolderOpen className={`shrink-0 text-[#d1ac60] ${layout === "grid" ? "h-9 w-9" : "h-6 w-6"}`} /></span><span className="min-w-0 flex-1 basis-16"><span className="block truncate text-sm text-[#e9dfcb]">{c.name}</span>{layout === "grid" && <span className="mt-0.5 block text-xs text-muted-foreground">Collection</span>}</span>{layout === "list" && <><span className="w-14 text-xs text-muted-foreground">Collection</span><span className="w-24 text-xs text-muted-foreground">—</span><span className="w-24 text-xs text-muted-foreground/70">{c.updatedAt ? modified(c.updatedAt) : "—"}</span></>}</button>{folderMenu(c)}
-          </div>)}</div></section>}
+          </LibraryItem>)}</div></section>}
           {projectGroups.map(([name, entries]) => entries.length > 0 && <section key={name || "projects"} aria-label={name || "Projects"} className="mb-6">{name && <h2 className="mb-3 border-b border-white/10 pb-2 text-sm text-[#d9c394]">{name}</h2>}
-            <div className={layout === "grid" ? "grid items-start gap-x-5 gap-y-7" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{entries.map((n) => <article key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: location })} data-library-project={n.id} className={`group relative min-w-0 ${layout === "list" ? "flex items-center gap-2 rounded-md border border-white/[0.07] bg-white/[0.02] px-2 py-2 hover:bg-white/5" : ""}`}>
+            <div className={layout === "grid" ? "grid items-start gap-x-5 gap-y-7" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{entries.map((n) => <LibraryItem as="article" key={n.id} {...dragProps({ kind: "project", id: n.id, sourceId: location })} data-library-project={n.id} className={`group group/library-item relative min-w-0 ${layout === "list" ? "flex items-center gap-2 rounded-md border border-white/[0.07] bg-white/[0.02] px-2 py-2 hover:bg-white/5" : ""}`}>
               <button type="button" onClick={() => props.onOpenProject(n.id)} aria-label={`Open ${n.title}`} className={layout === "grid" ? "block w-full text-left" : "flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left"}>
                 <Cover novel={n} small={layout === "list"} />
                 <span className={layout === "grid" ? "mt-3 block pr-6" : "min-w-0 flex-1 basis-24"}><span className="block break-words font-serif text-base leading-snug text-[#eee7d8] group-hover:text-[#f5d99d]">{n.title}{n.demo&&<span className="ml-2 inline-block rounded border border-amber-400/30 px-1.5 py-0.5 align-middle font-sans text-[10px] text-amber-300">Demo</span>}</span>{n.series&&<span className="mt-1 block text-xs text-muted-foreground">{n.series}{n.seriesIndex?" · "+n.seriesIndex:""}</span>}{layout === "list" && <span className="text-xs text-muted-foreground">{n.author}</span>}</span>
@@ -217,8 +230,8 @@ export function DashboardLibrary(props: Props) {
                 <span className={layout === "grid" ? "mt-1.5 block text-xs leading-relaxed text-muted-foreground" : "w-24 text-xs text-muted-foreground"}>{novelWords(n).toLocaleString()} words</span>
                 <span title={new Date(n.updatedAt).toLocaleString()} className={layout === "grid" ? "block text-xs leading-relaxed text-muted-foreground/70" : "w-24 text-xs text-muted-foreground/70"}>{layout === "grid" ? "Modified " : ""}{modified(n.updatedAt)}</span>
               </button>
-              <div className={layout === "grid" ? "absolute right-2 top-2 rounded bg-[#0a0c10]/90" : ""}>{projectMenu(n, location)}</div>
-            </article>)}</div>
+              <div className={layout === "grid" ? "absolute right-2 top-2 rounded has-[button[data-state=open]]:opacity-100 opacity-0 group-hover/library-item:opacity-100 group-focus-within/library-item:opacity-100" : ""}>{projectMenu(n, location)}</div>
+            </LibraryItem>)}</div>
           </section>)}
           {!folders.length && !projects.length && <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-center text-muted-foreground"><FolderOpen className="h-10 w-10 text-[#8d7548]" /><p className="text-sm">{query ? "No matching collections or projects." : "This location is empty."}</p>{!query && <p className="max-w-64 text-xs leading-relaxed">Create a collection or project, or drag items here from the tree.</p>}</div>}
         </div>
