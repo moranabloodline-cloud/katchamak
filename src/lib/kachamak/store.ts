@@ -871,7 +871,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 28,
+      version: 29,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -884,6 +884,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<29){if(typeof s.editorSpellCheck!=='boolean')s.editorSpellCheck=true;}
         if(version<28){ /* Optional per-note document targets; existing notes have no target. */ }
         if(version<27){ /* Optional per-project tab order; keep existing notes and the default order. */ }
         if(version<26){if(!validPageFormat(s.pageFormat))s.pageFormat={...DEFAULT_PAGE_FORMAT};}

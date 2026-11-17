@@ -25,8 +25,8 @@ const snapshot = () => {
   if(subscribed&&!snapshotDirty)return cachedSnapshot;
   const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
   const {selectedCollection, expanded} = useLibraryPreferences.getState();
-  const {editorFont:font,editorSize:size,editorSpacing:spacing,pageFormat:page}=useKachamak.getState();
-  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, editorAppearance:{font,size,spacing,page}, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
+  const {editorFont:font,editorSize:size,editorSpacing:spacing,pageFormat:page,editorSpellCheck:spellCheck}=useKachamak.getState();
+  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, editorAppearance:{font,size,spacing,page,spellCheck}, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
   snapshotDirty=false;
   return cachedSnapshot;
 };
@@ -54,7 +54,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
   const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline'].includes(preferredView ?? '') ? { view: preferredView! } : {};
   if(data.snapshot.editorAppearance!==undefined&&!validEditorAppearance(data.snapshot.editorAppearance))throw new Error('The saved page format could not be read.');
   const appearance=data.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;
-  const restoredAppearance=keepAppearance?{}:{editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page}};
+  const restoredAppearance=keepAppearance?{}:{editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page},editorSpellCheck:appearance.spellCheck??true};
   const navigation: Partial<Navigation> = {};
   if (!useWebLibrary.getState().ready && (route || data.snapshot.navigation)) {
     const saved = route?.navigation ?? data.snapshot.navigation!;
@@ -104,7 +104,7 @@ export async function initializeWebLibrary() {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
-      const fields=['novels','view','activeNovelId','activeTab','selectedNodeId','paneAId','paneBId','activePane','editorFont','editorSize','editorSpacing','pageFormat'] as const;
+      const fields=['novels','view','activeNovelId','activeTab','selectedNodeId','paneAId','paneBId','activePane','editorFont','editorSize','editorSpacing','pageFormat','editorSpellCheck'] as const;
       useKachamak.subscribe((state,before)=>{if(fields.some(field=>state[field]!==before[field]))changed();});
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
       useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
@@ -155,7 +155,7 @@ async function reconcileRevision(){
     throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
   }
   revision=remote.revision;saved=JSON.stringify(remote.snapshot);
-  if(!keepAppearance){const appearance=remote.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;applying=true;try{useKachamak.setState({editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page}});}finally{applying=false;}snapshotDirty=true;}
+  if(!keepAppearance){const appearance=remote.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;applying=true;try{useKachamak.setState({editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page},editorSpellCheck:appearance.spellCheck??true});}finally{applying=false;}snapshotDirty=true;}
   useWebLibrary.setState({conflict:false,error:null});
 }
 export async function refreshWebLibrary() {

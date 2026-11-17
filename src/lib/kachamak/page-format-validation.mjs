@@ -5,4 +5,5 @@ export const validPageFormat=value=>!!value && typeof value==='object' &&
   ['left','justify'].includes(value.align) && ['line','dots','asterisks','space'].includes(value.divider) &&
   ['centered','fit','stacked'].includes(value.layout) && typeof value.colorizeAnnotations==='boolean';
 export const validEditorAppearance=value=>!!value && PAGE_FONTS.includes(value.font) &&
-  [12,14,16,18,20,24].includes(value.size) && ['1.0','1.15','1.5','2.0'].includes(value.spacing) && validPageFormat(value.page);
+  [12,14,16,18,20,24].includes(value.size) && ['1.0','1.15','1.5','2.0'].includes(value.spacing) && validPageFormat(value.page) &&
+  (value.spellCheck===undefined||typeof value.spellCheck==='boolean');

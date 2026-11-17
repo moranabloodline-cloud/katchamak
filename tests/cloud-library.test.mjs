@@ -74,9 +74,10 @@ JSON.stringify=function(value,...args){if(value?.novels===useKachamak.getState()
 try {
  const beforeUI=(await (await call(a)).json()).revision;
  useKachamak.getState().setEditorSpellCheck(false);
- assert.equal(cloud.useWebLibrary.getState().pending,false,'Spelling preferences do not dirty cloud project data');
- await cloud.saveWebLibrary();assert.equal(serializations,0,'UI-only updates reuse the saved snapshot');
- assert.equal((await (await call(a)).json()).revision,beforeUI);
+ assert.equal(cloud.useWebLibrary.getState().pending,true,'Spelling changes schedule an authenticated preference save');
+ await cloud.saveWebLibrary();assert.equal(serializations,1,'The spelling choice is serialized once at Save');
+ assert.ok((await (await call(a)).json()).revision>beforeUI);
+ assert.equal((await (await call(a)).json()).snapshot.editorAppearance.spellCheck,false,'Off is stored as false');
  const manuscriptBeforeFormat=JSON.stringify(useKachamak.getState().novels);
  useKachamak.getState().setEditorSize(18);
  useKachamak.getState().setPageFormat({indent:1.5,paragraphGap:0.5,width:60,layout:'stacked',colorizeAnnotations:false});
@@ -86,6 +87,8 @@ try {
  assert.equal((await call(a,'/api/library','POST',{revision:concurrent.revision,snapshot:{...concurrent.snapshot,view:'split'}})).status,200);
  await cloud.saveWebLibrary();
  const formatted=(await (await call(a)).json()).snapshot;
+ assert.equal(formatted.editorAppearance.spellCheck,false,'Revision reconciliation preserves pending spelling choice');
+ assert.equal(validCloudLibrary({...formatted,editorAppearance:{...formatted.editorAppearance,spellCheck:'false'}}),false,'Server rejects nonboolean spelling values');
  assert.equal(formatted.editorAppearance.size,18);assert.equal(formatted.editorAppearance.page.width,60,'A newer navigation revision cannot drop pending page preferences');
  assert.equal(validCloudLibrary({...formatted,editorAppearance:{...formatted.editorAppearance,page:{...formatted.editorAppearance.page,width:'invalid'}}}),false);
  serializations=0;
@@ -115,6 +118,8 @@ await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().view,'write','Reopening restores the saved Write view');
 assert.equal(useKachamak.getState().editorSize,18,'Reopening restores page typography');
 assert.equal(useKachamak.getState().pageFormat.layout,'stacked');
+assert.equal(useKachamak.getState().editorSpellCheck,false,'Reopening restores spelling off');
+useKachamak.getState().setEditorSpellCheck(true);await cloud.saveWebLibrary();cloud.useWebLibrary.setState({ready:false});useKachamak.setState({editorSpellCheck:false});await cloud.initializeWebLibrary();assert.equal(useKachamak.getState().editorSpellCheck,true,'Reload restores the last saved on choice');
 assert.equal(useKachamak.getState().activeNovelId,novel.id);
 assert.equal(useKachamak.getState().activeTab,'binder');
 assert.equal(useKachamak.getState().selectedNodeId,'note-1');
