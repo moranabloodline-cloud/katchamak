@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
+for(const key of ['window','document','Document','DocumentFragment','HTMLElement','HTMLInputElement','HTMLButtonElement','HTMLSelectElement','Element','Node','NodeFilter','DOMParser','Event','MouseEvent','CustomEvent','KeyboardEvent','MutationObserver','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:typeof dom[key]==='function'&&!/^[A-Z]/.test(key)?dom[key].bind(dom):dom[key]});
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+globalThis.requestAnimationFrame=callback=>setTimeout(callback,0);globalThis.cancelAnimationFrame=clearTimeout;
+dom.matchMedia=()=>({matches:false});
+dom.HTMLElement.prototype.scrollIntoView=()=>{};
+const React=await import('react'),{createRoot}=await import('react-dom/client');
+const {NotesSection}=await import('../src/components/kachamak/NotesSection.tsx');
+const {useKachamak}=await import('../src/lib/kachamak/store.ts');
+const {newNovel}=await import('../src/lib/kachamak/seed.ts');
+const {findNode}=await import('../src/lib/kachamak/utils.ts');
+const note=(id,children=[])=>({id,title:id,kind:'doc',content:'',synopsis:'Keep synopsis',notes:'',status:'',label:'',createdAt:1,updatedAt:1,children,event:{type:children.length?'period':'event',start:1,...(children.length?{end:10}:{}),precision:'year'}});
+const box=document.createElement('div');document.body.append(box);const root=createRoot(box);
+const field=label=>document.querySelector(`[aria-label="${label}"]`);
+const change=async(label,value)=>{const el=field(label);assert.ok(el,label);await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.Event('change',{bubbles:true}));});};
+const meta=()=>field('Status').textContent.replace(/\s/g,'');
+const setMeta=async(value)=>{
+  await React.act(async()=>field('Status').dispatchEvent(new dom.KeyboardEvent('keydown',{key:'Enter',bubbles:true})));
+  const option=[...document.querySelectorAll('[role="option"]')].find(el=>el.textContent===value);assert.ok(option,value);
+  await React.act(async()=>option.click());
+};
+for(const section of ['timeline','binder','codex','planning','research','templates','prompts']){
+  const novel=newNovel('Status QA','');novel.statuses=['To Do','Done'];
+  novel.sections[section]=[note('Dawn',[note('First Light'),note('Starbirth')])];novel.timeline={...novel.timeline,display:'outline'};
+  await React.act(async()=>{useKachamak.setState({novels:[novel],activeNovelId:novel.id,activeTab:section,selectedNodeId:'Dawn',paneAId:'Dawn',activePane:'a',view:'timeline',rightPanelOpen:true});root.render(React.createElement(NotesSection,{key:section,section}));});
+  assert.equal(meta(),'NoStatus');
+  await change('Status for First Light','Done');
+  assert.equal(useKachamak.getState().selectedNodeId,'First Light','Editing a card selects that note for the inspector');
+  assert.equal(useKachamak.getState().paneAId,'First Light');assert.equal(meta(),'Done');
+  assert.equal(field('Status for First Light').value,'Done');assert.ok(field('Status for Starbirth'),'Editing status preserves the outline scope');
+  assert.equal(findNode(novel.sections[section],'Dawn').status,'','Parent status is independent');assert.equal(findNode(novel.sections[section],'Starbirth').status,'');
+  await setMeta('To Do');assert.equal(field('Status for First Light').value,'To Do','Metadata edits update the existing card immediately');
+  await setMeta('No Status');assert.equal(field('Status for First Light').value,'');
+  await change('Status for Starbirth','Done');assert.equal(meta(),'Done');
+  await change('Status for Starbirth','');assert.equal(meta(),'NoStatus');
+  await change('Status for Starbirth','Done');
+  const saved=JSON.parse(JSON.stringify(useKachamak.getState().novels));
+  await React.act(async()=>useKachamak.setState({novels:saved,view:'list'}));
+  const row=[...box.querySelectorAll('tbody tr')].find(el=>el.textContent.includes('Starbirth'));assert.ok(row?.textContent.includes('Done'),'List reads the saved note status');assert.equal(meta(),'Done');
+  await setMeta('To Do');assert.ok([...box.querySelectorAll('tbody tr')].find(el=>el.textContent.includes('Starbirth'))?.textContent.includes('To Do'));
+}
+// A nested period card must stay on the same board, including the active split pane.
+const nestedNovel=newNovel('Nested status QA','');nestedNovel.statuses=['To Do','Done'];nestedNovel.timeline={...nestedNovel.timeline,display:'outline'};
+nestedNovel.sections.timeline=[note('World',[note('Dawn',[note('Subperiod',[note('Spark')]),note('Sibling')]),note('Earth',[note('Other event')])])];
+await React.act(async()=>{useKachamak.setState({novels:[nestedNovel],activeNovelId:nestedNovel.id,selectedNodeId:'World',paneAId:'World',paneBId:'World',activePane:'b',view:'timeline'});root.render(React.createElement(NotesSection,{key:'nested',section:'timeline'}));});
+await change('Status for Subperiod','Done');assert.equal(meta(),'Done');assert.equal(useKachamak.getState().paneBId,'Subperiod');assert.equal(useKachamak.getState().paneAId,'World');assert.ok(field('Status for Other event'));assert.ok(field('Status for Sibling'));
+await setMeta('To Do');assert.equal(field('Status for Subperiod').value,'To Do');
+await React.act(async()=>document.querySelector('[data-note-id="Earth"]').click());assert.ok(field('Status for Other event'));assert.equal(field('Status for Subperiod'),null,'Explicit tree navigation releases the retained board scope');assert.equal(meta(),'NoStatus');
+await React.act(async()=>root.unmount());dom.close();
+console.log('Note status sync passed: outline selects the edited note, inspector/card bidirectional updates, clearing, unchanged parent/siblings, retained scope, saved roundtrip and list in all sections.');

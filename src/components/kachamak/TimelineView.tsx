@@ -1,5 +1,5 @@
 'use client';
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight,Plus,Settings2,ZoomIn,ZoomOut,Maximize2,Layers} from 'lucide-react';
 import {useKachamak} from '@/lib/kachamak/store';
 import {findNode,findNodeInNovel} from '@/lib/kachamak/utils';
@@ -25,12 +25,18 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
   const [editing,setEditing]=useState<{id?:string;start:number}|null>(null);
   const [jump,setJump]=useState<StoryDate|null>(null),[jumpError,setJumpError]=useState('');
   const importFile=useRef<HTMLInputElement>(null),[importing,setImporting]=useState(false);
+  // Editing a card selects its note for the inspector without drilling into it.
+  const [outlineSelection,setOutlineSelection]=useState<{id:string;scopeId?:string}|null>(null);
+  const mode=novel?.timeline?.display??(section==='timeline'?'axis':'chronicle');
+  useEffect(()=>{
+    if(mode!=='outline'||outlineSelection?.id!==state.selectedNodeId)setOutlineSelection(null);
+  },[mode,state.selectedNodeId,outlineSelection]);
   const selectedScope=novel&&state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const folderScope=novel&&rootId?findNodeInNovel(novel,rootId)?.node:null;
-  const scopeId=novel&&section==="timeline"?timelineScope(novel.sections.timeline,state.selectedNodeId,rootId):selectedScope?.section===section&&(!folderScope||findNode([folderScope],selectedScope.node.id))?selectedScope.node.id:rootId;
+  const scopeId=mode==='outline'&&outlineSelection?.id===state.selectedNodeId?outlineSelection.scopeId:novel&&section==="timeline"?timelineScope(novel.sections.timeline,state.selectedNodeId,rootId):selectedScope?.section===section&&(!folderScope||findNode([folderScope],selectedScope.node.id))?selectedScope.node.id:rootId;
   const [viewport,setViewport]=useState<{key:string;center:number;span:number}|null>(null);
   if(!novel)return null;
-  const prefs=novel.timeline,calendar=prefs?.calendar??GREGORIAN,groups=prefs?.groups??[],mode=prefs?.display??(section==='timeline'?'axis':'chronicle');
+  const prefs=novel.timeline,calendar=prefs?.calendar??GREGORIAN,groups=prefs?.groups??[];
   const all=timelineRows(novel,section,scopeId,true),hidden=prefs?.hiddenGroups??[];
   const level=section==='timeline'&&mode==='axis'?timelineLevelIds(novel.sections.timeline,scopeId):null;
   const rows=all.filter(r=>(!level||level.has(r.node.id))&&!hidden.includes(groupFor(r.event,groups)));
@@ -55,7 +61,7 @@ export function TimelineView({section='binder',rootId}:{section?:SectionKey;root
       </div>
       {mode!=='outline'&&<div className="flex flex-wrap items-center gap-1.5"><button className={timeButton} onClick={()=>setGroupsOpen(true)}><Layers className="h-3.5 w-3.5"/>Groups</button>{renderGroups.filter(g=>g.id||all.some(r=>groupFor(r.event,groups)==='')).map(g=><button key={g.id} aria-pressed={!hidden.includes(g.id)} className={`flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-1 text-[11px] ${hidden.includes(g.id)?'opacity-40 line-through':''}`} onClick={()=>state.setTimeline({hiddenGroups:hidden.includes(g.id)?hidden.filter(id=>id!==g.id):[...hidden,g.id]})}><span className="h-1.5 w-1.5 rounded-full" style={{background:g.color}}/>{g.name}</button>)}<span className="ml-auto text-[11px] text-muted-foreground">{rows.filter(r=>r.event.type!=="period"&&r.event.end===undefined).length} events · {rows.filter(r=>r.event.type==="period"||r.event.end!==undefined).length} periods</span></div>}</details>
     </header>
-    {mode==='outline'?<div className="min-h-0 flex-1"><OutlineView section={section} rootId={scopeId}/></div>:<>
+    {mode==='outline'?<div className="min-h-0 flex-1"><OutlineView section={section} rootId={scopeId} onSelectNote={id=>{setOutlineSelection({id,scopeId});state.select(id);}}/></div>:<>
       {(mode==='axis'||mode==='calendar')&&<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2">
         <button aria-label={mode==='calendar'?'Previous month':'Earlier dates'} className={timeButton} onClick={()=>mode==='calendar'?monthMove(-1):changeCenter(center-span/2)}><ChevronLeft className="h-4 w-4"/></button>
         <button aria-label={mode==='calendar'?'Next month':'Later dates'} className={timeButton} onClick={()=>mode==='calendar'?monthMove(1):changeCenter(center+span/2)}><ChevronRight className="h-4 w-4"/></button>

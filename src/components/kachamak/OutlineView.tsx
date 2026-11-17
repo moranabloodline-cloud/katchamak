@@ -4,7 +4,7 @@ import { useKachamak } from '@/lib/kachamak/store';
 import { findNode, stripHtml } from '@/lib/kachamak/utils';
 import type { NoteNode, SectionKey } from '@/lib/kachamak/types';
 
-export function OutlineView({section='binder',rootId}:{section?:SectionKey;rootId?:string}) {
+export function OutlineView({section='binder',rootId,onSelectNote}:{section?:SectionKey;rootId?:string;onSelectNote?:(id:string)=>void}) {
   const state=useKachamak(), novel=state.novels.find(n=>n.id===state.activeNovelId);
   if(!novel)return null;
   const prefs=novel.timeline??{rootId:null,detail:'synopsis',compact:false};
@@ -15,10 +15,14 @@ export function OutlineView({section='binder',rootId}:{section?:SectionKey;rootI
   const containers:{id:string;title:string}[]=[];
   const walk=(nodes:NoteNode[],depth=0)=>nodes.forEach(n=>{if(n.children.length){containers.push({id:n.id,title:'· '.repeat(depth)+n.title});walk(n.children,depth+1);}});walk(candidates);
   const open=(id:string)=>{state.select(id);state.setView('write');};
+  const changeStatus=(id:string,status:string)=>{
+    state.updateNode(section,id,{status});
+    (onSelectNote??state.select)(id);
+  };
   const card=(node:NoteNode,index:number,total:number)=> <article key={node.id} className={`rounded-lg border bg-card ${state.selectedNodeId===node.id?'border-amber-400/60':'border-white/10'} ${prefs.compact?'p-2.5':'p-4'}`} style={{borderTopColor:node.color||'#ad7e2e',borderTopWidth:2}}>
     <div className="flex items-start gap-2"><button onClick={()=>open(node.id)} className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm font-medium hover:text-amber-200"><FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400"/><span>{node.title}</span></button><span className="text-[10px] text-muted-foreground">{index+1}</span></div>
     {prefs.detail==='synopsis'&&<p className={`mt-3 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground ${prefs.compact?'line-clamp-2':'line-clamp-6'}`}>{stripHtml(node.synopsis)||'Add a synopsis in Info.'}</p>}
-    <div className="mt-3 flex items-center gap-2"><select aria-label={`Status for ${node.title}`} value={node.status||''} onChange={e=>state.updateNode(section,node.id,{status:e.target.value})} className="min-w-0 flex-1 rounded border border-white/10 bg-muted px-1 py-1 text-[11px] text-muted-foreground"><option value="">No status</option>{novel.statuses.map(s=><option key={s}>{s}</option>)}</select><button aria-label={`Move ${node.title} earlier`} disabled={index===0} onClick={()=>state.moveNode(section,node.id,'up')} className="text-muted-foreground disabled:opacity-20"><ArrowUp className="h-3.5 w-3.5"/></button><button aria-label={`Move ${node.title} later`} disabled={index===total-1} onClick={()=>state.moveNode(section,node.id,'down')} className="text-muted-foreground disabled:opacity-20"><ArrowDown className="h-3.5 w-3.5"/></button></div>
+    <div className="mt-3 flex items-center gap-2"><select aria-label={`Status for ${node.title}`} value={node.status||''} onChange={e=>changeStatus(node.id,e.target.value)} className="min-w-0 flex-1 rounded border border-white/10 bg-muted px-1 py-1 text-[11px] text-muted-foreground"><option value="">No status</option>{novel.statuses.map(s=><option key={s}>{s}</option>)}</select><button aria-label={`Move ${node.title} earlier`} disabled={index===0} onClick={()=>state.moveNode(section,node.id,'up')} className="text-muted-foreground disabled:opacity-20"><ArrowUp className="h-3.5 w-3.5"/></button><button aria-label={`Move ${node.title} later`} disabled={index===total-1} onClick={()=>state.moveNode(section,node.id,'down')} className="text-muted-foreground disabled:opacity-20"><ArrowDown className="h-3.5 w-3.5"/></button></div>
     {!!node.children.length&&<button onClick={()=>state.setTimeline({rootId:node.id})} className="mt-2 text-xs text-amber-300">View {node.children.length} sub-notes →</button>}
   </article>;
   return <div className="flex h-full flex-col bg-background">
