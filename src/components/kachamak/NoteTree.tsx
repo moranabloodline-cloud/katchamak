@@ -14,7 +14,6 @@ import {
   Library,
   MoreHorizontal,
   MoreVertical,
-  SquarePlus,
   BookText,
 } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -643,16 +642,6 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
           Details/Mentions reda: jedna linija od leve do desne ivice ekrana */}
       <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-white/10 pl-3 pr-2">
         <WorkspaceNavigation />
-        <span className="ml-auto" />
-        <button
-          type="button"
-          aria-label="Add note"
-          title="Add note"
-          onClick={() => addNode(section, selectedNodeId && findNode(scopedRoot ? [scopedRoot] : roots, selectedNodeId) ? selectedNodeId : rootId ?? null, "doc")}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-        >
-          <SquarePlus className="h-4 w-4" />
-        </button>
       </div>
 
       <ContextMenu>
@@ -670,7 +659,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         ))}
         {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
-            Empty. Use + above to create your first note.
+            Empty. Right-click here to create your first note.
           </p>
         )}
       </div>
