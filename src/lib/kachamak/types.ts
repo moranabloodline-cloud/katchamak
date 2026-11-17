@@ -56,6 +56,8 @@ export interface NoteNode {
   color?: string; // document colour (the dot in the right panel), "" = none
   image?: string; // optional portable raster portrait in Details
   hiddenDetailBlocks?: DetailBlockKey[]; // presentation only; hiding never deletes data
+  collapsedDetailBlocks?: DetailBlockKey[];
+  detailBlockOrder?: DetailBlockKey[];
   icon?: string; // note icon, chosen by the user (see NOTE_ICONS)
   hidden?: boolean; // "Hide" in the note menu — hidden from the tree
   collapsed?: boolean;

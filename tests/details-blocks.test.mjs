@@ -19,7 +19,7 @@ const blocks=()=>[...document.querySelectorAll('section[aria-label$=" block"]')]
 assert.deepEqual(blocks(),['Image block','Aliases block','Codex block']);
 const aliasArea=document.querySelector('textarea[aria-label=Aliases]');
 const typeAliases=async(value)=>React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLTextAreaElement.prototype,'value').set.call(aliasArea,value);aliasArea.dispatchEvent(new dom.Event('input',{bubbles:true}));});
-assert.equal(aliasArea.closest('section').querySelectorAll('button').length,1,'Only the block menu remains, without Save or Sort');
+assert.ok(![...aliasArea.closest('section').querySelectorAll('button')].some(button=>['Save','Sort'].includes(button.textContent)),'Save and Sort remain automatic');
 await typeAliases('zeta\nalpha\nAlpha\n');
 assert.deepEqual(node().aliases,['alpha','zeta'],'Aliases save and sort automatically, deduplicating case variants');
 assert.equal(aliasArea.value,'zeta\nalpha\nAlpha\n','Typing retains its cursor order and trailing newline');
@@ -44,5 +44,24 @@ for(const value of [['unknown'],['image','image'],'aliases',null]){
 }
 const legacy=structuredClone(roundtrip);delete legacy.sections.research[0].hiddenDetailBlocks;
 assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},23).novels[0],legacy,'v24 migration preserves existing notes exactly');
+const aliasHeader=()=>document.querySelector('section[aria-label="Aliases block"] h3 button');
+await React.act(async()=>aliasHeader().click());
+assert.equal(aliasHeader().getAttribute('aria-expanded'),'false');
+assert.ok(document.getElementById(aliasHeader().getAttribute('aria-controls')).hidden);
+assert.deepEqual(node().aliases,['Alternate name'],'Collapsing preserves saved aliases');
+await React.act(async()=>aliasHeader().click());assert.equal(aliasHeader().getAttribute('aria-expanded'),'true');
+const {detailBlockOrder,moveDetailBlock}=await import('../src/lib/kachamak/detail-blocks.ts');
+const reordered=moveDetailBlock(detailBlockOrder(),'codex','image');
+await React.act(async()=>actions.updateNode('research',one,{detailBlockOrder:reordered,collapsedDetailBlocks:['image']}));
+assert.deepEqual(blocks(),['Codex block','Image block','Aliases block']);
+const layoutRoundtrip=JSON.parse(JSON.stringify(useKachamak.getState().novels[0]));assert.ok(isUsableBackup(layoutRoundtrip));
+await React.act(async()=>{useKachamak.setState({novels:[layoutRoundtrip]});actions.select(two);});
+assert.deepEqual(blocks(),['Image block','Aliases block','Codex block']);assert.equal(document.querySelector('section[aria-label="Image block"] h3 button').getAttribute('aria-expanded'),'true');
+await React.act(async()=>actions.select(one));assert.deepEqual(blocks(),['Codex block','Image block','Aliases block']);assert.equal(document.querySelector('section[aria-label="Image block"] h3 button').getAttribute('aria-expanded'),'false');
+for(const [key,values] of [['collapsedDetailBlocks',[['unknown'],['image','image'],'image',null]],['detailBlockOrder',[[],['image'],['image','image','codex'],['image','aliases','unknown'],'image',null]]])for(const value of values){
+ const invalid=structuredClone(layoutRoundtrip);invalid.sections.research[0][key]=value;assert.equal(isUsableBackup(invalid),false);
+ await React.act(async()=>actions.updateNode('research',one,{[key]:value}));assert.deepEqual(node()[key],key==='detailBlockOrder'?reordered:['image']);
+}
+assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},24).novels[0],legacy,'v25 migration leaves legacy layouts and content untouched');
 await React.act(async()=>root.unmount());dom.close();
-console.log('Details blocks passed: independent visibility, all-hidden restore entry, preserved content, per-note isolation, roundtrip and v24 validation/migration.');
+console.log('Details blocks passed: autosave aliases, hide/restore, order, collapse/expand, content preservation, per-note isolation, portable roundtrip, validation and legacy migrations.');

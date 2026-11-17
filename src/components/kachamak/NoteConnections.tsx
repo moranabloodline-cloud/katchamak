@@ -6,8 +6,8 @@ import {indexNotes,groupLinkedNotes,referenceTo,type IndexedNote} from '@/lib/ka
 import {NotePreview} from './NotePreview';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NoteImage} from './NoteImage';
-import {DetailsBlock,AddDetailsBlock} from './DetailsBlock';
-import type {DetailBlockKey} from '@/lib/kachamak/detail-blocks';
+import {DetailsBlock,DetailsBlocks,AddDetailsBlock} from './DetailsBlock';
+import {detailBlockOrder,moveDetailBlock,type DetailBlockKey} from '@/lib/kachamak/detail-blocks';
 import {cleanAliases} from '@/lib/kachamak/note-links';
 
 export function NoteConnections({node,section,mode}:{node:NoteNode;section:SectionKey;mode:'details'|'mentions'}) {
@@ -24,6 +24,8 @@ export function NoteConnections({node,section,mode}:{node:NoteNode;section:Secti
     if(finish){setAliases(next.join('\n'));setAliasDirty(false);}
   };
   const hidden=node.hiddenDetailBlocks??[];
+  const collapsed=node.collapsedDetailBlocks??[],order=detailBlockOrder(node.detailBlockOrder),visibleOrder=order.filter(key=>!hidden.includes(key));
+  const updateLayout=(patch:Partial<NoteNode>)=>{if(useKachamak.getState().activeNovelId===novel?.id)update(section,node.id,patch);};
   const setBlockVisible=(key:DetailBlockKey,visible:boolean)=>{
     const state=useKachamak.getState();if(state.activeNovelId!==novel?.id)return;
     const current=node.hiddenDetailBlocks??[];
@@ -38,11 +40,11 @@ export function NoteConnections({node,section,mode}:{node:NoteNode;section:Secti
   const row=(entry:IndexedNote,detail?:string)=><button type="button" onClick={()=>setPreview(entry.node.id)} className={mode==='details'?"inline text-left align-baseline text-xs hover:underline":"w-full rounded-lg border border-white/10 px-3 py-2 text-left text-xs hover:bg-white/5"}><span className={mode==='details'?"font-medium":"block font-medium"} style={{color:entry.node.color && /^#[0-9a-f]{3,8}$/i.test(entry.node.color)?entry.node.color:'#60a5fa'}}>{entry.node.title}</span>{mode==='mentions'&&<span className="mt-1 block truncate text-muted-foreground">{entry.path}</span>}{detail&&<span className="mt-1 block line-clamp-2 text-muted-foreground">{detail}</span>}</button>;
   return <div className={mode==='details'?'space-y-2':'space-y-5'}>
     {mode==='details'?<>
-      {!hidden.includes('image')&&<DetailsBlock block="image" onHide={()=>setBlockVisible('image',false)}><NoteImage node={node} section={section}/></DetailsBlock>}
-      {!hidden.includes('aliases')&&<DetailsBlock block="aliases" onHide={()=>setBlockVisible('aliases',false)}><textarea aria-label="Aliases" id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);saveAliases(e.target.value);}} onBlur={e=>saveAliases(e.target.value,true)} rows={3} className="block w-full rounded border border-white/15 bg-transparent p-2 text-xs"/></DetailsBlock>}
-      {!hidden.includes('codex')&&<DetailsBlock block="codex" onHide={()=>setBlockVisible('codex',false)}><CodexNotePicker node={node} section={section}/>
+      {!!visibleOrder.length&&<DetailsBlocks key={node.id} order={visibleOrder} onMove={(from,to)=>updateLayout({detailBlockOrder:moveDetailBlock(order,from,to)})}>{visibleOrder.map(block=><DetailsBlock key={block} block={block} collapsed={collapsed.includes(block)} onToggle={()=>updateLayout({collapsedDetailBlocks:collapsed.includes(block)?collapsed.filter(key=>key!==block):[...collapsed,block]})} onHide={()=>setBlockVisible(block,false)}>
+      {block==='image'?<NoteImage node={node} section={section}/>:block==='aliases'?<textarea aria-label="Aliases" id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);saveAliases(e.target.value);}} onBlur={e=>saveAliases(e.target.value,true)} rows={3} className="block w-full rounded border border-white/15 bg-transparent p-2 text-xs"/>:<><CodexNotePicker node={node} section={section}/>
       {outgoing.map(group=><section key={group.id} aria-label={group.title}>{group.title&&<h3 className="mb-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground">{group.title}</h3>}<ul className="space-y-2">{group.entries.map(({id,target})=><li key={id} className="text-xs">{target?row(target):<span className="text-xs text-muted-foreground">Missing note — it may be in Trash.</span>}{' '}<button type="button" aria-label="Remove link" className="inline align-baseline text-muted-foreground hover:text-red-400" onClick={()=>update(section,node.id,{links:(node.links??[]).filter(n=>n!==id)})}>×</button></li>)}</ul></section>)}
-      </DetailsBlock>}
+      </>}
+      </DetailsBlock>)}</DetailsBlocks>}
       <AddDetailsBlock hidden={hidden} onAdd={key=>setBlockVisible(key,true)}/>
     </>:<>
       <section><h3 className="mb-2 text-xs font-semibold">Referenced by · {incoming.length}</h3>{incoming.length>0&&<input aria-label="Filter references" placeholder="Find a chapter or reference…" value={referenceQuery} onChange={e=>setReferenceQuery(e.target.value)} className="mb-2 w-full rounded border border-white/15 bg-transparent px-2 py-1.5 text-xs"/>}<div className="space-y-5">{mentionGroups.map(group=><section key={group.key} aria-label={group.label}><h3 className="mb-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground">{group.label}</h3><ul className="space-y-2">{group.entries.map(ref=><li key={ref.source.node.id}>{row(ref.source,(ref.explicit?'Linked · ':'Mention · ')+ref.snippet)}</li>)}</ul></section>)}</div>{!visibleIncoming.length&&<p className="text-xs text-muted-foreground">{incoming.length?'No references match this filter.':'No mentions yet. This note’s title, aliases and links will be found across all project notes.'}</p>}</section>
