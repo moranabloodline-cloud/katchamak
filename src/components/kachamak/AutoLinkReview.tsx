@@ -9,6 +9,9 @@ import {findNodeInNovel} from '@/lib/kachamak/utils';
 import {mergeReviewChoices,pendingLinkReview,prepareLinkReview,reviewDecisions} from '@/lib/kachamak/link-review';
 import {toast} from 'sonner';
 import {create} from 'zustand';
+import {BookText,Folder,Landmark,CalendarRange,Diamond} from 'lucide-react';
+import {iconByName} from '@/lib/kachamak/icons';
+import {eventType} from '@/lib/kachamak/story-calendar';
 
 export const requestLinkReview=()=>{document.dispatchEvent(new Event('katchamak-save-review'));};
 export const useSaveReviewState=create<{phase:'idle'|'preparing'|'saving'}>(()=>({phase:'idle'}));
@@ -94,7 +97,7 @@ export function AutoLinkReview() {
   const novel=novels.find(novel=>novel.id===session?.projectId);
   const paths=useMemo(()=>new Map(novel?flattenNotes(novel).map(row=>[row.node.id,[TABS.find(tab=>tab.key===row.section)?.label??row.section,...row.path].join(' / ')]):[]),[novel]);
   const close=()=>{if(!busy.current)put(null);};
-  const decide=(targetId:string|null,scope:'one'|'instances'|'remaining')=>{
+  const decide=(targetId:string|null)=>{
     if(!session||sessionRef.current!==session||!match||busy.current)return;
     busy.current=true;setWorking(true);
     try {
@@ -102,7 +105,7 @@ export function AutoLinkReview() {
       if(state.activeNovelId!==session.projectId)throw new Error('Return to the original project before reviewing links.');
       const current=state.novels.find(novel=>novel.id===session.projectId),hit=current?findNodeInNovel(current,session.noteId):null;
       if(!current||!hit)throw new Error('The original note is no longer available.');
-      const decisions=reviewDecisions(session.matches,match,targetId,scope);
+      const decisions=reviewDecisions(session.matches,match,targetId,'one');
       if(!decisions.length){toast.info('This name has multiple targets. Choose its note before continuing.');return;}
       const choices=mergeReviewChoices(current,hit.node,session.html,decisions);
       state.updateNode(hit.section,hit.node.id,{linkChoices:choices});
@@ -136,7 +139,7 @@ export function AutoLinkReview() {
     if(event.key==='Enter'){
       if(event.repeat){event.preventDefault();return;}
       if(focused instanceof HTMLInputElement&&focused.name==='automatic-link-target'){
-        event.preventDefault();if(!working)decide(focused.value,'one');
+        event.preventDefault();if(!working)decide(focused.value);
       }
       return;
     }
@@ -160,9 +163,9 @@ export function AutoLinkReview() {
     <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_208px]">
       <div className="min-w-0 space-y-4">
         <div aria-label="Link context" className="min-h-48 whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/20 p-5 text-sm leading-7">{start>0?'…':''}{text.slice(start,match.start)}<mark className="rounded bg-amber-400 px-1 py-0.5 font-semibold text-black">{match.text}</mark>{text.slice(match.end,end)}{end<text.length?'…':''}</div>
-        <fieldset className="space-y-2"><legend className="mb-2 text-xs font-semibold">{match.candidates.length>1?'Choose the correct note — this name has multiple targets':'Link target'}</legend>{match.candidates.map(candidate=>{const path=paths.get(candidate.id);return <label key={candidate.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/15 p-3 hover:bg-white/5 focus-within:ring-2 focus-within:ring-amber-400"><input type="radio" name="automatic-link-target" value={candidate.id} checked={selected===candidate.id} onChange={()=>setSelected(candidate.id)} disabled={working} className="mt-1 accent-amber-400"/><span className="min-w-0"><span className="block text-sm" style={{color:candidate.color||'#e7d6a8'}}>{candidate.title}</span><span className="mt-1 block break-words text-xs text-muted-foreground">{path??'Unavailable note'}</span></span></label>;})}</fieldset>
+        <fieldset className="space-y-2"><legend className="mb-2 text-xs font-semibold">{match.candidates.length>1?'Choose the correct note — this name has multiple targets':'Link target'}</legend>{match.candidates.map(candidate=>{const path=paths.get(candidate.id),Icon=iconByName(candidate.icon)??(candidate.event?(eventType(candidate.event)==='period'?CalendarRange:Diamond):candidate.kind==='act'?Landmark:candidate.kind==='folder'||candidate.kind==='chapter'?Folder:BookText);return <label key={candidate.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-white/5 focus-within:ring-2 focus-within:ring-amber-400 ${selected===candidate.id?'border-amber-400/50':'border-white/15'}`}><input type="radio" name="automatic-link-target" value={candidate.id} checked={selected===candidate.id} onChange={()=>setSelected(candidate.id)} disabled={working} className="sr-only"/><Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" style={{color:candidate.color||'#a1a1aa'}}/><span className="min-w-0"><span className="block text-sm" style={{color:candidate.color||'#e7d6a8'}}>{candidate.title}</span><span className="mt-1 block break-words text-xs text-muted-foreground">{path??'Unavailable note'}</span></span></label>;})}</fieldset>
       </div>
-      <div data-link-review-actions className="space-y-2"><button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected,'one')}>Create link</button><button type="button" className={action} disabled={working||!selected} onClick={()=>void decide(selected,'instances')}>Create all instances</button><div className="pt-2"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'one')}>Ignore link</button><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'instances')}>Ignore all instances</button><button type="button" className={action} disabled={working} onClick={close}>Decide later</button><div className="pt-3"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'remaining')}>Accept all further links</button><button type="button" className={action} disabled={working} onClick={close}>Abandon further links</button><p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">↑/↓ choose · ← targets · → actions · Enter confirm · Esc close. All instances applies to this name in this note. Accept all stops at an ambiguous name. Skipped and deferred links are scanned again on the next Save.</p></div>
+      <div data-link-review-actions className="space-y-2"><button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected)}>Create link</button><button type="button" className={action} disabled={working} onClick={()=>void decide(null)}>Ignore link</button><button type="button" className={action} disabled={working} onClick={close}>Decide later</button></div>
     </div>
   </>}</DialogContent></Dialog>;
 }
