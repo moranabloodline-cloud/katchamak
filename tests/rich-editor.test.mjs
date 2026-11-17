@@ -30,6 +30,16 @@ for(const section of SECTION_KEYS){
  const marker=input.querySelectorAll('li')[1].firstChild,caret=document.createRange();caret.setStart(marker,3);caret.collapse(true);dom.getSelection().removeAllRanges();dom.getSelection().addRange(caret);
  const enter=new dom.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'Enter'});await React.act(async()=>input.dispatchEvent(enter));
  assert.ok(enter.defaultPrevented);assert.equal(input.querySelectorAll('hr').length,1,section+' Enter also converts a standalone marker');assert.ok(input.textContent.includes('Before')&&input.textContent.includes('After'));
+ await React.act(async()=>root.render(React.createElement(RichEditor,{key:section+'-empty',html:'',onChange:value=>{changed=value;}})));
+ const blank=box.querySelector('[contenteditable]');blank.textContent='Suspect';
+ const firstLine=blank.firstChild,typing=document.createRange();typing.setStart(firstLine,7);typing.collapse(true);dom.getSelection().removeAllRanges();dom.getSelection().addRange(typing);
+ await React.act(async()=>blank.dispatchEvent(new dom.InputEvent('input',{bubbles:true,inputType:'insertText',data:'t'})));
+ assert.equal(changed,'<p>Suspect</p>',section+' gives the first typed line a paragraph before Enter');
+ assert.equal(dom.getSelection().anchorNode,firstLine);assert.equal(dom.getSelection().anchorOffset,7,'Wrapping preserves the caret');
+ await React.act(async()=>blank.dispatchEvent(new dom.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',ctrlKey:true})));
+ assert.equal(blank.innerHTML,'','One Undo returns to the genuinely empty document');
+ await React.act(async()=>blank.dispatchEvent(new dom.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'y',ctrlKey:true})));
+ assert.equal(blank.innerHTML,'<p>Suspect</p>','Redo keeps the paragraph structure');
 }
 await React.act(async()=>root.unmount());
 console.log('RichEditor passed: safe HTML, internal navigation, paste, typed list dividers, Enter fallback and Undo in every note tab.');

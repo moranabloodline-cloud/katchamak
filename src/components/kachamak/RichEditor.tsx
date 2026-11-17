@@ -15,6 +15,7 @@ import {insertTypedDivider} from '@/lib/kachamak/editor-divider';
 import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {trimWordSelection} from '@/lib/kachamak/editor-selection';
+import {wrapRootParagraphs} from '@/lib/kachamak/editor-paragraphs';
 
 interface RichEditorProps {
   html: string;
@@ -65,6 +66,7 @@ export function RichEditor({
   const handleInput = (event?: {nativeEvent?: Event}) => {
     if (!ref.current) return;
     const input=event?.nativeEvent as InputEvent|undefined;
+    if(!pasting.current&&!input?.isComposing&&input?.inputType&&['insertText','insertParagraph','insertLineBreak','insertCompositionText'].includes(input.inputType))wrapRootParagraphs(ref.current);
     if(pasting.current)repairListWrappers(ref.current);
     // Only typed insertions trigger the rule; paste and undo must remain literal.
     if(!pasting.current&&!convertingDivider.current&&input?.inputType==='insertText'&&!input.isComposing){
