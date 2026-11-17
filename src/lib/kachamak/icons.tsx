@@ -19,6 +19,18 @@ import {
   Zap,
   Gift,
   Sword,
+  Hammer,
+  Images,
+  LifeBuoy,
+  ListChecks,
+  WandSparkles,
+  Medal,
+  Store,
+  Music,
+  Wrench,
+  Car,
+  Shapes,
+  Omega,
   Anchor,
   Book,
   BookOpen,
@@ -108,6 +120,17 @@ const Hat = createLucideIcon('Hat', [
 ]);
 const Gun = createLucideIcon('Gun', [
   ['path',{d:'M2 5h19v6h-8l-1 3h-2l2 7H6L4 11H2zM5 8h13M12 11v3h4l2-3M21 7h2',key:'pistol'}],
+]);
+const Handcuffs = createLucideIcon('Handcuffs', [
+  ['circle',{cx:'6',cy:'15',r:'4',key:'left'}],
+  ['circle',{cx:'18',cy:'9',r:'4',key:'right'}],
+  ['path',{d:'m8 11 2-3h4M4 12l4 6M16 6l4 6',key:'chain'}],
+]);
+const MagicStaff = createLucideIcon('MagicStaff', [
+  ['path',{d:'m5 21 9-12M12 4l4-3 5 4-3 5-6-6zM14 3l4 5M4 7v4M2 9h4',key:'staff'}],
+]);
+const Monster = createLucideIcon('Monster', [
+  ['path',{d:'M6 7 3 2v9M18 7l3-5v9M7 6h10l4 6-3 8H6l-3-8zM7 11l3 1M17 11l-3 1M8 16h8M9 16v2M15 16v2',key:'creature'}],
 ]);
 
 /* solid folder like the original app's tree icons */
@@ -209,6 +232,21 @@ export const NOTE_ICONS: { key: string; label: string; Cmp: IconCmp }[] = [
   { key: "sword", label: "Sword", Cmp: Sword },
   { key: "hat", label: "Hat", Cmp: Hat },
   { key: "gun", label: "Gun", Cmp: Gun },
+  { key: "hammer", label: "Hammer", Cmp: Hammer },
+  { key: "handcuffs", label: "Handcuffs", Cmp: Handcuffs },
+  { key: "image-gallery", label: "Image gallery", Cmp: Images },
+  { key: "life-preserver", label: "Life preserver", Cmp: LifeBuoy },
+  { key: "list", label: "List", Cmp: ListChecks },
+  { key: "magic-item", label: "Magic item", Cmp: WandSparkles },
+  { key: "magic-staff", label: "Magic staff", Cmp: MagicStaff },
+  { key: "medal", label: "Medal", Cmp: Medal },
+  { key: "merchant", label: "Merchant", Cmp: Store },
+  { key: "monster", label: "Monster", Cmp: Monster },
+  { key: "music", label: "Music", Cmp: Music },
+  { key: "equipment", label: "Equipment", Cmp: Wrench },
+  { key: "vehicle", label: "Vehicle", Cmp: Car },
+  { key: "object-collection", label: "Object collection", Cmp: Shapes },
+  { key: "omega", label: "Omega", Cmp: Omega },
 ];
 
 const ICON_MAP: Record<string, IconCmp> = Object.fromEntries(

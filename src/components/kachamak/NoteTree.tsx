@@ -295,13 +295,13 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
           <PopoverContent
             side="bottom"
             align="start"
-            className="w-64 border-white/10 bg-[#1b1b1b] p-2.5"
+            className="max-h-[min(calc(100dvh-1.5rem),var(--radix-popover-content-available-height))] w-[min(36rem,calc(100vw-1.5rem))] overflow-y-auto border-white/10 bg-[#1b1b1b] p-3 kachamak-scroll"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-2 text-[11px] font-semibold tracking-wide text-muted-foreground">
               Icon
             </p>
-            <div className="grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto kachamak-scroll">
+            <div className="grid grid-cols-8 gap-1 sm:grid-cols-12">
               {NOTE_ICONS.map(({ key, label, Cmp }) => (
                 <button
                   key={key}
@@ -312,7 +312,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
                     updateNode(section, node.id, { icon: key });
                     setPickerOpen(false);
                   }}
-                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-white/10 ${
+                  className={`flex h-8 min-w-0 items-center justify-center rounded-md transition-colors hover:bg-white/10 ${
                     node.icon === key ? "bg-white/15" : ""
                   }`}
                 >
