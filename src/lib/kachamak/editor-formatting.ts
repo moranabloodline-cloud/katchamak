@@ -105,6 +105,13 @@ export function clearEditorFormatting(range:Range|null) {
     const selectedBlocks=Array.from(editor.querySelectorAll<HTMLElement>(blocks)).filter(block=>
       !block.querySelector(blocks)&&texts.some(text=>block.contains(text))
     );
+    // removeFormat deliberately preserves anchors in Chromium. Unwrap only
+    // links touched by the selection (or the caret's own link), including dead
+    // note IDs and pasted website links; keep their text and unrelated links.
+    const caretLink=start.parentElement?.closest('a');
+    const links=collapsed?(caretLink&&editor.contains(caretLink)?[caretLink]:[]):Array.from(editor.querySelectorAll('a')).filter(link=>texts.some(text=>link.contains(text)));
+    for(const link of links)link.replaceWith(...Array.from(link.childNodes));
+    if(!collapsed)selected=current();
     const selection=window.getSelection();selection?.removeAllRanges();selection?.addRange(selected);
     document.execCommand('removeFormat',false);
     for(const block of selectedBlocks){
