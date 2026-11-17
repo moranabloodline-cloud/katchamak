@@ -169,6 +169,15 @@
   list-style: decimal;
 }
 
+/* List rows share one vertical rhythm, whether their text is inline or
+   wrapped in paragraphs/divs with copied spacing. Keep nesting indentation. */
+.kachamak-editor li,
+.kachamak-editor li :is(p, div) {
+  margin-block: 0 !important;
+  padding-block: 0 !important;
+  line-height: inherit !important;
+}
+
 /* dialog overlay readability on near-black */
 [data-overlay="destructive"] {
   background: rgba(0, 0, 0, 0.7);
