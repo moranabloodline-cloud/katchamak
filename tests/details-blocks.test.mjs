@@ -29,7 +29,7 @@ await typeAliases('Alternate name');
 await React.act(async()=>aliasArea.dispatchEvent(new dom.FocusEvent('focusout',{bubbles:true})));
 await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:['aliases']}));
 assert.deepEqual(blocks(),['Image block','Codex block']);
-assert.ok([...document.querySelectorAll('button')].some(button=>button.textContent==='Codex'),'The link picker remains in its own block');
+assert.ok(document.querySelector('section[aria-label="Codex block"] header button[aria-label="Add Codex link"]'),'The link picker sits beside the Codex header');
 await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:['image','aliases','codex']}));
 assert.deepEqual(blocks(),[]);assert.ok([...document.querySelectorAll('button')].some(button=>button.textContent==='Add block'));
 const {hiddenDetailBlocks,updatedAt,...rest}=node(),{updatedAt:originalTime,...original}=preserved;assert.deepEqual(rest,original,'Hiding all blocks preserves image, aliases, links and text');
