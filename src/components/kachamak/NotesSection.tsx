@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, Target, X } from "lucide-react";
 import { NoteTree } from "./NoteTree";
+import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
 import {ContinuousWriteArea} from './ContinuousWriteArea';
@@ -269,6 +270,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const view = useKachamak((s) => s.view);
+  const activePane = useKachamak((s) => s.activePane);
   const setView = useKachamak((s) => s.setView);
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
   const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
@@ -366,9 +368,11 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               je bira, klik na notu otvara notu samo u izabranoj. Lenjir (traka
               3) je unutar SplitEditors — JEDAN red iznad OBA panela, bez
               pozadine; deli se samo površina ispod njega */}
-          {view === "split" && <SplitEditors section={section} />}
-          {view === "write" && (selected ? <WriteArea key={selected.id} node={selected} section={selectedSection}/> : <div className="p-10 text-center text-sm text-muted-foreground">Select a note from the tree to start writing.</div>)}
-          {view === "continuous" && <ContinuousWriteArea key={`${activeNovelId}:${section}:${rootId??""}`} section={section} rootId={rootId}/>}
+          {(view === "write" || view === "split" || view === "continuous") && <DocumentOutline title={view === "continuous" && selectedSection !== section ? novel?.title ?? "Manuscript" : selected?.title ?? ""} scopeKey={`${activeNovelId}:${section}:${rootId ?? ""}:${selectedNodeId}:${view}`} pane={view === "split" ? activePane : undefined}>
+            {view === "split" && <SplitEditors section={section} />}
+            {view === "write" && (selected ? <WriteArea key={selected.id} node={selected} section={selectedSection}/> : <div className="p-10 text-center text-sm text-muted-foreground">Select a note from the tree to start writing.</div>)}
+            {view === "continuous" && <ContinuousWriteArea key={`${activeNovelId}:${section}:${rootId??""}`} section={section} rootId={rootId}/>}
+          </DocumentOutline>}
         </div>
 
         {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
