@@ -146,11 +146,11 @@
 }
 
 .kachamak-editor blockquote {
-  border-left: 3px solid rgba(240, 136, 62, 0.6);
-  padding-left: 12px;
-  color: rgba(255, 255, 255, 0.75);
+  border: 0;
+  padding: 0;
+  color: inherit;
   font-style: italic;
-  margin: 8px 0;
+  margin: 1.25em 1.5em;
 }
 
 .kachamak-editor p {
@@ -210,7 +210,7 @@ html[data-theme="light"] { color-scheme: light; }
 html[data-theme="light"] [data-editor-toolbar] select { color-scheme: light; }
 html[data-theme="light"] .kachamak-scroll::-webkit-scrollbar-thumb { background: #0003; }
 html[data-theme="light"] .kachamak-editor:empty::before { color: #777; }
-html[data-theme="light"] .kachamak-editor blockquote { color: #555; }
+html[data-theme="light"] .kachamak-editor blockquote { color: inherit; }
 html[data-theme="light"] [class~="bg-[#080808]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
 html[data-theme="light"] [class~="bg-[#090b0f]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }
 html[data-theme="light"] [class~="bg-[#0a0c10]"]:not([data-project-cover], [data-project-cover] *) { background-color: #f7f6f3 !important; }

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
 import {PageSurface} from './PageSurface';
+import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
 import {DEFAULT_PAGE_FORMAT,pageVariables} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
@@ -57,19 +58,22 @@ function ToolBtn({
   onClick,
   title,
   children,
+  pressed,
 }: {
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  pressed?:boolean;
 }) {
   return (
     <button
       type="button"
       title={title}
       aria-label={title}
+      aria-pressed={pressed}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+      className={`rounded-md p-1.5 transition-colors hover:bg-white/10 hover:text-foreground ${pressed?'bg-amber-400/10 text-amber-300':'text-muted-foreground'}`}
     >
       {children}
     </button>
@@ -96,6 +100,7 @@ export function EditorToolbar() {
   /* Tekući blok selekcije se osvežava na svaku promenu selekcije, da dropdown
      uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
   const [blockStyle, setBlockStyle] = useState<string>("normal");
+  const [quoteActive,setQuoteActive]=useState(false);
   const savedRange=useRef<Range|null>(null);
   const colourRange=useRef<Range|null>(null);
   const [textColour,setTextColour]=useState(''),[highlightColour,setHighlightColour]=useState('');
@@ -103,17 +108,18 @@ export function EditorToolbar() {
     const sync = () => {
       const focused=document.activeElement;
       if(focused?.closest('[data-editor-toolbar]'))return;
-      if(focused?.matches('input,textarea,select')){savedRange.current=null;setSelectedTypography(null);setBlockStyle('normal');return;}
+      if(focused?.matches('input,textarea,select')){savedRange.current=null;setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');return;}
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
       if(editorForRange(range)){
         savedRange.current=range!.cloneRange();setBlockStyle(selectionBlock(range));
         const element=range!.startContainer.nodeType===1?range!.startContainer as Element:range!.startContainer.parentElement;
         if(element){
+          setQuoteActive(!!element.closest('blockquote'));
           const css=getComputedStyle(element),pixels=parseFloat(css.fontSize),line=parseFloat(css.lineHeight)/pixels;
           setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Math.round(pixels):size,spacing:Number.isFinite(line)?line.toFixed(2).replace(/0$/,''):spacing});
         }
       }
-      else {savedRange.current=null;setSelectedTypography(null);setBlockStyle('normal');}
+      else {savedRange.current=null;setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');}
     };
     document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
     return()=>{document.removeEventListener('selectionchange',sync);document.removeEventListener('focusin',sync);document.removeEventListener('input',sync);};
@@ -202,7 +208,8 @@ export function EditorToolbar() {
       </ToolBtn>
       <ToolBtn
         title="Quote"
-        onClick={() => cmd("formatBlock", "<blockquote>")}
+        pressed={quoteActive}
+        onClick={() => applyEditorQuote(savedRange.current)}
       >
         <Quote className="h-4 w-4" />
       </ToolBtn>
@@ -222,7 +229,7 @@ export function EditorToolbar() {
       <span className="mx-1 h-5 w-px bg-white/10" />
       <PresetColourPicker label="Text colour" value={textColour} preserveSelection onOpenChange={open=>{if(open)colourRange.current=savedRange.current?.cloneRange()??null;}} onChange={colour=>{if(applyEditorColour(colourRange.current,'text',colour))setTextColour(colour);}} className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"><Palette className="h-4 w-4"/></PresetColourPicker>
       <PresetColourPicker label="Highlight" value={highlightColour} preserveSelection onOpenChange={open=>{if(open)colourRange.current=savedRange.current?.cloneRange()??null;}} onChange={colour=>{if(applyEditorColour(colourRange.current,'highlight',colour))setHighlightColour(colour);}} className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"><Highlighter className="h-4 w-4"/></PresetColourPicker>
-      <ToolBtn title="Clear formatting" onClick={() => cmd("removeFormat")}>
+      <ToolBtn title="Clear formatting" onClick={() => clearEditorFormatting(savedRange.current)}>
         <RemoveFormatting className="h-4 w-4" />
       </ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
