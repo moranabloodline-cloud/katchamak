@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, Target, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
+import {DocumentTarget} from './DocumentTarget';
 import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
@@ -379,7 +380,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
 
         {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
         <div data-workspace-chrome className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
-          <Target className="absolute left-3 h-4 w-4 text-amber-400/90" aria-hidden="true" />
+          <DocumentTarget node={selected} section={selectedSection}/>
           {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}

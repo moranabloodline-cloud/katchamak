@@ -44,6 +44,16 @@ export const TABS: { key: TabKey; label: string }[] = [
    decides the name, icon and colour themselves (free hierarchy) */
 export type NodeKind = "act" | "chapter" | "scene" | "folder" | "doc";
 
+export interface DocumentTarget {
+  amount:number;
+  unit:'words'|'characters';
+  minimum:number;
+  allowance:number;
+  showOverrun:boolean;
+  showAllowance:boolean;
+  notifications:boolean;
+}
+
 export interface NoteNode {
   id: string;
   title: string;
@@ -55,6 +65,7 @@ export interface NoteNode {
   label: string; // free text, "" = no label
   color?: string; // document colour (the dot in the right panel), "" = none
   image?: string; // optional portable raster portrait in Details
+  documentTarget?: DocumentTarget;
   hiddenDetailBlocks?: DetailBlockKey[]; // presentation only; hiding never deletes data
   collapsedDetailBlocks?: DetailBlockKey[];
   detailBlockOrder?: DetailBlockKey[];

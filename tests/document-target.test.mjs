@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local',pretendToBeVisual:true}).window;
+for(const key of ['window','document','HTMLElement','Element','Node','Event','navigator','DocumentFragment','MutationObserver','NodeFilter','HTMLInputElement','HTMLButtonElement','CustomEvent','getComputedStyle'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:key==='getComputedStyle'?dom[key].bind(dom):dom[key]});
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const React=await import('react'),{createRoot}=await import('react-dom/client');
+const {useKachamak,isUsableBackup}=await import('../src/lib/kachamak/store.ts');
+const {validCloudLibrary}=await import('../scripts/cloud-library-runtime.mjs');
+const {DEFAULT_DOCUMENT_TARGET,validDocumentTarget,documentTargetProgress,crossedTargetMilestones}=await import('../src/lib/kachamak/document-target.ts');
+const {DocumentTarget}=await import('../src/components/kachamak/DocumentTarget.tsx');
+const actions=useKachamak.getState();actions.createNovel('Targets QA','Tester');
+const a=actions.addNode('binder',null,'doc','Chapter A'),b=actions.addNode('codex',null,'doc','Character B');actions.select(a);
+actions.updateNode('binder',a,{content:'<p>One two three four</p>',synopsis:'Extra metadata does not count.'});
+const getNode=id=>Object.values(useKachamak.getState().novels[0].sections).flat().find(n=>n.id===id);
+const target={...DEFAULT_DOCUMENT_TARGET,amount:10,minimum:5,allowance:2,showAllowance:true,showOverrun:true,notifications:true};
+assert.deepEqual(documentTargetProgress('<p>One two three four</p>',target),{count:4,maximum:12,percent:4/12*100,overrun:0});
+assert.equal(documentTargetProgress('<p>One two three</p>',{...target,unit:'characters'}).count,13);
+assert.deepEqual(crossedTargetMilestones(4,12,target),['Minimum target reached','Document target reached','Overrun allowance reached']);
+assert.deepEqual(crossedTargetMilestones(12,13,target),[]);assert.deepEqual(crossedTargetMilestones(0,20,{...target,notifications:false}),[]);
+actions.updateNode('binder',a,{documentTarget:target});
+const portable=structuredClone(useKachamak.getState().novels[0]);assert.ok(isUsableBackup(portable));assert.ok(validCloudLibrary({novels:[portable],collections:[]}));
+for(const invalid of [null,{}, {...target,amount:-1},{...target,amount:1.5},{...target,amount:10000001},{...target,minimum:11},{...target,allowance:Infinity},{...target,unit:'pages'},{...target,notifications:'yes'}]){
+ assert.equal(validDocumentTarget(invalid),false);
+ const bad=structuredClone(portable);bad.sections.binder[0].documentTarget=invalid;
+ assert.equal(isUsableBackup(bad),false);assert.equal(validCloudLibrary({novels:[bad],collections:[]}),false);
+ actions.updateNode('binder',a,{documentTarget:invalid});assert.deepEqual(getNode(a).documentTarget,target);
+}
+assert.equal(getNode(b).documentTarget,undefined,'Targets belong to an individual note');
+const legacy=structuredClone(portable);delete legacy.sections.binder[0].documentTarget;
+assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},27).novels,[legacy]);
+const root=createRoot(document.body.appendChild(document.createElement('div')));
+function App(){const state=useKachamak(),note=getNode(state.selectedNodeId);return React.createElement(DocumentTarget,{node:note,section:note.id===a?'binder':'codex'});}
+await React.act(async()=>root.render(React.createElement(App)));
+await React.act(async()=>document.querySelector('[aria-label="Document Target"]').click());
+assert.match(document.querySelector('[role=dialog]').textContent,/4 words/,'Only the document body counts');
+const setNumber=async(name,value)=>React.act(async()=>{const input=document.querySelector(`[aria-label="${name}"]`);Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(input,String(value));input.dispatchEvent(new dom.Event('input',{bubbles:true}));});
+await setNumber('Target for this document',20);
+await React.act(async()=>document.querySelector('form').dispatchEvent(new dom.Event('submit',{bubbles:true,cancelable:true})));
+assert.equal(getNode(a).documentTarget.amount,20);assert.equal(document.querySelector('[role=dialog]'),null);
+await React.act(async()=>document.querySelector('[aria-label="Document Target"]').click());
+await setNumber('Target for this document',50);
+await React.act(async()=>document.querySelector('[data-slot="dialog-close"]').click());
+assert.equal(getNode(a).documentTarget.amount,20,'Closing without OK discards draft');
+await React.act(async()=>document.querySelector('[aria-label="Document Target"]').click());
+await React.act(async()=>actions.select(b));assert.equal(document.querySelector('[role=dialog]'),null,'Navigation closes draft');
+await React.act(async()=>root.unmount());dom.close();
+console.log('Document targets passed: progress, milestones, note isolation, validation, portable/cloud roundtrip, v28 migration, OK/cancel and navigation.');

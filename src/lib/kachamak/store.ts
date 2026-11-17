@@ -19,6 +19,7 @@ import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoice
 import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
 import {validWorkspaceTabOrder,moveWorkspaceTabOrder} from './workspace-tabs';
+import {validDocumentTarget} from './document-target';
 import { validEvent, validTimelineExtra } from './story-calendar';
 
 interface KachamakState {
@@ -196,7 +197,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
     return typeof node.id === "string" && typeof node.title === "string" &&
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
-      validCoverImage(node.image) &&
+      validCoverImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
@@ -645,7 +646,7 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         if (!target) return;
-        if (!validCoverImage(patch.image)) return;
+        if (!validCoverImage(patch.image)||!validDocumentTarget(patch.documentTarget)) return;
         if (!validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (!validHiddenDetailBlocks(patch.collapsedDetailBlocks)||!validDetailBlockOrder(patch.detailBlockOrder)) return;
         if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
@@ -870,7 +871,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 27,
+      version: 28,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -883,6 +884,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<28){ /* Optional per-note document targets; existing notes have no target. */ }
         if(version<27){ /* Optional per-project tab order; keep existing notes and the default order. */ }
         if(version<26){if(!validPageFormat(s.pageFormat))s.pageFormat={...DEFAULT_PAGE_FORMAT};}
         if(version<25){ /* Optional Details order/collapse; existing notes remain expanded in their original order. */ }
