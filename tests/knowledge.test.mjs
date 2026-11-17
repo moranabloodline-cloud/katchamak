@@ -54,6 +54,14 @@ assert.deepEqual(linked,['cemetery','person','syntax','loose','missing'],'Groupi
 assert.deepEqual(groupLinkedNotes(groupedNovel,['people']).map(g=>g.title),[''],'A top-level parent note itself does not receive a group heading');
 assert.equal(groupLinkedNotes(groupedNovel,['nested'])[0].title,'People','A direct parent rename updates the static heading');
 
+const sortedNovel=newNovel('Sorted groups','');
+sortedNovel.sections.codex=[note('characters','Characters','',[note('z','Zora'),note('a','ana'),note('b','Beta')]),note('locations','Locations','',[note('ten','District 10'),note('two','District 2')])];
+const chosen=['z','ten','b','two','a'],snapshot=JSON.stringify(sortedNovel);
+assert.deepEqual(groupLinkedNotes(sortedNovel,chosen).map(g=>[g.title,g.entries.map(e=>e.id)]),[['Characters',['a','b','z']],['Locations',['two','ten']]],'Each selected group sorts by title regardless of selection order or case');
+assert.deepEqual(chosen,['z','ten','b','two','a']);assert.equal(JSON.stringify(sortedNovel),snapshot,'Display sorting does not reorder saved links or the note tree');
+sortedNovel.sections.codex[0].children[0].title='Aaron';
+assert.deepEqual(groupLinkedNotes(sortedNovel,chosen)[0].entries.map(e=>e.id),['z','a','b'],'A renamed target automatically moves to its alphabetical position');
+
 const mentionsNovel=newNovel('Universal mentions','');
 const chapterTarget=note('target-chapter','Ch 1 - The Query');
 const personTarget=note('target-person','Mrs. Gallagher');

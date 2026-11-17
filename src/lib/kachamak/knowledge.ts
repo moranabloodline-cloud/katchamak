@@ -11,6 +11,7 @@ export function indexNotes(novel: Novel): IndexedNote[] {
   return result;
 }
 export type LinkedNoteGroup = { id: string; title: string; entries: { id: string; target?: IndexedNote }[] };
+const linkedTitleOrder=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
 // Group by the existing immediate parent, never by a guessed name or note kind.
 export function groupLinkedNotes(novel: Novel, ids: string[]): LinkedNoteGroup[] {
   const index = new Map(indexNotes(novel).map(entry => [entry.node.id, entry]));
@@ -34,7 +35,11 @@ export function groupLinkedNotes(novel: Novel, ids: string[]): LinkedNoteGroup[]
     if (!groups.has(group.id)) groups.set(group.id, { ...group, entries: [] });
     groups.get(group.id)!.entries.push({ id, target: index.get(id) });
   }
-  return ordered.flatMap(group => { const match = groups.get(group.id); return match ? [match] : []; });
+  return ordered.flatMap(group => {
+    const match=groups.get(group.id);if(!match)return [];
+    match.entries.sort((a,b)=>linkedTitleOrder.compare(a.target?.node.title??'',b.target?.node.title??''));
+    return [match];
+  });
 }
 export const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 export function matchName(text: string, node: NoteNode): {name:string;index:number} | null {
