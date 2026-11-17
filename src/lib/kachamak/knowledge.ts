@@ -4,7 +4,7 @@ import { stripHtml } from './utils';
 export type IndexedNote = { node: NoteNode; section: SectionKey; path: string; text: string };
 export function searchNoteTitles(index:IndexedNote[],query:string):IndexedNote[]{
   const name=query.trim().normalize('NFC').toLocaleLowerCase();
-  return name?index.filter(entry=>entry.node.title.normalize('NFC').toLocaleLowerCase().includes(name)):index;
+  return name?index.filter(entry=>entry.node.title.normalize('NFC').toLocaleLowerCase().startsWith(name)):index;
 }
 export function indexNotes(novel: Novel): IndexedNote[] {
   const result: IndexedNote[] = [];

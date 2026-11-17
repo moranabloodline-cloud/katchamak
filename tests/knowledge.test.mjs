@@ -30,6 +30,10 @@ assert.deepEqual(searchNoteTitles(index,'Cork').map(n=>n.node.id),['research'],'
 assert.deepEqual(searchNoteTitles(index,'Act One').map(n=>n.node.id),['act'],'A parent path does not make every child a match');
 assert.deepEqual(searchNoteTitles(index,'C\u0301ira').map(n=>n.node.id),['unicode'],'Equivalent Unicode titles match');
 assert.equal(searchNoteTitles(index,'   '),index,'Clearing the query restores the available list');
+const prefixIndex=['Blackpool','Bloodline','Blue Gate','A Black Stone','Table','Morrigan'].map((title,i)=>({node:note('prefix-'+i,title),section:'codex',path:'Codex',text:'Bl'}));
+assert.deepEqual(searchNoteTitles(prefixIndex,'Bl').map(n=>n.node.title),['Blackpool','Bloodline','Blue Gate'],'Only names beginning with the typed letters remain');
+assert.deepEqual(searchNoteTitles(prefixIndex,'Blo').map(n=>n.node.title),['Bloodline'],'Each additional letter narrows the prefix');
+assert.deepEqual(searchNoteTitles(index,'rigan'),[],'A match in the middle or end of a title is excluded');
 character.title='A new name';
 assert.equal(referenceTo(index.find(n=>n.node.id==='outline'),character).explicit,true,'Renaming never breaks identity links');
 const selected=new Set(['chapter','chapter-2']);
