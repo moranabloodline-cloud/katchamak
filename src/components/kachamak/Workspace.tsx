@@ -33,7 +33,7 @@ export function Workspace() {
     const keyboard=(event:KeyboardEvent)=>{
       if(!(event.ctrlKey||event.metaKey))return;
       if(event.key.toLowerCase()==='s'){event.preventDefault();requestLinkReview();}
-      if(event.shiftKey&&event.key.toLowerCase()==='f'){event.preventDefault();document.querySelector<HTMLInputElement>('[aria-label="Search project"]')?.focus();}
+      if(event.shiftKey&&event.key.toLowerCase()==='f'){event.preventDefault();document.querySelector<HTMLInputElement>('[aria-label="Search"]')?.focus();}
     };
     document.addEventListener('keydown',keyboard);return()=>document.removeEventListener('keydown',keyboard);
   },[]);

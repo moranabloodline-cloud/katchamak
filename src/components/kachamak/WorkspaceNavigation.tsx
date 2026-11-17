@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from 'react';
-import {ArrowLeft,FileText,House,Search} from 'lucide-react';
+import {ArrowLeft,FileText,Search} from 'lucide-react';
 import {useKachamak} from '@/lib/kachamak/store';
 import {TABS,type NoteNode,type SectionKey} from '@/lib/kachamak/types';
 import {openProjectNote,returnToPreviousNote,useNoteTrail} from '@/lib/kachamak/note-navigation';
@@ -49,8 +49,8 @@ function ProjectSearch() {
           if (e.key === "ArrowUp") {e.preventDefault();setHighlight(i=>Math.max(0,i-1));}
           if (e.key === "Enter" && results[highlight]) {e.preventDefault();go(results[highlight]);}
         }}
-        placeholder="Search project."
-        aria-label="Search project"
+        placeholder="Search"
+        aria-label="Search"
         className="h-9 w-full rounded-lg border border-white/15 bg-[#10151d] pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-amber-500/50"
       />
       {open && q.trim() && (
@@ -91,6 +91,5 @@ function ProjectSearch() {
 }
 
 export function WorkspaceNavigation() {
-  const closeNovel=useKachamak(state=>state.closeNovel);
-  return <div className="flex min-w-0 flex-1 items-center gap-1.5"><button type="button" aria-label="Back to dashboard" title="Dashboard" onClick={closeNovel} className="shrink-0 rounded-md p-1 text-stone-200 hover:bg-white/10 hover:text-white"><House className="h-5 w-5"/></button><NoteBackButton/><ProjectSearch/></div>;
+  return <div className="flex min-w-0 flex-1 items-center gap-1.5"><ProjectSearch/><NoteBackButton/></div>;
 }
