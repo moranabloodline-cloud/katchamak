@@ -29,13 +29,13 @@ import {
 import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
 import {PageSurface} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
-import {DEFAULT_PAGE_FORMAT,pageVariables} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,DEFAULT_PAGE_FORMAT,pageVariables} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 
-const FONTS = ["Segoe UI", "Georgia", "Garamond", "Courier New", "Verdana", "Times New Roman"];
+const FONTS = PAGE_FONTS;
 const SIZES = [12, 14, 16, 18, 20, 24];
 const SPACINGS = ["1.0", "1.15", "1.5", "2.0"];
 

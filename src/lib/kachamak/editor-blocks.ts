@@ -1,3 +1,4 @@
+import {PAGE_FONTS} from './page-format-validation.mjs';
 export function editorForRange(range:Range|null):HTMLElement|null {
   if(!range)return null;
   const element=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer as Element:range.commonAncestorContainer.parentElement;
@@ -52,7 +53,7 @@ export function applyEditorColour(range:Range|null,kind:'text'|'highlight',colou
 export function applyEditorTypography(range:Range|null,property:'fontFamily'|'fontSize'|'lineHeight',value:string) {
   const editor=editorForRange(range);
   if(!editor||!range||range.collapsed||editor.getAttribute('contenteditable')!=='true')return false;
-  if(property==='fontFamily'&&!['Segoe UI','Georgia','Garamond','Courier New','Verdana','Times New Roman'].includes(value))return false;
+  if(property==='fontFamily'&&!PAGE_FONTS.includes(value))return false;
   if(property==='fontSize'&&!/^(12|14|16|18|20|24)px$/.test(value))return false;
   if(property==='lineHeight'&&!['1.0','1.15','1.5','2.0'].includes(value))return false;
   const leaves:{node:Text;start:number;end:number}[]=[];

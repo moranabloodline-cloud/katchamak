@@ -9,7 +9,7 @@ const React=await import('react'),{createRoot}=await import('react-dom/client');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
 const {findNodeInNovel}=await import('../src/lib/kachamak/utils.ts');
 const {applyEditorTypography,applyEditorHistory}=await import('../src/lib/kachamak/editor-blocks.ts');
-const {DEFAULT_PAGE_FORMAT,validEditorAppearance}=await import('../src/lib/kachamak/page-format.ts');
+const {PAGE_FONTS,DEFAULT_PAGE_FORMAT,validEditorAppearance}=await import('../src/lib/kachamak/page-format.ts');
 const {EditorPage}=await import('../src/components/kachamak/WriteArea.tsx');
 const {Workspace}=await import('../src/components/kachamak/Workspace.tsx');
 const actions=useKachamak.getState();actions.createNovel('Format QA','Tester');
@@ -29,6 +29,17 @@ await React.act(async()=>assert.equal(applyEditorHistory(dom.getSelection().getR
 assert.equal(editor.innerHTML,original,'Undo restores the exact unformatted HTML');
 range=document.createRange();range.selectNodeContents(editor.querySelector('p'));range.collapse(true);
 assert.equal(applyEditorTypography(range,'fontSize','24px'),false,'No marked text means no page-wide change');
+for(const family of PAGE_FONTS){
+  const selected=document.createRange();selected.selectNodeContents(editor.querySelector('p'));
+  await React.act(async()=>assert.equal(applyEditorTypography(selected,'fontFamily',family),true,family));
+  assert.equal(editor.textContent,'Alpha beta gamma.Second paragraph.');
+  assert.equal(editor.querySelector('[data-editor-typography]').style.fontFamily.replace(/["']/g,''),family);
+  assert.equal(node().content,editor.innerHTML,'Selected font persists in note HTML');
+  assert.ok(validEditorAppearance({font:family,size:16,spacing:'1.5',page:DEFAULT_PAGE_FORMAT}),'Cloud accepts every offered font');
+  await React.act(async()=>assert.equal(applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'),true));
+  assert.equal(editor.innerHTML,original,'Font formatting has one reversible history entry');
+}
+assert.equal(PAGE_FONTS.length,12);
 const contentBeforePage=node().content;
 await React.act(async()=>{actions.setEditorFont('Georgia');actions.setEditorSize(18);actions.setEditorSpacing('2.0');actions.setPageFormat({indent:1.5,paragraphGap:0.5,width:60,align:'justify',divider:'dots',layout:'stacked',colorizeAnnotations:false});});
 assert.equal(node().content,contentBeforePage);assert.equal(editor.innerHTML,contentBeforePage);
