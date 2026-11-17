@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Plus, FolderOpen } from 'lucide-react';
+import { Plus, FolderOpen, EyeOff } from 'lucide-react';
+import {PageFormatMenu} from './PageFormatMenu';
 import { useKachamak } from '@/lib/kachamak/store';
 import { findNodeInNovel } from '@/lib/kachamak/utils';
 import { TABS, type Novel, type SectionKey, type TabKey } from '@/lib/kachamak/types';
@@ -8,7 +9,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem} from '@/components/ui/context-menu';
 import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction} from '@/components/ui/alert-dialog';
 
-export function WorkspaceTabs({novel}:{novel:Novel}) {
+export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
   const active=useKachamak(s=>s.activeTab), setTab=useKachamak(s=>s.setTab), closeTab=useKachamak(s=>s.closeTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
   const lastNoteView=useRef(view==='timeline'?'write':view);
@@ -36,6 +37,8 @@ export function WorkspaceTabs({novel}:{novel:Novel}) {
     </PopoverContent></Popover>
     </div>
     <div className="flex shrink-0 items-center border-l border-white/15 pl-2">
+      <PageFormatMenu disabled={active==='trash'}/>
+      <button type="button" disabled={active==='trash'} onMouseDown={event=>event.preventDefault()} onClick={onFocus} aria-label="Focus" title="Focus" className="mr-2 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground disabled:opacity-40"><EyeOff className="h-3.5 w-3.5"/>Focus</button>
       <button type="button" onClick={()=>openTab('trash')} aria-current={active==='trash'?'page':undefined} title="Trash" className={`rounded-md border px-2.5 py-1 text-sm ${active==='trash'?'border-[#ad7e2e]/70 bg-[#3a2c18] text-[#fbe4a6]':'border-transparent text-muted-foreground hover:text-white'}`}>Trash</button>
     </div>
   </nav>

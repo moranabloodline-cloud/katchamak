@@ -1,7 +1,9 @@
 import {demoLibraryApi} from './demo-projects.mjs';
+import {validEditorAppearance} from '../src/lib/kachamak/page-format-validation.mjs';
 // Included in the Sites Worker with accountApi; all keys are private to the authenticated account.
 export function validCloudLibrary(value) {
   if (!value || !Array.isArray(value.novels) || !Array.isArray(value.collections)) return false;
+  if(value.editorAppearance!==undefined&&!validEditorAppearance(value.editorAppearance))return false;
   const ids = new Set(), collections = new Map();
   const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
   const validDetailBlocks=(value,complete=false)=>value===undefined||Array.isArray(value)&&value.length<=3&&(!complete||value.length===3)&&new Set(value).size===value.length&&value.every(key=>['image','aliases','codex'].includes(key));

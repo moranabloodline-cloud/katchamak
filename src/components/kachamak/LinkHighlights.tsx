@@ -7,7 +7,7 @@ import { useKachamak } from '@/lib/kachamak/store';
 import { contentText, flattenNotes, indexText, rangeForMatch, explicitLinks, type NoteMatch } from '@/lib/kachamak/note-links';
 import { findNodeInNovel, stripHtml } from '@/lib/kachamak/utils';
 
-export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTMLDivElement | null>; noteId: string }) {
+export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef: RefObject<HTMLDivElement | null>; noteId: string; colorize?:boolean }) {
   const novels=useKachamak(s=>s.novels), activeNovelId=useKachamak(s=>s.activeNovelId);
   const novel=novels.find(n=>n.id===activeNovelId), hit=novel?findNodeInNovel(novel,noteId):null;
   const prefix='codex'+useId().replace(/[^a-z0-9]/gi,'');
@@ -40,7 +40,7 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
         const target=codex.find(n=>n.id===match.targetId), name=prefix+i;
         const color=target?.color && /^#[0-9a-f]{3,8}$/i.test(target.color)?target.color:match.missing?'#f87171':'#60a5fa';
         registry.set(name,new HighlightClass(range)); keys.push(name);
-        rules.push(`::highlight(${name}){color:${color};text-decoration:underline;text-decoration-style:${match.targetId?'solid':'dotted'};}`);
+        rules.push(`::highlight(${name}){color:${colorize?color:'inherit'};text-decoration:underline;text-decoration-style:${match.targetId?'solid':'dotted'};}`);
       }
       style.textContent=rules.join('\n');
     };
@@ -54,7 +54,7 @@ export function LinkHighlights({ editorRef, noteId }: { editorRef: RefObject<HTM
     };
     editor.addEventListener('click',click);
     return()=>{clearTimeout(timer);observer.disconnect();editor.removeEventListener('click',click);keys.forEach(k=>registry?.delete(k));style.remove();};
-  },[novel,hit?.node.linkChoices,noteId,prefix,editorRef]);
+  },[novel,hit?.node.linkChoices,noteId,prefix,editorRef,colorize]);
 
   useEffect(()=>{
     if(!popup) return;

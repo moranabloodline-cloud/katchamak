@@ -67,6 +67,7 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
   return (
     <div
       role="separator"
+      data-workspace-chrome
       aria-orientation="vertical"
       aria-label={`Resize ${side} panel`}
       onPointerDown={(e) => {
@@ -304,6 +305,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
       {leftPanelOpen ? (
         <>
           <aside
+            data-workspace-chrome
             ref={leftPanelRef}
             style={{ width: leftPanelWidth }}
             className="hidden shrink-0 flex-col bg-black/20 md:flex"
@@ -341,7 +343,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
       ) : (
         // zatvoreni levi panel — uska traka; h-10 red održava donju liniju
         // trake 2 kontinuiranom i kad je panel sakriven
-        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 md:flex">
+        <div data-workspace-chrome className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 md:flex">
           <div className="flex h-10 w-full shrink-0 items-center justify-center border-b border-white/10">
             <button
               type="button"
@@ -376,7 +378,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
         </div>
 
         {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
-        <div className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
+        <div data-workspace-chrome className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
           <Target className="absolute left-3 h-4 w-4 text-amber-400/90" aria-hidden="true" />
           {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
@@ -422,6 +424,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             onMove={(dx) => setRightPanelWidth(useKachamak.getState().rightPanelWidth - dx)}
           />
           <aside
+            data-workspace-chrome
             ref={rightPanelRef}
             style={{ width: rightPanelWidth }}
             className="hidden shrink-0 flex-col bg-black/20 lg:flex"
@@ -461,7 +464,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
       ) : (
         // zatvoreni desni panel — uska traka; h-10 red održava donju liniju
         // trake 2 kontinuiranom i kad je panel sakriven
-        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 lg:flex">
+        <div data-workspace-chrome className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 lg:flex">
           <div className="flex h-10 w-full shrink-0 items-center justify-center border-b border-white/10">
             <button
               type="button"

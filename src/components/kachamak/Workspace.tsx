@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, Save, Settings } from "lucide-react";
+import { ChevronLeft, Save, Settings,Minimize2 } from "lucide-react";
 import { AutoLinkReview, requestLinkReview } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
@@ -48,6 +48,20 @@ export function Workspace() {
 
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [focusMode,setFocusMode]=useState(false);
+  useEffect(()=>{setFocusMode(false);},[activeNovelId]);
+  useEffect(()=>{
+    if(!focusMode)return;
+    const exit=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.defaultPrevented&&!document.querySelector('[role="dialog"]'))setFocusMode(false);};
+    document.addEventListener('keydown',exit);return()=>document.removeEventListener('keydown',exit);
+  },[focusMode]);
+  const enterFocus=()=>{
+    const {view,activePane}=useKachamak.getState();
+    const editor=document.querySelector<HTMLElement>(view==='split'?`main [data-pane="${activePane}"] .kachamak-editor[contenteditable="true"]`:'main .kachamak-editor[contenteditable="true"]');
+    const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0).cloneRange():null;
+    setFocusMode(true);
+    if(editor){editor.focus({preventScroll:true});if(range&&editor.contains(range.startContainer)&&editor.contains(range.endContainer)){selection?.removeAllRanges();selection?.addRange(range);}}
+  };
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
@@ -64,7 +78,8 @@ export function Workspace() {
       .toUpperCase() || "?";
 
   return (
-    <div className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
+    <div data-workspace data-focus-mode={focusMode} className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
+      {focusMode&&<button type="button" aria-label="Exit focus" title="Exit focus (Esc)" onMouseDown={event=>event.preventDefault()} onClick={()=>setFocusMode(false)} className="fixed right-4 top-4 z-40 flex items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 text-xs text-muted-foreground opacity-30 shadow transition-opacity hover:opacity-100 focus:opacity-100"><Minimize2 className="h-4 w-4"/>Exit focus · Esc</button>}
       {/* top bar — ONE strip, identical on every tab: home + search over the left
           panel, then the section tabs (all in one row), then scope/save/account/
           settings over the right panel. Together with the strip below it (panel
@@ -82,7 +97,7 @@ export function Workspace() {
         </div>
 
         {/* tabs start at the left edge of the workspace, always in a single line */}
-        <WorkspaceTabs novel={novel} />
+        <WorkspaceTabs novel={novel} onFocus={enterFocus} />
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div

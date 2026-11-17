@@ -22,6 +22,7 @@ interface RichEditorProps {
   placeholder?: string;
   noteId?: string;
   onFocusPlaceholderHide?: boolean;
+  colorizeAnnotations?:boolean;
 }
 
 /**
@@ -34,6 +35,7 @@ export function RichEditor({
   className,
   placeholder,
   noteId,
+  colorizeAnnotations=true,
 }: RichEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
@@ -89,7 +91,7 @@ export function RichEditor({
 
   return (
     <div className="relative flex-1 min-h-0">
-      <style>{noteAnchorStyles(novel,linkScope)}</style>
+      <style>{noteAnchorStyles(novel,linkScope,colorizeAnnotations)}</style>
       <div
         data-note-link-scope={linkScope}
         ref={ref}
@@ -139,7 +141,7 @@ export function RichEditor({
         className={`kachamak-editor outline-none ${className ?? ""}`}
       />
       <NotePreview noteId={preview} onClose={()=>setPreview(null)} />
-      {noteId && <LinkHighlights editorRef={ref} noteId={noteId} />}
+      {noteId && <LinkHighlights editorRef={ref} noteId={noteId} colorize={colorizeAnnotations} />}
     </div>
   );
 }

@@ -21,12 +21,13 @@ export async function packageSite(manifest) {
   const accounts = await readFile("scripts/accounts-runtime.mjs", "utf8");
   const demos = await readFile("scripts/demo-projects.mjs", "utf8");
   const cloud = await readFile("scripts/cloud-library-runtime.mjs", "utf8");
+  const pageFormatValidation = await readFile("src/lib/kachamak/page-format-validation.mjs", "utf8");
   const oidc = await readFile("scripts/github-oidc.mjs", "utf8");
   const store = await readFile("scripts/release-store.mjs", "utf8");
   const automation = JSON.parse(await readFile(".openai/automation.json", "utf8"));
   const deployConfig = { repository: automation.repository, branch: automation.branch, origin: automation.origin, workflow: automation.workflow };
-  deployConfig.runtimeHash = createHash("sha256").update(accounts + demos + cloud + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
-  const modules = demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^import[^\r\n]*demo-projects[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "") + "\n" + accounts.replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
+  deployConfig.runtimeHash = createHash("sha256").update(accounts + demos + cloud + pageFormatValidation + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
+  const modules = pageFormatValidation.replace(/^export /gm, "") + "\n" + demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^import[^\r\n]*(?:demo-projects|page-format-validation)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + accounts.replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
   await mkdir("dist/server", { recursive: true });
   await mkdir("dist/.openai", { recursive: true });
   await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + modules + "\n" + runtime);

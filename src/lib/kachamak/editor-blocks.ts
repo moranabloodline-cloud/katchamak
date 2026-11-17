@@ -47,3 +47,36 @@ export function applyEditorColour(range:Range|null,kind:'text'|'highlight',colou
   if(applied){editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));}
   return applied;
 }
+
+/** Inline typography changes only selected text leaves; never set page defaults. */
+export function applyEditorTypography(range:Range|null,property:'fontFamily'|'fontSize'|'lineHeight',value:string) {
+  const editor=editorForRange(range);
+  if(!editor||!range||range.collapsed||editor.getAttribute('contenteditable')!=='true')return false;
+  if(property==='fontFamily'&&!['Segoe UI','Georgia','Garamond','Courier New','Verdana','Times New Roman'].includes(value))return false;
+  if(property==='fontSize'&&!/^(12|14|16|18|20|24)px$/.test(value))return false;
+  if(property==='lineHeight'&&!['1.0','1.15','1.5','2.0'].includes(value))return false;
+  const leaves:{node:Text;start:number;end:number}[]=[];
+  const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);
+  let node:Node|null;
+  while((node=walker.nextNode())){
+    if(!range.intersectsNode(node)||node.parentElement?.closest('[contenteditable="false"]'))continue;
+    const text=node as Text,start=range.startContainer===text?range.startOffset:0,end=range.endContainer===text?range.endOffset:text.length;
+    if(end>start)leaves.push({node:text,start,end});
+  }
+  if(!leaves.length)return false;
+  editor.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,inputType:'formatFontName'}));
+  const spans:HTMLSpanElement[]=[];
+  for(const leaf of leaves.reverse()){
+    if(leaf.end<leaf.node.length)leaf.node.splitText(leaf.end);
+    const selected=leaf.start?leaf.node.splitText(leaf.start):leaf.node;
+    const parent=selected.parentElement;
+    if(parent?.matches('span[data-editor-typography]')&&parent.childNodes.length===1){parent.style[property]=value;spans.unshift(parent as HTMLSpanElement);continue;}
+    const span=document.createElement('span');span.style[property]=value;span.dataset.editorTypography='true';
+    selected.replaceWith(span);span.append(selected);spans.unshift(span);
+  }
+  const selection=window.getSelection(),next=document.createRange();
+  next.setStart(spans[0].firstChild!,0);next.setEnd(spans.at(-1)!.firstChild!,spans.at(-1)!.textContent!.length);
+  editor.focus();selection?.removeAllRanges();selection?.addRange(next);
+  editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));
+  return true;
+}

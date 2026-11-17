@@ -10,9 +10,10 @@ import type { Novel, ViewMode, TabKey } from './types';
 import { registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
+import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
-type Snapshot = { novels: Novel[]; collections: Collection[]; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
+type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
 export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, conflict: false }));
 let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
@@ -24,7 +25,8 @@ const snapshot = () => {
   if(subscribed&&!snapshotDirty)return cachedSnapshot;
   const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
   const {selectedCollection, expanded} = useLibraryPreferences.getState();
-  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
+  const {editorFont:font,editorSize:size,editorSpacing:spacing,pageFormat:page}=useKachamak.getState();
+  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, editorAppearance:{font,size,spacing,page}, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
   snapshotDirty=false;
   return cachedSnapshot;
 };
@@ -43,13 +45,16 @@ async function api(path: string, init?: RequestInit) {
   }
   return data;
 }
-function apply(data: { revision: number; snapshot: Snapshot }) {
+function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=false) {
   if (!data.snapshot?.novels?.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
   data.snapshot.novels.forEach(normalizeNovelSections);
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
   const preferredView = route?.view ?? data.snapshot.view;
   const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline'].includes(preferredView ?? '') ? { view: preferredView! } : {};
+  if(data.snapshot.editorAppearance!==undefined&&!validEditorAppearance(data.snapshot.editorAppearance))throw new Error('The saved page format could not be read.');
+  const appearance=data.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;
+  const restoredAppearance=keepAppearance?{}:{editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page}};
   const navigation: Partial<Navigation> = {};
   if (!useWebLibrary.getState().ready && (route || data.snapshot.navigation)) {
     const saved = route?.navigation ?? data.snapshot.navigation!;
@@ -68,11 +73,12 @@ function apply(data: { revision: number; snapshot: Snapshot }) {
     useLibraryPreferences.setState({selectedCollection: location.selectedCollection && exists(location.selectedCollection) ? location.selectedCollection : null, expanded: Array.isArray(location.expanded) ? location.expanded.filter(exists) : []});
   }
   applying = true;
-  try { useKachamak.setState({ ...restoredView, novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null, ...navigation }); useCollections.setState({ collections: data.snapshot.collections }); }
+  try { useKachamak.setState({ ...restoredView,...restoredAppearance, novels: data.snapshot.novels, activeNovelId: data.snapshot.novels.some(n => n.id === active) ? active : null, ...navigation }); useCollections.setState({ collections: data.snapshot.collections }); }
   finally { applying = false; }
   snapshotDirty=true;
   revision = data.revision; saved = snapshot();
-  useWebLibrary.setState({ ready: true, busy: false, pending: false, error: null, conflict: false });
+  if(keepAppearance){const acknowledged=JSON.parse(saved);acknowledged.editorAppearance=appearance;saved=JSON.stringify(acknowledged);}
+  useWebLibrary.setState({ ready: true, busy: false, pending: snapshot()!==saved, error: null, conflict: false });
 }
 export async function initializeWebLibrary() {
   if (initializing) return initializing;
@@ -98,7 +104,7 @@ export async function initializeWebLibrary() {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
-      const fields=['novels','view','activeNovelId','activeTab','selectedNodeId','paneAId','paneBId','activePane'] as const;
+      const fields=['novels','view','activeNovelId','activeTab','selectedNodeId','paneAId','paneBId','activePane','editorFont','editorSize','editorSpacing','pageFormat'] as const;
       useKachamak.subscribe((state,before)=>{if(fields.some(field=>state[field]!==before[field]))changed();});
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
       useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
@@ -139,14 +145,17 @@ async function reconcileRevision(){
   const remote=await api('/api/library');
   if(!Array.isArray(remote.snapshot?.novels)||!remote.snapshot.novels.every(isUsableBackup)||!Array.isArray(remote.snapshot.collections)||!Number.isSafeInteger(remote.revision))throw new Error('The saved library could not be read.');
   const local=JSON.parse(snapshot()) as Snapshot,base=JSON.parse(saved) as Snapshot;
+  if(remote.snapshot.editorAppearance!==undefined&&!validEditorAppearance(remote.snapshot.editorAppearance))throw new Error('The saved page format could not be read.');
+  const keepAppearance=JSON.stringify(local.editorAppearance??DEFAULT_EDITOR_APPEARANCE)!==JSON.stringify(base.editorAppearance??DEFAULT_EDITOR_APPEARANCE);
   const content=(value:Snapshot)=>JSON.stringify([value.novels,value.collections]);
   const localContent=content(local),remoteContent=content(remote.snapshot),baseContent=content(base);
-  if(localContent===remoteContent||localContent===baseContent){apply(remote);return;}
+  if(localContent===remoteContent||localContent===baseContent){apply(remote,keepAppearance);return;}
   if(remoteContent!==baseContent){
     useWebLibrary.setState({conflict:true});
     throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
   }
   revision=remote.revision;saved=JSON.stringify(remote.snapshot);
+  if(!keepAppearance){const appearance=remote.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;applying=true;try{useKachamak.setState({editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page}});}finally{applying=false;}snapshotDirty=true;}
   useWebLibrary.setState({conflict:false,error:null});
 }
 export async function refreshWebLibrary() {

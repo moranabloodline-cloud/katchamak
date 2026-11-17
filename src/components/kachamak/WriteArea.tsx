@@ -26,7 +26,9 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
-import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour} from "@/lib/kachamak/editor-blocks";
+import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
+import {PageSurface} from './PageSurface';
+import {DEFAULT_PAGE_FORMAT,pageVariables} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
@@ -81,19 +83,15 @@ const cmd = (command: string, value?: string) => {
 
 /* ---------- traka 2: formatna traka ---------- */
 
-/* JEDNA fiksna formatna traka (po Nikoli): stoji uvek na istom mestu iznad
-   radne površine i NE duplira se po panelu u Splitu — na njenu širinu utiču
-   jedino bočni paneli kad se pomeraju. Font/veličina/prored žive u store-u
-   (vaze za stranu u Write i u oba Split panela). */
+/* One fixed text toolbar, shared by Split panes. It formats its saved selection;
+   the separate Format menu owns the page defaults used as fallback values. */
 export function EditorToolbar() {
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const setSpellCheck=useKachamak(state=>state.setEditorSpellCheck);
   const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
-  const setFont = useKachamak((s) => s.setEditorFont);
   const size = useKachamak((s) => s.editorSize ?? 16);
-  const setSize = useKachamak((s) => s.setEditorSize);
   const spacing = useKachamak((s) => s.editorSpacing ?? "1.5");
-  const setSpacing = useKachamak((s) => s.setEditorSpacing);
+  const [selectedTypography,setSelectedTypography]=useState<{font:string;size:number;spacing:string}|null>(null);
 
   /* Tekući blok selekcije se osvežava na svaku promenu selekcije, da dropdown
      uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
@@ -105,10 +103,17 @@ export function EditorToolbar() {
     const sync = () => {
       const focused=document.activeElement;
       if(focused?.closest('[data-editor-toolbar]'))return;
-      if(focused?.matches('input,textarea,select')){savedRange.current=null;setBlockStyle('normal');return;}
+      if(focused?.matches('input,textarea,select')){savedRange.current=null;setSelectedTypography(null);setBlockStyle('normal');return;}
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
-      if(editorForRange(range)){savedRange.current=range!.cloneRange();setBlockStyle(selectionBlock(range));}
-      else {savedRange.current=null;setBlockStyle('normal');}
+      if(editorForRange(range)){
+        savedRange.current=range!.cloneRange();setBlockStyle(selectionBlock(range));
+        const element=range!.startContainer.nodeType===1?range!.startContainer as Element:range!.startContainer.parentElement;
+        if(element){
+          const css=getComputedStyle(element),pixels=parseFloat(css.fontSize),line=parseFloat(css.lineHeight)/pixels;
+          setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Math.round(pixels):size,spacing:Number.isFinite(line)?line.toFixed(2).replace(/0$/,''):spacing});
+        }
+      }
+      else {savedRange.current=null;setSelectedTypography(null);setBlockStyle('normal');}
     };
     document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
     return()=>{document.removeEventListener('selectionchange',sync);document.removeEventListener('focusin',sync);document.removeEventListener('input',sync);};
@@ -138,11 +143,11 @@ export function EditorToolbar() {
       </select>
       <select
         aria-label="Font"
-        value={font}
-        onChange={(e) => setFont(e.target.value)}
+        value={selectedTypography?.font??font}
+        onChange={(e) => {if(applyEditorTypography(savedRange.current,'fontFamily',e.target.value))setSelectedTypography(old=>({...old??{font,size,spacing},font:e.target.value}));}}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
       >
-        {FONTS.map((f) => (
+        {[...new Set([selectedTypography?.font??font,...FONTS])].map((f) => (
           <option key={f} value={f}>
             {f}
           </option>
@@ -150,11 +155,11 @@ export function EditorToolbar() {
       </select>
       <select
         aria-label="Font size"
-        value={size}
-        onChange={(e) => setSize(Number(e.target.value))}
+        value={selectedTypography?.size??size}
+        onChange={(e) => {if(applyEditorTypography(savedRange.current,'fontSize',e.target.value+'px'))setSelectedTypography(old=>({...old??{font,size,spacing},size:Number(e.target.value)}));}}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
       >
-        {SIZES.map((s) => (
+        {[...new Set([selectedTypography?.size??size,...SIZES])].sort((a,b)=>a-b).map((s) => (
           <option key={s} value={s}>
             {s}
           </option>
@@ -162,11 +167,11 @@ export function EditorToolbar() {
       </select>
       <select
         aria-label="Line spacing"
-        value={spacing}
-        onChange={(e) => setSpacing(e.target.value)}
+        value={selectedTypography?.spacing??spacing}
+        onChange={(e) => {if(applyEditorTypography(savedRange.current,'lineHeight',e.target.value))setSelectedTypography(old=>({...old??{font,size,spacing},spacing:e.target.value}));}}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
       >
-        {SPACINGS.map((s) => (
+        {[...new Set([selectedTypography?.spacing??spacing,...SPACINGS])].map((s) => (
           <option key={s} value={s}>
             {s}×
           </option>
@@ -268,16 +273,18 @@ function RulerStrip() {
    „ne vidi“ (po Nikoli) — ali je traka, i NE deli se u Splitu; deli se samo
    površina ISPOD nje. */
 export function RulerRow() {
+  const page=useKachamak(s=>s.pageFormat??DEFAULT_PAGE_FORMAT);
   /* „?? true“ jer stari sačuvani store nema ovaj ključ (persist je ceo
      state, verzija se ne menja; šema podataka ista) */
   const rulerVisible = useKachamak((s) => s.rulerVisible ?? true);
   const setRulerVisible = useKachamak((s) => s.setRulerVisible);
 
   return (
-    <div className="flex h-9 shrink-0 items-center overflow-y-auto px-6 kachamak-scroll" style={{scrollbarGutter:'stable'}}>
+    <div data-workspace-chrome className="flex h-9 shrink-0 items-center overflow-y-auto px-6 kachamak-scroll" style={{scrollbarGutter:'stable'}}>
       <div
-        className="relative mx-auto h-7 w-full"
-        style={{ maxWidth: "min(48rem, 100%)" }}
+        data-page-ruler data-page-layout={page.layout}
+        className="relative h-7 w-full"
+        style={pageVariables(page)}
       >
         {rulerVisible && <RulerStrip />}
         <button
@@ -296,10 +303,10 @@ export function RulerRow() {
 
 /* ---------- strana: naslov + tekst ---------- */
 
-/* Sadržaj JEDNOG editora (naslov + RichEditor) — koristi ga Write mod i
-   OBA Split panela. Font/veličina/prored dolaze iz store-a (fiksna formatna
-   traka iznad njih je jedina instanta). */
+/* One note surface, used by Write and both Split panes. Format supplies page
+   defaults; explicit inline styles in the manuscript remain local overrides. */
 export function EditorPage({ node, section, continuous=false }: { node: NoteNode; section: SectionKey; continuous?:boolean }) {
+  const page=useKachamak(s=>s.pageFormat??DEFAULT_PAGE_FORMAT);
   const updateNode = useKachamak((s) => s.updateNode);
   const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
   const size = useKachamak((s) => s.editorSize ?? 16);
@@ -310,10 +317,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
       <div className="px-6 py-6">
         {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
             zoomu (100% je u koordinatama zoomovanog elementa) */}
-        <div
-          className="mx-auto w-full"
-          style={{ maxWidth: "min(48rem, 100%)" }}
-        >
+        <PageSurface>
           <input
             value={node.title}
             onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
@@ -329,6 +333,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
             }}
           >
             <RichEditor
+              colorizeAnnotations={page.colorizeAnnotations}
               noteId={node.id}
               html={node.content}
               onChange={(html) => updateNode(section, node.id, { content: html })}
@@ -336,7 +341,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
               className={continuous ? "min-h-12 text-foreground" : "min-h-[50vh] text-foreground"}
             />
           </div>
-        </div>
+        </PageSurface>
       </div>
     </div>
   );

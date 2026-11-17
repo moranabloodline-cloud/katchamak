@@ -151,10 +151,10 @@ export function noteLinkColor(color?:string) {
 }
 
 /** Display-only rules keep old anchors in sync without rewriting prose/history. */
-export function noteAnchorStyles(novel:Novel|undefined,scope:string) {
+export function noteAnchorStyles(novel:Novel|undefined,scope:string,colorize=true) {
   if(!novel||!/^[a-zA-Z0-9_-]+$/.test(scope))return '';
   return flattenNotes(novel).filter(({node})=>/^[a-zA-Z0-9_-]+$/.test(node.id)).map(({node})=>{
     const selector=`[data-note-link-scope="${scope}"] a[href="#note/${node.id}"]`;
-    return `${selector},${selector} *{color:${noteLinkColor(node.color)}!important;}`;
+    return `${selector},${selector} *{color:${colorize?noteLinkColor(node.color):'inherit'}!important;}`;
   }).join('\n');
 }

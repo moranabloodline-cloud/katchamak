@@ -17,6 +17,7 @@ import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel } from "./utils";
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
+import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
 import { validEvent, validTimelineExtra } from './story-calendar';
 
 interface KachamakState {
@@ -55,14 +56,14 @@ interface KachamakState {
   setActivePane: (p: "a" | "b") => void;
   setSplitRatio: (r: number) => void;
 
-  /* formatna traka (traka 2) — JEDNA fiksna instanta iznad radne površine,
-     ne duplira se po panelu u Splitu (po Nikoli). Font/veličina/prored važe za
-     stranu u svakom modu (Write i oba Split panela). ?? default zbog starih
-     sačuvanih store-ova. */
+  /* Format page defaults shared by Write, Split and Continuous. The separate
+     text toolbar writes inline styles to its selection, never to these defaults. */
   editorFont: string;
   editorSize: number;
   editorSpacing: string;
   editorSpellCheck: boolean;
+  pageFormat: PageFormat;
+  setPageFormat: (patch:Partial<PageFormat>) => void;
   setEditorSpellCheck: (enabled:boolean) => void;
   setEditorFont: (f: string) => void;
   setEditorSize: (n: number) => void;
@@ -367,6 +368,8 @@ export const useKachamak = create<KachamakState>()(
       editorFont: "Segoe UI",
       editorSize: 16,
       editorSpacing: "1.5",
+      pageFormat: {...DEFAULT_PAGE_FORMAT},
+      setPageFormat: patch => set(state=>{const next={...DEFAULT_PAGE_FORMAT,...state.pageFormat,...patch};return validPageFormat(next)?{pageFormat:next}:{};}),
       editorSpellCheck: true,
       setEditorSpellCheck: (enabled) => set({editorSpellCheck:enabled}),
       setEditorFont: (f) => set({ editorFont: f }),
@@ -858,7 +861,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 25,
+      version: 26,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -871,6 +874,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<26){if(!validPageFormat(s.pageFormat))s.pageFormat={...DEFAULT_PAGE_FORMAT};}
         if(version<25){ /* Optional Details order/collapse; existing notes remain expanded in their original order. */ }
         if(version<24){ /* Optional per-note block visibility; preserve all existing content. */ }
         if(version<23){ /* Optional note image; existing notes remain untouched. */ }
