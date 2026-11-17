@@ -1,5 +1,5 @@
 'use client';
-import {Plus,CalendarRange,Diamond} from 'lucide-react';
+import {Plus,Hourglass,Zap} from 'lucide-react';
 import {eventType,eventDuration,formatDate,type StoryCalendar,type TimelineGroup} from '@/lib/kachamak/story-calendar';
 import {groupFor,type EventRow} from '@/lib/kachamak/timeline-data';
 import {iconByName} from '@/lib/kachamak/icons';
@@ -9,10 +9,10 @@ import {TimelineCardMenu} from './TimelineCardMenu';
 
 export function TimelineCards({rows,calendar,groups,compact,synopsis,onEdit,onAdd}:{rows:EventRow[];calendar:StoryCalendar;groups:TimelineGroup[];compact:boolean;synopsis:boolean;onEdit:(row:EventRow)=>void;onAdd:()=>void}) {
   return <div className="min-h-0 flex-1 overflow-auto px-3 py-6 sm:px-5 kachamak-scroll"><div className="mx-auto max-w-4xl">
-    {rows.map((row,index)=>{const period=eventType(row.event)==='period',Icon=iconByName(row.node.icon)??(period?CalendarRange:Diamond),group=groups.find(g=>g.id===groupFor(row.event,groups)),banner=row.event.cardStyle!=='color'&&row.event.banner&&validCoverImage(row.event.banner)?row.event.banner:undefined;
+    {rows.map((row,index)=>{const period=eventType(row.event)==='period',Icon=iconByName(row.node.icon)??(period?Hourglass:Zap),group=groups.find(g=>g.id===groupFor(row.event,groups)),banner=row.event.cardStyle!=='color'&&row.event.banner&&validCoverImage(row.event.banner)?row.event.banner:undefined;
       const color=row.event.cardColor??group?.color??row.node.color??'#45494a',opacity=row.event.cardOpacity??(banner ? .2 : .6),detail=row.event.cardDetail??(synopsis?'dates':'title');
       const previous=rows[index-1],overlap=previous&&row.event.start<(previous.event.end??previous.event.start),gapStart=previous?(overlap?previous.event.start:previous.event.end??previous.event.start):0,gap=previous?eventDuration({type:'period',start:gapStart,end:row.event.start,precision:row.event.precision},calendar):'';
-      const dates=formatDate(calendar,row.event.start,row.event.precision)+(period&&row.event.end!==undefined?' → '+formatDate(calendar,row.event.end,row.event.precision)+' ('+eventDuration(row.event,calendar)+')':'');
+      const dates=formatDate(calendar,row.event.start,row.event.precision)+(period&&row.event.end!==undefined?' → '+formatDate(calendar,row.event.end,row.event.endPrecision??row.event.precision)+' ('+eventDuration(row.event,calendar)+')':'');
       const rgb=[1,3,5].map(n=>parseInt(color.slice(n,n+2),16)),light=!banner&&opacity>.7&&(rgb[0]*.299+rgb[1]*.587+rgb[2]*.114)>180;
       return <article key={row.node.id} className="grid grid-cols-[16px_minmax(0,1fr)] gap-x-3 sm:grid-cols-[minmax(90px,140px)_18px_minmax(0,1fr)]">
         <div className="hidden pt-1 text-right sm:block"><time className="block text-[11px] font-semibold leading-snug">{formatDate(calendar,row.event.start,row.event.precision)}</time>{previous&&<span className="mt-0.5 block text-[10px] leading-snug text-muted-foreground">{gap?`${overlap?'Started ':''}${gap} later`:'Same time'}</span>}</div>

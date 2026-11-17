@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  CalendarRange,
+  Hourglass,
+  Zap,
   Diamond,
   ChevronDown,
   ChevronRight,
@@ -21,7 +22,7 @@ import { SECTION_KEYS, TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
 import { findNode, locateNode } from "@/lib/kachamak/utils";
-import {eventType} from "@/lib/kachamak/story-calendar";
+import {GREGORIAN,eventType} from "@/lib/kachamak/story-calendar";
 import {ColourPalette} from "./PresetColourPicker";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
@@ -43,6 +44,9 @@ import { WorkspaceNavigation } from "./WorkspaceNavigation";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
+import {chronologicalNotes,timelineKind,timelineDateLabel} from '@/lib/kachamak/timeline-tree';
+import {addTimelineNote} from '@/lib/kachamak/timeline-actions';
+
 /* fallback only for old notes that never got an icon — the user picks the real one */
 const kindIcon = (n: NoteNode, open: boolean) => {
   if (n.kind === "act") return <Landmark className="h-3.5 w-3.5 text-orange-400/80" />;
@@ -61,7 +65,7 @@ const rowIcon = (n: NoteNode, open: boolean) => {
   if (Cmp) {
     return <Cmp className="h-3.5 w-3.5" style={{ color: n.color || "#a1a1aa" }} />;
   }
-  if(n.event){const Icon=eventType(n.event)==='period'?CalendarRange:Diamond;return <Icon className="h-3.5 w-3.5 shrink-0" style={{color:n.color||undefined}}/>;}
+  if(timelineKind(n)){const Icon=timelineKind(n)==='period'?Hourglass:Zap;return <Icon className="h-3.5 w-3.5 shrink-0" style={{color:n.color||undefined}}/>;}
   return kindIcon(n, open);
 };
 
@@ -95,7 +99,8 @@ interface TreeRowProps {
 
 function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
-  const select = useKachamak((s) => s.select);
+  const selectNode = useKachamak((s) => s.select);
+  const select=(id:string|null)=>{selectNode(id);if(section==="timeline")useKachamak.getState().setView("timeline");};
   const updateNode = useKachamak((s) => s.updateNode);
   const addNode = useKachamak((s) => s.addNode);
   const deleteNode = useKachamak((s) => s.deleteNode);
@@ -205,7 +210,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
         aria-level={depth + 1}
         data-note-id={node.id}
         tabIndex={0}
-        onClick={(e) => { if (!renaming) { select(node.id); e.currentTarget.focus(); } }}
+        onClick={(e) => { if (!renaming && e.currentTarget.contains(e.target as Node)) { select(node.id); e.currentTarget.focus(); } }}
         onContextMenu={(e) => {
           if ((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]')) { e.stopPropagation(); return; }
           e.preventDefault();e.stopPropagation();
@@ -348,7 +353,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
             className="flex-1 min-w-0 bg-black/40 border border-orange-500/50 rounded px-1 text-sm outline-none"
           />
         ) : (
-          <span className="flex-1 min-w-0 truncate">{node.title}</span>
+          <span className="flex-1 min-w-0" title={section==="timeline"?`${node.title} · ${timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}`:node.title}><span className="block truncate">{node.title}</span>{section==="timeline"&&<span className="block truncate text-[10px] text-muted-foreground">{timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}</span>}</span>
         )}
         {/* three-dot menu at the END of the row — exact structure from the
             documentation; the dots stay visible while a menu/picker is open */}
@@ -379,6 +384,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
                 Create note
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
+              {section==="timeline"&&<><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</DropdownMenuItem><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</DropdownMenuItem><DropdownMenuSeparator/></>}
               <DropdownMenuItem onSelect={() => setRenamingNode(node.id)}>
                 Rename
               </DropdownMenuItem>
@@ -610,7 +616,8 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
       .map((n) => ({ ...n, children: dropHidden(n.children) }));
 
   const scopedRoot = rootId ? findNode(roots, rootId) : null;
-  const shown = dropHidden(scopedRoot ? [scopedRoot] : roots);
+  const visible = dropHidden(scopedRoot ? [scopedRoot] : roots);
+  const shown = section==="timeline"?chronologicalNotes(visible):visible;
 
   /* the top-bar dropdown: which level of the tree the panel shows */
   const visibleRoots = (() => {
@@ -665,6 +672,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
       </div>
       </ContextMenuTrigger>
       <ContextMenuContent aria-label="Tree actions" className="w-56 border-white/10 bg-[#1b1b1b] font-serif">
+        {section==="timeline"&&<><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</ContextMenuItem><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</ContextMenuItem></>}
         <ContextMenuItem onSelect={() => addNode(section,rootId??null,'doc')}>
           {rootId?'Create note':'Create top-level note'}
         </ContextMenuItem>

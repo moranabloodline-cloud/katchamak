@@ -1,5 +1,10 @@
 import { validCoverImage } from './project-settings';
 export const DEFAULT_ERA_COLOR='#8b949e';
+// 13.8 billion Gregorian years fit exactly in integer minutes. Leave headroom
+// below MAX_SAFE_INTEGER for calendar-day arithmetic and viewport rounding.
+export const TIMELINE_LIMIT=8e15;
+export const TIMELINE_MAX_SPAN=Number.MAX_SAFE_INTEGER;
+export type DatePrecision='year'|'month'|'day'|'time';
 /** Calendar arithmetic is independent of JavaScript Date/time zones. All event
  * positions are integer minutes from day 1 of year 1 in the chosen time system.
  * Astronomical year 0 is displayed as year 1 of the preceding era. */
@@ -24,7 +29,7 @@ export interface StoryCalendar {
   leap: { every: number; except: number; also: number; month: number; days: number } | null;
 }
 export interface StoryDate { year: number; month: number; day: number; hour: number; minute: number }
-export interface StoryEvent { start: number; end?: number; groupId?: string; precision: 'day' | 'time'; banner?: string; type?: 'event' | 'period'; cardColor?: string; cardOpacity?: number; cardDetail?: 'title' | 'dates' | 'synopsis'; cardStyle?: 'image' | 'color' }
+export interface StoryEvent { start: number; end?: number; groupId?: string; precision: DatePrecision; endPrecision?: DatePrecision; banner?: string; type?: 'event' | 'period'; cardColor?: string; cardOpacity?: number; cardDetail?: 'title' | 'dates' | 'synopsis'; cardStyle?: 'image' | 'color' }
 export const eventType=(event:StoryEvent):'event'|'period'=>event.type??(event.end!==undefined&&event.end>event.start?'period':'event');
 export function eventDuration(event:StoryEvent,c:StoryCalendar) {
   if(eventType(event)!=='period'||event.end===undefined)return '';
@@ -66,7 +71,7 @@ export function validCalendar(value:unknown):value is StoryCalendar {
   if(c.eraFullName!==undefined&&!label(c.eraFullName)||c.beforeEraFullName!==undefined&&!label(c.beforeEraFullName))return false;
   if(c.yearZero!==undefined&&typeof c.yearZero!=='boolean'||c.resetWeekdaysEachMonth!==undefined&&typeof c.resetWeekdaysEachMonth!=='boolean')return false;
   if(c.eras!==undefined&&(!Array.isArray(c.eras)||c.eras.length>32||!c.eras.every((e,i)=>e&&label(e.id)&&label(e.name)&&label(e.abbreviation)&&(e.color===undefined||typeof e.color==='string'&&/^#[a-f0-9]{6}$/i.test(e.color))&&integer(e.startYear,2,1e9)&&(!i||e.startYear>c.eras![i-1].startYear))||new Set(c.eras.map(e=>e.id)).size!==c.eras.length))return false;
-  if(c.range!==undefined&&(!c.range||!integer(c.range.start,-1e12,1e12)||!integer(c.range.end,c.range.start,1e12)))return false;
+  if(c.range!==undefined&&(!c.range||!integer(c.range.start,-TIMELINE_LIMIT,TIMELINE_LIMIT)||!integer(c.range.end,c.range.start,TIMELINE_LIMIT)))return false;
   if(c.moons!==undefined&&(!Array.isArray(c.moons)||c.moons.length>32||!c.moons.every(m=>m&&label(m.id)&&label(m.name)&&Number.isFinite(m.period)&&m.period>=1&&m.period<=1e12&&Number.isFinite(m.offset)&&Math.abs(m.offset)<=1e12&&/^#[a-f0-9]{6}$/i.test(m.color))||new Set(c.moons.map(m=>m.id)).size!==c.moons.length))return false;
   if(c.dateFormat!==undefined&&(typeof c.dateFormat!=='string'||!c.dateFormat.trim()||c.dateFormat.length>200)||c.timeFormat!==undefined&&!['12h','24h'].includes(c.timeFormat))return false;
   return l===null||!!l&&integer(l.every,1,10000)&&integer(l.except,0,10000)&&integer(l.also,0,10000)&&(!l.except||l.except%l.every===0)&&(!l.also||!!l.except&&l.also%l.except===0)&&integer(l.month,0,c.months.length-1)&&integer(l.days,1,30);
@@ -74,14 +79,14 @@ export function validCalendar(value:unknown):value is StoryCalendar {
 export function validEvent(value:unknown):value is StoryEvent {
   if(!value||typeof value!=='object')return false;
   const e=value as StoryEvent;
-  return integer(e.start,-1e12,1e12)&&(e.end===undefined||integer(e.end,e.start,1e12))&&(e.groupId===undefined||typeof e.groupId==='string')&&['day','time'].includes(e.precision)&&validCoverImage(e.banner)&&(e.cardColor===undefined||/^#[a-f0-9]{6}$/i.test(e.cardColor))&&(e.cardOpacity===undefined||Number.isFinite(e.cardOpacity)&&e.cardOpacity>=0&&e.cardOpacity<=1)&&(e.cardStyle===undefined||['image','color'].includes(e.cardStyle))&&(e.cardDetail===undefined||['title','dates','synopsis'].includes(e.cardDetail))&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
+  return integer(e.start,-TIMELINE_LIMIT,TIMELINE_LIMIT)&&(e.end===undefined||integer(e.end,e.start,TIMELINE_LIMIT))&&(e.groupId===undefined||typeof e.groupId==='string')&&['year','month','day','time'].includes(e.precision)&&(e.endPrecision===undefined||['year','month','day','time'].includes(e.endPrecision))&&validCoverImage(e.banner)&&(e.cardColor===undefined||/^#[a-f0-9]{6}$/i.test(e.cardColor))&&(e.cardOpacity===undefined||Number.isFinite(e.cardOpacity)&&e.cardOpacity>=0&&e.cardOpacity<=1)&&(e.cardStyle===undefined||['image','color'].includes(e.cardStyle))&&(e.cardDetail===undefined||['title','dates','synopsis'].includes(e.cardDetail))&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
 }
 export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&
     (t.display===undefined||['axis','calendar','chronicle','outline'].includes(t.display))&&
     (t.eventScope===undefined||['book','section','folder'].includes(t.eventScope))&&
-    (t.center===undefined||integer(t.center,-1e12,1e12))&&
-    (t.span===undefined||integer(t.span,1,2e12))&&
+    (t.center===undefined||integer(t.center,-TIMELINE_LIMIT,TIMELINE_LIMIT))&&
+    (t.span===undefined||integer(t.span,1,TIMELINE_MAX_SPAN))&&
     (t.groups===undefined||Array.isArray(t.groups)&&t.groups.length<=100&&new Set(t.groups.map(g=>g?.id)).size===t.groups.length&&t.groups.every(g=>g&&label(g.id)&&label(g.name)&&/^#[a-f0-9]{6}$/i.test(g.color)))&&
     (t.hiddenGroups===undefined||Array.isArray(t.hiddenGroups)&&t.hiddenGroups.every(id=>typeof id==='string'));
 }
@@ -105,7 +110,7 @@ export function dateToMinute(c:StoryCalendar,d:StoryDate) {
   let day=daysBeforeYear(c,d.year)+d.day-1;
   for(let i=0;i<d.month;i++)day+=monthDays(c,d.year,i);
   const value=day*minutesPerDay(c)+d.hour*c.minutesPerHour+d.minute;
-  if(!integer(value,-1e12,1e12))throw new Error('This date is outside the supported timeline range.');
+  if(!integer(value,-TIMELINE_LIMIT,TIMELINE_LIMIT))throw new Error('This date is outside the supported timeline range.');
   return value;
 }
 export function minuteToDate(c:StoryCalendar,value:number):StoryDate {
@@ -135,10 +140,18 @@ export function formatCalendarDate(c:StoryCalendar,value:number,pattern=c.dateFo
   const tokens:Record<string,string>={E:era.abbreviation,EE:era.name,YY:String(era.year).slice(-2).padStart(2,'0'),YYYY:String(era.year),SYYYY:String(d.year),YBIG:era.year.toLocaleString('en-US'),M:String(d.month+1),MM:String(d.month+1).padStart(2,'0'),MMM:c.months[d.month].name.slice(0,3),MMMM:c.months[d.month].name,D:String(d.day),DD:String(d.day).padStart(2,'0'),DDD:c.weekdays[weekday].slice(0,3),DDDD:c.weekdays[weekday],H:String(d.hour),HH:String(d.hour).padStart(2,'0'),m:String(d.minute),mm:String(d.minute).padStart(2,'0'),'^':ordinal(d.day)};
   return pattern.replace(/\[[^\]]*\]|SYYYY|YYYY|YBIG|MMMM|DDDD|MMM|DDD|YY|MM|DD|EE|HH|mm|[EMDHm^]/g,t=>t.startsWith('[')?t.slice(1,-1):tokens[t]??t);
 }
-export function formatDate(c:StoryCalendar,value:number,precision:'day'|'time'='day') {
+export function formatDate(c:StoryCalendar,value:number,precision:DatePrecision='day') {
   const d=minuteToDate(c,value);
+  const era=eraYear(c,d.year),year=era.year>9999?era.year.toLocaleString('en-US'):String(era.year);
+  if(precision==='year')return `${year} ${era.abbreviation}`;
+  if(precision==='month')return `${c.months[d.month].name} ${year} ${era.abbreviation}`;
   const clock=c.timeFormat==='12h'&&c.hoursPerDay===24?`${d.hour%12||12}:${String(d.minute).padStart(2,'0')} ${d.hour<12?'AM':'PM'}`:`${String(d.hour).padStart(2,'0')}:${String(d.minute).padStart(2,'0')}`;
   return `${formatCalendarDate(c,value)}${precision==='time'?` · ${clock}`:''}`;
+}
+export function dateAtPrecision(c:StoryCalendar,d:StoryDate,precision:DatePrecision,end=false) {
+  const month=precision==='year'?(end?c.months.length-1:0):d.month;
+  const day=precision==='year'||precision==='month'?(end?monthDays(c,d.year,month):1):d.day;
+  return {...d,month,day,hour:precision==='time'?d.hour:end?c.hoursPerDay-1:0,minute:precision==='time'?d.minute:end?c.minutesPerHour-1:0};
 }
 export function calendarCells(c:StoryCalendar,value:number) {
   const d=minuteToDate(c,value),first=value-(d.day-1)*minutesPerDay(c)-d.hour*c.minutesPerHour-d.minute,day=Math.floor(first/minutesPerDay(c));

@@ -79,6 +79,7 @@ export interface NoteNode {
   aliases?: string[];
   linkChoices?: LinkChoice[];
   event?: StoryEvent;
+  timelineKind?: 'event' | 'period'; // an undated Timeline note awaiting its dates
   createdAt: number;
   updatedAt: number;
   children: NoteNode[];

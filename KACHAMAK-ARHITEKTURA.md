@@ -190,3 +190,10 @@ Split/Write/Grid/List; Label+Status+colour row in the right panel.
 5. Top bar "Current Note" dropdown (§3).
 6. Vault + Master Backup + export formats (§14–15).
 7. Dashboard (§18).
+
+## Dopuna — Timeline hijerarhija (Nikola, 18.11.2026)
+
+- Time Period je ista Note sa početkom i krajem; može sadržati podperiode i Events kroz više nivoa. Kalendarske ere/oznake u Time System nisu zamena za ovu hijerarhiju.
+- Stablo levo, datumi/tip desno, automatska vremenska osa u sredini. Klik na period ulazi u njegov neposredni nivo; događaj zadržava pregled braće i roditelja.
+- Datumi se mogu zadati samo kao godina ili mesec, odnosno dan ili vreme. Premeštanje note ne pomera njen datum; neslaganje sa roditeljskim opsegom je vidljivo upozorenje.
+- Demo iz korisnikovog fajla dodaje se u Timeline postojećeg Morrigan’s Ocean projekta pod jednim glavnim periodom. Ne pravi novi roman i ne prepisuje sadržaj drugih tabova. Import timeline je append-only; kalendar se ne zamenjuje. Kloniranje tabova ostaje odloženo.

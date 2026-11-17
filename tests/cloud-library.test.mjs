@@ -30,6 +30,7 @@ assert.deepEqual((await (await call(a)).json()).snapshot,{novels:[],collections:
 const {newNovel}=await import('../src/lib/kachamak/seed.ts');
 const novel=newNovel('Cloud test','Tester');novel.sections.binder.push({id:'note-1',title:'First note',content:'<p>Saved text čćš</p>',children:[],kind:'doc',synopsis:'',notes:'',status:'',label:'',createdAt:1,updatedAt:1});
 novel.series='Cloud Saga';novel.seriesIndex='Book 1';novel.archived=false;novel.cover.image='data:image/png;base64,aGVsbG8=';
+novel.sections.timeline=[{...structuredClone(novel.sections.binder[0]),id:'cosmic-period',timelineKind:'period',event:{type:'period',start:-7258098600000000,end:1000,precision:'year',endPrecision:'day'},children:[{...structuredClone(novel.sections.binder[0]),id:'nested-period',timelineKind:'period',children:[]}]}];
 const snapshot={novels:[novel],collections:[{id:'collection-1',name:'My collection',projectIds:[novel.id],parentId:null}]};
 assert.equal((await call(a,'/api/library','POST',{revision:0,snapshot},'https://evil.local')).status,403);
 assert.equal((await call(a,'/api/library','POST',{revision:0,snapshot})).status,200);
@@ -181,7 +182,7 @@ assert.equal(useKachamak.getState().novels[0].timeline.display,'calendar');
 assert.deepEqual(useKachamak.getState().novels[0].timeline.calendar,eraCalendar);
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].event,{start:-1440,end:2880,precision:'day',groupId:'history',banner:'data:image/png;base64,aGVsbG8='});
 assert.equal(useKachamak.getState().novels[0].timeline.groups[0].name,'History');
-assert.equal(useKachamak.getState().novels[0].sections.timeline[0].id,timelineRoot);assert.equal(useKachamak.getState().novels[0].sections.timeline[0].children[0].content,'<p>Nested timeline prose.</p>');assert.deepEqual(useKachamak.getState().novels[0].sections.timeline[0].children[0].event,{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'});
+assert.equal(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).id,timelineRoot);assert.equal(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).children[0].content,'<p>Nested timeline prose.</p>');assert.deepEqual(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).children[0].event,{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'});
 assert.equal(useKachamak.getState().novels[0].sections.codex[0].aliases[0],'Cernobog');
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[0].targetId,target);assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[1].targetId,otherTarget);assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[2].targetId,null);
 assert.ok(useKachamak.getState().novels[0].hiddenSections.includes('research'));

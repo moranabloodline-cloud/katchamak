@@ -11,6 +11,9 @@ import { EditorToolbar, WriteArea } from "./WriteArea";
 import {ContinuousWriteArea} from './ContinuousWriteArea';
 import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
+import {timelineDefaultStart} from "@/lib/kachamak/timeline-tree";
+import {TimelineEventEditor} from "./TimelineEventEditor";
+import {GREGORIAN} from "@/lib/kachamak/story-calendar";
 import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
@@ -297,7 +300,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
      matičnu sekciju note (selectedSection), ne u tekući tab. */
   const hit =
     selectedNodeId && novel ? findNodeInNovel(novel, selectedNodeId) : null;
-  const selected = hit?.node ?? null;
+  const selected = view==="timeline"&&section==="timeline"&&hit?.section!==section?null:hit?.node ?? null;
   const selectedSection = hit?.section ?? section;
 
   const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
@@ -365,7 +368,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
       <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
-        <EditorToolbar />
+        {view!=="timeline"&&<EditorToolbar />}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
           {view === "timeline" && <TimelineView section={section} rootId={rootId} />}
@@ -402,7 +405,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             aria-label="View mode"
             className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5"
           >
-            {VIEW_BTNS.map((b) => (
+            {(section==="timeline"?[{key:"timeline" as const,label:"Timeline"},...VIEW_BTNS]:VIEW_BTNS).map((b) => (
               <button
                 key={b.key}
                 type="button"
@@ -436,8 +439,9 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {selected ? (
               <>
-                <div className="min-h-0 flex-1">
-                  <RightPanel node={selected} section={selectedSection} onHide={toggleRightPanel} />
+                <div className="flex min-h-0 flex-1 flex-col">
+                  {view==="timeline"&&selectedSection===section&&<div className="max-h-[65%] shrink-0 overflow-y-auto kachamak-scroll"><TimelineEventEditor key={`${novel!.id}:${selected.id}:${selected.title}:${selected.event?.start}:${selected.event?.end}:${selected.icon}:${JSON.stringify(novel?.timeline?.calendar)}`} embedded start={timelineDefaultStart(novel!.sections[section],selected.id)} novel={novel!} calendar={novel?.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}} section={section} onClose={()=>{}} onSaved={()=>{}}/></div>}
+                  <div className="min-h-0 flex-1"><RightPanel node={selected} section={selectedSection} onHide={toggleRightPanel} /></div>
                 </div>
                 <NoteMetaBar section={selectedSection} node={selected} />
               </>

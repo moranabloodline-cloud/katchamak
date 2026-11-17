@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {useKachamak,isUsableBackup} from '../src/lib/kachamak/store.ts';
+import {newNovel} from '../src/lib/kachamak/seed.ts';
+import {GREGORIAN} from '../src/lib/kachamak/story-calendar.ts';
+import {importTimeline} from '../src/lib/kachamak/timeline-import.ts';
+import {validCloudLibrary} from '../scripts/cloud-library-runtime.mjs';
+const novel=newNovel('Existing manuscript','Writer'),other=newNovel('Other','');
+const old={id:'existing',title:'Existing note',kind:'doc',content:'Keep this manuscript',synopsis:'Keep synopsis',notes:'Keep notes',status:'Draft',label:'Canon',createdAt:1,updatedAt:1,children:[]};
+novel.sections.timeline=[structuredClone(old)];novel.sections.binder=[{...old,id:'chapter'}];
+const before=structuredClone(novel);
+useKachamak.setState({novels:[novel,other],activeNovelId:novel.id});
+const file={format:'kachamak-timeline',version:1,calendar:GREGORIAN,notes:[{title:'Demo',content:'<p>Sample</p>',event:{start:0,end:10000,precision:'day',type:'period'},children:[{title:'Nested',event:{start:5,end:900,precision:'day',type:'period'},children:[{title:'Event',event:{start:6,precision:'day',type:'event'},children:[]}]}]}]};
+const result=importTimeline(novel.id,JSON.stringify(file)),live=useKachamak.getState().novels[0];
+assert.equal(result.count,3);assert.equal(useKachamak.getState().novels.length,2,'No separate project created');assert.equal(live.sections.timeline.length,2);assert.deepEqual(live.sections.timeline[0],before.sections.timeline[0]);assert.deepEqual(live.sections.binder,before.sections.binder);assert.equal(live.timeline.calendar,undefined,'Destination calendar is preserved');assert.equal(live.sections.timeline[1].children[0].children[0].event.start,6);assert.equal(live.sections.timeline[1].content,'<p>Sample</p>');assert.equal(useKachamak.getState().novels[1],other);assert.ok(isUsableBackup(live));assert.ok(validCloudLibrary({novels:[live,other],collections:[]}));
+const snapshot=JSON.stringify(useKachamak.getState().novels);
+for(const bad of [{...file,calendar:{...GREGORIAN,hoursPerDay:30}},{...file,notes:[{...file.notes[0],event:{start:'wrong',precision:'day'}}]},{...file,format:'katchamak-project'}])assert.throws(()=>importTimeline(novel.id,JSON.stringify(bad)));
+assert.throws(()=>importTimeline(other.id,JSON.stringify(file)));assert.equal(JSON.stringify(useKachamak.getState().novels),snapshot,'Invalid imports are atomic and leave all projects untouched');
+console.log('Timeline import passed: append-only nested notes in the existing project, preserved manuscript/calendar/other projects, private backup validation and atomic rejection.');

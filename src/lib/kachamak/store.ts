@@ -201,6 +201,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
       validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
+      (node.timelineKind === undefined || (node.timelineKind==="event"||node.timelineKind==="period")) &&
       (node.linkChoices === undefined || Array.isArray(node.linkChoices) && node.linkChoices.every(c => c && Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end > c.start && typeof c.text === 'string' && (c.targetId === null || typeof c.targetId === 'string'))) &&
       isTree(node.children);
   });
@@ -549,7 +550,7 @@ export const useKachamak = create<KachamakState>()(
       /* prelazak na drugi tab NE menja radnu površinu — selekcija ostaje
          (editor toolbar i desni panel drže tekuću notu) dok korisnik ne klikne
          novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
-      setTab: (tab) => set(s => ({ activeTab: tab, renamingNodeId: null,
+      setTab: (tab) => set(s => ({ activeTab: tab, renamingNodeId: null, ...(tab==="timeline"?{view:"timeline" as const}:s.activeTab==="timeline"&&s.view==="timeline"?{view:"write" as const}:{}),
         ...(s.novels.find(n=>n.id===s.activeNovelId)?.hiddenSections?.includes(tab as SectionKey)
           ? {novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:n.hiddenSections?.filter(k=>k!==tab)}):n)} : {})
       })),
@@ -646,6 +647,8 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         if (!target) return;
+        if(patch.event!==undefined&&!validEvent(patch.event))return;
+        if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
         if (!validCoverImage(patch.image)||!validDocumentTarget(patch.documentTarget)) return;
         if (!validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (!validHiddenDetailBlocks(patch.collapsedDetailBlocks)||!validDetailBlockOrder(patch.detailBlockOrder)) return;
@@ -871,7 +874,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 30,
+      version: 31,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -884,6 +887,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<31){ /* Optional undated Timeline types and date precision; preserve all saved dates. */ }
         if(version<30){ /* Optional era colours; existing eras keep the default without changing dates. */ }
         if(version<29){if(typeof s.editorSpellCheck!=='boolean')s.editorSpellCheck=true;}
         if(version<28){ /* Optional per-note document targets; existing notes have no target. */ }
