@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
-for(const key of ['window','document','HTMLElement','Element','Node','Event','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:dom[key]});
+for(const key of ['window','document','HTMLElement','Element','Node','Event','navigator','DocumentFragment','MutationObserver','NodeFilter','HTMLInputElement','CustomEvent'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:dom[key]});
+globalThis.getComputedStyle=dom.getComputedStyle.bind(dom);
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const React=await import('react'),{createRoot}=await import('react-dom/client');
 const {useKachamak,isUsableBackup}=await import('../src/lib/kachamak/store.ts');
@@ -21,6 +22,17 @@ const upload=async(file)=>React.act(async()=>{const input=document.querySelector
 const node=id=>findNodeInNovel(useKachamak.getState().novels[0],id).node;
 await upload(new File(['pixels'],'portrait.png',{type:'image/png'}));assert.equal(node(a).image,image);
 assert.ok(document.querySelector('img'));assert.ok(isUsableBackup(JSON.parse(JSON.stringify(useKachamak.getState().novels[0]))));
+const beforePreview=JSON.stringify(useKachamak.getState().novels);
+await React.act(async()=>document.querySelector('[aria-label="Enlarge note image"]').click());
+assert.equal(document.querySelector('[role=dialog] img').getAttribute('src'),image,'Preview uses the saved image without modifying it');
+assert.ok(document.querySelector('[role=dialog]').getAttribute('aria-labelledby'),'Preview has an accessible name');
+await React.act(async()=>document.querySelector('[aria-label="Close image preview"]').click());
+assert.equal(document.querySelector('[role=dialog]'),null);
+assert.equal(JSON.stringify(useKachamak.getState().novels),beforePreview,'Opening and closing never changes project data');
+await React.act(async()=>document.querySelector('[aria-label="Enlarge note image"]').click());
+await React.act(async()=>actions.select(b));
+assert.equal(document.querySelector('[role=dialog]'),null,'Navigation closes the previous note image');
+await React.act(async()=>actions.select(a));
 await React.act(async()=>document.querySelector('[aria-label="Remove note image"]').click());assert.equal(node(a).image,undefined);
 Object.defineProperty(navigator,'clipboard',{configurable:true,value:{read:async()=>[{types:['image/png'],getType:async()=>new Blob(['pixels'],{type:'image/png'})}]}});
 await React.act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Paste').click());assert.equal(node(a).image,image,'Paste reads an image from the clipboard');
