@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, Save, Settings,Minimize2 } from "lucide-react";
-import { AutoLinkReview, requestLinkReview } from "./AutoLinkReview";
+import { ChevronLeft, Save, Settings,Minimize2,LoaderCircle } from "lucide-react";
+import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
 import { WorkspaceBrand } from "./WorkspaceBrand";
@@ -27,6 +27,7 @@ export function Workspace() {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const activeTab = useKachamak((s) => s.activeTab);
+  const savePhase=useSaveReviewState(s=>s.phase);
   const setTab = useKachamak((s) => s.setTab);
   useEffect(()=>{
     const keyboard=(event:KeyboardEvent)=>{
@@ -113,11 +114,12 @@ export function Workspace() {
               <button
                 type="button"
                 aria-label="Save"
-                title="Save"
+                title={savePhase==='preparing'?'Preparing link review…':savePhase==='saving'?'Saving to your account…':'Save'}
+                aria-busy={savePhase!=='idle'}
                 onClick={requestLinkReview}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <Save className="h-5 w-5" />
+                {savePhase==='idle'?<Save className="h-5 w-5"/>:<LoaderCircle className="h-5 w-5 animate-spin"/>}
               </button>
               <button
                 type="button"

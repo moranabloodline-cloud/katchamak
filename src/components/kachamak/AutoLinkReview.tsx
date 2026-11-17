@@ -8,8 +8,15 @@ import {TABS} from '@/lib/kachamak/types';
 import {findNodeInNovel} from '@/lib/kachamak/utils';
 import {mergeReviewChoices,pendingLinkReview,reviewDecisions} from '@/lib/kachamak/link-review';
 import {toast} from 'sonner';
+import {create} from 'zustand';
 
 export const requestLinkReview=()=>{document.dispatchEvent(new Event('katchamak-save-review'));};
+export const useSaveReviewState=create<{phase:'idle'|'preparing'|'saving'}>(()=>({phase:'idle'}));
+const SAVE_TOAST='kachamak-manual-save';
+const afterPaint=()=>new Promise<void>(resolve=>{
+  if(document.visibilityState==='hidden')setTimeout(resolve,0);
+  else requestAnimationFrame(()=>setTimeout(resolve,0));
+});
 type Session={projectId:string;noteId:string;html:string;title:string;matches:NoteMatch[]};
 const action='w-full rounded-md border border-white/15 px-3 py-2 text-left text-xs hover:bg-white/5 disabled:opacity-40';
 
@@ -17,29 +24,47 @@ export function AutoLinkReview() {
   const [session,setSession]=useState<Session|null>(null),[selected,setSelected]=useState(''),[working,setWorking]=useState(false);
   const sessionRef=useRef<Session|null>(null),busy=useRef(false);
   const saveAttempt=useRef(0);
+  const manualAttempt=useRef(0),preparing=useRef<number|null>(null);
+  const manualContext=useRef<{projectId:string|null;noteId:string|null}|null>(null);
   const saveError=useWebLibrary(state=>state.error),savePending=useWebLibrary(state=>state.pending);
   const activeProject=useKachamak(state=>state.activeNovelId);
   const novels=useKachamak(state=>state.novels);
   const put=(value:Session|null)=>{sessionRef.current=value;setSession(value);};
   useEffect(()=>{
+    let disposed=false;
     const save=async()=>{
-      if(busy.current||sessionRef.current)return;
-      busy.current=true;
       const before=useKachamak.getState(),projectId=before.activeNovelId,noteId=before.selectedNodeId;
-      const canReview=before.activeTab!=='trash'&&!document.querySelector('[role=dialog]');
+      if(preparing.current||manualContext.current?.projectId===projectId&&manualContext.current?.noteId===noteId)return;
+      const attempt=++manualAttempt.current;
+      manualContext.current={projectId,noteId};preparing.current=attempt;
+      useSaveReviewState.setState({phase:'preparing'});
+      toast.loading('Saving…',{id:SAVE_TOAST});
+      const canReview=before.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]');
+      let failed=false,found=false,reviewed=false;
+      // Paint acknowledgement before serialization/detection. Local review then
+      // runs independently of autosave, refresh and the durable network write.
+      const painted=afterPaint();
+      const persisted=painted.then(()=>saveWebLibrary()).then(()=>({ok:true as const}),error=>{failed=true;return {ok:false as const,error};});
       try {
-        await saveWebLibrary();
+        await painted;
         const state=useKachamak.getState();
-        if(state.activeNovelId!==projectId||state.selectedNodeId!==noteId)return;
-        const novel=state.novels.find(novel=>novel.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
-        const matches=canReview&&novel&&hit?pendingLinkReview(novel,hit.node):[];
-        if(novel&&hit&&matches.length)put({projectId:novel.id,noteId:hit.node.id,html:hit.node.content,title:hit.node.title,matches});
-        else toast.success('Saved. No new note links to review.');
-      }catch(error){toast.error(error instanceof Error?error.message:String(error));}
-      finally{busy.current=false;}
+        if(!disposed&&attempt===manualAttempt.current&&!failed&&canReview&&state.activeNovelId===projectId&&state.selectedNodeId===noteId&&state.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]')){
+          const novel=state.novels.find(novel=>novel.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
+          const matches=novel&&hit?pendingLinkReview(novel,hit.node):[];
+          reviewed=true;found=matches.length>0;
+          if(novel&&hit&&found){put({projectId:novel.id,noteId:hit.node.id,html:hit.node.content,title:hit.node.title,matches});toast.dismiss(SAVE_TOAST);}
+        }
+        if(preparing.current===attempt)preparing.current=null;
+        if(!disposed&&attempt===manualAttempt.current)useSaveReviewState.setState({phase:'saving'});
+        const outcome=await persisted;
+        if(!outcome.ok)throw outcome.error;
+        const latest=useKachamak.getState(),sameNote=latest.activeNovelId===projectId&&latest.selectedNodeId===noteId;
+        if(!disposed&&attempt===manualAttempt.current&&!found)toast.success(reviewed&&sameNote?'Saved. No new note links to review.':'Saved to your account.',{id:SAVE_TOAST});
+      }catch(error){if(!disposed&&attempt===manualAttempt.current)toast.error(error instanceof Error?error.message:String(error),{id:SAVE_TOAST});}
+      finally{if(preparing.current===attempt)preparing.current=null;if(!disposed&&attempt===manualAttempt.current){manualContext.current=null;useSaveReviewState.setState({phase:'idle'});}}
     };
     document.addEventListener('katchamak-save-review',save);
-    return()=>document.removeEventListener('katchamak-save-review',save);
+    return()=>{disposed=true;manualAttempt.current++;manualContext.current=null;preparing.current=null;useSaveReviewState.setState({phase:'idle'});toast.dismiss(SAVE_TOAST);document.removeEventListener('katchamak-save-review',save);};
   },[]);
   useEffect(()=>{if(session&&session.projectId!==activeProject)put(null);},[activeProject,session]);
   const match=session?.matches[0];
