@@ -3,7 +3,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {FileText,Plus} from 'lucide-react';
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {useKachamak} from '@/lib/kachamak/store';
-import {indexNotes,searchNotes,type IndexedNote} from '@/lib/kachamak/knowledge';
+import {indexNotes,searchNoteTitles,type IndexedNote} from '@/lib/kachamak/knowledge';
 import {iconByName} from '@/lib/kachamak/icons';
 import type {NoteNode,SectionKey} from '@/lib/kachamak/types';
 
@@ -15,7 +15,7 @@ export function CodexNotePicker({node,section}:{node:NoteNode;section:SectionKey
   const groups=useMemo(()=>{
     if(!novel)return [];
     const index=indexNotes(novel).filter(e=>e.section==='codex');
-    const available=(query.trim()?searchNotes(index,query,node.id):index).filter(e=>e.node.id!==node.id&&!(node.links??[]).includes(e.node.id));
+    const available=searchNoteTitles(index,query).filter(e=>e.node.id!==node.id&&!(node.links??[]).includes(e.node.id));
     const found=new Map(available.map(e=>[e.node.id,e]));
     return novel.sections.codex.map(root=>{
       const entries:IndexedNote[]=[];

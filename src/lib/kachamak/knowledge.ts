@@ -2,6 +2,10 @@ import { SECTION_KEYS, TABS, type Novel, type NoteNode, type SectionKey } from '
 import { contentText, flattenNotes, scanLinks } from './note-links';
 import { stripHtml } from './utils';
 export type IndexedNote = { node: NoteNode; section: SectionKey; path: string; text: string };
+export function searchNoteTitles(index:IndexedNote[],query:string):IndexedNote[]{
+  const name=query.trim().normalize('NFC').toLocaleLowerCase();
+  return name?index.filter(entry=>entry.node.title.normalize('NFC').toLocaleLowerCase().includes(name)):index;
+}
 export function indexNotes(novel: Novel): IndexedNote[] {
   const result: IndexedNote[] = [];
   for (const section of SECTION_KEYS) {

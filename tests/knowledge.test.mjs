@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {newNovel} from '../src/lib/kachamak/seed.ts';
-import {indexNotes,groupLinkedNotes,matchName,referenceTo,searchNotes,inlineNoteIds} from '../src/lib/kachamak/knowledge.ts';
+import {indexNotes,groupLinkedNotes,matchName,referenceTo,searchNotes,searchNoteTitles,inlineNoteIds} from '../src/lib/kachamak/knowledge.ts';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM().window;globalThis.window=dom;globalThis.document=dom.document;globalThis.DOMParser=dom.DOMParser;
 const {manuscriptHtml,manuscriptMarkdown,manuscriptNotes,manuscriptWords}=await import('../src/lib/kachamak/manuscript-export.ts');
@@ -24,6 +24,12 @@ assert.deepEqual(inlineNoteIds('<a href="#note/character">Morrigan</a>'),['chara
 assert.equal(searchNotes(index,'Morana')[0].node.id,'character','Aliases are searchable');
 assert.equal(searchNotes(index,'Cork research')[0].node.id,'research','Exact title outranks body content');
 assert.ok(!searchNotes(index,'Morana','character').some(n=>n.node.id==='character'));
+assert.deepEqual(searchNoteTitles(index,'  MORRig  ').map(n=>n.node.id),['character'],'The picker matches partial titles without case sensitivity');
+assert.deepEqual(searchNoteTitles(index,'Morana'),[],'Aliases and manuscript mentions do not match the title-only picker');
+assert.deepEqual(searchNoteTitles(index,'Cork').map(n=>n.node.id),['research'],'A body-text match alone is excluded');
+assert.deepEqual(searchNoteTitles(index,'Act One').map(n=>n.node.id),['act'],'A parent path does not make every child a match');
+assert.deepEqual(searchNoteTitles(index,'C\u0301ira').map(n=>n.node.id),['unicode'],'Equivalent Unicode titles match');
+assert.equal(searchNoteTitles(index,'   '),index,'Clearing the query restores the available list');
 character.title='A new name';
 assert.equal(referenceTo(index.find(n=>n.node.id==='outline'),character).explicit,true,'Renaming never breaks identity links');
 const selected=new Set(['chapter','chapter-2']);
