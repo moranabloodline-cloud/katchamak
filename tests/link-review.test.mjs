@@ -4,8 +4,8 @@ const dom=new JSDOM('<!doctype html>').window;
 globalThis.window=dom;globalThis.document=dom.document;
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
 const {findNodeInNovel}=await import('../src/lib/kachamak/utils.ts');
-const {pendingLinkReview,reviewDecisions,mergeReviewChoices}=await import('../src/lib/kachamak/link-review.ts');
-const {backlinks,rebaseChoices}=await import('../src/lib/kachamak/note-links.ts');
+const {pendingLinkReview,prepareLinkReview,reviewDecisions,mergeReviewChoices}=await import('../src/lib/kachamak/link-review.ts');
+const {backlinks,rebaseChoices,contentText}=await import('../src/lib/kachamak/note-links.ts');
 const s=useKachamak.getState();s.createNovel('Review regression','Tester');
 const a=s.addNode('codex',null,'folder','People'),b=s.addNode('research',null,'folder','Myths');
 const one=s.addNode('codex',a,'doc','Morrigan'),two=s.addNode('research',b,'doc','Morrigan');
@@ -29,7 +29,7 @@ assert.equal(backlinks(novel(),two)[0].matches.length,2,'Cross-tab target keeps 
 pending=pendingLinkReview(novel(),node());assert.deepEqual(pending.map(m=>m.text),['Gateway']);
 decisions=reviewDecisions(pending,pending[0],null,'one');
 s.updateNode('timeline',source,{linkChoices:mergeReviewChoices(novel(),node(),html,decisions)});
-assert.equal(pendingLinkReview(novel(),node()).length,0,'Accepted and ignored occurrences do not return on Save');
+assert.equal(pendingLinkReview(novel(),node()).length,0,'Accepted and ignored occurrences stay resolved within the current pass');
 const saved=JSON.parse(JSON.stringify(novel()));assert.deepEqual(saved.sections.timeline[0].linkChoices,node().linkChoices);
 // Ordinary edits rebase selected IDs and ignored occurrences, never repoint names.
 s.updateNode('timeline',source,{content:'<p>Before.</p>'+html});
@@ -44,4 +44,26 @@ s.updateNode('research',two,{title:'Morrigan'});
 pending=pendingLinkReview(novel(),node());
 assert.equal(reviewDecisions(pending,pending[0],null,'remaining').length,1);
 assert.equal(rebaseChoices('Morrigan','Morrigan!', [{start:0,end:8,text:'Morrigan',targetId:two}])[0].targetId,two);
+// A new Save drops old skips, retains valid IDs and discovers appended text.
+const scanHtml='<p>Morrigan then Gateway.</p>';
+const first=pendingLinkReview(novel(),{...node(),content:scanHtml,linkChoices:[]});
+const skipped={start:first[0].start,end:first[0].end,text:first[0].text,targetId:null};
+const kept={start:first[1].start,end:first[1].end,text:first[1].text,targetId:gate};
+const fresh=prepareLinkReview(novel(),{...node(),content:scanHtml,linkChoices:[skipped,kept]});
+assert.equal(fresh.content,scanHtml);assert.deepEqual(fresh.linkChoices,[kept]);
+assert.deepEqual(pendingLinkReview(novel(),{...node(),...fresh}).map(m=>m.text),['Morrigan']);
+assert.deepEqual(pendingLinkReview(novel(),{...node(),...fresh,content:scanHtml+'<p>Morrigan returned.</p>'}).map(m=>m.text),['Morrigan','Morrigan']);
+// More than one broken anchor must not shift/drop valid choices between them.
+const broken='<p><a href="#note/old-morrigan"><strong>Morrigan</strong></a> then Gateway and <a href="#note/other-old">Morrigan</a>.</p><p><a href="#note/'+gate+'">Gateway</a> <a href="https://example.com">Morrigan</a></p>';
+const visible=contentText(broken),position=visible.indexOf('Gateway');
+const between={start:position,end:position+7,text:'Gateway',targetId:gate};
+const repaired=prepareLinkReview(novel(),{...node(),content:broken,linkChoices:[between]});
+assert.equal(repaired.unavailable,2);assert.ok(repaired.content.includes('<strong>Morrigan</strong>'));
+assert.ok(repaired.content.includes('href="#note/'+gate+'"'));assert.ok(repaired.content.includes('href="https://example.com"'));
+assert.equal(contentText(repaired.content).slice(repaired.linkChoices[0].start,repaired.linkChoices[0].end),'Gateway');
+assert.equal(repaired.linkChoices[0].targetId,gate);
+assert.deepEqual(pendingLinkReview(novel(),{...node(),...repaired}).map(m=>m.text),['Morrigan','Morrigan']);
+assert.ok(pendingLinkReview(novel(),{...node(),...repaired}).every(m=>m.candidates.length===2),'Repair never silently picks between namesakes');
+const stale=prepareLinkReview(novel(),{...node(),content:scanHtml,linkChoices:[{...skipped,targetId:'deleted-note'},kept]});
+assert.equal(stale.unavailable,1);assert.deepEqual(stale.linkChoices,[kept]);
 console.log('Link review passed: every tab, duplicate names, aliases, all/one/ignore decisions, preserved HTML, stable IDs, rebasing, roundtrip and stale-content rejection.');

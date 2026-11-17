@@ -6,7 +6,7 @@ import {saveWebLibrary,useWebLibrary} from '@/lib/kachamak/cloud-library';
 import {contentText,flattenNotes,type NoteMatch} from '@/lib/kachamak/note-links';
 import {TABS} from '@/lib/kachamak/types';
 import {findNodeInNovel} from '@/lib/kachamak/utils';
-import {mergeReviewChoices,pendingLinkReview,reviewDecisions} from '@/lib/kachamak/link-review';
+import {mergeReviewChoices,pendingLinkReview,prepareLinkReview,reviewDecisions} from '@/lib/kachamak/link-review';
 import {toast} from 'sonner';
 import {create} from 'zustand';
 
@@ -17,7 +17,7 @@ const afterPaint=()=>new Promise<void>(resolve=>{
   if(document.visibilityState==='hidden')setTimeout(resolve,0);
   else requestAnimationFrame(()=>setTimeout(resolve,0));
 });
-type Session={projectId:string;noteId:string;html:string;title:string;matches:NoteMatch[]};
+type Session={projectId:string;noteId:string;html:string;title:string;matches:NoteMatch[];unavailable:number};
 const action='w-full rounded-md border border-white/15 px-3 py-2 text-left text-xs hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 disabled:opacity-40';
 
 export function AutoLinkReview() {
@@ -41,11 +41,21 @@ export function AutoLinkReview() {
       useSaveReviewState.setState({phase:'preparing'});
       toast.loading('Saving…',{id:SAVE_TOAST});
       const canReview=before.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]');
-      let failed=false,found=false,reviewed=false;
+      let failed=false,found=false,reviewed=false,unavailable=0;
       // Paint acknowledgement before serialization/detection. Local review then
       // runs independently of autosave, refresh and the durable network write.
       const painted=afterPaint();
-      const persisted=painted.then(()=>saveWebLibrary()).then(()=>({ok:true as const}),error=>{failed=true;return {ok:false as const,error};});
+      const persisted=painted.then(()=>{
+        const state=useKachamak.getState();
+        if(!disposed&&attempt===manualAttempt.current&&canReview&&state.activeNovelId===projectId&&state.selectedNodeId===noteId&&state.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]')){
+          const novel=state.novels.find(n=>n.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
+          if(novel&&hit){
+            const prepared=prepareLinkReview(novel,hit.node);unavailable=prepared.unavailable;
+            if(prepared.content!==hit.node.content||JSON.stringify(prepared.linkChoices)!==JSON.stringify(hit.node.linkChoices??[]))state.updateNode(hit.section,hit.node.id,{content:prepared.content,linkChoices:prepared.linkChoices});
+          }
+        }
+        return saveWebLibrary();
+      }).then(()=>({ok:true as const}),error=>{failed=true;return {ok:false as const,error};});
       try {
         await painted;
         const state=useKachamak.getState();
@@ -53,14 +63,14 @@ export function AutoLinkReview() {
           const novel=state.novels.find(novel=>novel.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
           const matches=novel&&hit?pendingLinkReview(novel,hit.node):[];
           reviewed=true;found=matches.length>0;
-          if(novel&&hit&&found){put({projectId:novel.id,noteId:hit.node.id,html:hit.node.content,title:hit.node.title,matches});toast.dismiss(SAVE_TOAST);}
+          if(novel&&hit&&found){put({projectId:novel.id,noteId:hit.node.id,html:hit.node.content,title:hit.node.title,matches,unavailable});toast.dismiss(SAVE_TOAST);}
         }
         if(preparing.current===attempt)preparing.current=null;
         if(!disposed&&attempt===manualAttempt.current)useSaveReviewState.setState({phase:'saving'});
         const outcome=await persisted;
         if(!outcome.ok)throw outcome.error;
         const latest=useKachamak.getState(),sameNote=latest.activeNovelId===projectId&&latest.selectedNodeId===noteId;
-        if(!disposed&&attempt===manualAttempt.current&&!found)toast.success(reviewed&&sameNote?'Saved. No new note links to review.':'Saved to your account.',{id:SAVE_TOAST});
+        if(!disposed&&attempt===manualAttempt.current&&!found)toast.success(unavailable?`Saved. Removed ${unavailable} unavailable links; their text is unchanged.`:reviewed&&sameNote?'Saved. No new note links to review.':'Saved to your account.',{id:SAVE_TOAST});
       }catch(error){if(!disposed&&attempt===manualAttempt.current)toast.error(error instanceof Error?error.message:String(error),{id:SAVE_TOAST});}
       finally{if(preparing.current===attempt)preparing.current=null;if(!disposed&&attempt===manualAttempt.current){manualContext.current=null;useSaveReviewState.setState({phase:'idle'});}}
     };
@@ -146,13 +156,13 @@ export function AutoLinkReview() {
     next?.focus();
   };
   const start=match?Math.max(0,match.start-280):0,end=match?Math.min(text.length,match.end+360):0;
-  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}><DialogContent ref={dialog} onKeyDown={keyboard} onOpenAutoFocus={event=>event.preventDefault()} className="max-h-[88vh] overflow-y-auto border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl"><DialogHeader><DialogTitle>Automatic link detection</DialogTitle><DialogDescription>{session?.title} · {session?.matches.length??0} remaining. Targets are searched across every tab in this project.</DialogDescription></DialogHeader>{session&&<p role="status" className="text-xs text-muted-foreground">{saveError?'Choices remain in this window. Saving failed; retry Save.':savePending?'Saving link choices…':'Link choices saved.'}</p>}{session&&match&&<>
+  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}><DialogContent ref={dialog} onKeyDown={keyboard} onOpenAutoFocus={event=>event.preventDefault()} className="max-h-[88vh] overflow-y-auto border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl"><DialogHeader><DialogTitle>Automatic link detection</DialogTitle><DialogDescription>{session?.title} · {session?.matches.length??0} remaining. Targets are searched across every tab in this project.</DialogDescription></DialogHeader>{session&&<p role="status" className="text-xs text-muted-foreground">{saveError?'Choices remain in this window. Saving failed; retry Save.':savePending?'Saving link choices…':'Link choices saved.'}</p>}{session&&session.unavailable>0&&<p className="text-xs text-amber-300">Removed {session.unavailable} unavailable links; their text is unchanged. Choose any replacement targets below.</p>}{session&&match&&<>
     <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_208px]">
       <div className="min-w-0 space-y-4">
         <div aria-label="Link context" className="min-h-48 whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/20 p-5 text-sm leading-7">{start>0?'…':''}{text.slice(start,match.start)}<mark className="rounded bg-amber-400 px-1 py-0.5 font-semibold text-black">{match.text}</mark>{text.slice(match.end,end)}{end<text.length?'…':''}</div>
         <fieldset className="space-y-2"><legend className="mb-2 text-xs font-semibold">{match.candidates.length>1?'Choose the correct note — this name has multiple targets':'Link target'}</legend>{match.candidates.map(candidate=>{const path=paths.get(candidate.id);return <label key={candidate.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/15 p-3 hover:bg-white/5 focus-within:ring-2 focus-within:ring-amber-400"><input type="radio" name="automatic-link-target" value={candidate.id} checked={selected===candidate.id} onChange={()=>setSelected(candidate.id)} disabled={working} className="mt-1 accent-amber-400"/><span className="min-w-0"><span className="block text-sm" style={{color:candidate.color||'#e7d6a8'}}>{candidate.title}</span><span className="mt-1 block break-words text-xs text-muted-foreground">{path??'Unavailable note'}</span></span></label>;})}</fieldset>
       </div>
-      <div data-link-review-actions className="space-y-2"><button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected,'one')}>Create link</button><button type="button" className={action} disabled={working||!selected} onClick={()=>void decide(selected,'instances')}>Create all instances</button><div className="pt-2"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'one')}>Ignore link</button><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'instances')}>Ignore all instances</button><button type="button" className={action} disabled={working} onClick={close}>Decide later</button><div className="pt-3"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'remaining')}>Accept all further links</button><button type="button" className={action} disabled={working} onClick={close}>Abandon further links</button><p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">↑/↓ choose · ← targets · → actions · Enter confirm · Esc close. All instances applies to this name in this note. Accept all stops at an ambiguous name. Deferred links appear again on the next Save.</p></div>
+      <div data-link-review-actions className="space-y-2"><button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected,'one')}>Create link</button><button type="button" className={action} disabled={working||!selected} onClick={()=>void decide(selected,'instances')}>Create all instances</button><div className="pt-2"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'one')}>Ignore link</button><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'instances')}>Ignore all instances</button><button type="button" className={action} disabled={working} onClick={close}>Decide later</button><div className="pt-3"/><button type="button" className={action} disabled={working} onClick={()=>void decide(null,'remaining')}>Accept all further links</button><button type="button" className={action} disabled={working} onClick={close}>Abandon further links</button><p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">↑/↓ choose · ← targets · → actions · Enter confirm · Esc close. All instances applies to this name in this note. Accept all stops at an ambiguous name. Skipped and deferred links are scanned again on the next Save.</p></div>
     </div>
   </>}</DialogContent></Dialog>;
 }
