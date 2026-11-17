@@ -102,6 +102,10 @@ export function RichEditor({
         suppressContentEditableWarning
         onKeyDown={event => {
           const key=event.key.toLowerCase();
+          if(key==='enter'&&!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.nativeEvent.isComposing&&ref.current){
+            history.current.before(ref.current);convertingDivider.current=true;
+            try{if(insertTypedDivider(ref.current)){event.preventDefault();handleInput();return;}}finally{convertingDivider.current=false;}
+          }
           if(key==='backspace'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.shiftKey&&!event.nativeEvent.isComposing&&ref.current&&backspaceListMarker(ref.current)){event.preventDefault();handleInput();return;}
           if((event.ctrlKey||event.metaKey)&&!event.altKey&&(key==='z'||(key==='y'&&!event.shiftKey))){
             event.preventDefault();event.stopPropagation();const selection=window.getSelection();

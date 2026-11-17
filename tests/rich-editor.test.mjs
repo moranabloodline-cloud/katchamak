@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
-for(const key of ['window','document','HTMLElement','Element','Node','DOMParser','Event','MouseEvent','KeyboardEvent','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:key==='getComputedStyle'?dom.getComputedStyle.bind(dom):dom[key]});
+for(const key of ['window','document','HTMLElement','Element','Node','DOMParser','Event','CustomEvent','MouseEvent','KeyboardEvent','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:key==='getComputedStyle'?dom.getComputedStyle.bind(dom):dom[key]});
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const React=await import('react');const {createRoot}=await import('react-dom/client');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
@@ -19,5 +19,17 @@ let command='';document.execCommand=(name,_unused,html)=>{command=name;editor.in
 const paste=new dom.Event('paste',{bubbles:true,cancelable:true});Object.defineProperty(paste,'clipboardData',{value:{getData:type=>type==='text/html'?'<p style="color:red;background:white"><b>Pasted</b></p><p><br></p><p>Last</p>':''}});
 await React.act(async()=>editor.dispatchEvent(paste));
 assert.equal(command,'insertHTML');assert.ok(changed.includes('<b>Pasted</b>'));assert.equal(editor.querySelectorAll('p').length,3);assert.ok(!changed.includes('color:'));assert.ok(!changed.includes('background'));
+const {SECTION_KEYS}=await import('../src/lib/kachamak/types.ts');
+for(const section of SECTION_KEYS){
+ await React.act(async()=>{useKachamak.setState({activeTab:section});root.render(React.createElement(RichEditor,{key:section,html:'<ul><li>Before</li><li>---</li><li>After</li></ul>',onChange:value=>{changed=value;}}));});
+ const input=box.querySelector('[contenteditable]'),text=input.querySelectorAll('li')[1].firstChild,r=document.createRange();r.setStart(text,3);r.collapse(true);dom.getSelection().removeAllRanges();dom.getSelection().addRange(r);
+ await React.act(async()=>input.dispatchEvent(new dom.InputEvent('input',{bubbles:true,inputType:'insertText',data:'-'})));
+ assert.equal(input.querySelectorAll('hr').length,1,section+' uses the shared typed-divider rule');assert.ok(!input.querySelector('li hr'));assert.ok(changed.includes('<hr>'));
+ await React.act(async()=>input.dispatchEvent(new dom.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',ctrlKey:true})));
+ assert.equal(input.querySelectorAll('hr').length,0,section+' Undo restores the marker');assert.ok(input.textContent.includes('---'));
+ const marker=input.querySelectorAll('li')[1].firstChild,caret=document.createRange();caret.setStart(marker,3);caret.collapse(true);dom.getSelection().removeAllRanges();dom.getSelection().addRange(caret);
+ const enter=new dom.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'Enter'});await React.act(async()=>input.dispatchEvent(enter));
+ assert.ok(enter.defaultPrevented);assert.equal(input.querySelectorAll('hr').length,1,section+' Enter also converts a standalone marker');assert.ok(input.textContent.includes('Before')&&input.textContent.includes('After'));
+}
 await React.act(async()=>root.unmount());
-console.log('RichEditor integration passed: safe imported HTML, Ctrl+click navigation, paste preserves blank paragraphs and persists theme-safe content.');
+console.log('RichEditor passed: safe HTML, internal navigation, paste, typed list dividers, Enter fallback and Undo in every note tab.');
