@@ -44,9 +44,9 @@ export function NoteImage({node,section}:{node:NoteNode;section:SectionKey}) {
     </div>
     <input ref={input} type="file" aria-label="Upload note image" accept="image/jpeg,image/png,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void read(async()=>file);}}/>
     {error&&<p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
-    <Dialog open={preview&&!!node.image} onOpenChange={setPreview}><DialogContent aria-describedby={undefined} onCloseAutoFocus={event=>{event.preventDefault();previewButton.current?.focus();}} showCloseButton={false} style={{width:`min(calc(100vw - 2rem), calc((100dvh - 3rem) * ${imageRatio}))`}} className="max-w-[calc(100vw-2rem)] gap-0 overflow-hidden border-white/25 bg-black p-0 sm:max-w-[calc(100vw-2rem)]">
+    <Dialog open={preview&&!!node.image} onOpenChange={setPreview}><DialogContent aria-describedby={undefined} onCloseAutoFocus={event=>{event.preventDefault();previewButton.current?.focus();}} showCloseButton={false} style={{width:`min(80vw, 960px, calc(80dvh * ${imageRatio}), calc(800px * ${imageRatio}))`}} className="max-w-[calc(100vw-2rem)] gap-0 overflow-hidden border-white/25 bg-black p-0 sm:max-w-[calc(100vw-2rem)]">
       <DialogTitle className="sr-only">{node.title} image</DialogTitle>
-      <img src={node.image} alt={`${node.title} image`} className="block h-auto max-h-[calc(100dvh-3rem)] w-full object-contain"/>
+      <img src={node.image} alt={`${node.title} image`} className="block h-auto max-h-[min(80dvh,800px)] w-full object-contain"/>
       <DialogClose aria-label="Close image preview" className="absolute right-2 top-2 rounded-md border border-white/25 bg-black/60 p-2 text-white hover:bg-black/85 focus-visible:outline-2 focus-visible:outline-amber-500"><X aria-hidden="true" className="h-4 w-4"/></DialogClose>
     </DialogContent></Dialog>
   </section>;
