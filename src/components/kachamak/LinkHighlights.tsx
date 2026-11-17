@@ -1,11 +1,13 @@
 'use client';
-import { useEffect, useId, useRef, useState, type RefObject } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, Link2, PanelsLeftRight, X } from 'lucide-react';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import { useKachamak } from '@/lib/kachamak/store';
 import { contentText, flattenNotes, indexText, rangeForMatch, explicitLinks, type NoteMatch } from '@/lib/kachamak/note-links';
 import { findNodeInNovel, stripHtml } from '@/lib/kachamak/utils';
+import {groupLinkedNotes,inlineNoteIds} from '@/lib/kachamak/knowledge';
+import {NotePreview} from './NotePreview';
 
 export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef: RefObject<HTMLDivElement | null>; noteId: string; colorize?:boolean }) {
   const novels=useKachamak(s=>s.novels), activeNovelId=useKachamak(s=>s.activeNovelId);
@@ -14,7 +16,14 @@ export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef
   const [matches,setMatches]=useState<NoteMatch[]>([]);
   const [popup,setPopup]=useState<{match:NoteMatch;x:number;y:number}|null>(null);
   const [listOpen,setListOpen]=useState(false);
+  const [preview,setPreview]=useState<string|null>(null);
   const boxRef=useRef<HTMLDivElement>(null);
+  const groups=useMemo(()=>{
+    if(!novel||!hit)return [];
+    const accepted=explicitLinks(contentText(hit.node.content),flattenNotes(novel).map(n=>n.node),hit.node.linkChoices,noteId);
+    const ids=[...accepted.flatMap(match=>match.targetId&&!match.missing?[match.targetId]:[]),...inlineNoteIds(hit.node.content)];
+    return groupLinkedNotes(novel,ids).map(group=>({...group,entries:group.entries.filter(entry=>entry.target)})).filter(group=>group.entries.length);
+  },[novel,hit?.node.content,hit?.node.linkChoices,noteId]);
 
   useEffect(()=>{
     const editor=editorRef.current;
@@ -62,9 +71,9 @@ export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef
     document.addEventListener('pointerdown',close);document.addEventListener('keydown',close);
     return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',close);};
   },[popup]);
-  useEffect(()=>{setPopup(null);setListOpen(false);},[noteId]);
+  useEffect(()=>{setPopup(null);setListOpen(false);setPreview(null);},[noteId,activeNovelId]);
   useEffect(()=>{setPopup(null);},[hit?.node.content]);
-  if(!novel || !hit || !matches.length) return null;
+  if(!novel || !hit || (!matches.length&&!groups.length)) return null;
   const choose=(match:NoteMatch,targetId:string|null|undefined)=>{
     const state=useKachamak.getState(), current=state.novels.find(n=>n.id===activeNovelId);
     const currentHit=current?findNodeInNovel(current,noteId):null;
@@ -77,13 +86,13 @@ export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef
     if(openProjectNote(id,beside))setPopup(null);
   };
   const target=popup?.match.targetId?findNodeInNovel(novel,popup.match.targetId)?.node:null;
-  const count=matches.filter(m=>m.targetId&&!m.missing).length;
-  const unresolved=matches.filter(m=>!m.explicit&&m.candidates.length>1).length;
+  const count=groups.reduce((total,group)=>total+group.entries.length,0);
   return <>
-    <div className="mt-5 border-t border-white/10 pt-3 text-xs">
-      <button type="button" onClick={()=>setListOpen(!listOpen)} className="flex items-center gap-2 text-muted-foreground hover:text-amber-300" aria-expanded={listOpen}><Link2 className="h-3.5 w-3.5"/>{count} note links{unresolved?` · ${unresolved} to choose`:''}</button>
-      {listOpen&&<div className="mt-2 flex flex-wrap gap-2">{matches.map(m=><button key={`${m.start}-${m.end}`} type="button" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setPopup({match:m,x:r.left,y:r.bottom+8});}} className="rounded-md border border-white/15 px-2 py-1 text-muted-foreground hover:border-amber-500/50">{m.text}{m.explicit&&!m.targetId?' · skipped':m.missing?' · missing':!m.targetId?' · choose':''}</button>)}</div>}
-    </div>
+    {count>0&&<div className="mt-5 border-t border-white/10 pt-3 text-xs">
+      <button type="button" onClick={()=>setListOpen(!listOpen)} className="flex items-center gap-2 text-muted-foreground hover:text-amber-300" aria-expanded={listOpen}><Link2 className="h-3.5 w-3.5"/>{count} note links</button>
+      {listOpen&&<div className="mt-3 space-y-4">{groups.map(group=><section key={group.id} aria-label={group.title||group.entries[0].target?.path.split(' / ')[0]}><h3 className="mb-2 border-b border-white/10 pb-2 font-semibold text-muted-foreground">{group.title||group.entries[0].target?.path.split(' / ')[0]}</h3><ul className="space-y-2 pl-3">{group.entries.map(({id,target})=><li key={id}><button type="button" onClick={()=>setPreview(id)} className="text-left hover:underline" style={{color:target?.node.color&&/^#[0-9a-f]{3,8}$/i.test(target.node.color)?target.node.color:'#60a5fa'}}>{target?.node.title}</button></li>)}</ul></section>)}</div>}
+    </div>}
+    <NotePreview noteId={preview} onClose={()=>setPreview(null)}/>
     {popup&&createPortal(<div ref={boxRef} role="dialog" aria-label="Note link" className="fixed z-[100] w-80 max-w-[calc(100vw-24px)] max-h-[70vh] overflow-auto rounded-xl border border-amber-500/30 bg-[#181818] p-4 text-sm text-stone-200 shadow-2xl" style={{left:Math.max(12,Math.min(popup.x,window.innerWidth-332)),top:Math.max(12,Math.min(popup.y,window.innerHeight-370))}}>
       <div className="mb-3 flex items-center gap-2"><Link2 className="h-4 w-4 text-amber-400"/><strong className="flex-1 truncate">{target?.title||popup.match.text}</strong><button aria-label="Close link preview" onClick={()=>setPopup(null)}><X className="h-4 w-4"/></button></div>
       {target?<><p className="mb-3 line-clamp-4 text-xs leading-relaxed text-muted-foreground">{stripHtml(target.synopsis||target.content)||'No description yet.'}</p><div className="mb-4 flex gap-2"><button className="flex items-center gap-1 rounded border border-white/15 px-2 py-1" onClick={()=>open(target.id)}><BookOpen className="h-3 w-3"/>Open</button><button className="flex items-center gap-1 rounded border border-white/15 px-2 py-1" onClick={()=>open(target.id,true)}><PanelsLeftRight className="h-3 w-3"/>Open beside</button></div></>:<p className="mb-3 text-xs text-muted-foreground">{popup.match.missing?'This linked note is in Trash or missing. Restore it to reconnect.':'Choose the meaning for this occurrence only.'}</p>}
