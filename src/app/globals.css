@@ -200,6 +200,14 @@ body {
 
 /* Account appearance: explicit light palette, preserving user-supplied cover and editor colors. */
 html[data-theme="light"] { color-scheme: light; }
+
+/* Native toolbar dropdowns must use the same palette as app popovers. */
+[data-editor-toolbar] select { color-scheme: dark; }
+[data-editor-toolbar] select option {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+html[data-theme="light"] [data-editor-toolbar] select { color-scheme: light; }
 html[data-theme="light"] .kachamak-scroll::-webkit-scrollbar-thumb { background: #0003; }
 html[data-theme="light"] .kachamak-editor:empty::before { color: #777; }
 html[data-theme="light"] .kachamak-editor blockquote { color: #555; }
