@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 import {DocumentTarget} from './DocumentTarget';
+import {documentTargetProgress} from '@/lib/kachamak/document-target';
 import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
@@ -300,6 +301,8 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const selectedSection = hit?.section ?? section;
 
   const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
+  const target=view!=='continuous'&&selected?.documentTarget?.amount?selected.documentTarget:null;
+  const targetCount=target?documentTargetProgress(selected?.content??'',target).count:0;
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -385,10 +388,10 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
           <span
-            className="absolute left-10 max-w-24 truncate text-xs text-muted-foreground @[680px]:left-1/2 @[680px]:-translate-x-1/2"
-            title={view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
+            className="absolute left-10 max-w-52 truncate whitespace-nowrap text-xs text-muted-foreground @[680px]:left-1/2 @[680px]:-translate-x-1/2"
+            title={target?'Document text / target':view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
           >
-            {view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
+            {target?`${targetCount.toLocaleString('en-US')}/${target.amount.toLocaleString('en-US')} ${target.unit}`:view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
               ? `${ownWords(selected).toLocaleString("en-US")} words`
               : novel
                 ? `${novelWords(novel).toLocaleString("en-US")} words`
