@@ -31,6 +31,18 @@ import {
   Car,
   Shapes,
   Omega,
+  Smartphone,
+  Radiation,
+  Layers,
+  Rocket,
+  Vault,
+  Signpost,
+  Cctv,
+  Target,
+  Tv,
+  Hourglass,
+  TriangleAlert,
+  CloudLightning,
   Anchor,
   Book,
   BookOpen,
@@ -131,6 +143,21 @@ const MagicStaff = createLucideIcon('MagicStaff', [
 ]);
 const Monster = createLucideIcon('Monster', [
   ['path',{d:'M6 7 3 2v9M18 7l3-5v9M7 6h10l4 6-3 8H6l-3-8zM7 11l3 1M17 11l-3 1M8 16h8M9 16v2M15 16v2',key:'creature'}],
+]);
+const PlayingCard = createLucideIcon('PlayingCard', [
+  ['rect',{x:'5',y:'2',width:'14',height:'20',rx:'2',key:'card'}],
+  ['path',{d:'m12 8 3 4-3 4-3-4zM8 5h1M15 19h1',key:'suit'}],
+]);
+const Alien = createLucideIcon('Alien', [
+  ['path',{d:'M20 9c0 6-6 12-8 12S4 15 4 9a8 8 0 0 1 16 0zM7 10l4 3c-3 1-4-1-4-3zM17 10l-4 3c3 1 4-1 4-3zM10 17h4',key:'head'}],
+]);
+const Ring = createLucideIcon('Ring', [
+  ['circle',{cx:'12',cy:'15',r:'6',key:'band'}],
+  ['path',{d:'m8 3 4-2 4 2-4 6zM8 3h8M12 3v6',key:'stone'}],
+]);
+const Virus = createLucideIcon('Virus', [
+  ['circle',{cx:'12',cy:'12',r:'5',key:'body'}],
+  ['path',{d:'M12 7V2M10 2h4M12 17v5M10 22h4M7 12H2M2 10v4M17 12h5M22 10v4M8 8 4 4M3 5l2-2M16 8l4-4M19 3l2 2M8 16l-4 4M3 19l2 2M16 16l4 4M19 21l2-2M10 10h.01M14 13h.01',key:'spikes'}],
 ]);
 
 /* solid folder like the original app's tree icons */
@@ -247,6 +274,22 @@ export const NOTE_ICONS: { key: string; label: string; Cmp: IconCmp }[] = [
   { key: "vehicle", label: "Vehicle", Cmp: Car },
   { key: "object-collection", label: "Object collection", Cmp: Shapes },
   { key: "omega", label: "Omega", Cmp: Omega },
+  { key: "phone", label: "Phone", Cmp: Smartphone },
+  { key: "playing-card", label: "Playing card", Cmp: PlayingCard },
+  { key: "alien", label: "Alien / Race", Cmp: Alien },
+  { key: "radioactive", label: "Radioactive", Cmp: Radiation },
+  { key: "dimension", label: "Dimension", Cmp: Layers },
+  { key: "ring", label: "Ring", Cmp: Ring },
+  { key: "rocket", label: "Rocket", Cmp: Rocket },
+  { key: "safe", label: "Safe", Cmp: Vault },
+  { key: "signpost", label: "Signpost", Cmp: Signpost },
+  { key: "surveillance", label: "Surveillance camera", Cmp: Cctv },
+  { key: "target", label: "Target", Cmp: Target },
+  { key: "television", label: "Television", Cmp: Tv },
+  { key: "time-period", label: "Time period", Cmp: Hourglass },
+  { key: "virus", label: "Virus", Cmp: Virus },
+  { key: "warning", label: "Warning", Cmp: TriangleAlert },
+  { key: "weather", label: "Weather", Cmp: CloudLightning },
 ];
 
 const ICON_MAP: Record<string, IconCmp> = Object.fromEntries(
