@@ -55,9 +55,10 @@ export function RichEditor({
     if (html !== lastHtml.current && html !== el.innerHTML) {
       el.innerHTML = DOMPurify.sanitize(html || "", {FORBID_TAGS:["style","script","iframe","object","embed"],FORBID_ATTR:["srcdoc"]});
       const repaired=repairListWrappers(el);
+      const paragraphs=wrapRootParagraphs(el);
       lastHtml.current = el.innerHTML;
       history.current.reset(el);
-      if(repaired)onChange(lastHtml.current);
+      if(repaired||paragraphs)onChange(lastHtml.current);
     }
   }, [html]);
 

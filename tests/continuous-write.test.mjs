@@ -16,7 +16,7 @@ const hidden=state.addNode('binder',null,'doc','Private draft'),hiddenChild=stat
 const codex=state.addNode('codex',null,'doc','Ada');
 state.updateNode('binder',act,{collapsed:true});state.updateNode('binder',hidden,{hidden:true});
 state.updateNode('binder',one,{content:'<p><em>First paragraph.</em></p><p><br></p><p>Keep the blank line.</p>'});
-state.updateNode('binder',two,{content:'<p>Second chapter.</p>'});state.updateNode('codex',codex,{content:'<p>Codex only.</p>'});
+state.updateNode('binder',two,{content:'Second chapter.<div>Next paragraph.</div><div><br></div>'});state.updateNode('codex',codex,{content:'<p>Codex only.</p>'});
 useKachamak.setState({selectedNodeId:act,renamingNodeId:null,view:'write',treeScope:'all'});
 const novel=()=>useKachamak.getState().novels[0],roots=()=>novel().sections.binder;
 assert.deepEqual(continuousNotes(roots()).map(n=>n.id),[act,one,two,secondAct,nested]);
@@ -35,6 +35,8 @@ assert.deepEqual(ids(),[act,one,two],'Selected act includes its own content and 
 assert.equal(container.querySelectorAll('[contenteditable="true"],input').length,0,'Continuous has no editable text or title fields');
 const snapshot=JSON.stringify(novel());
 await React.act(async()=>state.select(two));assert.deepEqual(ids(),[two]);
+assert.equal(container.querySelector('[data-readonly-note]').innerHTML,'<p>Second chapter.</p><div>Next paragraph.</div><div><br></div>','Continuous also renders a legacy bare first line as a paragraph');
+assert.equal(findNode(roots(),two).content,'Second chapter.<div>Next paragraph.</div><div><br></div>','The read-only repair does not write project data');
 const binderButton=[...container.querySelectorAll('button')].find(e=>e.title==='Binder');
 await React.act(async()=>binderButton.click());assert.equal(useKachamak.getState().selectedNodeId,null);assert.deepEqual(ids(),[act,one,two,secondAct,nested],'Clicking tab restores all notes');
 assert.equal(JSON.stringify(novel()),snapshot,'Reading and selection must not alter the manuscript');

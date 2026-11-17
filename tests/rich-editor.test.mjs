@@ -40,6 +40,14 @@ for(const section of SECTION_KEYS){
  assert.equal(blank.innerHTML,'','One Undo returns to the genuinely empty document');
  await React.act(async()=>blank.dispatchEvent(new dom.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'y',ctrlKey:true})));
  assert.equal(blank.innerHTML,'<p>Suspect</p>','Redo keeps the paragraph structure');
+ const legacy='Suspect<div>Motive</div><div>Alibi</div><div>Secrets</div><div>Lies</div><div><br></div>';
+ let repairs=0;const repaired=value=>{changed=value;repairs++;};
+ await React.act(async()=>root.render(React.createElement(RichEditor,{key:section+'-legacy',html:legacy,onChange:repaired})));
+ const reopened=box.querySelector('[contenteditable]');
+ assert.equal(reopened.innerHTML,'<p>Suspect</p><div>Motive</div><div>Alibi</div><div>Secrets</div><div>Lies</div><div><br></div>',section+' repairs the actual saved first-line structure when opened');
+ assert.equal(changed,reopened.innerHTML,'The repaired structure is sent back for saving');assert.equal(repairs,1);
+ await React.act(async()=>root.render(React.createElement(RichEditor,{key:section+'-legacy',html:changed,onChange:repaired})));
+ assert.equal(repairs,1,'Receiving the normalized saved content does not trigger another save');
 }
 await React.act(async()=>root.unmount());
 console.log('RichEditor passed: safe HTML, internal navigation, paste, typed list dividers, Enter fallback and Undo in every note tab.');
