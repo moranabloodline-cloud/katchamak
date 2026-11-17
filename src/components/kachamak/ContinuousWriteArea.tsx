@@ -9,6 +9,7 @@ import type {SectionKey} from '@/lib/kachamak/types';
 import {PageSurface} from './PageSurface';
 import {DEFAULT_PAGE_FORMAT} from '@/lib/kachamak/page-format';
 import {noteAnchorStyles} from '@/lib/kachamak/note-links';
+import {trimWordSelection} from '@/lib/kachamak/editor-selection';
 
 export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?:string}) {
   const page=useKachamak(s=>s.pageFormat??DEFAULT_PAGE_FORMAT),scope='continuous'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
@@ -18,7 +19,7 @@ export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?
   const novel=novels.find(n=>n.id===projectId),notes=continuousSelection(novel?.sections[section]??[],selectedId,rootId);
   const scrollRef=useRef<HTMLDivElement>(null),[preview,setPreview]=useState<string|null>(null);
   useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;},[selectedId,section,rootId,projectId]);
-  return <div data-note-link-scope={scope} className="flex h-full min-h-0 flex-col" style={{zoom}}><style>{noteAnchorStyles(novel,scope,page.colorizeAnnotations)}</style>
+  return <div data-note-link-scope={scope} onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection((event.target as Element).closest<HTMLElement>('.kachamak-editor'));}} className="flex h-full min-h-0 flex-col" style={{zoom}}><style>{noteAnchorStyles(novel,scope,page.colorizeAnnotations)}</style>
     <RulerRow/>
     <div ref={scrollRef} aria-label="Continuous manuscript · read only" className="min-h-0 flex-1 overflow-y-auto kachamak-scroll pb-[40vh]" style={{scrollbarGutter:'stable'}}>
       {notes.map(node=><section key={node.id} data-continuous-note={node.id} aria-label={node.title||'Untitled note'} className="px-6 py-6 [&+section]:border-t [&+section]:border-border/50">

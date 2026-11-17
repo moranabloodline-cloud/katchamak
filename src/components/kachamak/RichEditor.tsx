@@ -14,6 +14,7 @@ import {EditorHistory} from '@/lib/kachamak/editor-history';
 import {insertTypedDivider} from '@/lib/kachamak/editor-divider';
 import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
+import {trimWordSelection} from '@/lib/kachamak/editor-selection';
 
 interface RichEditorProps {
   html: string;
@@ -102,6 +103,7 @@ export function RichEditor({
         aria-label={noteId ? "Note content" : placeholder || "Text"}
         aria-multiline="true"
         suppressContentEditableWarning
+        onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection(ref.current);}}
         onKeyDown={event => {
           const key=event.key.toLowerCase();
           if(key==='enter'&&!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.nativeEvent.isComposing&&ref.current){
