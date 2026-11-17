@@ -2,6 +2,23 @@
 
 import type { ComponentType, CSSProperties } from "react";
 import {
+  createLucideIcon,
+  FlaskConical,
+  Circle,
+  Bomb,
+  BrickWall,
+  BadgeCheck,
+  Drama,
+  Coins,
+  Box,
+  Boxes,
+  CircleHelp,
+  Dice6,
+  Footprints,
+  Clapperboard,
+  Zap,
+  Gift,
+  Sword,
   Anchor,
   Book,
   BookOpen,
@@ -56,6 +73,42 @@ import {
 } from "lucide-react";
 
 type IconCmp = ComponentType<{ className?: string; style?: CSSProperties }>;
+
+// Reference motifs absent from Lucide; all inherit the note's chosen colour.
+const Airship = createLucideIcon('Airship', [
+  ['ellipse',{cx:'12',cy:'9',rx:'9',ry:'5',key:'hull'}],
+  ['path',{d:'M3 9h18M12 4c4 2 4 8 0 10M8 14l1 4h6l1-4M3 7 1 5v8l2-2',key:'details'}],
+]);
+const Ammunition = createLucideIcon('Ammunition', [
+  ['path',{d:'M8 18V8c0-3 4-6 4-6s4 3 4 6v10M8 9h8M7 18h10v3H7z',key:'cartridge'}],
+]);
+const Pawn = createLucideIcon('Pawn', [
+  ['circle',{cx:'12',cy:'5',r:'3',key:'head'}],
+  ['path',{d:'M9 9h6M10 9c0 5-1 7-3 9h10c-2-2-3-4-3-9M6 18v3h12v-3',key:'base'}],
+]);
+const Deity = createLucideIcon('Deity', [
+  ['circle',{cx:'12',cy:'12',r:'9',key:'circle'}],
+  ['path',{d:'M12 3a4.5 4.5 0 0 1 0 9 4.5 4.5 0 0 0 0 9',key:'balance'}],
+  ['circle',{cx:'12',cy:'7.5',r:'0.75',fill:'currentColor',key:'upper'}],
+  ['circle',{cx:'12',cy:'16.5',r:'0.75',fill:'currentColor',key:'lower'}],
+]);
+const CheckeredFlag = createLucideIcon('CheckeredFlag', [
+  ['path',{d:'M4 22V3h16v12H4M4 9h16M9 3v12M15 3v12',key:'flag'}],
+  ['path',{d:'M4 3h5v6H4zM15 3h5v6h-5zM9 9h6v6H9z',fill:'currentColor',strokeWidth:'0',key:'checks'}],
+]);
+const Gauntlet = createLucideIcon('Gauntlet', [
+  ['path',{d:'M7 15 4 11a1.5 1.5 0 0 1 2-2l2 2V5a1 1 0 0 1 2 0v5-7a1 1 0 0 1 2 0v7-6a1 1 0 0 1 2 0v6-4a1 1 0 0 1 2 0v7l-2 3M7 15v6h8v-6H7M8 18h6',key:'hand'}],
+]);
+const Helmet = createLucideIcon('Helmet', [
+  ['path',{d:'M4 12V9a8 8 0 0 1 16 0v3H4M5 12v5l3 4h3v-6h2v6h3l3-4v-5M8 8h8M12 2v6',key:'helm'}],
+]);
+const Hat = createLucideIcon('Hat', [
+  ['path',{d:'m6 15 2-11 4 2 4-2 2 11M7 12h10',key:'crown'}],
+  ['ellipse',{cx:'12',cy:'17',rx:'10',ry:'3',key:'brim'}],
+]);
+const Gun = createLucideIcon('Gun', [
+  ['path',{d:'M2 5h19v6h-8l-1 3h-2l2 7H6L4 11H2zM5 8h13M12 11v3h4l2-3M21 7h2',key:'pistol'}],
+]);
 
 /* solid folder like the original app's tree icons */
 export function MaterialFolder({
@@ -131,6 +184,31 @@ export const NOTE_ICONS: { key: string; label: string; Cmp: IconCmp }[] = [
   { key: "tag", label: "Tag", Cmp: Tag },
   { key: "diamond", label: "Diamond", Cmp: Diamond },
   { key: "hexagon", label: "Hexagon", Cmp: Hexagon },
+  { key: "airship", label: "Airship", Cmp: Airship },
+  { key: "ammunition", label: "Ammunition", Cmp: Ammunition },
+  { key: "pawn", label: "Pawn", Cmp: Pawn },
+  { key: "potion", label: "Potion", Cmp: FlaskConical },
+  { key: "sphere", label: "Sphere", Cmp: Circle },
+  { key: "bomb", label: "Bomb", Cmp: Bomb },
+  { key: "brick-wall", label: "Brick wall", Cmp: BrickWall },
+  { key: "certificate", label: "Certificate", Cmp: BadgeCheck },
+  { key: "checkered-flag", label: "Checkered flag", Cmp: CheckeredFlag },
+  { key: "class", label: "Class", Cmp: Drama },
+  { key: "coins", label: "Coins", Cmp: Coins },
+  { key: "cube", label: "Cube", Cmp: Box },
+  { key: "cubes", label: "Cubes", Cmp: Boxes },
+  { key: "question", label: "Question", Cmp: CircleHelp },
+  { key: "deity", label: "Deity", Cmp: Deity },
+  { key: "die", label: "Die", Cmp: Dice6 },
+  { key: "domain", label: "Domain", Cmp: Footprints },
+  { key: "encounter", label: "Encounter", Cmp: Clapperboard },
+  { key: "lightning", label: "Lightning", Cmp: Zap },
+  { key: "gauntlet", label: "Gauntlet", Cmp: Gauntlet },
+  { key: "gift", label: "Gift", Cmp: Gift },
+  { key: "helmet", label: "Helmet", Cmp: Helmet },
+  { key: "sword", label: "Sword", Cmp: Sword },
+  { key: "hat", label: "Hat", Cmp: Hat },
+  { key: "gun", label: "Gun", Cmp: Gun },
 ];
 
 const ICON_MAP: Record<string, IconCmp> = Object.fromEntries(
