@@ -159,7 +159,8 @@ const reviewNovel=useKachamak.getState().novels.find(n=>n.id===novel.id),reviewS
 const reviewMatches=pendingLinkReview(reviewNovel,reviewSource);
 writer.updateNode('binder','note-1',{linkChoices:mergeReviewChoices(reviewNovel,reviewSource,reviewSource.content,reviewMatches.map((m,i)=>({start:m.start,end:m.end,text:m.text,targetId:i===0?target:i===1?otherTarget:null})))});
 const timelineRoot=writer.addNode('timeline',null,'doc','Timeline root'),timelineChild=writer.addNode('timeline',timelineRoot,'doc','Nested event');writer.updateNode('timeline',timelineChild,{content:'<p>Nested timeline prose.</p>',event:{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'}});writer.select('note-1');
-writer.openNoteTab('note-1');writer.setView('timeline');writer.setTimeline({detail:'titles',compact:true,display:'calendar',calendar:calendarPreset('uniform'),groups:[{id:'history',name:'History',color:'#123456'}]});writer.updateNode('binder','note-1',{event:{start:-1440,end:2880,precision:'day',groupId:'history',banner:'data:image/png;base64,aGVsbG8='}});writer.closeTab('research');
+const eraCalendar={...calendarPreset('uniform'),eras:[{id:'third-age',name:'Third Age',abbreviation:'TA',startYear:101,color:'#f0883e'}]};
+writer.openNoteTab('note-1');writer.setView('timeline');writer.setTimeline({detail:'titles',compact:true,display:'calendar',calendar:eraCalendar,groups:[{id:'history',name:'History',color:'#123456'}]});writer.updateNode('binder','note-1',{event:{start:-1440,end:2880,precision:'day',groupId:'history',banner:'data:image/png;base64,aGVsbG8='}});writer.closeTab('research');
 await cloud.saveWebLibrary();
 cloud.useWebLibrary.setState({ready:false});
 useKachamak.setState({novels:[],activeNovelId:null,activeTab:'binder',view:'write'});
@@ -177,7 +178,7 @@ assert.equal(useKachamak.getState().novels[0].targetAudience,'Adult speculative 
 assert.equal(useKachamak.getState().novels[0].language,'en-US');assert.deepEqual(useKachamak.getState().novels[0].genres,['Science Fiction','Thriller']);assert.deepEqual(useKachamak.getState().novels[0].subgenres,['Cyberpunk','Near Future']);assert.equal(useKachamak.getState().novels[0].chapterCount,21);
 assert.equal(useKachamak.getState().novels[0].timeline.detail,'titles');
 assert.equal(useKachamak.getState().novels[0].timeline.display,'calendar');
-assert.deepEqual(useKachamak.getState().novels[0].timeline.calendar,calendarPreset('uniform'));
+assert.deepEqual(useKachamak.getState().novels[0].timeline.calendar,eraCalendar);
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].event,{start:-1440,end:2880,precision:'day',groupId:'history',banner:'data:image/png;base64,aGVsbG8='});
 assert.equal(useKachamak.getState().novels[0].timeline.groups[0].name,'History');
 assert.equal(useKachamak.getState().novels[0].sections.timeline[0].id,timelineRoot);assert.equal(useKachamak.getState().novels[0].sections.timeline[0].children[0].content,'<p>Nested timeline prose.</p>');assert.deepEqual(useKachamak.getState().novels[0].sections.timeline[0].children[0].event,{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'});

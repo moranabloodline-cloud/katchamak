@@ -1,4 +1,5 @@
 import { validCoverImage } from './project-settings';
+export const DEFAULT_ERA_COLOR='#8b949e';
 /** Calendar arithmetic is independent of JavaScript Date/time zones. All event
  * positions are integer minutes from day 1 of year 1 in the chosen time system.
  * Astronomical year 0 is displayed as year 1 of the preceding era. */
@@ -13,7 +14,7 @@ export interface StoryCalendar {
   beforeEraName: string;
   eraFullName?: string;
   beforeEraFullName?: string;
-  eras?: { id: string; name: string; abbreviation: string; startYear: number }[];
+  eras?: { id: string; name: string; abbreviation: string; startYear: number; color?: string }[];
   yearZero?: boolean;
   resetWeekdaysEachMonth?: boolean;
   range?: { start: number; end: number };
@@ -64,7 +65,7 @@ export function validCalendar(value:unknown):value is StoryCalendar {
   const l=c.leap;
   if(c.eraFullName!==undefined&&!label(c.eraFullName)||c.beforeEraFullName!==undefined&&!label(c.beforeEraFullName))return false;
   if(c.yearZero!==undefined&&typeof c.yearZero!=='boolean'||c.resetWeekdaysEachMonth!==undefined&&typeof c.resetWeekdaysEachMonth!=='boolean')return false;
-  if(c.eras!==undefined&&(!Array.isArray(c.eras)||c.eras.length>32||!c.eras.every((e,i)=>e&&label(e.id)&&label(e.name)&&label(e.abbreviation)&&integer(e.startYear,2,1e9)&&(!i||e.startYear>c.eras![i-1].startYear))||new Set(c.eras.map(e=>e.id)).size!==c.eras.length))return false;
+  if(c.eras!==undefined&&(!Array.isArray(c.eras)||c.eras.length>32||!c.eras.every((e,i)=>e&&label(e.id)&&label(e.name)&&label(e.abbreviation)&&(e.color===undefined||typeof e.color==='string'&&/^#[a-f0-9]{6}$/i.test(e.color))&&integer(e.startYear,2,1e9)&&(!i||e.startYear>c.eras![i-1].startYear))||new Set(c.eras.map(e=>e.id)).size!==c.eras.length))return false;
   if(c.range!==undefined&&(!c.range||!integer(c.range.start,-1e12,1e12)||!integer(c.range.end,c.range.start,1e12)))return false;
   if(c.moons!==undefined&&(!Array.isArray(c.moons)||c.moons.length>32||!c.moons.every(m=>m&&label(m.id)&&label(m.name)&&Number.isFinite(m.period)&&m.period>=1&&m.period<=1e12&&Number.isFinite(m.offset)&&Math.abs(m.offset)<=1e12&&/^#[a-f0-9]{6}$/i.test(m.color))||new Set(c.moons.map(m=>m.id)).size!==c.moons.length))return false;
   if(c.dateFormat!==undefined&&(typeof c.dateFormat!=='string'||!c.dateFormat.trim()||c.dateFormat.length>200)||c.timeFormat!==undefined&&!['12h','24h'].includes(c.timeFormat))return false;

@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
+for(const key of ['window','document','Document','DocumentFragment','HTMLElement','HTMLInputElement','HTMLButtonElement','Element','Node','NodeFilter','DOMParser','Event','MouseEvent','CustomEvent','KeyboardEvent','MutationObserver','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:typeof dom[key]==='function'&&!/^[A-Z]/.test(key)?dom[key].bind(dom):dom[key]});
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const React=await import('react'),{createRoot}=await import('react-dom/client');
+const {TimeEras}=await import('../src/components/kachamak/TimeSystemPanels.tsx');
+const {GREGORIAN,DEFAULT_ERA_COLOR,validCalendar}=await import('../src/lib/kachamak/story-calendar.ts');
+let saved=structuredClone(GREGORIAN),patches=0,parentSubmits=0;
+function Harness(){const [draft,setDraft]=React.useState(saved);return React.createElement('form',{onSubmit:event=>{event.preventDefault();parentSubmits++;}},React.createElement(TimeEras,{draft,patch:patch=>{patches++;saved={...draft,...patch};setDraft(saved);}}));}
+const box=document.createElement('div');document.body.append(box);const root=createRoot(box);
+await React.act(async()=>root.render(React.createElement(Harness)));
+const button=name=>[...document.querySelectorAll('button')].find(b=>b.textContent===name);
+const input=async(index,value)=>React.act(async()=>{const field=document.querySelectorAll('[role=dialog] input')[index];Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new dom.Event('input',{bubbles:true}));});
+await React.act(async()=>button('Add era').click());assert.equal(patches,0,'Opening Add era does not change the calendar');assert.ok(button('Save era').disabled);
+await input(0,' Third Age ');await input(1,' TA ');
+await React.act(async()=>document.querySelector('[aria-label="Era color #f0883e"]').click());
+await React.act(async()=>button('Reset to default').click());assert.equal(document.querySelector(`[aria-label="Era color ${DEFAULT_ERA_COLOR}"]`).getAttribute('aria-pressed'),'true');
+await React.act(async()=>document.querySelector('[aria-label="Era color #f0883e"]').click());
+await React.act(async()=>button('Save era').click());
+assert.equal(parentSubmits,0,'Saving the child dialog never submits the parent settings form');assert.equal(patches,1);assert.equal(document.querySelector('[role=dialog]'),null);
+assert.deepEqual({...saved.eras[0],id:'generated'},{id:'generated',name:'Third Age',abbreviation:'TA',startYear:101,color:'#f0883e'});assert.ok(validCalendar(saved));
+await React.act(async()=>button('Add era').click());await input(0,'Discard this');await input(1,'DT');await React.act(async()=>button('Cancel').click());assert.equal(patches,1,'Cancel discards all new-era fields');
+await React.act(async()=>button('Add era').click());assert.equal(document.querySelector('[role=dialog] input').value,'','Reopening starts with a clean draft');assert.ok(button('Save era').disabled);
+await React.act(async()=>root.unmount());dom.close();
+console.log('Add Era passed: clean draft, required fields, name/abbreviation/colour, reset, save, cancel, calendar validity and nested-form isolation.');
