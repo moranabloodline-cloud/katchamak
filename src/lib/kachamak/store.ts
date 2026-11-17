@@ -18,6 +18,7 @@ import { uid, findNode, findNodeInNovel } from "./utils";
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
+import {validWorkspaceTabOrder,moveWorkspaceTabOrder} from './workspace-tabs';
 import { validEvent, validTimelineExtra } from './story-calendar';
 
 interface KachamakState {
@@ -109,6 +110,7 @@ interface KachamakState {
   /* workspace */
   setTab: (tab: TabKey) => void;
   openNoteTab: (id: string) => void;
+  moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
   setTimeline: (patch: Partial<NonNullable<Novel['timeline']>>) => void;
@@ -211,6 +213,7 @@ export function isUsableBackup(value: unknown): value is LegacyNovel {
     isTree([t.node])
   ))) return false;
   if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
+  if(!validWorkspaceTabOrder(n.tabOrder))return false;
   if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];
@@ -554,6 +557,12 @@ export const useKachamak = create<KachamakState>()(
         if(!novel || !findNodeInNovel(novel,id)) return;
         set(s=>({novels:s.novels.map(n=>n.id===novel.id?touch({...n,openNoteTabs:[...new Set([...(n.openNoteTabs||[]),id])]}):n),activeTab:`note:${id}`,renamingNodeId:null}));
       },
+      moveWorkspaceTab: (projectId,from,to)=>set(s=>{
+        if(s.activeNovelId!==projectId)return s;
+        const novel=s.novels.find(n=>n.id===projectId);if(!novel)return s;
+        const tabOrder=moveWorkspaceTabOrder(novel,from,to);if(!tabOrder)return s;
+        return {novels:s.novels.map(n=>n.id===projectId?touch({...n,tabOrder}):n)};
+      }),
       closeTab: (tab) => {
         if(['binder','codex','timeline','trash'].includes(tab)) return;
         set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,...(tab.startsWith('note:')?{openNoteTabs:(n.openNoteTabs||[]).filter(id=>id!==tab.slice(5))}:{hiddenSections:[...new Set([...(n.hiddenSections||[]),tab as SectionKey])]})}):n),activeTab:s.activeTab===tab?'binder':s.activeTab}));
@@ -861,7 +870,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 26,
+      version: 27,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -874,6 +883,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<27){ /* Optional per-project tab order; keep existing notes and the default order. */ }
         if(version<26){if(!validPageFormat(s.pageFormat))s.pageFormat={...DEFAULT_PAGE_FORMAT};}
         if(version<25){ /* Optional Details order/collapse; existing notes remain expanded in their original order. */ }
         if(version<24){ /* Optional per-note block visibility; preserve all existing content. */ }

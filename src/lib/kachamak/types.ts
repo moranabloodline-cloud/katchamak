@@ -106,6 +106,7 @@ export interface Novel {
   statuses: string[];
   labels: { id: string; name: string; color: string }[];
   openNoteTabs?: string[];
+  tabOrder?: TabKey[];
   hiddenSections?: SectionKey[];
   timeline?: TimelinePreferences;
   createdAt: number;

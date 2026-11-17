@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
+Object.defineProperty(globalThis,'window',{configurable:true,value:dom});Object.defineProperty(globalThis,'document',{configurable:true,value:dom.document});
+const {useKachamak,isUsableBackup}=await import('../src/lib/kachamak/store.ts');
+const {workspaceTabs,validWorkspaceTabOrder}=await import('../src/lib/kachamak/workspace-tabs.ts');
+const {validCloudLibrary}=await import('../scripts/cloud-library-runtime.mjs');
+const actions=useKachamak.getState();actions.createNovel('Tabs QA','Tester');
+const projectId=useKachamak.getState().activeNovelId;
+const folder=actions.addNode('binder',null,'doc','World');actions.updateNode('binder',folder,{content:'<p>Keep this manuscript.</p>'});actions.openNoteTab(folder);actions.select(folder);
+const novel=()=>useKachamak.getState().novels.find(n=>n.id===projectId),keys=()=>workspaceTabs(novel()).map(tab=>tab.key);
+assert.deepEqual(keys(),['binder','codex','planning','research','templates','prompts',`note:${folder}`,'timeline']);
+const sections=novel().sections,selection=useKachamak.getState().selectedNodeId,active=useKachamak.getState().activeTab;
+actions.moveWorkspaceTab(projectId,'timeline','binder');assert.equal(keys()[0],'timeline');
+actions.moveWorkspaceTab(projectId,`note:${folder}`,'codex');assert.deepEqual(keys().slice(0,4),['timeline','binder',`note:${folder}`,'codex']);
+assert.equal(novel().sections,sections,'Moving tabs never rewrites manuscript nodes');assert.equal(useKachamak.getState().activeTab,active);assert.equal(useKachamak.getState().selectedNodeId,selection,'Dragging does not navigate away from the current note');
+actions.closeTab(`note:${folder}`);assert.ok(!keys().includes(`note:${folder}`));actions.openNoteTab(folder);assert.equal(keys()[2],`note:${folder}`,'Reopening a folder restores its remembered position');
+actions.updateNode('binder',folder,{title:'Renamed World'});assert.equal(workspaceTabs(novel())[2].label,'Renamed World','Labels follow renaming without changing identity/order');
+const planningPosition=keys().indexOf('planning');actions.closeTab('planning');assert.ok(!keys().includes('planning'));actions.showSection('planning');assert.equal(keys().indexOf('planning'),planningPosition);
+const portable=JSON.parse(JSON.stringify(novel()));assert.ok(isUsableBackup(portable));assert.equal(validCloudLibrary({novels:[portable],collections:[]}),true);
+const ordered=keys();useKachamak.setState({novels:[portable]});assert.deepEqual(keys(),ordered,'The saved project order survives a portable roundtrip');
+for(const invalid of [['binder','binder'],['trash'],['unknown'],['note:'],['note:bad id'],null,{}]){
+ assert.equal(validWorkspaceTabOrder(invalid),false);
+ const bad={...portable,tabOrder:invalid};assert.equal(isUsableBackup(bad),false);assert.equal(validCloudLibrary({novels:[bad],collections:[]}),false,'Cloud and import validate the same tab identities');
+}
+const before=useKachamak.getState();actions.moveWorkspaceTab(projectId,'trash','binder');assert.equal(useKachamak.getState(),before);actions.moveWorkspaceTab(projectId,'binder','binder');assert.equal(useKachamak.getState(),before);
+actions.createNovel('Other project','Tester');const other=useKachamak.getState().activeNovelId;
+assert.equal(useKachamak.getState().novels.find(n=>n.id===other).tabOrder,undefined,'A project has its own default order');
+const guarded=useKachamak.getState();actions.moveWorkspaceTab(projectId,'binder','timeline');assert.equal(useKachamak.getState(),guarded,'A late drag from another project cannot change either order');
+const legacy=structuredClone(portable);delete legacy.tabOrder;
+assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},26).novels,[legacy],'v27 migration preserves legacy projects exactly');
+console.log('Workspace tabs passed: defaults, section/Timeline/folder moves, unchanged manuscript/navigation, close/reopen, rename, project isolation, roundtrip, validation and migration.');

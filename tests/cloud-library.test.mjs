@@ -137,6 +137,8 @@ assert.equal(useKachamak.getState().selectedNodeId,'note-1');
 assert.equal(useKachamak.getState().view,'write');
 // New workspace metadata must survive the same authenticated cloud save as prose.
 const writer=useKachamak.getState();
+writer.moveWorkspaceTab(novel.id,'research','binder');
+const savedTabOrder=[...useKachamak.getState().novels[0].tabOrder];
 writer.updateNode('binder','note-1',{image:'data:image/png;base64,aW1hZ2U='});
 writer.updateNode('binder','note-1',{hiddenDetailBlocks:['aliases','codex']});
 writer.updateNode('binder','note-1',{detailBlockOrder:['codex','image','aliases'],collapsedDetailBlocks:['image']});
@@ -160,6 +162,7 @@ await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().activeTab,'note:note-1');
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].image,'data:image/png;base64,aW1hZ2U=','Note images survive authenticated cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].hiddenDetailBlocks,['aliases','codex'],'Block visibility survives cloud save/reload');
+assert.deepEqual(useKachamak.getState().novels[0].tabOrder,savedTabOrder,'Tab order survives authenticated cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].detailBlockOrder,['codex','image','aliases']);assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].collapsedDetailBlocks,['image'],'Block order/collapse survive cloud save/reload');
 assert.equal(useKachamak.getState().view,'timeline');
 assert.equal(useKachamak.getState().novels[0].targetAudience,'Adult speculative fiction readers');assert.deepEqual(useKachamak.getState().novels[0].tones,['Melancholic']);assert.deepEqual(useKachamak.getState().novels[0].writingStyles,['Poetic']);assert.deepEqual(useKachamak.getState().novels[0].plotTechniques,['Corruption Exposed']);assert.deepEqual(useKachamak.getState().novels[0].sellingPoints,['Rich Worldbuilding']);assert.equal(useKachamak.getState().novels[0].explicitContent,true);
