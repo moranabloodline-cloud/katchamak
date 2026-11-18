@@ -31,6 +31,14 @@ jobs:
         run: bun run tests/release-store.test.mjs
       - name: Test story calendar and chronology
         run: bun run tests/story-calendar.test.mjs
+      - name: Test Timeline inspector, book isolation and date views
+        run: |
+          bun run tests/timeline-panel.test.mjs
+          bun run tests/timeline-inspector.test.mjs
+          bun run tests/timeline-readonly.test.mjs
+          bun run tests/timeline-hierarchy.test.mjs
+          bun run tests/timeline-import.test.mjs
+          bun run tests/time-system.test.mjs
       - name: Test connected note creation and navigation
         run: bun run tests/note-workflow.test.mjs
       - name: Test selected text linking and note preview

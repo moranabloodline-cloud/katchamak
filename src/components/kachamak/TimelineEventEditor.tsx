@@ -64,7 +64,18 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
   };
 
   const rows=flattenNotes(novel),chosen=rows.find(r=>r.node.id===target);
-  const choose=(id:string)=>{const row=rows.find(r=>r.node.id===id);bannerRequest.current++;setLoadingBanner(false);setIcon(row?.node.icon??'');setLinks(row?.node.links??[]);setStyle(row?.node.event?.cardStyle??(row?.node.event?.banner?'image':'color'));setCardColor(row?.node.event?.cardColor);setBanner(row?.node.event?.banner);setKind(row?timelineKind(row.node)??'event':'event');setStartDirty(!row?.node.event);setEndDirty(!row?.node.event);setTarget(id);setTitle(row?.node.title||'');setQuery('');setHasStart(!!row?.node.event);setHasEndDate(row?.node.event?.end!==undefined);if(row?.node.event){setFrom(minuteToDate(calendar,row.node.event.start));setTo(minuteToDate(calendar,row.node.event.end??row.node.event.start+minutesPerDay(calendar)));setKind(eventType(row.node.event));setPrecision(row.node.event.precision);setEndPrecision(row.node.event.endPrecision??row.node.event.precision);setGroup(groupFor(row.node.event,novel.timeline?.groups??[]));}};
+  const choose=(id:string)=>{
+    const row=rows.find(r=>r.node.id===id),event=row?.node.event;
+    bannerRequest.current++;setLoadingBanner(false);setError('');
+    setIcon(row?.node.icon??'');setLinks(row?.node.links??[]);
+    setStyle(event?.cardStyle??(event?.banner?'image':'color'));setCardColor(event?.cardColor);setBanner(event?.banner);
+    setKind(row?timelineKind(row.node)??'event':'event');setStartDirty(!event);setEndDirty(!event);
+    setTarget(id);setTitle(row?.node.title||'');setQuery('');setHasStart(!!event);setHasEndDate(event?.end!==undefined);
+    setFrom(minuteToDate(calendar,event?.start??start));
+    setTo(minuteToDate(calendar,event?.end??Math.min(TIMELINE_LIMIT,(event?.start??start)+minutesPerDay(calendar))));
+    setPrecision(event?.precision??'day');setEndPrecision(event?.endPrecision??event?.precision??'day');
+    setGroup(event?groupFor(event,novel.timeline?.groups??[]):'');
+  };
   const save=()=>{
     if(loadingBanner)return;
     setError('');if(!title.trim()){setError('Give this event a title.');return;}
@@ -116,6 +127,6 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       <button type="submit" disabled={loadingBanner||!hasStart||hasEnd&&!hasEndDate} className="mt-1 flex h-8 w-full items-center justify-center gap-2 rounded bg-[#e4e4e7] text-[11px] font-medium text-black hover:bg-white disabled:opacity-50">{embedded?'Apply dates':current?'Update event':hasEnd?'Create Time Period':'Create event'}<span className="text-[10px] text-black/45">Ctrl + ↵</span></button>
     </form>
 </>;
-  if(embedded)return <section aria-label="Timeline note settings" className="border-b border-border p-3 font-sans"><h3 className="mb-3 text-sm font-semibold">Timeline</h3>{content}</section>;
+  if(embedded)return <section aria-label="Timeline note settings" className="font-sans">{content}</section>;
   return <Dialog open onOpenChange={value=>{if(!value)onClose();}}><DialogContent className="max-h-[90dvh] max-w-[calc(100vw-24px)] gap-3 overflow-y-auto rounded-xl border-border bg-card p-4 font-sans sm:max-w-[360px]"><DialogHeader><DialogTitle>{current?'Edit dates':hasEnd?'Add Time Period':'Add event'}</DialogTitle><DialogDescription className="sr-only">Set the type, dates and appearance of this note.</DialogDescription></DialogHeader>{content}</DialogContent></Dialog>;
 }

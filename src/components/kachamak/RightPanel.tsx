@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type RefObject,
+  type ReactNode,
 } from "react";
 import {
   CalendarDays,
@@ -71,15 +72,19 @@ export function RightPanel({
   node,
   section,
   onHide,
+  timelineSettings,
 }: {
   node: NoteNode;
   section: SectionKey;
   onHide?: () => void;
+  timelineSettings?: ReactNode;
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const rightZoom = useKachamak((s) => s.rightZoom ?? 1);
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
+  const [tab, setTab] = useState(timelineSettings ? "timeline" : "info");
+  const activeTab = tab === "timeline" && !timelineSettings ? "info" : tab;
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
   const infoBoxRef = useRef<HTMLDivElement | null>(null);
@@ -91,11 +96,11 @@ export function RightPanel({
     "h-8 flex-none rounded-lg border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors data-[state=active]:border-[#ad7e2e]/80 dark:data-[state=active]:border-[#ad7e2e]/80 data-[state=active]:bg-[#3a2c18] dark:data-[state=active]:bg-[#3a2c18] data-[state=active]:text-[#fbe4a6] dark:data-[state=active]:text-[#fbe4a6] data-[state=active]:shadow-none dark:data-[state=active]:shadow-none";
 
   return (
-    <Tabs defaultValue="info" className="flex h-full flex-col gap-0">
+    <Tabs value={activeTab} onValueChange={setTab} className="flex h-full flex-col gap-0">
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
-      <div className="flex h-10 shrink-0 items-center border-b border-white/10 pl-3.5 pr-3.5">
-        <TabsList className="h-auto justify-start gap-1 rounded-none bg-transparent p-0">
+      <div className={`flex h-10 min-w-0 shrink-0 items-center border-b border-white/10 ${timelineSettings ? 'px-2' : 'px-3.5'}`}>
+        <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${timelineSettings ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
           <TabsTrigger value="info" className={tabCls}>
             Info
           </TabsTrigger>
@@ -105,6 +110,7 @@ export function RightPanel({
           <TabsTrigger value="mentions" className={tabCls}>
             Mentions
           </TabsTrigger>
+          {timelineSettings && <TabsTrigger value="timeline" className={tabCls}>Timeline</TabsTrigger>}
         </TabsList>
         {onHide && (
           <button
@@ -112,7 +118,7 @@ export function RightPanel({
             aria-label="Hide panel"
             title="Hide panel"
             onClick={onHide}
-            className="ml-auto rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+            className="ml-auto shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -193,6 +199,7 @@ export function RightPanel({
         <TabsContent value="mentions" className="mt-0">
           <NoteConnections node={node} section={section} mode="mentions" />
         </TabsContent>
+        {timelineSettings && <TabsContent value="timeline" forceMount hidden={activeTab !== 'timeline'} className="mt-0 data-[state=inactive]:hidden">{timelineSettings}</TabsContent>}
       </div>
     </Tabs>
   );

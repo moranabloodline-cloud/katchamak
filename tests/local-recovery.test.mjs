@@ -2,10 +2,19 @@ import assert from 'node:assert/strict';
 import { indexedDB, IDBObjectStore } from 'fake-indexeddb';
 import { Window } from 'happy-dom';
 import { newNovel } from '../src/lib/kachamak/seed.ts';
+import { calendarPreset,dateToMinute } from '../src/lib/kachamak/story-calendar.ts';
 const dom = new Window({url:'https://synthetic.invalid'});
 globalThis.window=dom;globalThis.document=dom.document;globalThis.indexedDB=indexedDB;
 const source=newNovel('Synthetic manuscript','Synthetic author');
 source.sections.binder.push({id:'note',title:'Note',content:'<p>Cloud original</p>',children:[],kind:'doc',synopsis:'',notes:'',status:'',label:'',createdAt:1,updatedAt:1});
+const calendar=calendarPreset('uniform'),tick=year=>dateToMinute(calendar,{year,month:0,day:1,hour:0,minute:0});
+const timelineNote=(id,event,children=[])=>({...structuredClone(source.sections.binder[0]),id,title:id,event,children});
+source.timeline={rootId:null,detail:'synopsis',compact:false,calendar,groups:[{id:'story',name:'Story',color:'#123456'}]};
+source.sections.timeline=[timelineNote('era',{type:'period',start:tick(-200),end:tick(100),precision:'year'},[
+  timelineNote('period',{type:'period',start:tick(-100),end:tick(50),precision:'year'},[
+    {...timelineNote('event',{type:'event',start:tick(1),precision:'year',groupId:'story',cardStyle:'color',cardColor:'#345678'}),links:['note'],status:'Draft'}
+  ])
+])];
 const libraries=new Map(['a','b'].map(id=>[id,{revision:0,snapshot:{novels:[{...structuredClone(source),id:'project-'+id}],collections:[]}}]));
 let user='a',failSave=false,failIdentity=false,failLibrary=false,writes=0,holdSave=null;
 globalThis.fetch=async(path,init={})=>{
@@ -28,11 +37,16 @@ const bundle=await Bun.build({entrypoints:['tests/fixtures/local-recovery-window
 assert.equal(bundle.success,true);const code=await bundle.outputs[0].text();let next=0;
 async function openWindow(){const w=await import('data:text/javascript;base64,'+Buffer.from(code+'\n// window '+(++next)).toString('base64'));await w.initializeWebLibrary();return w;}
 const edit=(w,text)=>{w.useKachamak.setState({activeNovelId:'project-a'});w.useKachamak.getState().updateNode('binder','note',{content:text});};
-const a=await openWindow();edit(a,'<p>Draft before crash</p>');await a.checkpointLocalDraft();
+const a=await openWindow();edit(a,'<p>Draft before crash</p>');
+const event=a.useKachamak.getState().novels[0].sections.timeline[0].children[0].children[0];
+a.useKachamak.getState().updateNode('timeline','event',{event:{...event.event,start:tick(2)},content:'<p>Unsaved Timeline text</p>'});
+const draftTimeline=structuredClone(a.useKachamak.getState().novels[0].sections.timeline);
+await a.checkpointLocalDraft();
 const [original]=await a.draftStorage.list('a');assert.ok(original);assert.match(original.snapshot,/Draft before crash/);
 a.useWebLibrary.setState({ready:false}); // abrupt process loss: no successful Save/cleanup
 const reload=await openWindow();
 assert.equal(reload.useKachamak.getState().novels[0].sections.binder[0].content,'<p>Cloud original</p>','Reload never applies the draft automatically');
+assert.deepEqual(reload.useKachamak.getState().novels[0].sections.timeline,source.sections.timeline);
 assert.equal(reload.useLocalRecovery.getState().drafts.length,1);assert.equal(writes,0);
 
 user='b';const b=await openWindow();assert.deepEqual(b.useLocalRecovery.getState().drafts,[],'Other account gets neither draft list nor content');
@@ -58,6 +72,9 @@ await reload.refreshWebLibrary();const cloudOriginal=structuredClone(libraries.g
 await reload.recoverLocalDraft(reload.useLocalRecovery.getState().drafts[0]);
 const saved=libraries.get('a').snapshot;
 assert.deepEqual(saved.novels[0],cloudOriginal);assert.equal(saved.novels[1].sections.binder[0].content,'<p>Draft before crash</p>');
+assert.deepEqual(saved.novels[1].sections.timeline,draftTimeline,'Recovery keeps Timeline hierarchy, dates, text, links, status and style');
+assert.deepEqual(saved.novels[1].timeline,source.timeline,'Custom calendar and groups survive recovery');
+const reopened=await openWindow();assert.deepEqual(reopened.useKachamak.getState().novels,saved.novels,'Recovered Timeline survives cloud save and reload');reopened.useWebLibrary.setState({ready:false});
 assert.notEqual(saved.novels[1].id,saved.novels[0].id);assert.ok(saved.collections[0].name.startsWith('Recovered'));
 assert.deepEqual(await a.draftStorage.list('a'),[],'Only acknowledged recovered copies remove their source draft');
 

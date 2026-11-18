@@ -371,7 +371,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
         {view!=="timeline"&&<EditorToolbar />}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
-          {view === "timeline" && <TimelineView section={section} rootId={rootId} />}
+          {view === "timeline" && <TimelineView key={`${novel?.id}:${section}:${rootId ?? ''}`} section={section} rootId={rootId} />}
           {view === "list" && <ListView section={section} rootId={rootId} />}
           {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
               je bira, klik na notu otvara notu samo u izabranoj. Lenjir (traka
@@ -440,8 +440,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
             {selected ? (
               <>
                 <div className="flex min-h-0 flex-1 flex-col">
-                  {view==="timeline"&&selectedSection===section&&<div className="max-h-[65%] shrink-0 overflow-y-auto kachamak-scroll"><TimelineEventEditor key={`${novel!.id}:${selected.id}:${selected.title}:${selected.event?.start}:${selected.event?.end}:${selected.icon}:${JSON.stringify(novel?.timeline?.calendar)}`} embedded start={timelineDefaultStart(novel!.sections[section],selected.id)} novel={novel!} calendar={novel?.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}} section={section} onClose={()=>{}} onSaved={()=>{}}/></div>}
-                  <div className="min-h-0 flex-1"><RightPanel node={selected} section={selectedSection} onHide={toggleRightPanel} /></div>
+                  <div className="min-h-0 flex-1"><RightPanel key={novel!.id} node={selected} section={selectedSection} onHide={toggleRightPanel} timelineSettings={(section==='timeline'||view==='timeline')&&selectedSection===section ? <TimelineEventEditor key={`${novel!.id}:${selected.id}:${selected.title}:${JSON.stringify(selected.event)}:${selected.icon}:${JSON.stringify(selected.links)}:${JSON.stringify(novel?.timeline?.calendar)}`} embedded start={timelineDefaultStart(novel!.sections[section],selected.id)} novel={novel!} calendar={novel?.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}} section={section} onClose={()=>{}} onSaved={()=>{}}/> : undefined} /></div>
                 </div>
                 <NoteMetaBar section={selectedSection} node={selected} />
               </>
