@@ -434,6 +434,10 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+### 2026-11-18 — Calendar zadržava pregledani mesec pri filtriranju
+- Grupni filter i Show all ne pomeraju datum pregledanja, čak ni kad nema rezultata. Ako se knjiga prvi put otvori s potpuno skrivenim događajima, prikaz koristi stvarni datum postojećeg događaja u opsegu umesto skoka na 1 CE.
+- Strelice, Go to date, First event, druga knjiga i izmena Time System zadržavaju namerno kretanje. Regresije i sintetički browser potvrđuju delimičan/prazan filter, reset, prelazak preko granice godine i prikaz na 390 px. Nema izmene sadržaja ili upisanih datuma.
+
 ### 2026-11-18 — Vidljivo stanje grupnog filtera
 - U zatvorenim View options piše koliko je grupa skriveno u Timeline, Calendar i Cards. Outline nema oznaku jer ne primenjuje grupni filter. Postojeći Show all groups i izbor note ostaju isti.
 - Sintetička regresija i browser pokrivaju delimičan i prazan rezultat, reset, prelazak između prikaza i dve knjige s istim ID-jevima grupa. Bez promene sadržaja, datuma ili podataka.
