@@ -89,11 +89,23 @@ export async function initializeWebLibrary() {
     const account = await api('/api/account');
     if(typeof account.id!=='string'||!account.id||typeof account.email!=='string')throw new Error('The signed-in account could not be read. Please retry.');
     if(accountId&&accountId!==account.id&&snapshot()!==saved)throw new Error('Sign back in to '+useWebLibrary.getState().email+' to save the changes left open in this window.');
+    let resumePending = false;
+    if (subscribed && accountId === account.id && useWebLibrary.getState().pending && snapshot() !== saved) {
+      const current = JSON.parse(snapshot()) as Snapshot, base = JSON.parse(saved) as Snapshot;
+      // Navigation alone is restored through the workspace URL as before.
+      resumePending = JSON.stringify([current.novels,current.collections,current.editorAppearance]) !== JSON.stringify([base.novels,base.collections,base.editorAppearance]);
+    }
     accountId=account.id;
     useWebLibrary.setState({ email: account.email });
     useAccountPreferences.setState({displayName: account.displayName, photo: account.avatar || null});
     useAppearancePreferences.setState({theme: account.preferences?.lightTheme?'light':'dark',interfaceSize:account.preferences?.smallInterface?'small':account.preferences?.largeInterface?'large':'normal'});
     useKachamak.setState({ defaultAuthor: account.displayName || '' });
+    // Reauthenticating the same window must not replace its pending prose with the last cloud copy.
+    if (resumePending) {
+      useWebLibrary.setState({ready:true,busy:false});
+      await flushWebLibrary();
+      return;
+    }
     apply(await api('/api/library/demo/install',{method:'POST'}));
     writeWorkspaceRoute();
     if (!subscribed) {
@@ -178,7 +190,10 @@ export async function refreshWebLibrary() {
 export async function reloadWebLibrary(discard = false) {
   if (running) await running;
   if (snapshot() !== saved && !discard) throw new Error('Save or export your unsaved edits before reloading.');
-  apply(await api('/api/library'));
+  const before = snapshot(), data = await api('/api/library');
+  // Discard applies only to edits present at the click, never to text typed while waiting.
+  if (snapshot() !== before || data.revision < revision) throw new Error('The library changed while reloading. Your current edits were kept. Save them before retrying.');
+  apply(data);
 }
 export async function createWebCollection(name: string, parentId: string | null) {
   const id = useCollections.getState().addCollection(name, parentId); await flushWebLibrary(); return id;

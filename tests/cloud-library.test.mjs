@@ -264,6 +264,40 @@ useKachamak.getState().updateNode('binder','note-1',{content:'<p>Committed befor
 globalThis.fetch=async(path,init)=>{const r=await realFetch(path,init);if(path==='/api/library'&&init?.method==='POST')throw new TypeError('Lost acknowledgement');return r;};
 await assert.rejects(()=>cloud.saveWebLibrary());assert.equal(cloud.useWebLibrary.getState().pending,true);
 globalThis.fetch=realFetch;await cloud.saveWebLibrary();assert.equal(cloud.useWebLibrary.getState().pending,false);
+// Reload may only replace the snapshot that was present when the user requested it.
+for(const discard of [false,true]) {
+ let releaseRead,readStarted;
+ const started=new Promise(resolve=>{readStarted=resolve;});
+ globalThis.fetch=async(path,init)=>{const response=await realFetch(path,init);if(path==='/api/library'&&(!init?.method||init.method==='GET')){readStarted();await new Promise(resolve=>{releaseRead=resolve;});}return response;};
+ const reload=cloud.reloadWebLibrary(discard);
+ await started;
+ const typed='<p>New text typed during delayed reload '+discard+'</p>';
+ useKachamak.getState().updateNode('binder','note-1',{content:typed});
+ releaseRead();
+ await assert.rejects(reload,/changed while reloading/,'A delayed reload must refuse to replace a newer local edit');
+ assert.equal(useKachamak.getState().novels[0].sections.binder[0].content,typed);
+ assert.equal(cloud.useWebLibrary.getState().pending,true);
+ globalThis.fetch=realFetch;await cloud.saveWebLibrary();
+}
+// Reauthentication in this same window must retain its unsaved manuscript.
+useKachamak.getState().updateNode('binder','note-1',{content:'<p>Unsaved text before account interruption</p>'});
+browserUser=b;await assert.rejects(()=>cloud.saveWebLibrary(),/account changed/);
+assert.equal(cloud.useWebLibrary.getState().ready,false);
+await assert.rejects(()=>cloud.initializeWebLibrary(),/Sign back in/,'A different account must never receive pending prose');
+browserUser=a;await cloud.initializeWebLibrary();
+assert.equal(useKachamak.getState().novels[0].sections.binder[0].content,'<p>Unsaved text before account interruption</p>');
+await cloud.saveWebLibrary();
+assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Unsaved text before account interruption</p>');
+// A genuine concurrent manuscript edit must remain a conflict even after signing back in.
+useKachamak.getState().updateNode('binder','note-1',{content:'<p>Local manuscript kept through reauthentication</p>'});
+browserUser=b;await assert.rejects(()=>cloud.saveWebLibrary(),/account changed/);
+const competing=await (await call(a)).json();competing.snapshot.novels[0].sections.binder[0].content='<p>Text saved in another window</p>';
+await call(a,'/api/library','POST',competing);
+browserUser=a;await assert.rejects(()=>cloud.initializeWebLibrary(),/Another window/);
+assert.equal(useKachamak.getState().novels[0].sections.binder[0].content,'<p>Local manuscript kept through reauthentication</p>');
+assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Text saved in another window</p>');
+assert.equal(cloud.useWebLibrary.getState().ready,true);assert.equal(cloud.useWebLibrary.getState().pending,true);assert.equal(cloud.useWebLibrary.getState().conflict,true);
+await cloud.reloadWebLibrary(true); // Only this explicit discard may replace the pending version.
 browserUser=b;
 await assert.rejects(()=>cloud.refreshWebLibrary(),/account changed/);
 assert.equal(cloud.useWebLibrary.getState().ready,false,'Account switch hides the old library before rendering the next account');
