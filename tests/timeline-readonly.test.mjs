@@ -71,5 +71,55 @@ assert.equal(box.querySelectorAll('[aria-label^="Move "]').length,0,'Timeline ou
 const articleTitles=[...box.querySelectorAll('article')].map(el=>el.querySelector('button').textContent);
 assert.deepEqual(articleTitles,['November event','December event','Later'],'Outline uses dates even when the stored note order is different');
 assert.deepEqual(contextNovel.sections.timeline[0].children.map(node=>node.title),['Later','Era'],'Chronological rendering does not rewrite saved note order');
+// Closed View options must still tell the user when a group filter applies.
+const filterBook=newNovel('Filter QA',''),otherBook=newNovel('Separate filters QA','');
+const groupDefs=[{id:'sea',name:'Sea watch',color:'#58a6ff'},{id:'land',name:'Land watch',color:'#f0b045'}];
+const sea=note('Sea signal',tick(1965,10,5));sea.event.groupId='sea';
+const land=note('Land lantern',tick(1965,10,9));land.event.groupId='land';
+filterBook.sections.timeline=[sea,land];filterBook.timeline={...filterBook.timeline,groups:groupDefs,display:'axis'};
+otherBook.sections.timeline=[structuredClone(sea)];otherBook.timeline={...otherBook.timeline,groups:groupDefs,display:'axis'};
+const sectionsBefore=JSON.stringify(filterBook.sections);
+const click=async(label)=>{const control=button(label);assert.ok(control,label);await React.act(async()=>control.click());};
+const options=()=>box.querySelector('header details');
+const summary=()=>options().querySelector('summary').textContent;
+await React.act(async()=>{
+  useKachamak.setState({novels:[filterBook,otherBook],activeNovelId:filterBook.id,selectedNodeId:land.id,view:'timeline'});
+  root.render(React.createElement(TimelineView,{key:filterBook.id,section:'timeline'}));
+});
+assert.ok(!options().open);
+assert.doesNotMatch(summary(),/groups? hidden/);
+await React.act(async()=>options().open=true);await click('Sea watch');await React.act(async()=>options().open=false);
+assert.match(summary(),/1 group hidden/);
+assert.equal(useKachamak.getState().selectedNodeId,land.id);
+for(const mode of ['Timeline','Calendar','Cards']){
+  await click(mode);
+  assert.equal(options().open,false);
+  assert.match(summary(),/1 group hidden/);
+  assert.ok(box.textContent.includes(land.title),mode+' retains visible event');
+  assert.ok(!box.textContent.includes(sea.title),mode+' still hides the selected group');
+}
+await click('Outline');
+assert.doesNotMatch(summary(),/groups? hidden/,'Outline does not apply group filters');
+assert.ok(box.textContent.includes(sea.title),'Outline still displays the full note hierarchy');
+await click('Calendar');
+assert.match(summary(),/1 group hidden/,'Switching back to a filtered view recalls the filter');
+await React.act(async()=>options().open=true);await click('Land watch');await React.act(async()=>options().open=false);
+assert.match(summary(),/2 groups hidden/);
+assert.ok(box.textContent.includes('No notes match these filters.'));
+await click('Show all groups');
+assert.doesNotMatch(summary(),/groups? hidden/);
+assert.ok(box.textContent.includes(sea.title)&&box.textContent.includes(land.title));
+assert.equal(useKachamak.getState().selectedNodeId,land.id,'Reset does not change selection');
+await React.act(async()=>options().open=true);await click('Sea watch');await React.act(async()=>options().open=false);
+const switchBook=async(book,id)=>React.act(async()=>{
+  useKachamak.setState({activeNovelId:book.id,selectedNodeId:id});
+  root.render(React.createElement(TimelineView,{key:book.id,section:'timeline'}));
+});
+await switchBook(otherBook,sea.id);
+assert.doesNotMatch(summary(),/groups? hidden/,'Another book with matching group IDs does not inherit the badge');
+assert.ok(box.textContent.includes(sea.title));
+await switchBook(filterBook,land.id);
+assert.match(summary(),/1 group hidden/,'Returning restores only the original book filter');
+assert.equal(JSON.stringify(filterBook.sections),sectionsBefore,'Toggling and resetting groups does not rewrite note content or dates');
 await React.act(async()=>root.unmount());dom.close();
-console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details and chronological outline.');
+console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details, chronological outline and persistent group filter status.');
