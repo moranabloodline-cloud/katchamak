@@ -55,6 +55,11 @@ jobs:
         run: bun run tests/note-tree-add.test.mjs
       - name: Test authenticated cloud storage and cross-view saves
         run: bun run tests/cloud-library.test.mjs
+      - name: Request failures, latency and query counts
+        run: |
+          bun run tests/request-json.test.mjs
+          bun run tests/request-performance.test.mjs
+          bun run tests/request-trace.test.mjs
       - name: Test account authorization
         run: bun run tests/account-auth.test.mjs
       - name: Test local account settings

@@ -1,18 +1,30 @@
+import { measuredQuery, measuredBatch } from './request-trace.mjs';
 const accountJson = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
-export async function accountApi(request, env) {
+// Cache schema setup only. Authorization and suspension are read on every request.
+const accountSchema = new WeakMap();
+async function ensureAccountSchema(db, measure) {
+  if (!accountSchema.has(db)) accountSchema.set(db, (async () => {
+    await measuredQuery(db, "CREATE TABLE IF NOT EXISTS account_access (email TEXT PRIMARY KEY NOT NULL,display_name TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'active',source TEXT NOT NULL DEFAULT 'manual',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL)", [], measure).run();
+    await measuredQuery(db, 'CREATE INDEX IF NOT EXISTS accounts_email_idx ON accounts(email)', [], measure).run();
+  })().catch(error => { accountSchema.delete(db); throw error; }));
+  await accountSchema.get(db);
+}
+export async function accountApi(request, env, measure) {
   const url = new URL(request.url), id = request.headers.get('oai-authenticated-user-id');
   const email = (request.headers.get('oai-authenticated-user-email') ?? '').trim().toLowerCase();
   if (!id || !email) return accountJson({ error: 'Sign in required' }, 401);
   if (!env.DB) return accountJson({ error: 'Account storage is unavailable' }, 503);
   const admin = Boolean(env.KATCHAMAK_ADMIN_EMAIL && email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase());
   const db = env.DB, now = Date.now();
-  const q = (sql, ...values) => db.prepare(sql).bind(...values);
-  // Idempotent migration also covers an existing Sites D1 binding on first use.
-  await q("CREATE TABLE IF NOT EXISTS account_access (email TEXT PRIMARY KEY NOT NULL,display_name TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'active',source TEXT NOT NULL DEFAULT 'manual',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL)").run();
-  await q('INSERT INTO accounts (id,email,created_at,last_seen) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET email=excluded.email,last_seen=excluded.last_seen', id,email,now,now).run();
-  const user = await q('SELECT * FROM accounts WHERE id=?', id).first();
-  const access = await q('SELECT status FROM account_access WHERE email=?',email).first();
-  if (!admin && (user.status !== 'active'||access?.status==='suspended')) return accountJson({ error: 'Your account is suspended. Contact support.' }, 403);
+  const q = (sql, ...values) => measuredQuery(db, sql, values, measure);
+  await ensureAccountSchema(db, measure);
+  const readUser = () => q('SELECT a.*,x.status AS access_status,l.plan AS license_plan,l.expires_at AS license_expires_at,l.updated_at AS license_updated_at FROM accounts a LEFT JOIN account_access x ON x.email=? LEFT JOIN licenses l ON l.email=? WHERE a.id=?', email,email,id).first();
+  let user = await readUser();
+  if (!user || user.email !== email || user.last_seen < now - 60000) {
+    await q('INSERT INTO accounts (id,email,created_at,last_seen) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET email=excluded.email,last_seen=excluded.last_seen', id,email,now,now).run();
+    if (!user) user = await readUser();
+  }
+  if (!admin && (user.status !== 'active'||user.access_status==='suspended')) return accountJson({ error: 'Your account is suspended. Contact support.' }, 403);
   const route = url.pathname, method = request.method;
   if (route.startsWith('/api/admin') && !admin) return accountJson({ error: 'Admin access required' }, 403);
   if (!['GET','POST','PATCH'].includes(method)) return accountJson({ error: 'Method not allowed' }, 405);
@@ -22,7 +34,7 @@ export async function accountApi(request, env) {
   const audit = (target, action, detail) => q('INSERT INTO account_audit (id,actor,target,action,detail,created_at) VALUES (?,?,?,?,?,?)', crypto.randomUUID(), id, target, action, JSON.stringify(detail), now);
   if (route.startsWith('/api/admin/gmail/')) return gmailConnection(request, env, {q,id,body,audit});
   if (route === '/api/account' && method === 'GET') {
-    const license = await q('SELECT plan,expires_at,updated_at FROM licenses WHERE email=?',email).first();
+    const license = user.license_plan === null ? null : {plan:user.license_plan,expires_at:user.license_expires_at,updated_at:user.license_updated_at};
     return accountJson({ id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active: license.plan !== 'none' && (license.expires_at === null || license.expires_at > now) } : { plan: 'none', active: false } });
   }
   if (route === '/api/account' && method === 'PATCH') {
@@ -42,11 +54,14 @@ export async function accountApi(request, env) {
   if (route === '/api/admin/users' && method === 'GET') {
     let invitations=[];
     try{invitations=JSON.parse(env.KATCHAMAK_INVITED_USERS||'[]');}catch{/* Keep registered users available if the import is misconfigured. */}
+    const imported = new Map();
     if(Array.isArray(invitations))for(const invited of invitations.slice(0,1000)){
       const invitedEmail=typeof invited?.email==='string'?invited.email.trim().toLowerCase():'';
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invitedEmail)||invitedEmail.length>254)continue;
-      await q("INSERT INTO account_access (email,display_name,status,source,created_at,updated_at,updated_by) VALUES (?,?,'active','sites',?,?,?) ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name,source='sites'",invitedEmail,typeof invited.name==='string'?invited.name.slice(0,100):'',now,now,id).run();
+      imported.set(invitedEmail,{email:invitedEmail,name:typeof invited.name==='string'?invited.name.slice(0,100):''});
     }
+    // One set-based statement, independent of the invitation count. Never reset status.
+    if(imported.size)await q("INSERT INTO account_access (email,display_name,status,source,created_at,updated_at,updated_by) SELECT json_extract(value,'$.email'),json_extract(value,'$.name'),'active','sites',?,?,? FROM json_each(?) WHERE 1 ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name,source='sites' WHERE account_access.display_name<>excluded.display_name OR account_access.source<>'sites'",now,now,id,JSON.stringify([...imported.values()])).run();
     const search = (url.searchParams.get('search') ?? '').slice(0,100), offset = Math.max(0, Math.min(1000000, Number(url.searchParams.get('offset')) || 0));
     const rows = await q("SELECT * FROM (SELECT a.id,a.email,a.display_name,COALESCE(x.status,a.status) AS status,a.created_at,a.last_seen,l.plan,l.expires_at,COALESCE(x.source,'account') AS source FROM accounts a LEFT JOIN licenses l ON l.email=a.email LEFT JOIN account_access x ON x.email=a.email UNION ALL SELECT NULL AS id,l.email,COALESCE(x.display_name,'') AS display_name,COALESCE(x.status,'pending') AS status,l.updated_at AS created_at,NULL AS last_seen,l.plan,l.expires_at,COALESCE(x.source,'license') AS source FROM licenses l LEFT JOIN account_access x ON x.email=l.email WHERE NOT EXISTS (SELECT 1 FROM accounts a WHERE a.email=l.email) UNION ALL SELECT NULL AS id,x.email,x.display_name,x.status,x.created_at,NULL AS last_seen,NULL AS plan,NULL AS expires_at,x.source FROM account_access x WHERE NOT EXISTS (SELECT 1 FROM accounts a WHERE a.email=x.email) AND NOT EXISTS (SELECT 1 FROM licenses l WHERE l.email=x.email)) WHERE email LIKE ? OR display_name LIKE ? ORDER BY created_at DESC,email,id LIMIT 51 OFFSET ?", '%'+search+'%','%'+search+'%',offset).all();
     return accountJson({ users: rows.results.slice(0,50).map(u => ({ ...u, role: u.email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase() ? 'admin' : 'member' })), hasMore: rows.results.length > 50 });
@@ -57,7 +72,7 @@ export async function accountApi(request, env) {
     if (target === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase()) return accountJson({ error: 'The owner license cannot be changed' }, 400);
     const expires = body.plan === 'timed' ? Number(body.expiresAt) : null;
     if (body.plan === 'timed' && (!Number.isSafeInteger(expires) || expires <= now)) return accountJson({ error: 'Choose a future expiry date' }, 400);
-    await db.batch([q('INSERT INTO licenses (email,plan,expires_at,updated_at,updated_by) VALUES (?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET plan=excluded.plan,expires_at=excluded.expires_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by', target,body.plan,expires,now,id), audit(target,'license',{ plan: body.plan, expiresAt: expires })]);
+    await measuredBatch(db,[q('INSERT INTO licenses (email,plan,expires_at,updated_at,updated_by) VALUES (?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET plan=excluded.plan,expires_at=excluded.expires_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by', target,body.plan,expires,now,id), audit(target,'license',{ plan: body.plan, expiresAt: expires })],measure);
     const license = await q('SELECT email,plan,expires_at FROM licenses WHERE email=?',target).first();
     const registered = Boolean(await q('SELECT id FROM accounts WHERE email=?',target).first());
     return accountJson({ ok: true, license, registered });
@@ -66,7 +81,7 @@ export async function accountApi(request, env) {
     const target = typeof body.email==='string'?await q("SELECT email FROM (SELECT email FROM accounts UNION SELECT email FROM licenses UNION SELECT email FROM account_access) WHERE email=?",body.email.trim().toLowerCase()).first():await q('SELECT id,email FROM accounts WHERE id=?',typeof body.id === 'string' ? body.id : '').first();
     if (!target || !['active','suspended'].includes(body.status)) return accountJson({ error: 'Invalid user or status' }, 400);
     if (target.email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase() || target.id === id) return accountJson({ error: 'The owner cannot be suspended' }, 400);
-    await db.batch([q("INSERT INTO account_access (email,status,source,created_at,updated_at,updated_by) VALUES (?,?,'manual',?,?,?) ON CONFLICT(email) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at,updated_by=excluded.updated_by",target.email,body.status,now,now,id),q('UPDATE accounts SET status=? WHERE email=?',body.status,target.email),audit(target.email,'status',{ status:body.status })]);
+    await measuredBatch(db,[q("INSERT INTO account_access (email,status,source,created_at,updated_at,updated_by) VALUES (?,?,'manual',?,?,?) ON CONFLICT(email) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at,updated_by=excluded.updated_by",target.email,body.status,now,now,id),q('UPDATE accounts SET status=? WHERE email=?',body.status,target.email),audit(target.email,'status',{ status:body.status })],measure);
     return accountJson({ ok: true });
   }
   if (route === '/api/admin/send-access-link' && method === 'POST') {

@@ -1,5 +1,6 @@
 import {demoLibraryApi} from './demo-projects.mjs';
 import {validEditorAppearance} from '../src/lib/kachamak/page-format-validation.mjs';
+import { measuredQuery } from './request-trace.mjs';
 // Included in the Sites Worker with accountApi; all keys are private to the authenticated account.
 export function validCloudLibrary(value) {
   if (!value || !Array.isArray(value.novels) || !Array.isArray(value.collections)) return false;
@@ -35,11 +36,11 @@ export function validCloudLibrary(value) {
   return true;
 }
 
-export async function cloudLibraryApi(request, env) {
+export async function cloudLibraryApi(request, env, measure) {
   const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
   try {
     const url = new URL(request.url);
-    const gate = await accountApi(new Request(new URL('/api/account', url), { headers: request.headers }), env);
+    const gate = await accountApi(new Request(new URL('/api/account', url), { headers: request.headers }), env, measure);
     if (!gate.ok) return gate;
     if (!env.BUCKET) return json({ error: 'Cloud storage is unavailable.' }, 503);
     const account = await gate.json();
@@ -48,12 +49,13 @@ export async function cloudLibraryApi(request, env) {
     if((expected&&expected!==id)||(request.method!=='GET'&&!expected))return json({error:'Your signed-in account changed. Reopen the library before saving.',accountChanged:true},409);
     const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))].map(b => b.toString(16).padStart(2, '0')).join('');
     const prefix = `accounts/${hash}/`;
-    const q = (sql, ...args) => env.DB.prepare(sql).bind(...args);
+    const q = (sql, ...args) => measuredQuery(env.DB, sql, args, measure);
     const record = await q('SELECT * FROM cloud_libraries WHERE account_id = ?', id).first();
     const revision = record?.revision ?? 0;
     const readSnapshot = async () => {
       if (!record?.snapshot_key) return { novels: [], collections: [] };
-      const object = await env.BUCKET.get(record.snapshot_key);
+      const read = () => env.BUCKET.get(record.snapshot_key);
+      const object = await (measure ? measure('r2.readSnapshot', read) : read());
       if (!object) throw new Error('The saved library could not be read. Please retry.');
       return JSON.parse(await object.text());
     };
@@ -63,7 +65,8 @@ export async function cloudLibraryApi(request, env) {
     const writeSnapshot=async(value,baseRevision)=>{
       await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
       const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + '.json';
-      await env.BUCKET.put(key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } });
+      const write = () => env.BUCKET.put(key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } });
+      await (measure ? measure('r2.writeSnapshot', write) : write());
       const updatedAt = Date.now();
       const result = await q('UPDATE cloud_libraries SET snapshot_key = ?, revision = revision + 1, updated_at = ? WHERE account_id = ? AND revision = ?', key, updatedAt, id, baseRevision).run();
       if (result.meta.changes !== 1) { await env.BUCKET.delete(key); return null; }
@@ -71,7 +74,11 @@ export async function cloudLibraryApi(request, env) {
     };
     if(url.pathname==='/api/library/demo'||url.pathname.startsWith('/api/library/demo/'))return await demoLibraryApi({request,env,account,prefix,revision,readSnapshot,writeSnapshot,json});
     if (url.pathname === '/api/library') {
-      if (request.method === 'GET') return json({ revision, snapshot: await readSnapshot(), updatedAt: record?.updated_at ?? 0 });
+      if (request.method === 'GET') {
+        // Account checks above still run; an unchanged revision needs no R2 read or manuscript transfer.
+        if (url.searchParams.get('revision') === String(revision)) return json({ revision, unchanged: true, updatedAt: record?.updated_at ?? 0 });
+        return json({ revision, snapshot: await readSnapshot(), updatedAt: record?.updated_at ?? 0 });
+      }
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
       if (!request.headers.get('Content-Type')?.startsWith('application/json')) return json({ error: 'JSON required.' }, 415);
       const text = await request.text();

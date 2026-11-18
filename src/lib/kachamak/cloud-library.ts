@@ -11,6 +11,7 @@ import { registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
+import { requestJson } from './request-json';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
 type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
@@ -19,6 +20,7 @@ let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let accountId='';
+let refreshController: AbortController | null = null;
 let snapshotDirty=true,cachedSnapshot='';
 // Serialize at save/verification boundaries, not for each keystroke or panel resize.
 const snapshot = () => {
@@ -35,8 +37,7 @@ class LibraryConflictError extends Error {}
 async function api(path: string, init?: RequestInit) {
   const headers=new Headers(init?.headers);
   if(path.startsWith('/api/library')&&accountId)headers.set('X-Katchamak-Account',accountId);
-  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init, headers });
-  const data = await response.json().catch(() => ({}));
+  const { response, data } = await requestJson(path, { ...init, headers }, path.includes('/demo/') || init?.body instanceof FormData ? 60000 : 30000);
   if(data.accountChanged)useWebLibrary.setState({ready:false,busy:false,error:data.error});
   if (!response.ok) {
     const message=data.error || 'Cloud storage could not be reached. Retry saving.';
@@ -46,7 +47,7 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=false) {
-  if (!data.snapshot?.novels?.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
+  if (!Number.isSafeInteger(data.revision) || data.revision < 0 || !Array.isArray(data.snapshot?.novels) || !data.snapshot.novels.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
   data.snapshot.novels.forEach(normalizeNovelSections);
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
@@ -86,6 +87,7 @@ export async function initializeWebLibrary() {
   initializing = (async () => {
     useWebLibrary.setState({ busy: true, error: null });
     const account = await api('/api/account');
+    if(typeof account.id!=='string'||!account.id||typeof account.email!=='string')throw new Error('The signed-in account could not be read. Please retry.');
     if(accountId&&accountId!==account.id&&snapshot()!==saved)throw new Error('Sign back in to '+useWebLibrary.getState().email+' to save the changes left open in this window.');
     accountId=account.id;
     useWebLibrary.setState({ email: account.email });
@@ -117,8 +119,9 @@ export async function flushWebLibrary() {
   if (running) return running;
   running = (async () => {
     if (!useWebLibrary.getState().ready) throw new Error('Open your account library before saving.');
-    // A refresh begun before typing must finish before the revision is used for saving.
-    if (refreshing) await refreshing;
+    // Saving takes priority over a background read. CAS still checks the latest server revision.
+    if (refreshing) { refreshController?.abort(); await refreshing.catch(() => {}); }
+    if (!useWebLibrary.getState().ready) throw new Error('Open your account library before saving.');
     let retries=0;
     if(useWebLibrary.getState().conflict)await reconcileRevision();
     while (true) {
@@ -132,6 +135,7 @@ export async function flushWebLibrary() {
         if(retries++>=2){useWebLibrary.setState({conflict:true});throw error;}
         await reconcileRevision();continue;
       }
+      if(!Number.isSafeInteger(data.revision)||data.revision!==revision+1)throw new Error('The server did not confirm this save. Your edits are kept in this window. Retry saving.');
       revision = data.revision; saved = value;
     }
     useWebLibrary.setState({ busy: false, pending: false, error: null });
@@ -160,19 +164,15 @@ async function reconcileRevision(){
 }
 export async function refreshWebLibrary() {
   if (refreshing) return refreshing;
-  if (!useWebLibrary.getState().ready) return;
+  if (!useWebLibrary.getState().ready || running || useWebLibrary.getState().pending || useWebLibrary.getState().error) return;
   const before = snapshot();
+  const controller = new AbortController(); refreshController = controller;
   refreshing = (async () => {
-    const account=await api('/api/account');
-    if(account.id!==accountId){
-      const message='Your signed-in ChatGPT account changed. Reopen the library for the current account.';
-      useWebLibrary.setState({ready:false,busy:false,error:message});
-      throw new Error(message);
-    }
-    if(running||useWebLibrary.getState().pending||useWebLibrary.getState().error)return;
-    const data = await api('/api/library');
+    const data = await api('/api/library?revision='+revision, { signal: controller.signal });
+    if(!Number.isSafeInteger(data.revision)||data.revision<0)throw new Error('The saved library could not be read.');
+    if(data.unchanged===true){if(data.revision!==revision)throw new Error('The saved library revision could not be verified.');return;}
     if (snapshot() === before && !useWebLibrary.getState().pending && data.revision !== revision) apply(data);
-  })().finally(() => { refreshing = null; });
+  })().finally(() => { refreshing = null; refreshController = null; });
   return refreshing;
 }
 export async function reloadWebLibrary(discard = false) {

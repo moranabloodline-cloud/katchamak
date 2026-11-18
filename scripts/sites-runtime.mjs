@@ -16,8 +16,8 @@ export default {
     if (url.pathname === "/api/github-release" && request.method === "POST") return publishRelease(request, env.BUCKET, DEPLOY_CONFIG);
     if (url.pathname === "/api/deploy-capabilities") return Response.json({ protocol: 1, runtimeHash: DEPLOY_CONFIG.runtimeHash, storageReady: Boolean(env.BUCKET) }, { headers: { "Cache-Control": "no-store" } });
     const userId = request.headers.get("oai-authenticated-user-id");
-    if (url.pathname === '/api/account' || url.pathname.startsWith('/api/admin/')) return accountApi(request, env);
-    if (url.pathname === '/api/library' || url.pathname.startsWith('/api/library/')) return cloudLibraryApi(request, env);
+    if (url.pathname === '/api/account' || url.pathname.startsWith('/api/admin/')) return traceApiRequest(request, measure => accountApi(request, env, measure));
+    if (url.pathname === '/api/library' || url.pathname.startsWith('/api/library/')) return traceApiRequest(request, measure => cloudLibraryApi(request, env, measure));
     const publicProtocol = ["/mcp", "/api/app-version", "/app-version.json"].includes(url.pathname);
     if (!userId && !publicProtocol) {
       return new Response(null, { status: 302, headers: { Location: "/signin-with-chatgpt?return_to=%2F", "Cache-Control": "private, no-store" } });

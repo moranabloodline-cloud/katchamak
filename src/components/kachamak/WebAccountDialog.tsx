@@ -9,11 +9,12 @@ import { useKachamak } from '@/lib/kachamak/store';
 import { toast } from 'sonner';
 import { useAppearancePreferences } from '@/lib/kachamak/appearance-preferences';
 import packageInfo from '../../../package.json';
+import { requestJson } from '@/lib/kachamak/request-json';
 type Account = { id: string; email: string; role: 'admin'|'member'; displayName: string; avatar: string; preferences: Record<string,boolean>; license: { plan: string; active: boolean; expires_at?: number } };
 type User = { id: string|null; email: string; display_name: string; role: string; status: string; plan: string|null; expires_at: number|null; source?: string };
 async function api(path: string, method = 'GET', body?: unknown) {
-  const r = await fetch(path, { method, cache: 'no-store', headers: body ? { 'Content-Type':'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
-  const data = await r.json(); if (!r.ok) throw new Error(data.error || 'Request failed'); return data;
+  const {response:r,data} = await requestJson(path, { method, headers: body ? { 'Content-Type':'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) throw new Error(data.error || 'Request failed'); return data;
 }
 const button = 'rounded-lg border border-amber-400/25 px-3 py-2 text-sm hover:bg-amber-400/10 disabled:opacity-50';
 export function WebAccountDialog({open,onOpenChange,initialTab='Profile'}:{open:boolean;onOpenChange:(v:boolean)=>void;initialTab?:string}) {

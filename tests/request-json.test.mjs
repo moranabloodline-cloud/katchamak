@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { requestJson, RequestTimeoutError } from '../src/lib/kachamak/request-json.ts';
+const original = globalThis.fetch;
+try {
+  let calls = 0, aborted = false;
+  globalThis.fetch = async (_, init) => { calls++; init.signal.addEventListener('abort', () => { aborted = true; }); return new Promise(() => {}); };
+  const started = performance.now();
+  await assert.rejects(requestJson('/api/library', { method: 'POST', body: '{}' }, 25), RequestTimeoutError);
+  assert.ok(performance.now() - started < 500);
+  assert.equal(calls, 1, 'A timed-out write is not automatically repeated');
+  assert.equal(aborted, true);
+  globalThis.fetch = async () => new Response(new ReadableStream({ start() {} }));
+  await assert.rejects(requestJson('/api/library', {}, 25), RequestTimeoutError, 'A stalled body has the same deadline');
+  globalThis.fetch = async () => new Response('<html>Gateway</html>');
+  await assert.rejects(requestJson('/api/library'), /unreadable response/);
+  globalThis.fetch = async () => Response.json(null);
+  await assert.rejects(requestJson('/api/library'), /invalid response/);
+  globalThis.fetch = async () => new Response('Gateway unavailable', { status: 503 });
+  assert.equal((await requestJson('/api/library')).response.status, 503);
+  globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(requestJson('/api/library'), /Failed to fetch/);
+  globalThis.fetch = async () => new Promise(() => {});
+  const controller = new AbortController();
+  const cancelled = requestJson('/api/library', { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(cancelled, { name: 'AbortError' });
+  globalThis.fetch = async () => Response.json({ revision: 2 });
+  assert.equal((await requestJson('/api/library')).data.revision, 2, 'A later request can recover normally');
+  console.log('Request replay passed: stalled headers/body, cancellation, HTML/null, 503, network failure and recovery.');
+} finally { globalThis.fetch = original; }

@@ -1,4 +1,5 @@
 'use client';
+import { requestJson } from '@/lib/kachamak/request-json';
 import { useEffect, useState } from 'react';
 import { FOLDER_ACCESS, rememberedFolder, pickNativeFolder, type FolderHandle } from '@/lib/kachamak/folder-access';
 
@@ -20,9 +21,8 @@ export function FolderAccessWindow() {
       if (data.action === 'accepted') { window.close(); return; }
       if (data.action !== 'connect' || typeof data.accountId !== 'string') return;
       try {
-        const response = await fetch('/api/account', { credentials: 'same-origin', cache: 'no-store' });
+        const {response,data:user} = await requestJson('/api/account');
         if (!response.ok) throw new Error('Sign in with the same account as Preview, then connect the folder again.');
-        const user = await response.json();
         if (user.id !== data.accountId) throw new Error('Preview and this window are signed in to different accounts.');
         const current = data.current ?? await rememberedFolder(user.id);
         if (active) { setIdentity(user); setConnection({ accountId: user.id, current, choose: Boolean(data.choose) }); }

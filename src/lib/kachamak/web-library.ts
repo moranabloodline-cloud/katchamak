@@ -1,4 +1,5 @@
 'use client';
+import { requestJson } from './request-json';
 import { create } from 'zustand';
 import { previewFolder } from './preview-folder';
 import { rememberedFolder, requestFolder, type FolderHandle } from './folder-access';
@@ -144,9 +145,8 @@ export async function initializeWebLibrary(reconnect = false) {
   reconnecting?.catch(() => {});
   initializing = (async () => {
     useWebLibrary.setState({ ready: false, busy: true, error: null });
-    const response = await fetch('/api/account', { cache: 'no-store', credentials: 'same-origin' });
-    if (!response.ok) { signedInId = null; const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Sign in to open your library.'); }
-    const identity = await response.json();
+    const {response,data:identity} = await requestJson('/api/account');
+    if (!response.ok) { signedInId = null; throw new Error(identity.error || 'Sign in to open your library.'); }
     if (typeof identity.id !== 'string' || !identity.id) throw new Error('Sign in to open your library.');
     signedInId = identity.id;
     if (!localStorage.getItem(accountKey()) && identity.displayName) localStorage.setItem(accountKey(), JSON.stringify({ author: identity.displayName }));

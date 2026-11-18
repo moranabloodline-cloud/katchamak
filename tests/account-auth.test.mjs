@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
 import { readFileSync } from 'node:fs';
 import { accountApi } from '../scripts/accounts-runtime.mjs';
+import { traceApiRequest } from '../scripts/request-trace.mjs';
+globalThis.traceApiRequest=traceApiRequest;
 const sql = new Database(':memory:');
 for (const statement of readFileSync('drizzle/0000_cold_spyke.sql','utf8').split('--> statement-breakpoint')) if(statement.trim())sql.exec(statement);
 const DB={ prepare(query){let values=[];const obj={bind(...v){values=v;return obj;},async run(){return sql.query(query).run(...values);},async first(){return sql.query(query).get(...values);},async all(){return {results:sql.query(query).all(...values)};}};return obj;},async batch(statements){return Promise.all(statements.map(s=>s.run()));}};

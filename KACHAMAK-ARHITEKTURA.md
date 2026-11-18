@@ -204,3 +204,12 @@ Split/Write/Grid/List; Label+Status+colour row in the right panel.
 - Forma proverava granice svih roditeljskih perioda i već datirane potomke pri sužavanju perioda. Ne menja druge datume da bi uklopila unos. Ranije nepravilnosti prikazuju se kao upozorenja, bez masovne korekcije rukopisa/datuma.
 - Calendar ne izmišlja tačan dan za Year/Month događaje; takvi događaji su izdvojeni u No exact day za odgovarajući mesec/godinu. Prvi prikaz kreće od prvog stvarnog događaja.
 - Pregled zadržava opseg dok se bira događaj ili menja prikaz. Cards opcije stvarno menjaju sadržaj kartica; Timeline Outline se ređa po datumima, uz očuvan sačuvani red/hijerarhiju i zajednički status note.
+
+
+## Dopuna — Pouzdani i merljivi cloud zahtevi (18.11.2026)
+
+- Sačuvano stanje potvrđuje isključivo validan serverski odgovor sa očekivanom narednom revizijom. Mrežna greška, timeout ili nečitljiv/nepotpun odgovor ostavlja lokalne izmene pending; ponovljeni Save koristi postojeću CAS zaštitu. Nema slepog automatskog ponavljanja POST zahteva.
+- Rok zahteva obuhvata prijem zaglavlja i tela (30 s; demo/prilozi 60 s). Save otkazuje pozadinsko čitanje i samostalno proverava reviziju pri upisu.
+- Pozadinska sinhronizacija šalje reviziju i ne prenosi rukopis ako se nije promenio. Svaki zahtev ponovo proverava identitet i suspension; samo tehnička inicijalizacija šeme može biti keširana.
+- Admin uvoz pozivnica je jedan set-based upit i ne prepisuje status; neizmenjeni redovi se ne ažuriraju. JSON proširenje je podržano u [Cloudflare D1](https://developers.cloudflare.com/d1/sql-api/query-json/).
+- Dijagnostika meri trajanje/broj DB i R2 operacija, daje request ID i Server-Timing, bez rukopisa, parametara upita, email adresa ili kredencijala u trace zapisu. last_seen je evidencija aktivnosti sa minutnom preciznošću, ne autorizacioni keš.

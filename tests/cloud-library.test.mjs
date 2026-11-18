@@ -234,6 +234,36 @@ await cloud.reloadWebLibrary(true);await cloud.removeWebProject(project);
 assert.ok(!(await (await call(a)).json()).snapshot.novels.some(n=>n.id===project));
 assert.ok(useKachamak.getState().novels.some(n=>n.id===novel.id),'Deleting one project preserves the others');
 assert.equal(browserStorageWrites,0,'Cloud startup, saving and refreshing work without browser storage writes');
+// Replayed malformed acknowledgements and outages must preserve dirty edits and allow retry.
+useKachamak.setState({activeNovelId:novel.id,activeTab:'binder'});await cloud.saveWebLibrary();
+const realFetch = globalThis.fetch;
+for (const broken of [() => new Response('<html>Gateway</html>'), () => Response.json({}), () => Response.json({revision:-1}), () => new Response('Unavailable',{status:503}), () => {throw new TypeError('Failed to fetch');}]) {
+ useKachamak.getState().updateNode('binder','note-1',{content:'<p>Preserve failed request '+crypto.randomUUID()+'</p>'});
+ const content=useKachamak.getState().novels[0].sections.binder[0].content;
+ globalThis.fetch=async(path,init)=>path==='/api/library'&&init?.method==='POST'?broken():realFetch(path,init);
+ await assert.rejects(()=>cloud.saveWebLibrary());
+ assert.equal(cloud.useWebLibrary.getState().busy,false);assert.equal(cloud.useWebLibrary.getState().pending,true);
+ assert.equal(useKachamak.getState().novels[0].sections.binder[0].content,content);
+ globalThis.fetch=realFetch;await cloud.saveWebLibrary();
+ assert.equal(cloud.useWebLibrary.getState().pending,false);
+ assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,content);
+}
+// A slow background refresh cannot hold the Save button hostage.
+let readCancelled=false,requests=[];
+globalThis.fetch=async(path,init)=>{requests.push(path);if(path.startsWith('/api/library?revision=')){init.signal.addEventListener('abort',()=>{readCancelled=true;});return new Promise(()=>{});}return realFetch(path,init);};
+const blockedRefresh=cloud.refreshWebLibrary().catch(()=>{});
+await Promise.resolve();
+useKachamak.getState().updateNode('binder','note-1',{content:'<p>Save while refresh is stalled</p>'});
+await Promise.race([cloud.saveWebLibrary(),new Promise((_,reject)=>{const timer=setTimeout(()=>reject(new Error('Save was blocked by refresh')),1000);timer.unref();})]);
+await blockedRefresh;assert.equal(readCancelled,true);assert.equal(cloud.useWebLibrary.getState().pending,false);
+globalThis.fetch=async(path,init)=>{requests.push(path);return realFetch(path,init);};requests=[];
+await cloud.refreshWebLibrary();assert.equal(requests.length,1);assert.match(requests[0],/^\/api\/library\?revision=/);
+globalThis.fetch=realFetch;
+// A lost response after a committed write recovers through revision reconciliation.
+useKachamak.getState().updateNode('binder','note-1',{content:'<p>Committed before connection dropped</p>'});
+globalThis.fetch=async(path,init)=>{const r=await realFetch(path,init);if(path==='/api/library'&&init?.method==='POST')throw new TypeError('Lost acknowledgement');return r;};
+await assert.rejects(()=>cloud.saveWebLibrary());assert.equal(cloud.useWebLibrary.getState().pending,true);
+globalThis.fetch=realFetch;await cloud.saveWebLibrary();assert.equal(cloud.useWebLibrary.getState().pending,false);
 browserUser=b;
 await assert.rejects(()=>cloud.refreshWebLibrary(),/account changed/);
 assert.equal(cloud.useWebLibrary.getState().ready,false,'Account switch hides the old library before rendering the next account');
