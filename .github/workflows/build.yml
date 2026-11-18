@@ -57,6 +57,7 @@ jobs:
         run: |
           bun run tests/cloud-library.test.mjs
           bun run tests/cloud-validation.test.mjs
+          bun run tests/local-recovery.test.mjs
       - name: Request failures, latency and query counts
         run: |
           bun run tests/request-json.test.mjs

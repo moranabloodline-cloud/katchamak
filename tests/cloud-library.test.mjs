@@ -293,7 +293,9 @@ useKachamak.getState().updateNode('binder','note-1',{content:'<p>Local manuscrip
 browserUser=b;await assert.rejects(()=>cloud.saveWebLibrary(),/account changed/);
 const competing=await (await call(a)).json();competing.snapshot.novels[0].sections.binder[0].content='<p>Text saved in another window</p>';
 await call(a,'/api/library','POST',competing);
-browserUser=a;await assert.rejects(()=>cloud.initializeWebLibrary(),/Another window/);
+browserUser=a;await cloud.initializeWebLibrary();
+assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Text saved in another window</p>','Reauthentication does not automatically save pending changes');
+await assert.rejects(()=>cloud.saveWebLibrary(),/Another window/);
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].content,'<p>Local manuscript kept through reauthentication</p>');
 assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Text saved in another window</p>');
 assert.equal(cloud.useWebLibrary.getState().ready,true);assert.equal(cloud.useWebLibrary.getState().pending,true);assert.equal(cloud.useWebLibrary.getState().conflict,true);

@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { initializeWebLibrary, useWebLibrary, saveWebLibrary, reloadWebLibrary, refreshWebLibrary, projectAttachments, addProjectAttachment, attachmentUrl } from '@/lib/kachamak/cloud-library';
-import { exportNovelJson, useKachamak } from '@/lib/kachamak/store';
+import { useKachamak } from '@/lib/kachamak/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { LocalRecovery } from './LocalRecovery';
+import { checkpointLocalDraft, exportPendingBackups } from '@/lib/kachamak/cloud-library';
 export function WebLibraryStorage({ children }: { children: ReactNode }) {
   const state = useWebLibrary();
   useEffect(() => { void initializeWebLibrary().catch(() => {}); }, []);
@@ -11,12 +13,12 @@ export function WebLibraryStorage({ children }: { children: ReactNode }) {
     const refresh = () => { if (document.visibilityState === 'visible') void refreshWebLibrary().catch(() => {}); };
     const interval = setInterval(refresh, 4000);
     window.addEventListener('focus', refresh); document.addEventListener('visibilitychange', refresh);
-    const closing = (event: BeforeUnloadEvent) => { const s = useWebLibrary.getState(); if (s.pending || s.busy) { event.preventDefault(); event.returnValue = ''; } };
+    const closing = (event: BeforeUnloadEvent) => { const s = useWebLibrary.getState(); if (s.pending || s.busy) { void checkpointLocalDraft(); event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', closing);
     return () => { clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('beforeunload', closing); };
   }, []);
-  if (!state.ready) return <main className="flex min-h-screen items-center justify-center bg-[#0d0d0d] p-8 text-foreground"><section className="max-w-lg space-y-5 rounded-xl border border-amber-500/30 bg-[#151515] p-7"><h1 className="font-serif text-2xl text-[#f3d589]">KATCHAMAK</h1><p>{state.busy ? 'Opening your account library…' : 'Could not open your cloud library'}</p>{state.error && <p role="alert" className="text-sm text-red-300">{state.error}</p>}{!state.busy && <><button onClick={() => void initializeWebLibrary().catch(() => {})} className="rounded bg-amber-400 px-4 py-2 text-black">Retry</button><a href="/signin-with-chatgpt?return_to=%2F" target="_top" className="ml-4 underline">Sign in</a></>}</section></main>;
-  return <>{children}{state.error && <div role="alert" className="fixed inset-x-0 bottom-8 z-[100] flex items-center gap-3 bg-red-950 p-3 text-sm text-red-100"><span className="flex-1">Cloud save failed: {state.error}</span><button onClick={() => void saveWebLibrary().catch(e => toast.error(String(e)))} className="underline">Retry save</button><button onClick={() => { for (const n of useKachamak.getState().novels) exportNovelJson(n); }} className="underline">Export backups</button>{state.conflict && <button className="underline" onClick={() => { if (window.confirm('Reload the saved cloud library and discard unsaved edits? Export backups first to keep them.')) void reloadWebLibrary(true).catch(e => toast.error(String(e))); }}>Reload saved library</button>}</div>}</>;
+  if (!state.ready) return <><LocalRecovery /><main className="flex min-h-screen items-center justify-center bg-[#0d0d0d] p-8 text-foreground"><section className="max-w-lg space-y-5 rounded-xl border border-amber-500/30 bg-[#151515] p-7"><h1 className="font-serif text-2xl text-[#f3d589]">KATCHAMAK</h1><p>{state.busy ? 'Opening your account library…' : 'Could not open your cloud library'}</p>{state.error && <p role="alert" className="text-sm text-red-300">{state.error}</p>}{!state.busy && <><button onClick={() => void initializeWebLibrary().catch(() => {})} className="rounded bg-amber-400 px-4 py-2 text-black">Retry</button><a href="/signin-with-chatgpt?return_to=%2F" target="_top" className="ml-4 underline">Sign in</a></>}</section></main></>;
+  return <><LocalRecovery />{children}{state.error && <div role="alert" className="fixed inset-x-0 bottom-8 z-[100] flex items-center gap-3 bg-red-950 p-3 text-sm text-red-100"><span className="flex-1">Cloud save failed: {state.error}</span><button onClick={() => void saveWebLibrary().catch(e => toast.error(String(e)))} className="underline">Retry save</button><button onClick={() => void exportPendingBackups().catch(e => toast.error(String(e)))} className="underline">Export backups</button>{state.conflict && <button className="underline" onClick={() => { if (window.confirm('Reload the saved cloud library and discard unsaved edits? Export backups first to keep them.')) void reloadWebLibrary(true).catch(e => toast.error(String(e))); }}>Reload saved library</button>}</div>}</>;
 }
 export function CloudStorageControls() {
   const [open, setOpen] = useState(false), [files, setFiles] = useState<Awaited<ReturnType<typeof projectAttachments>>>([]);

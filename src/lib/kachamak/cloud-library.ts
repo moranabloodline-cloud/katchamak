@@ -1,7 +1,7 @@
 'use client';
 import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
 import { create } from 'zustand';
-import { useKachamak, isUsableBackup, normalizeNovelSections } from './store';
+import { useKachamak, isUsableBackup, normalizeNovelSections, exportNovelJson } from './store';
 import { useCollections, type Collection } from './collections-store';
 import { findNode, findNodeInNovel } from './utils';
 import { useLibraryPreferences } from './library-preferences';
@@ -12,6 +12,7 @@ import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
 import { requestJson } from './request-json';
+import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
 type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
@@ -20,6 +21,9 @@ let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let accountId='';
+let accountEpoch = 0, writerId = crypto.randomUUID();
+let activeDraft: LocalDraft | null = null, localTimer: ReturnType<typeof setTimeout> | null = null;
+let localWrites: Promise<void> = Promise.resolve();
 let refreshController: AbortController | null = null;
 let snapshotDirty=true,cachedSnapshot='';
 // Serialize at save/verification boundaries, not for each keystroke or panel resize.
@@ -33,12 +37,57 @@ const snapshot = () => {
   return cachedSnapshot;
 };
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
+// Recovery protects project/collection data, not transient navigation or account preferences.
+const projectPayload = (value: string) => { const data = JSON.parse(value); return JSON.stringify({ novels: data.novels, collections: data.collections }); };
+let recoveryBase = '', recoveryBasePayload = '';
+// Throttled independently of cloud debounce: continuous typing still checkpoints.
+export function checkpointLocalDraft() {
+  if (localTimer) { clearTimeout(localTimer); localTimer = null; }
+  if (!accountId || !saved || snapshot() === saved) return localWrites;
+  if (recoveryBase !== saved) { recoveryBase = saved; recoveryBasePayload = projectPayload(saved); }
+  const value = projectPayload(snapshot());
+  if (value === recoveryBasePayload) return localWrites;
+  if (activeDraft?.snapshot === value) return localWrites;
+  const draft: LocalDraft = { version: 1, owner: accountId, id: writerId, generation: crypto.randomUUID(), updatedAt: Date.now(), revision, snapshot: value };
+  activeDraft = draft;
+  useLocalRecovery.setState({ writing: true });
+  localWrites = draftStorage.put(draft).then(() => {
+    if (useLocalRecovery.getState().owner === draft.owner && activeDraft === draft) useLocalRecovery.setState({ writing: false, error: null });
+  }).catch(error => { if (activeDraft === draft) activeDraft = null; if (useLocalRecovery.getState().owner === draft.owner) recoveryStorageError(error); });
+  return localWrites;
+}
+function lockAccount() {
+  void checkpointLocalDraft();
+  accountEpoch++;
+  if (timer) { clearTimeout(timer); timer = null; }
+  lockLocalRecovery();
+  useWebLibrary.setState({ ready: false, busy: false, email: '', error: 'Sign in again to access your library and local recovery drafts.' });
+}
+async function loadLocalDrafts() {
+  const owner = useLocalRecovery.getState().owner, epoch = accountEpoch;
+  if (!owner || owner !== accountId) return;
+  try {
+    const drafts = await draftStorage.list(owner);
+    if (epoch === accountEpoch && useLocalRecovery.getState().owner === owner) useLocalRecovery.setState({ drafts: drafts.filter(d => d.id !== writerId).map(({ id, generation, updatedAt }) => ({ id, generation, updatedAt })).sort((a,b) => b.updatedAt-a.updatedAt) });
+  } catch (error) { if (epoch === accountEpoch && useLocalRecovery.getState().owner === owner) recoveryStorageError(error); }
+}
+export async function refreshLocalDrafts() { await verifyRecoveryOwner(); await loadLocalDrafts(); }
+async function removeAcknowledgedDraft(draft: LocalDraft | null, value: string) {
+  if (!draft || draft.snapshot !== projectPayload(value)) return;
+  try { await localWrites; const removed = await draftStorage.remove(draft.owner, draft.id, draft.generation); if (removed && activeDraft?.generation === draft.generation) activeDraft = null; }
+  catch (error) { if (useLocalRecovery.getState().owner === draft.owner) recoveryStorageError(error); }
+}
 class LibraryConflictError extends Error {}
 async function api(path: string, init?: RequestInit) {
+  const epoch = accountEpoch;
   const headers=new Headers(init?.headers);
   if(path.startsWith('/api/library')&&accountId)headers.set('X-Katchamak-Account',accountId);
   const { response, data } = await requestJson(path, { ...init, headers }, path.includes('/demo/') || init?.body instanceof FormData ? 60000 : 30000);
-  if(data.accountChanged)useWebLibrary.setState({ready:false,busy:false,error:data.error});
+  if(data.accountChanged || response.status === 401 || response.status === 403) {
+    lockAccount();
+    throw new Error(data.accountChanged ? 'Your signed-in account changed. Sign in again to access your library and local recovery drafts.' : 'Sign in again to access your library and local recovery drafts.');
+  }
+  if (epoch !== accountEpoch) throw new Error('The account session changed. Please sign in again.');
   if (!response.ok) {
     const message=data.error || 'Cloud storage could not be reached. Retry saving.';
     if(response.status===409&&data.conflict===true)throw new LibraryConflictError(message);
@@ -85,25 +134,29 @@ export async function initializeWebLibrary() {
   if (initializing) return initializing;
   if (useWebLibrary.getState().ready) return;
   initializing = (async () => {
+    lockLocalRecovery();
     useWebLibrary.setState({ busy: true, error: null });
     const account = await api('/api/account');
     if(typeof account.id!=='string'||!account.id||typeof account.email!=='string')throw new Error('The signed-in account could not be read. Please retry.');
-    if(accountId&&accountId!==account.id&&snapshot()!==saved)throw new Error('Sign back in to '+useWebLibrary.getState().email+' to save the changes left open in this window.');
+    if(accountId&&accountId!==account.id&&snapshot()!==saved){lockAccount();throw new Error('Sign back in to the original account to save the changes left open in this window.');}
     let resumePending = false;
     if (subscribed && accountId === account.id && useWebLibrary.getState().pending && snapshot() !== saved) {
       const current = JSON.parse(snapshot()) as Snapshot, base = JSON.parse(saved) as Snapshot;
       // Navigation alone is restored through the workspace URL as before.
       resumePending = JSON.stringify([current.novels,current.collections,current.editorAppearance]) !== JSON.stringify([base.novels,base.collections,base.editorAppearance]);
     }
+    if (accountId !== account.id) { writerId = crypto.randomUUID(); activeDraft = null; }
     accountId=account.id;
+    useLocalRecovery.setState({ owner: account.id, drafts: [], error: null });
+    await loadLocalDrafts();
     useWebLibrary.setState({ email: account.email });
     useAccountPreferences.setState({displayName: account.displayName, photo: account.avatar || null});
     useAppearancePreferences.setState({theme: account.preferences?.lightTheme?'light':'dark',interfaceSize:account.preferences?.smallInterface?'small':account.preferences?.largeInterface?'large':'normal'});
     useKachamak.setState({ defaultAuthor: account.displayName || '' });
     // Reauthenticating the same window must not replace its pending prose with the last cloud copy.
     if (resumePending) {
-      useWebLibrary.setState({ready:true,busy:false});
-      await flushWebLibrary();
+      // Reauthentication retains this window's text, but never silently uploads it.
+      useWebLibrary.setState({ready:true,busy:false,conflict:true,error:'Unsaved changes were kept after sign-in. Choose Retry save to save them, or export backups.'});
       return;
     }
     apply(await api('/api/library/demo/install',{method:'POST'}));
@@ -115,6 +168,7 @@ export async function initializeWebLibrary() {
         if (applying || !useWebLibrary.getState().ready) return;
         writeWorkspaceRoute();
         useWebLibrary.setState({ pending: true });
+        if (!localTimer) localTimer = setTimeout(() => { void checkpointLocalDraft(); }, 150);
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
@@ -139,6 +193,9 @@ export async function flushWebLibrary() {
     while (true) {
       const value = snapshot();
       if(value===saved)break;
+      await checkpointLocalDraft();
+      const checkpoint = activeDraft;
+      if (!useWebLibrary.getState().ready) throw new Error('Sign in again before saving.');
       useWebLibrary.setState({ busy: true, pending: true });
       let data;
       try{data=await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });}
@@ -149,6 +206,7 @@ export async function flushWebLibrary() {
       }
       if(!Number.isSafeInteger(data.revision)||data.revision!==revision+1)throw new Error('The server did not confirm this save. Your edits are kept in this window. Retry saving.');
       revision = data.revision; saved = value;
+      await removeAcknowledgedDraft(checkpoint, value);
     }
     useWebLibrary.setState({ busy: false, pending: false, error: null });
   })().catch(error => { fail(error); throw error; }).finally(() => { running = null; });
@@ -176,7 +234,9 @@ async function reconcileRevision(){
 }
 export async function refreshWebLibrary() {
   if (refreshing) return refreshing;
-  if (!useWebLibrary.getState().ready || running || useWebLibrary.getState().pending || useWebLibrary.getState().error) return;
+  if (running) return;
+  if (!useWebLibrary.getState().ready) { if (useLocalRecovery.getState().owner) await verifyRecoveryOwner(); return; }
+  if (useWebLibrary.getState().pending || useWebLibrary.getState().error) { await verifyRecoveryOwner(); return; }
   const before = snapshot();
   const controller = new AbortController(); refreshController = controller;
   refreshing = (async () => {
@@ -184,16 +244,79 @@ export async function refreshWebLibrary() {
     if(!Number.isSafeInteger(data.revision)||data.revision<0)throw new Error('The saved library could not be read.');
     if(data.unchanged===true){if(data.revision!==revision)throw new Error('The saved library revision could not be verified.');return;}
     if (snapshot() === before && !useWebLibrary.getState().pending && data.revision !== revision) apply(data);
-  })().finally(() => { refreshing = null; refreshController = null; });
+  })().catch(error => { if (!controller.signal.aborted) lockAccount(); throw error; }).finally(() => { refreshing = null; refreshController = null; });
   return refreshing;
+}
+async function verifyRecoveryOwner() {
+  const owner = useLocalRecovery.getState().owner;
+  if (!owner || owner !== accountId) throw new Error('Sign in again to access local recovery.');
+  let account;
+  try { account = await api('/api/account'); }
+  catch (error) { lockAccount(); throw error; } // No offline unlock from a remembered identity.
+  if (account.id !== owner) { lockAccount(); throw new Error('Your signed-in account changed. Sign in again to access local recovery.'); }
+  return owner;
+}
+async function selectedDraft(summary: DraftSummary) {
+  const owner = await verifyRecoveryOwner(), epoch = accountEpoch;
+  const draft = await draftStorage.get(owner, summary.id);
+  if (epoch !== accountEpoch || useLocalRecovery.getState().owner !== owner) throw new Error('Sign in again to access local recovery.');
+  if (!draft || draft.generation !== summary.generation) { await refreshLocalDrafts(); throw new Error('This draft changed in another window. Choose its latest version.'); }
+  return draft;
+}
+function readDraft(draft: LocalDraft): Snapshot {
+  const value = JSON.parse(draft.snapshot);
+  if (draft.version !== 1 || !Array.isArray(value?.novels) || !value.novels.every(isUsableBackup) || !Array.isArray(value.collections)) throw new Error('This local draft cannot be recovered. It has been kept.');
+  return value;
+}
+export async function exportPendingBackups() {
+  await verifyRecoveryOwner();
+  for (const novel of useKachamak.getState().novels) exportNovelJson(novel);
+}
+export async function exportLocalDraft(summary: DraftSummary) {
+  const draft = await selectedDraft(summary), value = readDraft(draft);
+  for (const novel of value.novels) exportNovelJson(novel);
+}
+export async function discardLocalDraft(summary: DraftSummary) {
+  const draft = await selectedDraft(summary);
+  await draftStorage.remove(draft.owner, draft.id, draft.generation);
+  await refreshLocalDrafts();
+}
+let recovering = false;
+export async function recoverLocalDraft(summary: DraftSummary) {
+  if (recovering) throw new Error('A recovery is already in progress.');
+  recovering = true;
+  try {
+    const draft = await selectedDraft(summary), source = readDraft(draft), epoch = accountEpoch;
+    if (!useWebLibrary.getState().ready) throw new Error('Open the cloud library before recovering copies. You can still export this draft.');
+    await flushWebLibrary();
+    if (epoch !== accountEpoch || useLocalRecovery.getState().owner !== draft.owner) throw new Error('Sign in again to recover this draft.');
+    const ids = new Map(source.novels.map(n => [n.id, crypto.randomUUID()]));
+    const folders = new Map(source.collections.map(c => [c.id, crypto.randomUUID()]));
+    if (folders.size !== source.collections.length || source.collections.some(c => typeof c.name !== 'string' || !Array.isArray(c.projectIds) || c.projectIds.some(id => !ids.has(id)) || c.parentId !== null && !folders.has(c.parentId))) throw new Error('This draft has invalid collections. Export its project backups instead.');
+    const root = crypto.randomUUID(), now = Date.now();
+    const novels = source.novels.map(n => { const copy = { ...n, id: ids.get(n.id)!, title: n.title + ' (Recovered)', author: n.author ?? '', trash: n.trash ?? [], statuses: n.statuses ?? [], labels: n.labels ?? [] }; normalizeNovelSections(copy); return copy; });
+    const assigned = new Set(source.collections.flatMap(c => c.projectIds));
+    const collections: Collection[] = [
+      { id: root, name: 'Recovered · ' + new Date(draft.updatedAt).toLocaleString(), parentId: null, projectIds: source.novels.filter(n => !assigned.has(n.id)).map(n => ids.get(n.id)!), createdAt: now, updatedAt: now },
+      ...source.collections.map(c => ({ ...c, id: folders.get(c.id)!, parentId: c.parentId === null ? root : folders.get(c.parentId)!, projectIds: c.projectIds.map(id => ids.get(id)!) })),
+    ];
+    useKachamak.setState(s => ({ novels: [...s.novels, ...novels] }));
+    useCollections.setState(s => ({ collections: [...s.collections, ...collections] }));
+    await flushWebLibrary();
+    // Only this exact selected generation, and only after its copies are acknowledged.
+    const acknowledged = JSON.parse(saved) as Snapshot;
+    if (novels.every(n => acknowledged.novels.some(v => JSON.stringify(v) === JSON.stringify(n))) && collections.every(c => acknowledged.collections.some(v => JSON.stringify(v) === JSON.stringify(c)))) await draftStorage.remove(draft.owner, draft.id, draft.generation);
+    await refreshLocalDrafts();
+  } finally { recovering = false; }
 }
 export async function reloadWebLibrary(discard = false) {
   if (running) await running;
   if (snapshot() !== saved && !discard) throw new Error('Save or export your unsaved edits before reloading.');
-  const before = snapshot(), data = await api('/api/library');
+  const before = snapshot(), discardedDraft = activeDraft, data = await api('/api/library');
   // Discard applies only to edits present at the click, never to text typed while waiting.
   if (snapshot() !== before || data.revision < revision) throw new Error('The library changed while reloading. Your current edits were kept. Save them before retrying.');
   apply(data);
+  if (discard) await removeAcknowledgedDraft(discardedDraft, before);
 }
 export async function createWebCollection(name: string, parentId: string | null) {
   const id = useCollections.getState().addCollection(name, parentId); await flushWebLibrary(); return id;
