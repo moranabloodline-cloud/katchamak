@@ -12,7 +12,7 @@ import {CalendarDays,Hourglass,Zap,ChevronDown,Image as ImageIcon,Palette,Plus,X
 import {Popover,PopoverTrigger,PopoverContent} from '@/components/ui/popover';
 import {NOTE_ICONS,iconByName} from '@/lib/kachamak/icons';
 import {formatDate} from '@/lib/kachamak/story-calendar';
-import {timelineKind,timelineWarnings} from '@/lib/kachamak/timeline-tree';
+import {timelineDateErrors,timelineKind,timelineWarnings} from '@/lib/kachamak/timeline-tree';
 import { timeButton, timeField } from './CalendarSettings';
 
 export function DateFields({label,calendar:c,value:d,onChange,time=false,precision=time?'time':'day'}:{label:string;calendar:StoryCalendar;value:StoryDate;onChange:(d:StoryDate)=>void;time?:boolean;precision?:DatePrecision}) {
@@ -81,6 +81,11 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       const live=state.novels.find(n=>n.id===novel.id)!;
       const row=target?flattenNotes(live).find(r=>r.node.id===target):null;
       if(target&&!row)throw new Error('This note is no longer available.');
+      const oldEvent=row?.node.event;
+      if(!oldEvent||event.start!==oldEvent.start||event.end!==oldEvent.end||eventType(event)!==eventType(oldEvent)){
+        const errors=timelineDateErrors(live.sections[row?.section??section],event,row?.node.id,parentId);
+        if(errors.length)throw new Error(errors[0]);
+      }
       const id=row?.node.id||state.addNode(section,parentId??null,'doc',title.trim());
       if(!id)throw new Error('The note could not be created.');
       state.updateNode(row?.section??section,id,{title:title.trim(),event,timelineKind:kind,icon:icon||undefined,links:[...new Set(links.filter(link=>link!==id))]});state.setRenamingNode(null);state.select(id);onSaved(start);onClose();

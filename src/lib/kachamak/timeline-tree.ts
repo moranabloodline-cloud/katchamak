@@ -1,5 +1,5 @@
 import type {NoteNode} from './types';
-import {eventType,formatDate,type StoryCalendar} from './story-calendar';
+import {eventType,formatDate,type StoryCalendar,type StoryEvent} from './story-calendar';
 import {findNode,locateNode} from './utils';
 
 export const timelineKind=(node:NoteNode)=>node.event?eventType(node.event):node.timelineKind;
@@ -44,6 +44,22 @@ export function timelineWarnings(nodes:NoteNode[],node:NoteNode):string[] {
   if(node.event&&eventType(node.event)==='period'){
     let outside=0;const check=(list:NoteNode[])=>list.forEach(child=>{if(child.event&&(child.event.start<node.event!.start||(child.event.end??child.event.start)>node.event!.end!))outside++;check(child.children);});check(node.children);
     if(outside)messages.push(`${outside} contained ${outside===1?'note falls':'notes fall'} outside this period. Their dates have not been changed.`);
+  }
+  return messages;
+}
+
+/** Validate explicit date edits against both ancestors and descendants, without
+ * silently resizing a parent or moving its children. Existing data stays intact. */
+export function timelineDateErrors(nodes:NoteNode[],event:StoryEvent,id?:string,parentId?:string):string[] {
+  const current=id?findNode(nodes,id):null,messages:string[]=[];
+  let ancestorId=current?locateNode(nodes,current.id)?.parentId:parentId;
+  while(ancestorId){const ancestor=findNode(nodes,ancestorId);if(!ancestor)break;
+    if(ancestor.event&&eventType(ancestor.event)==='period'&&(event.start<ancestor.event.start||(event.end??event.start)>ancestor.event.end!))messages.push(`Dates must stay within “${ancestor.title}”. Edit that period’s dates first if it needs to be wider.`);
+    ancestorId=locateNode(nodes,ancestorId)?.parentId??undefined;
+  }
+  if(current&&eventType(event)==='period'){
+    const outside:string[]=[];const visit=(list:NoteNode[])=>list.forEach(child=>{if(child.event&&(child.event.start<event.start||(child.event.end??child.event.start)>event.end!))outside.push(child.title);visit(child.children);});visit(current.children);
+    if(outside.length)messages.push(`This period must include ${outside.slice(0,2).map(title=>`“${title}”`).join(' and ')}${outside.length>2?` and ${outside.length-2} other notes`:''}. Their dates will not be moved.`);
   }
   return messages;
 }

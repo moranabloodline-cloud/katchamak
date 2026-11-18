@@ -197,3 +197,10 @@ Split/Write/Grid/List; Label+Status+colour row in the right panel.
 - Stablo levo, datumi/tip desno, automatska vremenska osa u sredini. Klik na period ulazi u njegov neposredni nivo; događaj zadržava pregled braće i roditelja.
 - Datumi se mogu zadati samo kao godina ili mesec, odnosno dan ili vreme. Premeštanje note ne pomera njen datum; neslaganje sa roditeljskim opsegom je vidljivo upozorenje.
 - Demo iz korisnikovog fajla dodaje se u Timeline postojećeg Morrigan’s Ocean projekta pod jednim glavnim periodom. Ne pravi novi roman i ne prepisuje sadržaj drugih tabova. Import timeline je append-only; kalendar se ne zamenjuje. Kloniranje tabova ostaje odloženo.
+## Dopuna — Datumi i prikazi Timeline-a (Nikola, 18.11.2026)
+
+- Isključivo Event/Time Period forma upisuje izmene postojećih datuma. Nijedan grafikon ne pomera/razvlači note da bi promenio vreme; povlačenje prazne ose služi samo pregledanju. Ovo pravilo ima prednost nad ranijim opisima drag/resize ponašanja.
+- Svi grafikoni čitaju isti NoteNode.event. Svaka nota ima svoj red na osi; naslov ne produžava vremenski raspon. Podperiodi ostaju ugnežđeni, granice roditelja vidljive, velika odstupanja u skali rešavaju se ulaskom u period/zoom-om.
+- Forma proverava granice svih roditeljskih perioda i već datirane potomke pri sužavanju perioda. Ne menja druge datume da bi uklopila unos. Ranije nepravilnosti prikazuju se kao upozorenja, bez masovne korekcije rukopisa/datuma.
+- Calendar ne izmišlja tačan dan za Year/Month događaje; takvi događaji su izdvojeni u No exact day za odgovarajući mesec/godinu. Prvi prikaz kreće od prvog stvarnog događaja.
+- Pregled zadržava opseg dok se bira događaj ili menja prikaz. Cards opcije stvarno menjaju sadržaj kartica; Timeline Outline se ređa po datumima, uz očuvan sačuvani red/hijerarhiju i zajednički status note.
