@@ -22,8 +22,10 @@ const field=label=>document.querySelector(`[aria-label="${label}"]`);
 const button=label=>[...document.querySelectorAll('button')].find(el=>el.getAttribute('aria-label')===label||el.textContent===label)??[...document.querySelectorAll('button')].find(el=>el.textContent.startsWith(label));
 const click=async(el)=>{assert.ok(el);await React.act(async()=>{el.dispatchEvent(new dom.MouseEvent('mousedown',{bubbles:true,button:0}));el.click();});await React.act(async()=>new Promise(resolve=>setTimeout(resolve,5)));};
 const change=async(label,value)=>{const el=field(label);assert.ok(el,label);await React.act(async()=>{Object.getOwnPropertyDescriptor(el.tagName==='SELECT'?dom.HTMLSelectElement.prototype:dom.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});};
+const option=async(label)=>{await click(button('Timeline options'));await click(button(label));};
+assert.ok(!button('Go to date')&&!button('Time System'),'The axis starts without either toolbar');
 // Regression: a Time System draft must not survive switching to another book.
-await click(button('Time System'));await change('Time system name','Unsaved A calendar');
+await option('Time System');await change('Time system name','Unsaved A calendar');
 await React.act(async()=>useKachamak.setState({activeNovelId:b.id,selectedNodeId:'period',paneAId:'period'}));
 assert.ok(!document.querySelector('[role="dialog"]'),'Book change closes the old calendar draft instead of offering to save it into the new book');
 assert.equal(JSON.stringify(b),untouchedB);
@@ -40,7 +42,7 @@ await click(tab('Timeline'));assert.equal(field('Event title').value,'Draft peri
 await click(button('Apply dates'));assert.equal(a.sections.timeline[0].title,'Draft period title');
 // Every modal belongs to this book, including group edits and navigation dates.
 for(const label of ['Groups','Go to date']){
-  await click(button(label));assert.ok(document.querySelector('[role="dialog"]'));
+  await option(label);assert.ok(document.querySelector('[role="dialog"]'));
   await React.act(async()=>useKachamak.setState({activeNovelId:b.id,selectedNodeId:'period',paneAId:'period'}));
   assert.ok(!document.querySelector('[role="dialog"]'),label+' closes on book change');
   await React.act(async()=>useKachamak.setState({activeNovelId:a.id,selectedNodeId:'period',paneAId:'period'}));
@@ -115,7 +117,7 @@ await click(tab('Info'));
 await click(treeRow('world'));
 assert.equal(tab('Info').getAttribute('aria-selected'),'true','Selecting an existing item does not change tabs');
 const beforeNew=JSON.stringify(qa.sections.timeline[0].children[1]);
-await click([...document.querySelectorAll('header button')].find(el=>el.textContent.trim()==='Add event'));
+await option('Add event');
 const addedEvent=qa.sections.timeline[0].children.at(-1);
 assert.equal(addedEvent.timelineKind,'event');assert.equal(addedEvent.event,undefined);
 assert.equal(tab('Timeline').getAttribute('aria-selected'),'true','Explicit Add event opens the existing dates inspector');
@@ -123,7 +125,7 @@ assert.equal(field('Event title').value,'New Event');
 assert.equal(button('Apply dates').disabled,true,'Do not invent a date');
 assert.equal(document.querySelector('[role="dialog"]'),null,'Wide layout uses the existing inspector without a dialog');
 await click(tab('Info'));
-await click([...document.querySelectorAll('header button')].find(el=>el.textContent.trim()==='Time Period'));
+await option('Time Period');
 const addedPeriod=qa.sections.timeline[0].children.at(-1);
 assert.equal(addedPeriod.timelineKind,'period');assert.equal(addedPeriod.event,undefined);
 assert.equal(tab('Timeline').getAttribute('aria-selected'),'true');
@@ -135,7 +137,7 @@ await React.act(async()=>fresh.select('world'));
 await React.act(async()=>fresh.select(addedPeriod.id));
 assert.equal(tab('Info').getAttribute('aria-selected'),'true','Revisiting a previously added item never replays the creation task');
 dom.matchMedia=()=>({matches:true});
-await click([...document.querySelectorAll('header button')].find(el=>el.textContent.trim()==='Add event'));
+await option('Add event');
 const mobile=()=>document.querySelector('[role="dialog"]');
 assert.equal(mobile().querySelector('h2').textContent,'Edit dates','Narrow layout uses the already existing date editor');
 const mobileId=useKachamak.getState().selectedNodeId;
@@ -146,7 +148,7 @@ await click([...mobile().querySelectorAll('button')].find(el=>el.textContent.tri
 assert.equal(mobile(),null);
 assert.equal(useKachamak.getState().selectedNodeId,mobileId,'Closing the editor keeps the undated note');
 assert.equal(findNode(qa.sections.timeline,mobileId).event,undefined);
-await click([...document.querySelectorAll('header button')].find(el=>el.textContent.trim()==='Time Period'));
+await option('Time Period');
 assert.equal(mobile().querySelector('[aria-label="Timeline note type"]').value,'period');
 assert.ok(mobile().querySelector('[aria-label="End date"]'));
 await click([...mobile().querySelectorAll('button')].find(el=>el.textContent.trim()==='Close'));

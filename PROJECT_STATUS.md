@@ -1,3 +1,5 @@
+> **2026-11-18 — Timeline bez gornja dva reda:** grafikon počinje odmah ispod glavnih tabova. Podešavanja, dodavanje, uvoz, filteri, skala i zum dostupni su iz menija ⋯ pored donjih Timeline prikaza. Calendar zadržava navigaciju meseci. Ciljani testovi za prikaz, filtere i uvoz prolaze, a Chrome provera na sintetičkom projektu potvrđuje prikaz i meni.
+
 > **2026-11-18 — Tri Timeline prikaza:** uklonjen Outline režim iz radne površine i natpis Chronology sa donje trake. Timeline, Calendar i Cards su dostupni. Ranije sačuvan Outline se pri prikazu čita kao Timeline osa, bez prepisivanja preference ili izmene beleški. Ciljani testovi za prikaze, status, kalendar i cloud validaciju prolaze; potvrđeno i na sintetičkom projektu u Chrome-u.
 
 > **2026-11-18 — Clone to project za radne tabove:** desni klik na tab nudi izbor drugog aktivnog projekta i vidljivog odredišnog taba. Kopije sa novim ID-jevima i očuvanim podstablom dodaju se pod Sort This; postojeći Sort This se ponovo koristi. Interne veze se preusmeravaju na kopije, a tekst veza van izabranog sadržaja ostaje sačuvan. Timeline i Trash nisu izvor ni odredište. Projektni prilozi iz Storage nisu deo kloniranja. Ciljani testovi pokrivaju strukturu, vidljive tabove, validaciju i integritet izvora; izolovani Chrome je potvrdio meni, izbor odredišta i cloud potvrdu upisa na sintetičkom backendu. App TypeScript i Sites build prolaze, a puni tsc ima dve postojeće greške u examples/websocket.
@@ -439,6 +441,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-18 — Timeline bez gornja dva reda:** grafikon počinje odmah ispod glavnih tabova. Podešavanja, dodavanje, uvoz, filteri, skala i zum dostupni su iz menija ⋯ pored donjih Timeline prikaza. Calendar zadržava navigaciju meseci. Ciljani testovi za prikaz, filtere i uvoz prolaze, a Chrome provera na sintetičkom projektu potvrđuje prikaz i meni.
 
 > **2026-11-18 — Tri Timeline prikaza:** uklonjen Outline režim iz radne površine i natpis Chronology sa donje trake. Timeline, Calendar i Cards su dostupni. Ranije sačuvan Outline se pri prikazu čita kao Timeline osa, bez prepisivanja preference ili izmene beleški. Ciljani testovi za prikaze, status, kalendar i cloud validaciju prolaze; potvrđeno i na sintetičkom projektu u Chrome-u.
 
