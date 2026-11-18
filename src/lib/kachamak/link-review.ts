@@ -6,6 +6,10 @@ import {contentText, flattenNotes, scanLinks,indexText,rangeForMatch,validLinkCh
  * for detection again. Never guess the replacement for an unavailable ID. */
 export function prepareLinkReview(novel:Novel,source:NoteNode){
   const targets=new Set(flattenNotes(novel).map(row=>row.node.id));
+  return removeUnavailableNoteLinks(source,targets);
+}
+
+export function removeUnavailableNoteLinks(source:Pick<NoteNode,'content'|'linkChoices'>,targets:ReadonlySet<string>){
   const root=document.createElement('div');root.innerHTML=source.content;
   const before=indexText(root);
   const valid=validLinkChoices(before.text,source.linkChoices);
