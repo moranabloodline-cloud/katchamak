@@ -119,14 +119,23 @@ for(const w of [a,b,c,reload])w.useWebLibrary.setState({ready:false});
 
 // Actual UI gate: no draft controls, list, or manuscript on the expired/other account screen.
 for(const key of ['Document','HTMLElement','Element','Node','navigator','Event','MutationObserver'])Object.defineProperty(globalThis,key,{configurable:true,value:dom[key]});
+globalThis.requestAnimationFrame = dom.requestAnimationFrame.bind(dom);
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const React=await import('react'),{createRoot}=await import('react-dom/client');
 const ui=await import('../src/lib/kachamak/cloud-library.ts'),{useLocalRecovery}=await import('../src/lib/kachamak/local-recovery.ts');
 const {WebLibraryStorage}=await import('../src/components/kachamak/WebLibraryStorage.tsx');
+const {LocalRecovery}=await import('../src/components/kachamak/LocalRecovery.tsx');
 await a.draftStorage.put({...original,id:'ui-draft',generation:crypto.randomUUID()});
 await ui.initializeWebLibrary();
 const box=document.body.appendChild(document.createElement('div')),root=createRoot(box);
-await React.act(async()=>root.render(React.createElement(WebLibraryStorage,null,React.createElement('p',null,'Private editor content'))));
+const render = (accountId) => React.act(async()=>root.render(React.createElement(WebLibraryStorage,null,
+  React.createElement('p',null,'Private editor content'),
+  accountId ? React.createElement(LocalRecovery,{accountId}) : null)));
+await render();
+assert.ok(!box.querySelector('[aria-label="Local recovery"]'),'Editor has no recovery panel even when a draft exists');
+await render('b');
+assert.ok(!box.textContent.includes('Recover as copies'),'Account settings for a different identity cannot reveal drafts');
+await render('a');
 assert.ok(box.textContent.includes('Recover as copies'));assert.ok(box.textContent.includes('unencrypted'));
 user=null;await React.act(async()=>{await assert.rejects(()=>ui.refreshLocalDrafts(),/Sign in/);});
 assert.ok(!box.textContent.includes('Recover as copies'));assert.ok(!box.textContent.includes('Private editor content'));assert.equal(useLocalRecovery.getState().owner,null);
