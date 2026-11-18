@@ -434,6 +434,10 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+### 2026-11-18 — Donji Timeline red bez preklapanja
+- Timeline brojač reči/znakova ostaje levo dok nema prostora za centriranje pored svih Workspace kontrola. Timeline, Calendar, Cards i Outline zadržavaju isto ponašanje i sve komande.
+- Browser na sintetici potvrdio preklapanje pri 704 px pre izmene i razdvojen brojač nakon izmene, uz kratku i dugu oznaku cilja na okolnim širinama. Bez promene rukopisa, panelâ ili šeme.
+
 ### 2026-11-18 — Unos datuma posle eksplicitnog Add
 - Add event i Time Period otvaraju postojeći Timeline tab odabrane note; na užem ekranu koriste postojeći Edit dates dijalog. Redovan izbor postojećih nota ne menja inspector tab. Novoj noti se ne upisuje datum; iz mobilnog pregleda uklonjen je prikaz podrazumevanog datuma dok datum nije odabran.
 - Regresija i sintetički browser potvrđuju oba tipa, običan izbor i zatvaranje na širini 390 px. Nema promene šeme, stvarnih beležaka ili drugih knjiga.

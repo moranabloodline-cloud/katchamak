@@ -388,14 +388,16 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
           </DocumentOutline>}
         </div>
 
-        {/* Centre the count when space permits; on narrow panes keep it clear of the view buttons. */}
+        {/* The extra Timeline workspace controls need more room before the count can be centered. */}
         <div data-workspace-chrome className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
           <DocumentTarget node={selected} section={selectedSection}/>
           {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
           <span
-            className="ml-10 mr-1 min-w-0 max-w-52 flex-1 truncate whitespace-nowrap text-xs text-muted-foreground @[680px]:absolute @[680px]:left-1/2 @[680px]:ml-0 @[680px]:-translate-x-1/2"
+            className={`ml-10 mr-1 min-w-0 max-w-52 flex-1 truncate whitespace-nowrap text-xs text-muted-foreground ${view === "timeline"
+              ? "@[1040px]:absolute @[1040px]:left-1/2 @[1040px]:mx-0 @[1040px]:-translate-x-1/2"
+              : "@[680px]:absolute @[680px]:left-1/2 @[680px]:ml-0 @[680px]:-translate-x-1/2"}`}
             title={target?'Document text / target':view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
           >
             {target?`${targetCount.toLocaleString('en-US')}/${target.amount.toLocaleString('en-US')} ${target.unit}`:view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
