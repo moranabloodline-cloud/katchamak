@@ -54,7 +54,9 @@ jobs:
       - name: Test adding notes inside the selected item
         run: bun run tests/note-tree-add.test.mjs
       - name: Test authenticated cloud storage and cross-view saves
-        run: bun run tests/cloud-library.test.mjs
+        run: |
+          bun run tests/cloud-library.test.mjs
+          bun run tests/cloud-validation.test.mjs
       - name: Request failures, latency and query counts
         run: |
           bun run tests/request-json.test.mjs
@@ -81,6 +83,10 @@ jobs:
         run: node scripts/run-target.mjs sites scripts/build-project.mjs
       - name: Verify Sites application assets
         run: bun run check:release
+      - name: Verify packaged cloud validation
+        env:
+          KATCHAMAK_TEST_PACKAGED_VALIDATION: '1'
+        run: bun run tests/cloud-validation.test.mjs
   windows-desktop:
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
