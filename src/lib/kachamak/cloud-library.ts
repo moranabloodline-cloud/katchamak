@@ -209,7 +209,9 @@ export async function prepareWebImport(_collectionId: string | null) { await flu
 export async function importWebProject(json: string, collectionId: string | null) {
   const input = JSON.parse(json), value = input?.format === 'katchamak-project' ? input.novel : input;
   if (!isUsableBackup(value)) throw new Error('Not a Katchamak project.');
-  normalizeNovelSections(value); addNovel({ ...value, id: crypto.randomUUID() }, collectionId); await flushWebLibrary();
+  // Match the established store.importNovel defaults for older JSON backups.
+  const novel: Novel = { ...value, id: crypto.randomUUID(), author: value.author ?? '', trash: value.trash ?? [], statuses: value.statuses ?? [], labels: value.labels ?? [] };
+  normalizeNovelSections(novel); addNovel(novel, collectionId); await flushWebLibrary();
 }
 function filesPath() { const id = useKachamak.getState().activeNovelId; if (!id) throw new Error('Open a project first.'); return '/api/library/files/' + encodeURIComponent(id); }
 export async function projectAttachments(): Promise<{ id: string; name: string; size: number }[]> { return (await api(filesPath())).files; }

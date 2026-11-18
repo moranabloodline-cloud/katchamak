@@ -151,4 +151,36 @@ assert.deepEqual(await (await call()).json(), beforeFailure, 'Validation failure
 useKachamak.getState().setTimeline({calendar:clone(modern.timeline.calendar)});
 await cloud.saveWebLibrary(); await cloud.reloadWebLibrary();
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].content, '<p>Unsaved text must survive validation failure.</p>');
-console.log(`Cloud validation passed: ${invalidCases.length} rejected cases without writes; modern/legacy/custom/imported formats; real client save/reload${process.env.KATCHAMAK_TEST_PACKAGED_VALIDATION === '1' ? ' against packaged Worker' : ''}.`);
+// Exercise the actual Dashboard/Settings importer, not only store.importNovel.
+const missingAuthor = clone(modern); delete missingAuthor.author;
+for (const [label, source] of [['current', modern], ['missing author', missingAuthor], ['legacy defaults and Codex', partial]]) {
+  for (const wrapped of [false, true]) {
+    const beforeImport = clone(useKachamak.getState().novels);
+    const input = wrapped ? {format:'katchamak-project', version:1, storeVersion:7, novel:source} : source;
+    await cloud.importWebProject(JSON.stringify(input), null);
+    const importedId = useKachamak.getState().activeNovelId;
+    assert.ok(importedId && importedId !== source.id && !beforeImport.some(n => n.id === importedId), label + ': new copy, never replace');
+    const expectedImport = {...clone(source), id:importedId, author:source.author??'', trash:clone(source.trash??[]), statuses:clone(source.statuses??[]), labels:clone(source.labels??[])};
+    normalizeNovelSections(expectedImport);
+    const savedImport = (await (await call()).json()).snapshot.novels;
+    if (source.codex) {
+      // The existing Codex migration creates IDs and folder timestamps. Compare
+      // all source-derived fields, then verify those generated values survive reload.
+      const stableCodex = nodes => nodes.map(({id, ...n}) => {
+        if (n.kind === 'folder') { delete n.createdAt; delete n.updatedAt; }
+        return {...n, children:stableCodex(n.children)};
+      });
+      assert.deepEqual(stableCodex(savedImport.at(-1).sections.codex), stableCodex(expectedImport.sections.codex));
+      expectedImport.sections.codex = clone(savedImport.at(-1).sections.codex);
+    }
+    assert.deepEqual(savedImport, [...beforeImport, expectedImport], label + ': exact cloud content and all existing projects preserved');
+    await cloud.reloadWebLibrary();
+    assert.deepEqual(useKachamak.getState().novels, [...beforeImport, expectedImport], label + ': same fields, text, links and nested notes after reload');
+    assert.equal(cloud.useWebLibrary.getState().pending, false, label + ': fully saved');
+  }
+}
+const beforeInvalidImport = clone(useKachamak.getState().novels), savedBeforeInvalidImport = await (await call()).json();
+await assert.rejects(() => cloud.importWebProject(JSON.stringify({...modern, author:42}), null), /Not a Katchamak project/);
+assert.deepEqual(useKachamak.getState().novels, beforeInvalidImport, 'Invalid author is rejected before changing the open library');
+assert.deepEqual(await (await call()).json(), savedBeforeInvalidImport, 'Invalid author leaves saved library and revision unchanged');
+console.log(`Cloud validation passed: ${invalidCases.length} rejected cases without writes; modern/legacy/custom/imported formats; real client save/reload; six active JSON/desktop imports with library preservation${process.env.KATCHAMAK_TEST_PACKAGED_VALIDATION === '1' ? ' against packaged Worker' : ''}.`);
