@@ -31,3 +31,37 @@ assert.equal(useKachamak.getState().novels[0].chapterCount,21,'Archive/restore p
 assert.equal(novel.targetAudience,'Adult readers of speculative fiction');assert.deepEqual(novel.tones,['Intense','Bittersweet']);assert.deepEqual(novel.writingStyles,['First Person','Atmospheric']);assert.deepEqual(novel.plotTechniques,['Race Against Time','Sacrifice']);assert.deepEqual(novel.sellingPoints,['Thought-Provoking','Unique Premise']);assert.equal(novel.explicitContent,true);
 for(const patch of [{targetAudience:'x'.repeat(2001)},{tones:Array.from({length:9},(_,i)=>'Tone '+i)},{writingStyles:['A','a']},{plotTechniques:['']},{sellingPoints:['x'.repeat(101)]},{explicitContent:'yes'}])assert.equal(novelSettingsPatch(novel,patch),null);
 assert.equal(useKachamak.getState().novels[0].explicitContent,true,'Partial archive updates preserve writing metadata');
+
+// Check the visible pre-export note and that the existing download stays portable.
+const {JSDOM}=await import('jsdom');
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
+for(const key of ['window','document','Document','DocumentFragment','HTMLElement','HTMLInputElement','Element','Node','NodeFilter','Event','MouseEvent','KeyboardEvent','CustomEvent','MutationObserver','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:typeof dom[key]==='function'&&!/^[A-Z]/.test(key)?dom[key].bind(dom):dom[key]});
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+globalThis.requestAnimationFrame=callback=>setTimeout(callback,0);
+globalThis.cancelAnimationFrame=clearTimeout;
+const React=await import('react'),{createRoot}=await import('react-dom/client');
+const {ProjectSettings}=await import('../src/components/kachamak/ProjectSettings.tsx');
+const root=createRoot(document.body.appendChild(document.createElement('div')));
+let exportedBlob,exportedName;
+const oldBlobUrl=URL.createObjectURL,oldRevoke=URL.revokeObjectURL;
+URL.createObjectURL=blob=>{exportedBlob=blob;return 'blob:https://test.local/backup';};
+URL.revokeObjectURL=()=>{};
+dom.HTMLAnchorElement.prototype.click=function(){exportedName=this.download;};
+await React.act(async()=>root.render(React.createElement(ProjectSettings,{open:true,onOpenChange(){}})));
+const button=text=>[...document.querySelectorAll('button')].find(el=>el.textContent.trim()===text);
+const exportButton=button('Export JSON backup');
+assert.ok(exportButton);
+const help=document.getElementById(exportButton.getAttribute('aria-describedby'));
+assert.match(help.textContent,/JSON backups do not include files uploaded to Project files/);
+assert.match(help.textContent,/My Account → Storage → Project files.*click each filename/);
+assert.ok(help.compareDocumentPosition(exportButton)&dom.Node.DOCUMENT_POSITION_FOLLOWING,'The warning is shown before the export action');
+await React.act(async()=>exportButton.click());
+assert.equal(exportedName,'New_title-kachamak-backup.json');
+assert.deepEqual(JSON.parse(await exportedBlob.text()),useKachamak.getState().novels[0],'JSON format and embedded cover are unchanged');
+await React.act(async()=>button('Delete Novel').click());
+const safetyExport=button('Export backup');
+assert.match(document.getElementById(safetyExport.getAttribute('aria-describedby')).textContent,/click each filename/);
+assert.equal(button('Delete permanently').disabled,true,'Test never deletes the project');
+await React.act(async()=>root.unmount());
+URL.createObjectURL=oldBlobUrl;URL.revokeObjectURL=oldRevoke;dom.close();
+console.log('Backup notice passed: visible before export and deletion; JSON contents unchanged.');

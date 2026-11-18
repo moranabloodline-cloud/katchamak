@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type DragEvent,
 import { Archive, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
 import {useKachamak, exportNovelJson } from "@/lib/kachamak/store";
+import { PROJECT_BACKUP_ATTACHMENT_NOTICE } from "@/lib/kachamak/project-settings";
 import type { Novel } from "@/lib/kachamak/types";
 import { novelWords } from "@/lib/kachamak/utils";
 import { canMoveCollection, useCollections, type Collection } from "@/lib/kachamak/collections-store";
@@ -152,7 +153,7 @@ export function DashboardLibrary(props: Props) {
   </DropdownMenuContent></LibraryItemMenu>;
   const projectMenu = (n: Novel, sourceId: string | null) => <LibraryItemMenu><DropdownMenuTrigger asChild><button aria-label={`Options for project ${n.title}`} className={`${itemActions} shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10`}><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-96 max-w-80 overflow-y-auto">
     <DropdownMenuItem onSelect={() => props.onOpenProject(n.id)}>Open project</DropdownMenuItem>
-    <DropdownMenuItem onSelect={() => { exportNovelJson(n); toast.success("Backup downloaded."); }}>Export backup</DropdownMenuItem>
+    <DropdownMenuItem aria-label="Export backup" aria-describedby={`backup-attachments-${n.id}`} textValue="Export backup" onSelect={() => { exportNovelJson(n); toast.success("Backup downloaded."); }} className="flex-col items-start gap-1"><span>Export backup</span><span id={`backup-attachments-${n.id}`} className="text-xs leading-normal text-muted-foreground">{PROJECT_BACKUP_ATTACHMENT_NOTICE}</span></DropdownMenuItem>
     {destinationMenu({ kind: "project", id: n.id, sourceId })}
     <DropdownMenuItem onSelect={async()=>{useKachamak.getState().updateNovelSettings(n.id,{archived:!n.archived});try{await saveWebLibrary();toast.success(n.archived?'Project restored.':'Project archived.');}catch(error){toast.error(String(error));}}}>{n.archived?'Restore from archive':'Archive project'}</DropdownMenuItem>
     <DropdownMenuItem variant="destructive" onSelect={() => props.onDeleteProject(n)}>Delete project</DropdownMenuItem>

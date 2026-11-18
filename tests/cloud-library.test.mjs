@@ -46,7 +46,10 @@ assert.deepEqual((await (await call(a)).json()).snapshot,snapshot);
 const data=new FormData();data.set('file',new File(['private attachment'],'test.txt'));
 const attachment=await (await call(a,'/api/library/files/'+novel.id,'POST',data)).json();
 assert.equal((await call(b,'/api/library/files/'+novel.id+'/'+attachment.id)).status,404);
-assert.equal(await (await call(a,'/api/library/files/'+novel.id+'/'+attachment.id)).text(),'private attachment');
+const downloaded=await call(a,'/api/library/files/'+novel.id+'/'+attachment.id);
+assert.equal(downloaded.headers.get('Content-Disposition'), "attachment; filename*=UTF-8''test.txt");
+assert.equal(await downloaded.text(),'private attachment');
+assert.deepEqual((await (await call(a)).json()).snapshot,snapshot,'Project JSON is unchanged by attachment upload; embedded cover stays in JSON');
 assert.equal((await (await call(a,'/api/library/files/'+novel.id)).json()).files[0].name,'test.txt');
 // A second account using the same project ID still has a separate private file namespace.
 await call(b,'/api/library','POST',{revision:0,snapshot});
