@@ -76,12 +76,6 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const navigate=(id:string|null)=>{setViewSelection(null);state.select(id);};
   const trail:NoteNode[]=[];let trailId=scopeId;while(trailId){const node=findNode(novel.sections[section],trailId);if(!node)break;trail.unshift(node);trailId=locateNode(novel.sections[section],trailId)?.parentId??undefined;}
   return <div className="flex h-full min-w-0 flex-col bg-background">
-    {mode==='calendar'&&<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2">
-      <button aria-label="Previous month" className={timeButton} onClick={()=>monthMove(-1)}><ChevronLeft className="h-4 w-4"/></button>
-      <button aria-label="Next month" className={timeButton} onClick={()=>monthMove(1)}><ChevronRight className="h-4 w-4"/></button>
-      <button className={`${timeButton} mr-auto`} onClick={()=>{setJump(date);setJumpError('');}}><CalendarDays className="h-3.5 w-3.5"/>{mode==='calendar'?`${calendar.months[date.month].name} ${yearText(calendar,date.year)}`:'Go to date'}</button>
-      <button className={timeButton} disabled={!rows.length} onClick={()=>changeViewport({center:firstEvent!.event.start})}><Maximize2 className="h-3.5 w-3.5"/>First event</button>
-    </div>}
     {mode==='axis'&&<TimelineAxis calendar={calendar} rows={rows} groups={groups} center={center} span={span} compact={prefs?.compact??false} onOpen={edit} selectedId={state.selectedNodeId??undefined} onPan={changeCenter}/>}
     {mode==='calendar'&&<TimelineCalendar selectedId={state.selectedNodeId??undefined} rows={rows} calendar={calendar} groups={groups} center={center} compact={prefs?.compact??false} onOpen={edit} onAdd={start=>setEditing({start})}/>}
     {mode==='chronicle'&&<TimelineCards calendar={calendar} rows={rows} groups={groups} compact={prefs?.compact??false} synopsis={prefs?.detail!=='titles'} selectedId={state.selectedNodeId??undefined} onEdit={edit} onAdd={()=>setEditing({start:scopeId?findNode(novel.sections[section],scopeId)?.event?.start??center:firstEvent?.event.start??center})}/>}
@@ -104,6 +98,12 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
             <button className={timeButton} onClick={()=>runOption(()=>{setJump(date);setJumpError('');})}>Go to date</button>
             <select aria-label="Timeline scale" className={`${timeField} !py-1 !text-xs`} value="" onChange={e=>changeViewport({span:Number(e.target.value)*day})}><option value="" disabled>Scale…</option><option value={1}>Day</option><option value={14}>Two weeks</option><option value={baseYearDays(calendar)}>Year</option><option value={baseYearDays(calendar)*10}>Decade</option><option value={baseYearDays(calendar)*100}>Century</option><option value={baseYearDays(calendar)*1e6}>Million years</option><option value={baseYearDays(calendar)*1e9}>Billion years</option></select><button aria-label="Zoom in timeline" className={timeButton} disabled={span<=60} onClick={()=>changeViewport({span:Math.max(60,Math.round(span/2))})}><ZoomIn className="h-4 w-4"/></button><button aria-label="Zoom out timeline" className={timeButton} disabled={span>=TIMELINE_MAX_SPAN} onClick={()=>changeViewport({span:Math.min(TIMELINE_MAX_SPAN,span*2)})}><ZoomOut className="h-4 w-4"/></button>
             <button className={timeButton} disabled={!rows.length} onClick={()=>changeViewport(fit)}><Maximize2 className="h-3.5 w-3.5"/>Fit events</button>
+          </div>}
+          {mode==='calendar'&&<div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+            <button aria-label="Previous month" className={timeButton} onClick={()=>monthMove(-1)}><ChevronLeft className="h-4 w-4"/></button>
+            <button aria-label="Next month" className={timeButton} onClick={()=>monthMove(1)}><ChevronRight className="h-4 w-4"/></button>
+            <button className={`${timeButton} mr-auto`} onClick={()=>runOption(()=>{setJump(date);setJumpError('');})}><CalendarDays className="h-3.5 w-3.5"/>{mode==='calendar'?`${calendar.months[date.month].name} ${yearText(calendar,date.year)}`:'Go to date'}</button>
+            <button className={timeButton} disabled={!rows.length} onClick={()=>changeViewport({center:firstEvent!.event.start})}><Maximize2 className="h-3.5 w-3.5"/>First event</button>
           </div>}
         </PopoverContent>
       </Popover>
