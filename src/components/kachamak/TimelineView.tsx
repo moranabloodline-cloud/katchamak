@@ -13,8 +13,8 @@ import {TimelineAxis} from './TimelineAxis';
 import {TimelineGroups} from './TimelineGroups';
 import {TimelineCalendar} from './TimelineCalendar';
 import {TimelineCards} from './TimelineCards';
-import {timelineScope,timelineLevelIds} from '@/lib/kachamak/timeline-tree';
-import {addTimelineNote} from '@/lib/kachamak/timeline-actions';
+import {timelineDefaultStart,timelineScope,timelineLevelIds} from '@/lib/kachamak/timeline-tree';
+import {addTimelineNote,finishTimelineAdd,usesCompactTimelineEditor,useTimelineAddRequest} from '@/lib/kachamak/timeline-actions';
 import {OutlineView} from './OutlineView';
 import {importTimeline} from '@/lib/kachamak/timeline-import';
 import {toast} from 'sonner';
@@ -36,6 +36,14 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const folderScope=novel&&rootId?findNodeInNovel(novel,rootId)?.node:null;
   const scopeId=viewSelection?.id===state.selectedNodeId?viewSelection.scopeId:novel&&section==="timeline"?timelineScope(novel.sections.timeline,state.selectedNodeId,rootId):selectedScope?.section===section&&(!folderScope||findNode([folderScope],selectedScope.node.id))?selectedScope.node.id:rootId;
   const [viewport,setViewport]=useState<{key:string;center:number;span:number}|null>(null);
+  const addRequest=useTimelineAddRequest();
+  useEffect(()=>{
+    if(!novel||!addRequest||addRequest.novelId!==novel.id||addRequest.section!==section
+      ||addRequest.noteId!==state.selectedNodeId||!usesCompactTimelineEditor())return;
+    setEditing({id:addRequest.noteId,start:timelineDefaultStart(novel.sections[section],addRequest.noteId)});
+    finishTimelineAdd(addRequest);
+  },[addRequest,novel,section,state.selectedNodeId]);
+
   if(!novel)return null;
   const prefs=novel.timeline,calendar=prefs?.calendar??GREGORIAN,groups=prefs?.groups??[];
   const all=timelineRows(novel,section,scopeId,true),hidden=prefs?.hiddenGroups??[];
@@ -49,7 +57,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
   const renderGroups=[{id:'',name:'Ungrouped',color:'#d6a64a'},...groups];
-  const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(window.matchMedia("(max-width: 1023px)").matches)setEditing({id:r.node.id,start:r.event.start});else if(!state.rightPanelOpen)state.toggleRightPanel();};
+  const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesCompactTimelineEditor())setEditing({id:r.node.id,start:r.event.start});else if(!state.rightPanelOpen)state.toggleRightPanel();};
   const changeViewport=(patch:Partial<{center:number;span:number}>)=>{const next=boundedViewport(patch.center??center,patch.span??span);setViewport({key:scopeKey,...next});state.setTimeline(next);};
   const changeCenter=(value:number)=>changeViewport({center:Math.max(-TIMELINE_LIMIT,Math.min(TIMELINE_LIMIT,Math.round(value)))});
   const monthMove=(delta:number)=>{try{changeCenter(shiftMonth(calendar,center,delta));}catch{/* Limit reached. */}};

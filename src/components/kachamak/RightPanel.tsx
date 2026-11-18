@@ -14,6 +14,7 @@ import {
 import { NoteConnections } from "./NoteConnections";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
+import { finishTimelineAdd, usesCompactTimelineEditor, useTimelineAddRequest } from "@/lib/kachamak/timeline-actions";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -85,6 +86,18 @@ export function RightPanel({
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
   const [tab, setTab] = useState(timelineSettings ? "timeline" : "info");
   const activeTab = tab === "timeline" && !timelineSettings ? "info" : tab;
+  const activeNovelId = useKachamak((s) => s.activeNovelId);
+  const addRequest = useTimelineAddRequest();
+  const hasTimelineSettings = !!timelineSettings;
+  const timelineTabRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!hasTimelineSettings || !addRequest || addRequest.novelId !== activeNovelId || addRequest.section !== section
+      || addRequest.noteId !== node.id || usesCompactTimelineEditor()) return;
+    setTab("timeline");
+    timelineTabRef.current?.scrollIntoView?.({block:"nearest",inline:"nearest"});
+    finishTimelineAdd(addRequest);
+  }, [addRequest, activeNovelId, hasTimelineSettings, node.id, section]);
+
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
   const infoBoxRef = useRef<HTMLDivElement | null>(null);
@@ -110,7 +123,7 @@ export function RightPanel({
           <TabsTrigger value="mentions" className={tabCls}>
             Mentions
           </TabsTrigger>
-          {timelineSettings && <TabsTrigger value="timeline" className={tabCls}>Timeline</TabsTrigger>}
+          {timelineSettings && <TabsTrigger value="timeline" ref={timelineTabRef} className={tabCls}>Timeline</TabsTrigger>}
         </TabsList>
         {onHide && (
           <button
