@@ -287,6 +287,10 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
   const setLeftPanelWidth = useKachamak((s) => s.setLeftPanelWidth);
   const setRightPanelWidth = useKachamak((s) => s.setRightPanelWidth);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
+  const [treeReveal, setTreeReveal] = useState<{ id: string; scope: string }>();
+  const treeScopeKey = `${activeNovelId}:${section}:${rootId ?? ''}`;
+  const reveal = view === 'timeline' && treeReveal?.scope === treeScopeKey && treeReveal.id === selectedNodeId
+    ? treeReveal : undefined;
 
   /* zone za Ctrl+skrol (zoom po panelu) */
   const leftPanelRef = useRef<HTMLElement | null>(null);
@@ -319,7 +323,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
           >
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
-              <NoteTree section={section} rootId={rootId} />
+              <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
                 Collapse skroz desno u istom redu — po Nikoli */}
@@ -335,7 +339,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               </button>
               <button
                 type="button"
-                onClick={() => setAllNodesCollapsed(section, true)}
+                onClick={() => { setTreeReveal(undefined); setAllNodesCollapsed(section, true); }}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 Collapse
@@ -371,7 +375,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
         {view!=="timeline"&&<EditorToolbar />}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
-          {view === "timeline" && <TimelineView key={`${novel?.id}:${section}:${rootId ?? ''}`} section={section} rootId={rootId} />}
+          {view === "timeline" && <TimelineView key={treeScopeKey} section={section} rootId={rootId} onRevealNote={id => setTreeReveal({ id, scope: treeScopeKey })} />}
           {view === "list" && <ListView section={section} rootId={rootId} />}
           {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
               je bira, klik na notu otvara notu samo u izabranoj. Lenjir (traka
@@ -391,7 +395,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
           <span
-            className="absolute left-10 max-w-52 truncate whitespace-nowrap text-xs text-muted-foreground @[680px]:left-1/2 @[680px]:-translate-x-1/2"
+            className="ml-10 mr-1 min-w-0 max-w-52 flex-1 truncate whitespace-nowrap text-xs text-muted-foreground @[680px]:absolute @[680px]:left-1/2 @[680px]:ml-0 @[680px]:-translate-x-1/2"
             title={target?'Document text / target':view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
           >
             {target?`${targetCount.toLocaleString('en-US')}/${target.amount.toLocaleString('en-US')} ${target.unit}`:view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
@@ -403,15 +407,16 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
           <div
             role="toolbar"
             aria-label="View mode"
-            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5"
+            className="ml-auto flex min-w-0 items-center gap-0.5 overflow-x-auto px-1 @[440px]:px-2"
           >
+            {view==="timeline"&&<span aria-hidden="true" className="hidden shrink-0 border-r border-border pr-2 text-[11px] font-medium text-muted-foreground @[440px]:mr-1 @[440px]:inline">Workspace</span>}
             {(section==="timeline"?[{key:"timeline" as const,label:"Timeline"},...VIEW_BTNS]:VIEW_BTNS).map((b) => (
               <button
                 key={b.key}
                 type="button"
                 onClick={() => setView(view === b.key ? "write" : b.key)}
                 aria-pressed={view === b.key}
-                className={`rounded-lg px-2 py-1 text-[13px] transition-colors ${
+                className={`shrink-0 rounded-lg px-1.5 py-1 text-xs transition-colors @[440px]:px-2 @[440px]:text-[13px] ${
                   view === b.key
                     ? "border border-amber-400/70 bg-amber-400/15 text-amber-300"
                     : "border border-transparent text-zinc-300 hover:text-white"

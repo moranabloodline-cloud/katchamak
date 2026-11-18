@@ -95,9 +95,11 @@ interface TreeRowProps {
   depth: number;
   novelTitle: string;
   dnd: TreeDnd;
+  revealed?: ReadonlySet<string>;
+  onDismissReveal?: () => void;
 }
 
-function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
+function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissReveal }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const selectNode = useKachamak((s) => s.select);
   const select=(id:string|null)=>{selectNode(id);if(section==="timeline")useKachamak.getState().setView("timeline");};
@@ -120,7 +122,11 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
   const novel = novels.find((n) => n.id === activeNovelId);
   const renaming = renamingNodeId === node.id;
   const selected = selectedNodeId === node.id;
-  const open = !node.collapsed;
+  const open = !node.collapsed || !!revealed?.has(node.id);
+  const setCollapsed = (collapsed: boolean) => {
+    if (collapsed && revealed?.has(node.id)) onDismissReveal?.();
+    updateNode(section, node.id, { collapsed });
+  };
   const hasChildren = node.children.length > 0;
   const dropHere = dnd.drop && dnd.drop.id === node.id ? dnd.drop.mode : null;
 
@@ -232,9 +238,9 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
             if(e.key==='ArrowUp')go(rows[index-1]);
             if(e.key==='Home')go(rows[0]);
             if(e.key==='End')go(rows.at(-1));
-            if(e.key==='ArrowRight'&&hasChildren){if(!open)updateNode(section,node.id,{collapsed:false});else if(Number(rows[index+1]?.getAttribute('aria-level'))>depth+1)go(rows[index+1]);}
+            if(e.key==='ArrowRight'&&hasChildren){if(!open)setCollapsed(false);else if(Number(rows[index+1]?.getAttribute('aria-level'))>depth+1)go(rows[index+1]);}
             if(e.key==='ArrowLeft'){
-              if(hasChildren&&open)updateNode(section,node.id,{collapsed:true});
+              if(hasChildren&&open)setCollapsed(true);
               else go(rows.slice(0,index).reverse().find(row=>Number(row.getAttribute('aria-level'))<depth+1));
             }
             return;
@@ -274,7 +280,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
           aria-label={open ? "Collapse" : "Expand"}
           onClick={(e) => {
             e.stopPropagation();
-            updateNode(section, node.id, { collapsed: open });
+            setCollapsed(open);
           }}
           className={`shrink-0 ${hasChildren ? "visible" : "invisible"}`}
         >
@@ -353,7 +359,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
             className="flex-1 min-w-0 bg-black/40 border border-orange-500/50 rounded px-1 text-sm outline-none"
           />
         ) : (
-          <span className="flex-1 min-w-0" title={section==="timeline"?`${node.title} · ${timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}`:node.title}><span className="block truncate">{node.title}</span>{section==="timeline"&&<span className="block truncate text-[10px] text-muted-foreground">{timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}</span>}</span>
+          <span className="flex-1 min-w-0" title={section==="timeline"?`${node.title} · ${timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}`:node.title}><span className="block truncate">{node.title}</span>{section==="timeline"&&<span className="block break-words text-xs leading-snug text-foreground/80">{timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}</span>}</span>
         )}
         {/* three-dot menu at the END of the row — exact structure from the
             documentation; the dots stay visible while a menu/picker is open */}
@@ -433,13 +439,13 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
                 disabled={!hasChildren}
-                onSelect={() => updateNode(section, node.id, { collapsed: true })}
+                onSelect={() => setCollapsed(true)}
               >
                 Collapse
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!hasChildren}
-                onSelect={() => updateNode(section, node.id, { collapsed: false })}
+                onSelect={() => setCollapsed(false)}
               >
                 Expand
               </DropdownMenuItem>
@@ -460,7 +466,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd }: TreeRowProps) {
       {open && hasChildren && (
         <div role="group">
           {node.children.map((c) => (
-            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} dnd={dnd} />
+            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} dnd={dnd} revealed={revealed} onDismissReveal={onDismissReveal} />
           ))}
         </div>
       )}
@@ -512,7 +518,7 @@ function findTitle(roots: NoteNode[], id: string): string | null {
   return null;
 }
 
-export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: string }) {
+export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section: SectionKey; rootId?: string; reveal?: { id: string }; onDismissReveal?: () => void }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
@@ -524,6 +530,19 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
   const leftZoom = useKachamak((s) => s.leftZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
+  const treeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!reveal) return;
+    const tree = treeRef.current;
+    const row = Array.from(tree?.querySelectorAll<HTMLElement>('[data-note-id]') ?? [])
+      .find(el => el.dataset.noteId === reveal.id);
+    // Scroll only the tree; do not move keyboard focus or the calendar viewport.
+    if (tree && row) {
+      const bounds = tree.getBoundingClientRect(), target = row.getBoundingClientRect();
+      if (target.top < bounds.top) tree.scrollTop += (target.top - bounds.top) / leftZoom;
+      else if (target.bottom > bounds.bottom) tree.scrollTop += (target.bottom - bounds.bottom) / leftZoom;
+    }
+  }, [reveal, leftZoom, treeScope]);
 
   /* ---------- drag & drop (kao u Scriveneru) ----------
      Računa se nad STVARNIM stablom sekcije (roots), ne nad filtriranim prikazom
@@ -631,6 +650,16 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
     return keep(shown);
   })();
 
+  // A selection can temporarily disclose its path without modifying saved notes.
+  const revealed = new Set<string>();
+  if (reveal && findNode(visibleRoots, reveal.id)) {
+    let parentId = locateNode(visibleRoots, reveal.id)?.parentId;
+    while (parentId) {
+      revealed.add(parentId);
+      parentId = locateNode(visibleRoots, parentId)?.parentId;
+    }
+  }
+
   /* every hidden note in this section — "Show" them from the section ••• menu */
   const hiddenNotes: NoteNode[] = [];
   const collectHidden = (nodes: NoteNode[]) =>
@@ -654,6 +683,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
       <ContextMenu>
       <ContextMenuTrigger asChild>
       <div
+        ref={treeRef}
         className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2"
         style={{ zoom: leftZoom }}
         role="tree"
@@ -662,7 +692,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         onDrop={handleDropRoot}
       >
         {visibleRoots.map((r) => (
-          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} dnd={treeDnd} />
+          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} dnd={treeDnd} revealed={revealed} onDismissReveal={onDismissReveal} />
         ))}
         {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
@@ -678,7 +708,7 @@ export function NoteTree({ section, rootId }: { section: SectionKey; rootId?: st
         </ContextMenuItem>
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,false):setAllNodesCollapsed(section,false)}>Expand all</ContextMenuItem>
-        <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,true):setAllNodesCollapsed(section,true)}>Collapse all</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { onDismissReveal?.(); if (rootId) useKachamak.getState().setSubtreeCollapsed(section,rootId,true); else setAllNodesCollapsed(section,true); }}>Collapse all</ContextMenuItem>
         {hiddenNotes.length > 0 && <>
           <ContextMenuSeparator className="bg-white/10" />
           {hiddenNotes.map(hn=><ContextMenuItem key={hn.id} onSelect={()=>updateNode(section,hn.id,{hidden:false})}><Eye className="mr-2 h-3.5 w-3.5"/>Show {hn.title}</ContextMenuItem>)}

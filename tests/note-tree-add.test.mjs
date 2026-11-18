@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
-import { Window } from 'happy-dom';
-const dom = new Window({ url: 'https://test.local' });
-for (const key of ['window','document','HTMLElement','Element','Node','MutationObserver','getComputedStyle','navigator','requestAnimationFrame','cancelAnimationFrame']) Object.defineProperty(globalThis,key,{configurable:true,value:typeof dom[key]==='function'&&!/^[A-Z]/.test(key)?dom[key].bind(dom):dom[key]});
+import { JSDOM } from 'jsdom';
+const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://test.local' }).window;
+for (const key of ['window','document','Document','DocumentFragment','DOMRect','HTMLElement','Element','Node','NodeFilter','Event','MouseEvent','KeyboardEvent','CustomEvent','MutationObserver','getComputedStyle','navigator']) {
+  Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:typeof dom[key]==='function'&&!/^[A-Z]/.test(key)?dom[key].bind(dom):dom[key]});
+}
+globalThis.requestAnimationFrame=callback=>setTimeout(callback,0);
+globalThis.cancelAnimationFrame=clearTimeout;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const React = await import('react');
 const {createRoot} = await import('react-dom/client');
@@ -16,30 +20,38 @@ const chapter1=actions.addNode('binder',act1,'chapter','Chapter 1');
 const chapter2=actions.addNode('binder',act1,'chapter','Chapter 2');
 const act2=actions.addNode('binder',null,'act','Act 2');
 await React.act(async()=>root.render(React.createElement(NoteTree,{section:'binder'})));
-const clickPlus=async()=>{const button=container.querySelector('button[aria-label="Add note"]');assert.ok(button);await React.act(async()=>button.click());return useKachamak.getState().selectedNodeId;};
+const createFromTree=async(parentId,label='Create note')=>{
+  const target=parentId?container.querySelector(`[data-note-id="${parentId}"]`):container.querySelector('[role="tree"]');
+  assert.ok(target);
+  await React.act(async()=>target.dispatchEvent(new dom.MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2})));
+  const action=[...document.querySelectorAll('[role="menuitem"]')].find(el=>el.textContent.trim()===label);
+  assert.ok(action,label);
+  await React.act(async()=>action.click());
+  return useKachamak.getState().selectedNodeId;
+};
 await React.act(async()=>{actions.select(act1);actions.updateNode('binder',act1,{collapsed:true});});
-const added=await clickPlus();
+const added=await createFromTree(act1);
 let novel=useKachamak.getState().novels[0], parent=findNode(novel.sections.binder,act1);
-assert.deepEqual(novel.sections.binder.map(n=>n.id),[act1,act2],'Plus must not append to the section root when an act is selected');
+assert.deepEqual(novel.sections.binder.map(n=>n.id),[act1,act2],'Row menu must not append to the section root when an act is selected');
 assert.deepEqual(parent.children.map(n=>n.id),[chapter1,chapter2,added],'New note follows Chapter 2 inside the selected Act 1');
 assert.equal(parent.collapsed,false,'Parent expands to show its newly appended note');
 assert.equal(findNode(novel.sections.binder,added).content,'','New note starts empty');
 assert.equal(findNode(novel.sections.binder,added).title,'Untitled','No automatic chapter numbering');
 assert.equal(useKachamak.getState().renamingNodeId,added,'New note is ready for naming');
 await React.act(async()=>actions.select(chapter1));
-const nested=await clickPlus();
+const nested=await createFromTree(chapter1);
 assert.deepEqual(findNode(useKachamak.getState().novels[0].sections.binder,chapter1).children.map(n=>n.id),[nested],'Selecting a note also appends inside that note');
 await React.act(async()=>actions.select(null));
-const top=await clickPlus();
+const top=await createFromTree(null,'Create top-level note');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder.map(n=>n.id),[act1,act2,top],'No selected item appends at section root');
 // A selection from another section must not capture the new note.
 await React.act(async()=>{actions.select(chapter2);root.render(React.createElement(NoteTree,{section:'codex'}));});
-const codex=await clickPlus();
+const codex=await createFromTree(null,'Create top-level note');
 assert.equal(useKachamak.getState().novels[0].sections.codex[0].id,codex);
 assert.equal(findNode(useKachamak.getState().novels[0].sections.binder,chapter2).children.length,0);
 // A folder tab must never add a note outside that folder, even if an old editor selection remains.
 await React.act(async()=>{actions.select(act2);root.render(React.createElement(NoteTree,{section:'binder',rootId:act1}));});
-const scoped=await clickPlus();
+const scoped=await createFromTree(null);
 assert.ok(findNode(findNode(useKachamak.getState().novels[0].sections.binder,act1).children,scoped));
 assert.equal(findNode(useKachamak.getState().novels[0].sections.binder,act2).children.length,0);
 // Timeline reads and writes the active section, and a folder tab stays scoped.
@@ -54,5 +66,5 @@ assert.equal(findNode(useKachamak.getState().novels[0].sections.codex,codex).chi
 await React.act(async()=>root.render(React.createElement(TimelineView,{section:'binder',rootId:act1})));
 assert.ok(!container.textContent.includes('Act 2'));
 assert.ok(container.textContent.includes('Chapter 1'));
-await React.act(async()=>root.unmount());
-console.log('Tree Plus UI passed: append after the selected act’s last chapter, nested notes, expansion, blank content, root fallback and section isolation.');
+await React.act(async()=>root.unmount());dom.close();
+console.log('Tree creation menus passed: append after the selected act’s last chapter, nested notes, expansion, blank content, root fallback and section isolation.');

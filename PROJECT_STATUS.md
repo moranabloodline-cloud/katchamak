@@ -434,6 +434,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+### 2026-11-18 — Čitljiviji Timeline i jasna navigacija
+- Outline razdvaja opseg od filtera, ima jasno brisanje filtera i pri povratku na širi opseg ne prenosi prethodni filter.
+- Izbor kalendarskog događaja privremeno otvara njegovu granu u stablu i označava notu. Datumi i sačuvano stanje grane ostaju nepromenjeni; odvojene oznake Chronology i Workspace i prelom dugih raspona ne uklanjaju nijednu kontrolu ili prikaz.
+- Sintetički browser QA za Outline, Calendar, dugačak BCE–CE raspon i oba donja reda. Regresije pokrivaju drugi roman, preklapanje prikaza i ponovno biranje događaja posle zatvaranja grane. Test kreiranja note sada koristi postojeće kontekst menije umesto uklonjenog dugmeta. Bez promene šeme ili produkcijskih podataka.
+
 ### 2026-11-18 — Jedan Timeline tab standardnog inspectora
 - Uklonjen dupli gornji Timeline blok; sve kontrole sada su u jednom novom tabu uz očuvane Info/Details/Mentions i donji metadata bar.
 - Ispravljena potvrđena curenja lokalne forme između knjiga i između izabranih beležaka, plus osvežavanje event/links vrednosti iz drugih editora.
