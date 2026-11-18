@@ -57,7 +57,7 @@ const event=a.sections.timeline[0].children[0];assert.equal(event.event.groupId,
 // Changes made by another existing editor must not be overwritten by a stale inspector.
 await React.act(async()=>useKachamak.getState().updateNode('timeline','event',{event:{...event.event,cardColor:'#123456',groupId:''},links:[]}));
 await click(button('Apply dates'));assert.equal(event.event.cardColor,'#123456');assert.equal(event.event.groupId,'');assert.deepEqual(event.links,[]);
-for(const mode of ['Timeline','Calendar','Cards','Outline']){const list=field('Chronology view');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,4);assert.equal(field('Event title').value,'A event');}
+for(const mode of ['Timeline','Calendar','Cards']){const list=field('Timeline display');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,4);assert.equal(field('Event title').value,'A event');}
 await click(tab('Info'));assert.ok(document.querySelector('[aria-label="Resize Synopsis and Notes"]'));assert.match(document.body.textContent,/Keep synopsis/);
 await click(tab('Details'));assert.match(document.body.textContent,/Created/);await click(tab('Mentions'));
 assert.equal(JSON.stringify(b),untouchedB,'All edits stay in one book');
@@ -72,7 +72,7 @@ assert.equal(field('Event group').value,'group');
 await change('Find an existing note','Codex link');await click(button('Codex link'));
 assert.equal(field('Event group').value,'','An undated note must not inherit another note’s group');
 await click(button('Start date'));assert.equal(field('Start year').value,'1920');assert.equal(field('Start precision').value,'day');
-// Outline's extra filter must never carry a stale period into the whole chronology.
+// A saved Outline preference falls back to the Timeline chart without rewriting notes.
 const qa=newNovel('Navigation QA','');
 const date=(day)=>dateToMinute(GREGORIAN,{year:1950,month:0,day,hour:0,minute:0});
 const dayEvent=day=>({type:'event',start:date(day),precision:'day'});
@@ -85,17 +85,12 @@ const world={...note('world','Whole chronology',periodEvent(1,31),[dawn,earth]),
 qa.sections.timeline=[world];qa.timeline={...qa.timeline,rootId:'dawn',display:'outline'};
 await React.act(async()=>{useKachamak.setState({novels:[qa,b],activeNovelId:qa.id,activeTab:'timeline',view:'timeline',selectedNodeId:'world',paneAId:'world',treeScope:'all',leftPanelOpen:true});
   root.render(React.createElement(NotesSection,{key:'navigation-qa',section:'timeline'}));});
-const chronology=label=>[...field('Chronology view').querySelectorAll('[role="tab"]')].find(el=>el.textContent===label);
+const chronology=label=>[...field('Timeline display').querySelectorAll('[role="tab"]')].find(el=>el.textContent===label);
 const treeRow=id=>document.querySelector(`[data-note-id="${id}"]`);
-assert.ok(field('Status for Other chronology'),'Legacy Dawn filter cannot restrict whole-scope Outline');
-await change('Outline filter','dawn');
-assert.ok(field('Status for First Light'));assert.equal(field('Status for Other chronology'),null);
-await click(button('Clear filter'));assert.ok(field('Status for Other chronology'));
-await change('Outline filter','dawn');
-await click([...field('Timeline location').querySelectorAll('button')].find(el=>el.textContent==='All timelines'));
-assert.equal(field('Outline filter').value,'');
-await change('Outline filter','dawn');
-await click(button('Clear filter'));assert.equal(field('Outline filter').value,'');
+assert.equal(chronology('Timeline').getAttribute('aria-selected'),'true');
+assert.ok(field('Timeline chart'));
+assert.equal(qa.timeline.display,'outline');
+assert.equal(chronology('Outline'),undefined);
 // Calendar reveals collapsed ancestors without persisting a note or date edit.
 await click(chronology('Calendar'));
 const snapshot=JSON.stringify(qa.sections);
@@ -159,11 +154,12 @@ assert.equal(mobile(),null);
 assert.equal(JSON.stringify(b),untouchedB,'Creation opens the editor only in the active book');
 dom.matchMedia=()=>({matches:false});
 const workspace=field('View mode');
-assert.ok(field('Chronology view').textContent.startsWith('Chronology'));
+assert.deepEqual([...field('Timeline display').querySelectorAll('[role=tab]')].map(el=>el.textContent),['Timeline','Calendar','Cards']);
+assert.equal(field('Timeline display').textContent,'TimelineCalendarCards');
 assert.ok(workspace.textContent.startsWith('Workspace'));
 await click([...workspace.querySelectorAll('button')].find(el=>el.textContent==='Grid'));
-assert.equal(useKachamak.getState().view,'corkboard');assert.equal(field('Chronology view'),null);
+assert.equal(useKachamak.getState().view,'corkboard');assert.equal(field('Timeline display'),null);
 await click([...workspace.querySelectorAll('button')].find(el=>el.textContent==='List'));
 assert.equal(useKachamak.getState().view,'list');
 await React.act(async()=>root.unmount());dom.close();
-console.log('Timeline panel passed: single standard inspector/four tabs, complete editor, preserved tab draft, validation and apply, links/group/icon, four modes/Write, note/book isolation, calendar draft closure, Outline filter reset, calendar tree reveal, separate navigation, and explicit creation on wide and narrow layouts.');
+console.log('Timeline panel passed: single standard inspector/four tabs, complete editor, preserved tab draft, validation and apply, links/group/icon, three modes/Write, note/book isolation, calendar draft closure, legacy Outline fallback, calendar tree reveal, separate navigation, and explicit creation on wide and narrow layouts.');

@@ -66,10 +66,6 @@ assert.ok(box.textContent.includes('Synopsis'));
 const detail=box.querySelector('[aria-label="Event card content"]');
 await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLSelectElement.prototype,'value').set.call(detail,'titles');detail.dispatchEvent(new dom.Event('change',{bubbles:true}));});
 assert.ok(!box.textContent.includes('Synopsis'),'The global card detail option changes actual card content');
-await React.act(async()=>button('Outline').click());
-assert.equal(box.querySelectorAll('[aria-label^="Move "]').length,0,'Timeline outline cannot manually reorder dates');
-const articleTitles=[...box.querySelectorAll('article')].map(el=>el.querySelector('button').textContent);
-assert.deepEqual(articleTitles,['November event','December event','Later'],'Outline uses dates even when the stored note order is different');
 assert.deepEqual(contextNovel.sections.timeline[0].children.map(node=>node.title),['Later','Era'],'Chronological rendering does not rewrite saved note order');
 // Closed View options must still tell the user when a group filter applies.
 const filterBook=newNovel('Filter QA',''),otherBook=newNovel('Separate filters QA','');
@@ -98,9 +94,6 @@ for(const mode of ['Timeline','Calendar','Cards']){
   assert.ok(box.textContent.includes(land.title),mode+' retains visible event');
   assert.ok(!box.textContent.includes(sea.title),mode+' still hides the selected group');
 }
-await click('Outline');
-assert.doesNotMatch(summary(),/groups? hidden/,'Outline does not apply group filters');
-assert.ok(box.textContent.includes(sea.title),'Outline still displays the full note hierarchy');
 await click('Calendar');
 assert.match(summary(),/1 group hidden/,'Switching back to a filtered view recalls the filter');
 await React.act(async()=>options().open=true);await click('Land watch');await React.act(async()=>options().open=false);
@@ -172,4 +165,4 @@ await switchBook(cursorOther,distant.id);
 assert.ok(button('September 1987 CE'),'On entry with all events filtered, use the existing dates for the initial view');
 assert.equal(JSON.stringify([cursorBook.sections,cursorOther.sections]),cursorNotesBefore,'Browsing and filtering do not alter dates or prose');
 await React.act(async()=>root.unmount());dom.close();
-console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details, chronological outline, persistent group filter status and stable calendar dates.');
+console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details, persistent group filter status and stable calendar dates.');
