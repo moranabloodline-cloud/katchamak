@@ -3,10 +3,8 @@
 /** Project dialogs reuse the existing manuscript actions; the library owns navigation. */
 import { createWebCollection, createWebProject, prepareWebImport, importWebProject, flushWebLibrary } from "@/lib/kachamak/cloud-library";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FileText, Calendar, MoreVertical } from "lucide-react";
 import { exportNovelJson, projectsSavedLocally, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
-import { novelWords } from "@/lib/kachamak/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,27 +12,7 @@ import { toast } from "sonner";
 import { useCollections } from "@/lib/kachamak/collections-store";
 import { useLibraryPreferences } from "@/lib/kachamak/library-preferences";
 import { DashboardLibrary } from "./DashboardLibrary";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-/** „Modified 3d ago“ stil iz reference. */
-function relativeTime(ts: number): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks === 1) return "1w ago";
-  if (weeks < 5) return `${weeks}w ago`;
-  const months = Math.floor(days / 30);
-  if (months <= 1) return "1mo ago";
-  return `${months}mo ago`;
-}
 
 export function Dashboard() {
   const novels = useKachamak((s) => s.novels);
@@ -120,46 +98,5 @@ export function Dashboard() {
       <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete collection?</AlertDialogTitle><AlertDialogDescription>The collection will be removed. Its subcollections and projects will move to its parent location. Project contents will be preserved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingDelete) { const parentId = collections.find((c) => c.id === pendingDelete)?.parentId ?? null; removeCollection(pendingDelete); if (selectedCollection === pendingDelete) setSelectedCollection(parentId); } setPendingDelete(null); }}>Delete collection</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open) setPendingProjectDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete {pendingProjectDelete?.title}?</AlertDialogTitle><AlertDialogDescription>This deletes the project from your account library. Export a backup first if you want to keep a copy.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={async () => { if (pendingProjectDelete) { try { deleteNovel(pendingProjectDelete.id); collections.forEach((c) => setMembership(c.id, pendingProjectDelete.id, false)); await flushWebLibrary(); toast.success("Project deleted from your account library."); } catch (error) { toast.error(String(error)); } } setPendingProjectDelete(null); }}>Delete project</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </DashboardLibrary>
-  );
-}
-
-/** Horizontalna kartica projekta: naslovna slika levo, informacije desno. */
-function ProjectCard({ novel, onOpen, onExport, onDelete, layout, collections, setMembership }: { novel: Novel; onOpen: () => void; onExport: () => void; onDelete: () => void; layout: "grid" | "list"; collections: { id: string; name: string; projectIds: string[] }[]; setMembership: (collectionId: string, projectId: string, included: boolean) => void }) {
-  return (
-    <div className={`group relative overflow-hidden rounded-xl border border-[#a97f33]/60 bg-[#0c0f14] transition-colors hover:border-[#f0b018] ${layout === "grid" ? "h-[210px]" : "h-[104px]"}`}>
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`Open ${novel.title}`}
-      className="flex h-full w-full cursor-pointer overflow-hidden text-left"
-    >
-      {/* cover */}
-      <span
-        className={`flex shrink-0 items-center justify-center border-r border-[#a97f33]/40 ${layout === "grid" ? "w-[32%] min-w-[112px] max-w-[180px] text-5xl" : "w-[90px] text-3xl"}`}
-        style={{ background: novel.cover.bg }}
-      >
-        <span className="drop-shadow-lg">{novel.cover.icon}</span>
-      </span>
-      {/* info */}
-      <span className={`flex min-w-0 flex-1 flex-col px-5 ${layout === "grid" ? "py-5" : "justify-center"}`}>
-        <span className={`truncate pr-5 font-serif font-bold text-white ${layout === "grid" ? "text-2xl" : "text-xl"}`}>
-          {novel.title}
-        </span>
-        <span className={`${layout === "grid" ? "mt-4" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
-          <BookOpen className="h-5 w-5 shrink-0 text-[#e8c265]" />
-          Novel
-        </span>
-        <span className={`${layout === "grid" ? "mt-3" : "mt-1"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
-          <FileText className="h-5 w-5 shrink-0 text-[#e8c265]" />
-          {novelWords(novel).toLocaleString()} words
-        </span>
-        <span className={`${layout === "grid" ? "mt-3" : "hidden"} flex items-center gap-3 text-base text-[#d4d1c9]`}>
-          <Calendar className="h-5 w-5 shrink-0 text-[#e8c265]" />
-          Modified {relativeTime(novel.updatedAt)}
-        </span>
-      </span>
-    </button>
-    <DropdownMenu><DropdownMenuTrigger asChild><button type="button" aria-label={`Options for ${novel.title}`} className="absolute bottom-3 right-3 rounded p-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 text-muted-foreground hover:bg-white/10 hover:text-white"><MoreVertical className="h-5 w-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={onOpen}>Open project</DropdownMenuItem><DropdownMenuItem onSelect={onExport}>Export backup</DropdownMenuItem><DropdownMenuItem variant="destructive" onSelect={onDelete}>Delete project</DropdownMenuItem><DropdownMenuSeparator />{collections.length === 0 ? <DropdownMenuItem disabled>Create a collection first</DropdownMenuItem> : collections.map((c) => <DropdownMenuCheckboxItem key={c.id} checked={c.projectIds.includes(novel.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMembership(c.id, novel.id, checked === true)}>{c.name}</DropdownMenuCheckboxItem>)}</DropdownMenuContent></DropdownMenu>
-    </div>
   );
 }
