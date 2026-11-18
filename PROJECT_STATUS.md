@@ -1,3 +1,5 @@
+> **2026-11-18 — Calendar bez No exact day:** uklonjen je izdvojeni blok iznad mreže dana. Događaji sa preciznošću meseca ili godine ostaju u podacima, stablu i na Timeline osi. Ciljani test i Chrome provera sa sintetičkim beleškama potvrđuju da mreža i datirani događaji rade.
+
 > **2026-11-18 — Timeline bez gornja dva reda:** grafikon počinje odmah ispod glavnih tabova. Podešavanja, dodavanje, uvoz, filteri, skala i zum dostupni su iz menija ⋯ pored donjih Timeline prikaza. Calendar zadržava navigaciju meseci. Ciljani testovi za prikaz, filtere i uvoz prolaze, a Chrome provera na sintetičkom projektu potvrđuje prikaz i meni.
 
 > **2026-11-18 — Tri Timeline prikaza:** uklonjen Outline režim iz radne površine i natpis Chronology sa donje trake. Timeline, Calendar i Cards su dostupni. Ranije sačuvan Outline se pri prikazu čita kao Timeline osa, bez prepisivanja preference ili izmene beleški. Ciljani testovi za prikaze, status, kalendar i cloud validaciju prolaze; potvrđeno i na sintetičkom projektu u Chrome-u.
@@ -441,6 +443,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-18 — Calendar bez No exact day:** uklonjen je izdvojeni blok iznad mreže dana. Događaji sa preciznošću meseca ili godine ostaju u podacima, stablu i na Timeline osi. Ciljani test i Chrome provera sa sintetičkim beleškama potvrđuju da mreža i datirani događaji rade.
 
 > **2026-11-18 — Timeline bez gornja dva reda:** grafikon počinje odmah ispod glavnih tabova. Podešavanja, dodavanje, uvoz, filteri, skala i zum dostupni su iz menija ⋯ pored donjih Timeline prikaza. Calendar zadržava navigaciju meseci. Ciljani testovi za prikaz, filtere i uvoz prolaze, a Chrome provera na sintetičkom projektu potvrđuje prikaz i meni.
 

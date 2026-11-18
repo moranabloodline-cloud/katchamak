@@ -35,6 +35,11 @@ const loose=timelineCalendarBroadDates(rows,GREGORIAN,tick(1960,1));assert.deepE
 const month=timelineCalendarWeeks(rows,GREGORIAN,tick(1960,1));assert.ok(!month.flatMap(week=>week.items).some(item=>item.row.node.id.includes('only')),'Year/month precision never invents a day in the calendar');
 for(const calendar of [GREGORIAN,calendarPreset('uniform')])for(const [left,span] of [[-7e15,8e15],[0,minutesPerDay(calendar)*14],[-1e8,2e8],[100,60]]){const ticks=timelineTicks(calendar,left,span);assert.ok(ticks.length>0&&ticks.length<=10);assert.ok(ticks.every(t=>Number.isSafeInteger(t.value)&&t.value>=left&&t.value<=left+span));}
 const box=document.createElement('div');document.body.append(box);const root=createRoot(box);let panned=null,opened=null;
+const {TimelineCalendar}=await import('../src/components/kachamak/TimelineCalendar.tsx');
+await React.act(async()=>root.render(React.createElement(TimelineCalendar,{calendar:GREGORIAN,rows,groups:[],center:tick(1960,1),compact:false,onOpen(){},onAdd(){}})));
+assert.equal(box.querySelector('[aria-label="Events without an exact day"]'),null);
+assert.doesNotMatch(box.textContent,/No exact day|Year only|Month only/);
+assert.ok(box.querySelector('[aria-label^="Add event on "]'),'Calendar still renders its day grid');
 await React.act(async()=>root.render(React.createElement(TimelineAxis,{calendar:GREGORIAN,rows,groups:[],center:tick(1950),span:tick(2001)-tick(1900),compact:false,onOpen:row=>opened=row.node.id,onPan:value=>panned=value})));
 assert.equal(box.querySelectorAll('[aria-label^="Resize end"]').length,0);assert.equal(box.querySelectorAll('[draggable="true"]').length,0);
 assert.equal(box.querySelectorAll('[data-timeline-row]').length,rows.length,'Every note gets a separate row; no label competes for time range width');
