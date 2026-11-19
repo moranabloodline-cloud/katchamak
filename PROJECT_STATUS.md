@@ -1,3 +1,5 @@
+> **2026-11-19 — Nazivi u levom Timeline stablu.** Svaki red prikazuje samo naziv beleške. U Chrome-u na probnoj knjizi provereni su ugnježdeni periodi i događaji, njihove ikone i datumi u Details.
+
 > **2026-11-19 — Tabovi desnog panela po knjizi.** Info, Details, Mentions i Family dele istu traku u radnim prikazima beležaka. Hide tab i + rade i kad su svi tabovi sakriveni ili beleška nije izabrana. Na dve probne knjige provereni su snimanje, ponovno učitavanje i vraćanje tabova. Skrivanje tokom uređivanja čuva otvoreni unos datuma i porodične veze. Kada je Details sakriven, novi događaj otvara postojeći prozor za datume.
 
 > **2026-11-19 — Skrivanje tabova po knjizi.** Desni klik na tab nudi Hide tab. Postojeći + vraća skrivene tabove na njihova mesta, uključujući beleške otvorene kao tab. Provereno u Chrome-u na dve probne knjige, uz snimanje i ponovno učitavanje.
@@ -475,6 +477,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Nazivi u levom Timeline stablu.** Svaki red prikazuje samo naziv beleške. U Chrome-u na probnoj knjizi provereni su ugnježdeni periodi i događaji, njihove ikone i datumi u Details.
 
 > **2026-11-19 — Tabovi desnog panela po knjizi.** Info, Details, Mentions i Family dele istu traku u radnim prikazima beležaka. Hide tab i + rade i kad su svi tabovi sakriveni ili beleška nije izabrana. Na dve probne knjige provereni su snimanje, ponovno učitavanje i vraćanje tabova. Skrivanje tokom uređivanja čuva otvoreni unos datuma i porodične veze. Kada je Details sakriven, novi događaj otvara postojeći prozor za datume.
 

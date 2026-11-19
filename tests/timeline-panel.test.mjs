@@ -118,6 +118,8 @@ const calendarEvent=()=>button('Open event Hidden calendar event');
 await click(calendarEvent());
 assert.equal(calendarEvent().getAttribute('aria-current'),'true');
 assert.equal(treeRow('hidden-event').getAttribute('aria-selected'),'true');
+assert.equal(treeRow('inner').textContent.trim(),inner.title,'A time period shows only its name in the note tree');
+assert.equal(treeRow('hidden-event').textContent.trim(),hiddenEvent.title,'An event shows only its name in the note tree');
 assert.equal(treeRow('world').getAttribute('aria-expanded'),'true');
 assert.equal(treeRow('dawn').getAttribute('aria-expanded'),'true');
 assert.equal(treeRow('inner').getAttribute('aria-expanded'),'true');

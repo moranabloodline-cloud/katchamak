@@ -22,7 +22,6 @@ import { SECTION_KEYS, TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
 import { findNode, locateNode } from "@/lib/kachamak/utils";
-import {GREGORIAN,eventType} from "@/lib/kachamak/story-calendar";
 import {ColourPalette} from "./PresetColourPicker";
 import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
@@ -50,7 +49,7 @@ import { WorkspaceNavigation } from "./WorkspaceNavigation";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
-import {chronologicalNotes,timelineKind,timelineDateLabel} from '@/lib/kachamak/timeline-tree';
+import {chronologicalNotes,timelineKind} from '@/lib/kachamak/timeline-tree';
 import {addTimelineNote} from '@/lib/kachamak/timeline-actions';
 
 /* fallback only for old notes that never got an icon — the user picks the real one */
@@ -376,7 +375,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             className="flex-1 min-w-0 bg-black/40 border border-orange-500/50 rounded px-1 text-sm outline-none"
           />
         ) : (
-          <span className="flex-1 min-w-0" title={section==="timeline"?`${node.title} · ${timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}`:node.title}><span className="block truncate">{node.title}</span>{section==="timeline"&&<span className="block break-words text-xs leading-snug text-foreground/80">{timelineDateLabel(node,novel?.timeline?.calendar??GREGORIAN)}</span>}</span>
+          <span className="min-w-0 flex-1 truncate" title={node.title}>{node.title}</span>
         )}
         {/* three-dot menu at the END of the row — exact structure from the
             documentation; the dots stay visible while a menu/picker is open */}
