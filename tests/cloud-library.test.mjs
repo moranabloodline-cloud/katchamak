@@ -165,8 +165,8 @@ const customKin={kind:'custom',label:'Clan guardian',from:target,to:familyMember
 const godchild={kind:'godchild',from:familyMember,to:target};
 assert.equal(writer.changeFamilyRelationship(novel.id,familyTree,customKin),null);
 assert.equal(writer.changeFamilyRelationship(novel.id,familyTree,godchild),null);
-const otherTarget=writer.addNode('research',null,'doc','Portal');
-writer.updateNode('binder','note-1',{content:'<p>Cernobog arrived. Portal, then Portal.</p>'});
+const otherTarget=writer.addNode('codex',null,'doc','Portal');
+writer.updateNode('binder','note-1',{content:'<p>Černobog arrived. Portal, then Portal.</p>'});
 const {pendingLinkReview,mergeReviewChoices}=await import('../src/lib/kachamak/link-review.ts');
 const reviewNovel=useKachamak.getState().novels.find(n=>n.id===novel.id),reviewSource=reviewNovel.sections.binder[0];
 const reviewMatches=pendingLinkReview(reviewNovel,reviewSource);

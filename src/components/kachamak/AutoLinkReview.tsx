@@ -95,7 +95,7 @@ export function AutoLinkReview() {
     return()=>cancelAnimationFrame(frame);
   },[session?.noteId,match?.start,match?.text]);
   const novel=novels.find(novel=>novel.id===session?.projectId);
-  const paths=useMemo(()=>new Map(novel?flattenNotes(novel).map(row=>[row.node.id,[TABS.find(tab=>tab.key===row.section)?.label??row.section,...row.path].join(' / ')]):[]),[novel]);
+  const paths=useMemo(()=>new Map(novel?flattenNotes(novel,'codex').map(row=>[row.node.id,[TABS.find(tab=>tab.key===row.section)?.label??row.section,...row.path].join(' / ')]):[]),[novel]);
   const close=()=>{if(!busy.current)put(null);};
   const decide=(targetId:string|null)=>{
     if(!session||sessionRef.current!==session||!match||busy.current)return;
@@ -159,7 +159,7 @@ export function AutoLinkReview() {
     next?.focus();
   };
   const start=match?Math.max(0,match.start-280):0,end=match?Math.min(text.length,match.end+360):0;
-  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}><DialogContent ref={dialog} onKeyDown={keyboard} onOpenAutoFocus={event=>event.preventDefault()} className="max-h-[88vh] overflow-y-auto border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl"><DialogHeader><DialogTitle>Automatic link detection</DialogTitle><DialogDescription>{session?.title} · {session?.matches.length??0} remaining. Targets are searched across every tab in this project.</DialogDescription></DialogHeader>{session&&<p role="status" className="text-xs text-muted-foreground">{saveError?'Choices remain in this window. Saving failed; retry Save.':savePending?'Saving link choices…':'Link choices saved.'}</p>}{session&&session.unavailable>0&&<p className="text-xs text-amber-300">Removed {session.unavailable} unavailable links; their text is unchanged. Choose any replacement targets below.</p>}{session&&match&&<>
+  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}><DialogContent ref={dialog} onKeyDown={keyboard} onOpenAutoFocus={event=>event.preventDefault()} className="max-h-[88vh] overflow-y-auto border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl"><DialogHeader><DialogTitle>Automatic link detection</DialogTitle><DialogDescription>{session?.title} · {session?.matches.length??0} remaining. Matches Codex note titles in this book.</DialogDescription></DialogHeader>{session&&<p role="status" className="text-xs text-muted-foreground">{saveError?'Choices remain in this window. Saving failed; retry Save.':savePending?'Saving link choices…':'Link choices saved.'}</p>}{session&&session.unavailable>0&&<p className="text-xs text-amber-300">Removed {session.unavailable} unavailable links; their text is unchanged. Choose any replacement targets below.</p>}{session&&match&&<>
     <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_208px]">
       <div className="min-w-0 space-y-4">
         <div aria-label="Link context" className="min-h-48 whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/20 p-5 text-sm leading-7">{start>0?'…':''}{text.slice(start,match.start)}<mark className="rounded bg-amber-400 px-1 py-0.5 font-semibold text-black">{match.text}</mark>{text.slice(match.end,end)}{end<text.length?'…':''}</div>

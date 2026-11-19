@@ -33,9 +33,10 @@ export function contentText(html: string) {
   return indexText(root).text;
 }
 
-export function flattenNotes(novel: Novel) {
+export function flattenNotes(novel: Novel, onlySection?: SectionKey) {
   const out: { node: NoteNode; section: SectionKey; path: string[] }[] = [];
   for (const [section, roots] of Object.entries(novel.sections) as [SectionKey, NoteNode[]][]) {
+    if (onlySection !== undefined && section !== onlySection) continue;
     const walk = (nodes: NoteNode[], path: string[]) => nodes.forEach(node => {
       out.push({node, section, path}); walk(node.children, [...path, node.title]);
     });
@@ -78,11 +79,12 @@ export function explicitLinks(text: string, notes: NoteNode[], choices: LinkChoi
   }).sort((a,b)=>a.start-b.start);
 }
 
-export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[] = [], sourceId?: string): NoteMatch[] {
+export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[] = [], sourceId?: string, names: 'titles' | 'titles-and-aliases' = 'titles-and-aliases'): NoteMatch[] {
   const terms = new Map<string, NoteNode[]>();
   for (const note of codex) {
     if (note.id === sourceId) continue;
-    for (const term of cleanAliases([note.title, ...(note.aliases || [])])) {
+    const aliases = names === 'titles' ? [] : (note.aliases ?? []);
+    for (const term of cleanAliases([note.title, ...aliases])) {
       const key = term.toLocaleLowerCase();
       const list = terms.get(key) || [];
       if (!list.some(n => n.id === note.id)) list.push(note);

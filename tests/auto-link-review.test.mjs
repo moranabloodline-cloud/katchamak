@@ -8,7 +8,8 @@ const {newNovel}=await import('../src/lib/kachamak/seed.ts');
 const novel=newNovel('Review response QA','Tester');
 const note=(id,title,content='')=>({id,title,content,synopsis:'',notes:'',status:'',label:'',kind:'doc',children:[],createdAt:1,updatedAt:1});
 novel.sections.binder.push(note('source','Opening','<p>Ada met Ada near Gate.</p>'));
-novel.sections.codex.push(note('ada','Ada'),note('gate','Gate'));
+novel.sections.codex.push({...note('ada','Ada'),aliases:['Local edit']},note('gate','Gate'));
+novel.sections.research.push(note('outside','Ada'),note('quiet','quiet dawn'));
 let snapshot={novels:[novel],collections:[],navigation:{activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'source',paneAId:'source',paneBId:null,activePane:'a'}},revision=0,gate,release,writes=0,fail=false;
 globalThis.fetch=async(path,init={})=>{
  if(path==='/api/account')return Response.json({id:'test',email:'test@local',displayName:'Tester'});
@@ -72,7 +73,7 @@ assert.equal(document.querySelector('[role="dialog"]'),null,'Navigation during p
 await React.act(async()=>{gate=null;release();await cloud.saveWebLibrary();});
 let duplicate;
 await React.act(async()=>{
-  duplicate=useKachamak.getState().addNode('research',null,'doc','Ada');
+  duplicate=useKachamak.getState().addNode('codex',null,'doc','Ada');
   useKachamak.getState().select('source');
   useKachamak.getState().updateNode('binder','source',{content:'<p>Ada met Ada near Gate.</p>',linkChoices:[]});
 });
