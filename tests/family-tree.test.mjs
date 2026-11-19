@@ -104,7 +104,7 @@ assert.equal(validFamilyRelationships([{kind:'unknown-role',from:'a',to:'b'}]),f
 assert.equal(validCloudLibrary({novels:[{...original,familyRelationships:[parent,parent]}],collections:[]}),false);
 // Parents and intermediate relatives may live outside the currently open tree.
 const lineage=[rel('mother','m','a'),rel('son','b','m'),rel('father','g','m')];
-const lineageBook={...original,sections:{...original.sections,codex:['m','a','b','g','p','x'].map(id=>({id,title:id,children:[]}))},familyRelationships:lineage};
+const lineageBook={...original,sections:{...original.sections,family:[{id:'lineage',familyMembers:['a','b','m','g','p','x'],children:[]}],codex:['m','a','b','g','p','x'].map(id=>({id,title:id,children:[]}))},familyRelationships:lineage};
 const lineageTree={familyMembers:['a','b','g']};
 const projection=(records=lineage,source=lineageBook,tree=lineageTree)=>familyTreeView({...source,familyRelationships:records},tree);
 const inferred=(records,source,tree)=>[...projection(records,source,tree).reasons.keys()];

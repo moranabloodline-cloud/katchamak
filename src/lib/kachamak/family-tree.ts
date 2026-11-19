@@ -58,28 +58,34 @@ export function familyEdges(novel:Novel, people:NoteNode[]) {
   return (novel.familyRelationships??[]).filter(edge=>ids.has(edge.from)&&ids.has(edge.to));
 }
 
+type TreeMembership = Map<string, Set<string>[]>;
+
+function indexTreeMembers(index:TreeMembership, node:NoteNode) {
+  if (!node.familyMembers || node.familyMembers.length < 2) return;
+  const members = new Set(node.familyMembers);
+  for (const id of members) {
+    const trees = index.get(id);
+    if (trees) trees.push(members);
+    else index.set(id, [members]);
+  }
+}
+
+function hasPair(index:TreeMembership, edge:FamilyRelationship) {
+  return index.get(edge.from)?.some(members => members.has(edge.to)) ?? false;
+}
+
 // A relationship is shared only when both people belong to the same tree.
 export function familyDeletionImpact(novel:Novel, rootId:string) {
   const inside = new Map<string, Set<string>[]>();
   const outside = new Map<string, Set<string>[]>();
   function visit(node:NoteNode, deleting:boolean) {
     deleting = deleting || node.id === rootId;
-    const members = new Set(node.familyMembers);
-    if (members.size > 1) {
-      const index = deleting ? inside : outside;
-      for (const id of members) {
-        const trees = index.get(id);
-        if (trees) trees.push(members);
-        else index.set(id, [members]);
-      }
-    }
+    indexTreeMembers(deleting ? inside : outside, node);
     for (const child of node.children) visit(child, deleting);
   }
   for (const root of novel.sections.family ?? []) visit(root, false);
-  const related = (novel.familyRelationships ?? []).filter(edge =>
-    inside.get(edge.from)?.some(members => members.has(edge.to)));
-  const exclusive = new Set(related.filter(edge =>
-    !outside.get(edge.from)?.some(members => members.has(edge.to))));
+  const related = (novel.familyRelationships ?? []).filter(edge => hasPair(inside,edge));
+  const exclusive = new Set(related.filter(edge => !hasPair(outside,edge)));
   return {related, exclusive};
 }
 
@@ -113,18 +119,22 @@ export function familyTreeView(novel:Novel,tree:NoteNode|null) {
   const codex=codexIndex(novel);
   const people=tree?familyMembers(novel,tree,codex):[];
   const edges=familyEdges(novel,people);
-  const reasons=inferredRelationships(novel,codex,new Set(people.map(p=>p.id)),edges);
+  const reasons=inferredRelationships(novel.familyRelationships??[],codex,new Set(people.map(p=>p.id)),edges);
   return {people,edges:[...edges,...reasons.keys()],reasons};
 }
 
 export function noteRelationships(novel:Novel,person:string) {
   const rows:{target:NoteNode;label:string;reason?:string}[]=[];
-  if(!novel.familyRelationships?.length)return rows;
+  if(!novel.familyRelationships?.length || !novel.sections.family?.length)return rows;
+  const membership:TreeMembership = new Map();
+  forEachNode(novel.sections.family, tree => indexTreeMembers(membership,tree));
+  if (!membership.has(person)) return rows;
+  const recorded = novel.familyRelationships.filter(edge => hasPair(membership,edge));
   const codex=codexIndex(novel);
   if(!codex.has(person))return rows;
   const visible=new Set(codex.keys());
-  const edges=novel.familyRelationships.filter(e=>(e.from===person||e.to===person)&&visible.has(e.from)&&visible.has(e.to));
-  const reasons=inferredRelationships(novel,codex,visible,edges,person);
+  const edges=recorded.filter(e=>(e.from===person||e.to===person)&&visible.has(e.from)&&visible.has(e.to));
+  const reasons=inferredRelationships(recorded,codex,visible,edges,person);
   for(const edge of [...edges,...reasons.keys()]){
     const target=codex.get(edge.from===person?edge.to:edge.from)!;
     rows.push({target,label:relationshipCaption(edge,person),reason:reasons.get(edge)});
@@ -132,13 +142,13 @@ export function noteRelationships(novel:Novel,person:string) {
   return rows;
 }
 
-function inferredRelationships(novel:Novel,codex:Map<string,NoteNode>,visible:Set<string>,edges:FamilyRelationship[],focus?:string) {
+function inferredRelationships(recorded:FamilyRelationship[],codex:Map<string,NoteNode>,visible:Set<string>,edges:FamilyRelationship[],focus?:string) {
   const reasons=new Map<FamilyRelationship,string>();
   if(visible.size<2)return reasons;
   const roles=new Map<string,FamilyRole>();
   const parents=new Map<string,Set<string>>();
   const childrenInView=new Map<string,Set<string>>();
-  for(const edge of novel.familyRelationships??[]){
+  for(const edge of recorded){
     const link=directParentage(edge);
     if(!link || !codex.has(link.from) || !codex.has(link.to))continue;
     addToIndex(parents,link.to,link.from);

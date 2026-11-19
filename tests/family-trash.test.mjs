@@ -74,12 +74,30 @@ assert.equal(restore(codexTrash.id),undefined);
 assert.deepEqual(noteRelationships(book(),c),[]);
 state().emptyTrash();
 assert.equal(book().familyRelationships.length,2);
-// An old Trash item has no snapshot: restore it, then delete under the new rules.
+// Old family records may still be in the book. Codex reads only pairs shown by a live tree.
 const legacy = structuredClone(deleted);
 delete legacy.trash[0].familyRelationships;
 legacy.familyRelationships = JSON.parse(snapshot).familyRelationships;
-assert.ok(state().importNovel(JSON.stringify(legacy)).ok);
+const encoded = JSON.stringify(legacy);
+assert.deepEqual(noteRelationships(legacy,c),[]);
+assert.deepEqual(noteRelationships(legacy,b).map(row=>row.target.id).sort(),[a,d].sort());
+assert.equal(JSON.stringify(legacy),encoded);
+const empty = {...legacy,sections:{...legacy.sections,family:[]}};
+for (const trash of [empty.trash, []]) {
+  for (const id of [a,b,c,d]) assert.deepEqual(noteRelationships({...empty,trash},id),[]);
+}
+const leaf = members => ({familyMembers:members,children:[]});
+const trees = [...legacy.sections.family, {children:[leaf([a,c]),leaf([a,b])]}];
+const nested = {...legacy,sections:{...legacy.sections,family:trees}};
+assert.ok(noteRelationships(nested,c).some(row=>row.target.id===b && row.reason));
+assert.equal(noteRelationships(nested,a).filter(row=>row.target.id===b).length,1);
+const split = {...legacy,sections:{...legacy.sections,family:[leaf([a,d]),leaf([c,b])]}};
+assert.deepEqual(noteRelationships(split,a),[]);
+assert.deepEqual(noteRelationships(split,b),[]);
+assert.ok(state().importNovel(encoded).ok);
+assert.deepEqual(noteRelationships(book(),c),[]);
 assert.equal(restore(rootTrash),undefined);
+assert.ok(noteRelationships(book(),c).some(row=>row.target.id===b && row.reason));
 remove(root);
 assert.deepEqual(noteRelationships(book(),c),[]);
 console.log('Passed family deletion, inferred links, shared trees, Codex text, backup, restore order, legacy Trash and ancestry conflicts.');
