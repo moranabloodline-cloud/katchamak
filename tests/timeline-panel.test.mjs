@@ -32,7 +32,7 @@ assert.equal(JSON.stringify(b),untouchedB);
 await React.act(async()=>useKachamak.setState({activeNovelId:a.id,selectedNodeId:'period',paneAId:'period'}));
 const inspector=()=>document.querySelector('[aria-label="Note inspector"]');
 const tab=label=>[...inspector().querySelectorAll('[role="tab"]')].find(el=>el.textContent===label);
-assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions']);
+assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions','Family']);
 assert.equal(document.querySelectorAll('[aria-label="Timeline note settings"]').length,1);
 assert.ok(field('Timeline note settings').closest('[role="tabpanel"]'),'The existing editor belongs to the standard panel, not a parallel block');
 await click(tab('Details'));assert.equal(field('Event title').value,'A period');assert.equal(field('Timeline note type').value,'period');assert.ok(button('End date'));
@@ -48,8 +48,14 @@ assert.deepEqual(a.sections.timeline[0].event,periodDates);
 await toggleMenu(field('Add block'));await click(menuItem('Timeline'));
 assert.equal(field('Timeline block').hidden,false);
 assert.equal(field('Event title').value,'Draft period title','Hiding and restoring keeps the unapplied editor draft');
-for(const label of ['Info','Details','Mentions']){await click(tab(label));assert.equal(tab(label).getAttribute('aria-selected'),'true');}
+for(const label of ['Info','Details','Mentions','Family']){await click(tab(label));assert.equal(tab(label).getAttribute('aria-selected'),'true');}
 await click(tab('Details'));assert.equal(field('Event title').value,'Draft period title','Switching inspector tabs preserves unapplied form values');
+const settings=useKachamak.getState();
+await React.act(async()=>settings.setInspectorTabHidden(a.id,'details',true));
+assert.equal(tab('Details'),undefined);
+assert.equal(field('Event title').value,'Draft period title');
+await React.act(async()=>settings.setInspectorTabHidden(a.id,'details',false));
+await click(tab('Details'));assert.equal(field('Event title').value,'Draft period title');
 await click(button('Apply dates'));assert.equal(a.sections.timeline[0].title,'Draft period title');
 // Every modal belongs to this book, including group edits and navigation dates.
 for(const label of ['Groups','Go to date']){
@@ -70,13 +76,13 @@ const event=a.sections.timeline[0].children[0];assert.equal(event.event.groupId,
 // Changes made by another existing editor must not be overwritten by a stale inspector.
 await React.act(async()=>useKachamak.getState().updateNode('timeline','event',{event:{...event.event,cardColor:'#123456',groupId:''},links:[]}));
 await click(button('Apply dates'));assert.equal(event.event.cardColor,'#123456');assert.equal(event.event.groupId,'');assert.deepEqual(event.links,[]);
-for(const mode of ['Timeline','Calendar','Cards']){const list=field('Timeline display');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,3);assert.equal(field('Event title').value,'A event');}
+for(const mode of ['Timeline','Calendar','Cards']){const list=field('Timeline display');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,4);assert.equal(field('Event title').value,'A event');}
 await click(tab('Info'));assert.ok(document.querySelector('[aria-label="Resize Synopsis and Notes"]'));assert.match(document.body.textContent,/Keep synopsis/);
 await click(tab('Details'));assert.match(document.body.textContent,/Created/);await click(tab('Mentions'));
 assert.equal(JSON.stringify(b),untouchedB,'All edits stay in one book');
 await React.act(async()=>useKachamak.setState({view:'write'}));await click(tab('Details'));assert.equal(field('Event title').value,'A event','Timeline notes keep their Timeline block in Write mode too');
 await React.act(async()=>{useKachamak.setState({activeTab:'codex',selectedNodeId:'link',paneAId:'link'});root.render(React.createElement(NotesSection,{section:'codex'}));});
-assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions']);assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Details');assert.equal(field('Timeline block'),null);
+assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions','Family']);assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Details');assert.equal(field('Timeline block'),null);
 // Switching the existing-note chooser must not carry another note's dates/group.
 const {TimelineEventEditor}=await import('../src/components/kachamak/TimelineEventEditor.tsx');
 await React.act(async()=>{useKachamak.getState().updateNode('timeline','event',{event:{...event.event,groupId:'group'}});root.render(React.createElement(TimelineEventEditor,{novel:a,calendar:GREGORIAN,section:'timeline',start:tick(1920),onClose(){},onSaved(){}}));});
@@ -147,6 +153,12 @@ await click(tab('Info'));
 await React.act(async()=>fresh.select('world'));
 await React.act(async()=>fresh.select(addedPeriod.id));
 assert.equal(tab('Info').getAttribute('aria-selected'),'true','Revisiting a previously added item never replays the creation task');
+await React.act(async()=>settings.setInspectorTabHidden(qa.id,'details',true));
+await option('Add event');
+assert.equal(document.querySelector('[role="dialog"] h2')?.textContent,'Edit dates','Wide screens can edit new dates with Details hidden');
+assert.equal(tab('Details'),undefined);
+await click([...document.querySelectorAll('[role="dialog"] button')].find(el=>el.textContent.trim()==='Close'));
+await React.act(async()=>settings.setInspectorTabHidden(qa.id,'details',false));
 dom.matchMedia=()=>({matches:true});
 await option('Add event');
 const mobile=()=>document.querySelector('[role="dialog"]');

@@ -126,7 +126,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">
     <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
       <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold"><Network className="size-4 shrink-0 text-muted-foreground"/><span className="truncate">{tree?.title||'Family Tree'}</span></h2>
-      {tree && <button type="button" onClick={onEdit} className={action+(rightOpen?' lg:hidden':'')}>Edit tree</button>}
+      {tree && <button type="button" onClick={onEdit} className={action+(rightOpen && !novel.hiddenInspectorTabs?.includes('family')?' lg:hidden':'')}>Edit tree</button>}
     </header>
     {people.length===0 ? <div className="m-auto max-w-sm px-5 py-12 text-center">
       <Network aria-hidden="true" className="mx-auto mb-4 size-8 text-amber-400/70"/>

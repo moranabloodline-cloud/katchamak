@@ -15,7 +15,7 @@ import {TimelineGroups} from './TimelineGroups';
 import {TimelineCalendar} from './TimelineCalendar';
 import {TimelineCards} from './TimelineCards';
 import {timelineDefaultStart,timelineScope,timelineLevelIds} from '@/lib/kachamak/timeline-tree';
-import {addTimelineNote,finishTimelineAdd,usesCompactTimelineEditor,useTimelineAddRequest} from '@/lib/kachamak/timeline-actions';
+import {addTimelineNote,finishTimelineAdd,usesTimelineDialog,useTimelineAddRequest} from '@/lib/kachamak/timeline-actions';
 import {importTimeline} from '@/lib/kachamak/timeline-import';
 import {toast} from 'sonner';
 
@@ -42,7 +42,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const addRequest=useTimelineAddRequest();
   useEffect(()=>{
     if(!novel||!addRequest||addRequest.novelId!==novel.id||addRequest.section!==section
-      ||addRequest.noteId!==state.selectedNodeId||!usesCompactTimelineEditor())return;
+      ||addRequest.noteId!==state.selectedNodeId||!usesTimelineDialog())return;
     setEditing({id:addRequest.noteId,start:timelineDefaultStart(novel.sections[section],addRequest.noteId)});
     finishTimelineAdd(addRequest);
   },[addRequest,novel,section,state.selectedNodeId]);
@@ -67,7 +67,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
   const renderGroups=[{id:'',name:'Ungrouped',color:'#d6a64a'},...groups].filter(g=>g.id||all.some(r=>groupFor(r.event,groups)===''));
   const hiddenGroupCount=renderGroups.filter(g=>hidden.includes(g.id)).length;
-  const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesCompactTimelineEditor())setEditing({id:r.node.id,start:r.event.start});else if(!state.rightPanelOpen)state.toggleRightPanel();};
+  const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesTimelineDialog())setEditing({id:r.node.id,start:r.event.start});else if(!state.rightPanelOpen)state.toggleRightPanel();};
   const preserveCalendarMonth=()=>{if(mode==='calendar'&&!local)setViewport({key:scopeKey,center,span});};
   const setHiddenGroups=(hiddenGroups:string[])=>{preserveCalendarMonth();state.setTimeline({hiddenGroups});};
   const changeViewport=(patch:Partial<{center:number;span:number}>)=>{const next=boundedViewport(patch.center??center,patch.span??span);setViewport({key:scopeKey,...next});state.setTimeline(next);};

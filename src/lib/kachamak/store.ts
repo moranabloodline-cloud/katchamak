@@ -9,6 +9,7 @@ import type {
   Novel,
   SectionKey,
   TabKey,
+  InspectorTabKey,
   TreeScope,
   ViewMode,
 } from "./types";
@@ -117,6 +118,7 @@ interface KachamakState {
   openNoteTab: (id: string) => void;
   moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
   hideTab: (projectId:string,tab:TabKey) => void;
+  setInspectorTabHidden: (projectId:string,tab:InspectorTabKey,hidden:boolean) => void;
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
   changeFamilyRelationship: (projectId:string, treeId:string, relation:FamilyRelationship, remove?:boolean) => string | null;
@@ -529,6 +531,14 @@ export const useKachamak = create<KachamakState>()(
         const tabOrder=moveWorkspaceTabOrder(novel,from,to);if(!tabOrder)return s;
         return {novels:s.novels.map(n=>n.id===projectId?touch({...n,tabOrder}):n)};
       }),
+      setInspectorTabHidden: (projectId,tab,hidden) => set(s=>{
+        const novel=s.novels.find(n=>n.id===projectId);
+        if(!novel || s.activeNovelId!==projectId)return s;
+        const current=novel.hiddenInspectorTabs??[];
+        if(current.includes(tab)===hidden)return s;
+        const hiddenInspectorTabs=hidden?[...current,tab]:current.filter(key=>key!==tab);
+        return {novels:s.novels.map(n=>n===novel?touch({...n,hiddenInspectorTabs}):n)};
+      }),
       hideTab: (projectId,tab) => set(s=>{
         const novel=s.novels.find(n=>n.id===projectId);
         if(projectId!==s.activeNovelId||!novel||!workspaceTabs(novel).some(t=>t.key===tab))return s;
@@ -880,7 +890,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 37,
+      version: 38,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -893,6 +903,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<38){ /* Missing inspector preferences show every tab, without rewriting books. */ }
         if(version<37){ /* Existing books retain their tab order and legacy hidden sections. */ }
         if(version<36){ /* Notes without an explicit opt-out remain automatic link targets. */ }
         if(version<35){ /* Earlier Trash items have no saved family links. */ }

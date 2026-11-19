@@ -45,6 +45,7 @@ modern.sections.binder = [node('chapter', { children: [node('child')], aliases: 
 modern.sections.timeline = [node('period', {timelineKind: 'period', event: {type: 'period', start: -100, end: 100, precision: 'year'}, children: [node('outside-legacy', {event: {start: 101, end: 101, precision: 'day'}})]})];
 modern.timeline = { rootId: null, detail: 'synopsis', compact: false, calendar: calendarPreset('gregorian') };
 modern.trash = [{ id: 'trash', section: 'binder', node: node('deleted', {children: [node('deleted-child')]}), deletedAt: 1 }];
+modern.hiddenInspectorTabs = ['info','details','mentions','family'];
 modern.hiddenSections = ['planning']; modern.openNoteTabs = ['chapter']; modern.extension = { retained: true };
 const wrap = novel => ({ novels: [novel], collections: [] });
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -68,6 +69,8 @@ const invalidCases = [
   ['labels', n => n.labels = [{id: 'x', name: 'x'}]],
   ['open tabs', n => n.openNoteTabs = [3]],
   ['hidden sections', n => n.hiddenSections = ['binder']],
+  ['unknown inspector tab', n => n.hiddenInspectorTabs = ['timeline']],
+  ['duplicate inspector tab', n => n.hiddenInspectorTabs = ['info','info']],
   ['timeline shape', n => n.timeline = null],
   ['timeline root', n => n.timeline.rootId = 3],
   ['timeline detail', n => n.timeline.detail = 'invalid'],
@@ -98,7 +101,7 @@ for (const [label, mutate] of invalidCases) {
 }
 
 const legacy = clone(modern);
-for (const key of ['timeline','trash','statuses','labels','openNoteTabs','hiddenSections']) delete legacy[key];
+for (const key of ['timeline','trash','statuses','labels','openNoteTabs','hiddenSections','hiddenInspectorTabs']) delete legacy[key];
 delete legacy.sections.timeline;
 legacy.sections.binder[0].kind = 'scene'; // Historical note kinds remain legal.
 const custom = clone(modern);

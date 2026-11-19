@@ -1,3 +1,5 @@
+> **2026-11-19 — Tabovi desnog panela po knjizi.** Info, Details, Mentions i Family dele istu traku u radnim prikazima beležaka. Hide tab i + rade i kad su svi tabovi sakriveni ili beleška nije izabrana. Na dve probne knjige provereni su snimanje, ponovno učitavanje i vraćanje tabova. Skrivanje tokom uređivanja čuva otvoreni unos datuma i porodične veze. Kada je Details sakriven, novi događaj otvara postojeći prozor za datume.
+
 > **2026-11-19 — Skrivanje tabova po knjizi.** Desni klik na tab nudi Hide tab. Postojeći + vraća skrivene tabove na njihova mesta, uključujući beleške otvorene kao tab. Provereno u Chrome-u na dve probne knjige, uz snimanje i ponovno učitavanje.
 
 > **2026-11-19 — Ignorisanje beleške pri automatskom linkovanju.** Stavka „Ignore in auto-linking“ u meniju beleške izuzima njen naslov i aliase iz predloga pri svakom Save u celoj knjizi. Deca foldera i druge istoimene beleške ostaju zasebni ciljevi. Postojeće veze i ručni izbor su sačuvani. Na probnom projektu u Chrome-u provereni su uključivanje, dva snimanja, ponovno učitavanje i isključivanje.
@@ -473,6 +475,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Tabovi desnog panela po knjizi.** Info, Details, Mentions i Family dele istu traku u radnim prikazima beležaka. Hide tab i + rade i kad su svi tabovi sakriveni ili beleška nije izabrana. Na dve probne knjige provereni su snimanje, ponovno učitavanje i vraćanje tabova. Skrivanje tokom uređivanja čuva otvoreni unos datuma i porodične veze. Kada je Details sakriven, novi događaj otvara postojeći prozor za datume.
 
 > **2026-11-19 — Skrivanje tabova po knjizi.** Desni klik na tab nudi Hide tab. Postojeći + vraća skrivene tabove na njihova mesta, uključujući beleške otvorene kao tab. Provereno u Chrome-u na dve probne knjige, uz snimanje i ponovno učitavanje.
 

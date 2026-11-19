@@ -310,9 +310,10 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
   const hit =
     selectedNodeId && novel ? findNodeInNovel(novel, selectedNodeId) : null;
   const selected = ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
-  const familySettings=section==='family' && selected && novel && hit?.section==='family'
+  const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
+    if(novel)useKachamak.getState().setInspectorTabHidden(novel.id,'family',false);
     if(!rightPanelOpen)toggleRightPanel();
     setEditFamily(n=>n+1);
     setCompactFamily(true);
@@ -459,35 +460,22 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
             className={compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "hidden shrink-0 flex-col bg-black/20 lg:flex"}
           >
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
-            {selected ? (
-              <>
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="min-h-0 flex-1"><RightPanel key={familySettings?`${novel!.id}:family:${editFamily}`:novel!.id} node={selected} section={selectedSection} familySettings={familySettings} onHide={()=>{if(compactFamily && !window.matchMedia('(min-width:64rem)').matches)setCompactFamily(false);else {setCompactFamily(false);toggleRightPanel();}}} timelineSettings={(section==='timeline'||view==='timeline')&&selectedSection===section ? <TimelineEventEditor key={`${novel!.id}:${selected.id}:${selected.title}:${JSON.stringify(selected.event)}:${selected.icon}:${JSON.stringify(selected.links)}:${JSON.stringify(novel?.timeline?.calendar)}`} embedded start={timelineDefaultStart(novel!.sections[section],selected.id)} novel={novel!} calendar={novel?.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}} section={section} onClose={()=>{}} onSaved={()=>{}}/> : undefined} /></div>
-                </div>
-                <NoteMetaBar section={selectedSection} node={selected} />
-              </>
-            ) : (
-              <div className="flex h-full flex-col">
-                <div className="flex h-10 shrink-0 items-center justify-between gap-1 border-b border-white/10 pl-3.5 pr-3.5">
-                  <span className="text-xs text-muted-foreground">Info</span>
-                  <button
-                    type="button"
-                    aria-label="Hide panel"
-                    title="Hide panel"
-                    onClick={toggleRightPanel}
-                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-                <p className="p-4 text-xs leading-relaxed text-muted-foreground">
-                  Select a note in the tree or a card in the Grid to see its synopsis,
-                  notes and details here.
-                </p>
-                {/* keep the full-width bottom bar continuous */}
-                <div className="h-10 shrink-0 border-t border-amber-500/25" />
-              </div>
-            )}
+            {novel && <div className="min-h-0 flex-1">
+              <RightPanel key={familySettings?`${novel.id}:family:${editFamily}`:novel.id}
+                novel={novel} node={selected} section={selectedSection} familySettings={familySettings}
+                onHide={()=>{
+                  setCompactFamily(false);
+                  if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();
+                }}
+                timelineSettings={selected && (selectedSection==='timeline' || view==='timeline' && selectedSection===section)
+                  ? <TimelineEventEditor key={`${novel.id}:${selected.id}:${selected.title}:${JSON.stringify(selected.event)}:${selected.icon}:${JSON.stringify(selected.links)}:${JSON.stringify(novel.timeline?.calendar)}`}
+                      embedded start={timelineDefaultStart(novel.sections[selectedSection],selected.id)} novel={novel}
+                      calendar={novel.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}}
+                      section={selectedSection} onClose={()=>{}} onSaved={()=>{}}/>
+                  : undefined}
+              />
+            </div>}
+            {selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>}
           </aside>
         </>
       ) : (

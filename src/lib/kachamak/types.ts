@@ -25,6 +25,14 @@ export const SECTION_KEYS: SectionKey[] = [
 
 export type TabKey = SectionKey | "trash" | `note:${string}`;
 
+export const INSPECTOR_TABS = [
+  { key: 'info', label: 'Info' },
+  { key: 'details', label: 'Details' },
+  { key: 'mentions', label: 'Mentions' },
+  { key: 'family', label: 'Family' },
+] as const;
+export type InspectorTabKey = typeof INSPECTOR_TABS[number]['key'];
+
 export interface LinkChoice {
   start: number;
   end: number;
@@ -129,6 +137,7 @@ export interface Novel {
   tabOrder?: TabKey[];
   hiddenSections?: SectionKey[];
   hiddenTabs?: TabKey[];
+  hiddenInspectorTabs?: InspectorTabKey[];
   timeline?: TimelinePreferences;
   createdAt: number;
   updatedAt: number;

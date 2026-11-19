@@ -10,12 +10,15 @@ import {
 import {
   CalendarDays,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { NoteConnections } from "./NoteConnections";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
-import { finishTimelineAdd, usesCompactTimelineEditor, useTimelineAddRequest } from "@/lib/kachamak/timeline-actions";
-import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
+import { finishTimelineAdd, usesTimelineDialog, useTimelineAddRequest } from "@/lib/kachamak/timeline-actions";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { INSPECTOR_TABS, type InspectorTabKey, type Novel, type NoteNode, type SectionKey } from "@/lib/kachamak/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 
@@ -70,13 +73,15 @@ function SynopsisResizer({
 }
 
 export function RightPanel({
+  novel,
   node,
   section,
   onHide,
   timelineSettings,
   familySettings,
 }: {
-  node: NoteNode;
+  novel: Novel;
+  node: NoteNode | null;
   section: SectionKey;
   onHide?: () => void;
   timelineSettings?: ReactNode;
@@ -87,19 +92,34 @@ export function RightPanel({
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
   const [tab, setTab] = useState<string|null>(null);
-  const activeTab = tab==='family' && !familySettings ? 'info' : tab ?? (familySettings?'family':timelineSettings?'details':'info');
-  const extraTab = !!familySettings;
+  const visibleTabs = INSPECTOR_TABS.filter(t=>!novel.hiddenInspectorTabs?.includes(t.key));
+  const hiddenTabs = INSPECTOR_TABS.filter(t=>novel.hiddenInspectorTabs?.includes(t.key));
+  const preferred = tab ?? (familySettings?'family':timelineSettings?'details':'info');
+  const activeTab = visibleTabs.find(t=>t.key===preferred)?.key ?? visibleTabs[0]?.key ?? '';
+  const setInspectorTabHidden = useKachamak(s=>s.setInspectorTabHidden);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const restoringTab = useRef(false);
+  const hideTab = (key:InspectorTabKey) => {
+    if(key===activeTab){
+      const index=visibleTabs.findIndex(t=>t.key===key);
+      setTab(visibleTabs[index+1]?.key ?? visibleTabs[index-1]?.key ?? null);
+    }
+    setInspectorTabHidden(novel.id,key,true);
+    requestAnimationFrame(()=>toolbarRef.current?.querySelector<HTMLButtonElement>(
+      '[role="tab"][aria-selected="true"], button[aria-label="Show hidden inspector tabs"]'
+    )?.focus());
+  };
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addRequest = useTimelineAddRequest();
   const hasTimelineSettings = !!timelineSettings;
   const detailsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!hasTimelineSettings || !addRequest || addRequest.novelId !== activeNovelId || addRequest.section !== section
-      || addRequest.noteId !== node.id || usesCompactTimelineEditor()) return;
+      || addRequest.noteId !== node?.id || usesTimelineDialog()) return;
     if(activeTab!=='details'){setTab('details');return;}
     detailsRef.current?.querySelector('[aria-label="Timeline block"]')?.scrollIntoView?.({block:"nearest"});
     finishTimelineAdd(addRequest);
-  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node.id, section]);
+  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node?.id, section]);
 
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
@@ -115,19 +135,30 @@ export function RightPanel({
     <Tabs value={activeTab} onValueChange={setTab} className="flex h-full flex-col gap-0">
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
-      <div className={`flex h-10 min-w-0 shrink-0 items-center border-b border-white/10 ${extraTab ? 'px-2' : 'px-3.5'}`}>
-        <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${extraTab ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
-          <TabsTrigger value="info" className={tabCls}>
-            Info
-          </TabsTrigger>
-          <TabsTrigger value="details" className={tabCls}>
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="mentions" className={tabCls}>
-            Mentions
-          </TabsTrigger>
-          {familySettings && <TabsTrigger value="family" className={tabCls}>Family</TabsTrigger>}
+      <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
+        <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
+          {visibleTabs.map(t=><ContextMenu key={t.key}>
+            <ContextMenuTrigger asChild><TabsTrigger value={t.key} className={tabCls}>{t.label}</TabsTrigger></ContextMenuTrigger>
+            <ContextMenuContent aria-label={t.label+' tab actions'}>
+              <ContextMenuItem onSelect={()=>hideTab(t.key)}>Hide tab</ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>)}
         </TabsList>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><button type="button" disabled={!hiddenTabs.length} aria-label="Show hidden inspector tabs" title={hiddenTabs.length?'Show hidden tabs':'All tabs are visible'} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-white/10 disabled:opacity-40"><Plus className="size-4"/></button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" aria-label="Hidden inspector tabs" onCloseAutoFocus={event=>{
+            if(!restoringTab.current)return;
+            restoringTab.current=false;
+            event.preventDefault();
+            toolbarRef.current?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus();
+          }}>
+            {hiddenTabs.map(t=><DropdownMenuItem key={t.key} onSelect={()=>{
+              restoringTab.current=true;
+              setInspectorTabHidden(novel.id,t.key,false);
+              setTab(t.key);
+            }}>Show {t.label}</DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
         {onHide && (
           <button
             type="button"
@@ -149,6 +180,7 @@ export function RightPanel({
       >
         {/* Info — Synopsis i Notes vertikalno; razdelnik između njih se vuče
             (arhitektura §11), svako polje skroluje svoj sadržaj nezavisno */}
+        {node ? <>
         <TabsContent value="info" className="mt-0 h-full">
           <div ref={infoBoxRef} className="flex h-full min-h-0 flex-col">
             <div
@@ -215,7 +247,10 @@ export function RightPanel({
         <TabsContent value="mentions" className="mt-0">
           <NoteConnections node={node} section={section} mode="mentions" />
         </TabsContent>
-        {familySettings && <TabsContent value="family" className="mt-0">{familySettings}</TabsContent>}
+        </> : activeTab && activeTab!=='family' && <TabsContent value={activeTab} className="mt-0 text-xs text-muted-foreground">Select a note to see its {activeTab==='info'?'synopsis and notes':activeTab}.</TabsContent>}
+        <TabsContent value="family" forceMount={familySettings?true:undefined} hidden={activeTab!=='family'} className="mt-0 data-[state=inactive]:hidden">
+          {familySettings ?? <p className="text-xs text-muted-foreground">Select a Family Tree note to edit its members and relationships.</p>}
+        </TabsContent>
       </div>
     </Tabs>
   );
