@@ -58,6 +58,31 @@ export function familyEdges(novel:Novel, people:NoteNode[]) {
   return (novel.familyRelationships??[]).filter(edge=>ids.has(edge.from)&&ids.has(edge.to));
 }
 
+// A relationship is shared only when both people belong to the same tree.
+export function familyDeletionImpact(novel:Novel, rootId:string) {
+  const inside = new Map<string, Set<string>[]>();
+  const outside = new Map<string, Set<string>[]>();
+  function visit(node:NoteNode, deleting:boolean) {
+    deleting = deleting || node.id === rootId;
+    const members = new Set(node.familyMembers);
+    if (members.size > 1) {
+      const index = deleting ? inside : outside;
+      for (const id of members) {
+        const trees = index.get(id);
+        if (trees) trees.push(members);
+        else index.set(id, [members]);
+      }
+    }
+    for (const child of node.children) visit(child, deleting);
+  }
+  for (const root of novel.sections.family ?? []) visit(root, false);
+  const related = (novel.familyRelationships ?? []).filter(edge =>
+    inside.get(edge.from)?.some(members => members.has(edge.to)));
+  const exclusive = new Set(related.filter(edge =>
+    !outside.get(edge.from)?.some(members => members.has(edge.to))));
+  return {related, exclusive};
+}
+
 function siblingPair(a:string,b:string) {
   return JSON.stringify(a<b?[a,b]:[b,a]);
 }

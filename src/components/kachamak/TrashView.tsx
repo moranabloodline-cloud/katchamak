@@ -3,6 +3,7 @@
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { AlertTriangle, ChevronLeft, ChevronRight, RotateCcw, Trash2, FileText } from "lucide-react";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
@@ -121,7 +122,10 @@ export function TrashView() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => restoreFromTrash(t.id)}
+                  onClick={() => {
+                    const error = restoreFromTrash(t.id);
+                    if (error) toast.error(error);
+                  }}
                   className="flex items-center gap-1.5 rounded-lg border border-green-500/40 px-2.5 py-1.5 text-xs text-green-300 transition-colors hover:bg-green-500/10"
                 >
                   <RotateCcw className="h-3.5 w-3.5" /> Restore

@@ -42,7 +42,7 @@ export function isReadableProject(value: unknown): boolean {
   if (n.trash !== undefined && (!Array.isArray(n.trash) || !n.trash.every((t) =>
     t && typeof t === "object" && typeof t.id === "string" &&
     typeof t.section === "string" && SECTION_KEYS.includes(t.section as SectionKey) &&
-    isTree([t.node])
+    validFamilyRelationships(t.familyRelationships) && isTree([t.node])
   ))) return false;
   if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder))return false;

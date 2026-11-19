@@ -95,6 +95,7 @@ export interface TrashItem {
   parentId: string | null; // restore target (null = section root)
   section: SectionKey;
   node: NoteNode; // whole subtree
+  familyRelationships?: FamilyRelationship[]; // recorded links available when this tree is restored
   deletedAt: number;
   originalIndex?: number; // original position among siblings; absent in older backups
 }

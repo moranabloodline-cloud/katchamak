@@ -40,6 +40,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { familyDeletionImpact } from "@/lib/kachamak/family-tree";
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
@@ -119,7 +124,16 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
   const [moveOpen, setMoveOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const [deleteInBook, setDeleteInBook] = useState<string | null>(null);
   const novel = novels.find((n) => n.id === activeNovelId);
+  const impact = novel && section === 'family' && deleteInBook === novel.id
+    ? familyDeletionImpact(novel, node.id) : null;
+  const sharedCount = impact ? impact.related.length - impact.exclusive.size : 0;
+  const rowRef = useRef<HTMLDivElement>(null);
+  const requestDelete = () => {
+    if (section === 'family') setDeleteInBook(activeNovelId);
+    else deleteNode(section, node.id);
+  };
   const renaming = renamingNodeId === node.id;
   const selected = selectedNodeId === node.id;
   const open = !node.collapsed || !!revealed?.has(node.id);
@@ -211,6 +225,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
     <div>
       <div
         role="treeitem"
+        ref={rowRef}
         aria-selected={selected}
         aria-expanded={hasChildren ? open : undefined}
         aria-level={depth + 1}
@@ -249,7 +264,8 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
           /* Delete key deletes the selected note (goes to Trash) */
           if (e.key === "Delete" && selected && !renaming) {
             e.stopPropagation();
-            deleteNode(section, node.id);
+            e.preventDefault();
+            requestDelete();
           }
         }}
         draggable={!renaming}
@@ -418,7 +434,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                 Move to top level
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => deleteNode(section, node.id)}
+                onSelect={requestDelete}
                 className="text-red-400 focus:text-red-300"
               >
                 Delete
@@ -469,6 +485,32 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} dnd={dnd} revealed={revealed} onDismissReveal={onDismissReveal} />
           ))}
         </div>
+      )}
+
+      {impact && (
+        <AlertDialog open onOpenChange={open => { if (!open) setDeleteInBook(null); }}>
+          <AlertDialogContent className="border-white/10 bg-[#1b1b1b]" onCloseAutoFocus={e => {
+            if (rowRef.current?.isConnected) { e.preventDefault(); rowRef.current.focus(); }
+          }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Move “{node.title}” to Trash?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {hasChildren ? 'This includes all nested family trees. ' : ''}
+                {impact.exclusive.size
+                  ? `This will remove ${impact.exclusive.size} recorded family relationship${impact.exclusive.size === 1 ? '' : 's'} from the linked Codex notes. Inferred kinship will update too. `
+                  : 'No family relationships will be removed from Codex. '}
+                {sharedCount > 0 && `${sharedCount} shared relationship${sharedCount === 1 ? ' stays' : 's stay'} in other trees. `}
+                The character notes are kept. You can restore the tree and its relationships from Trash.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction className="bg-red-600 text-white hover:bg-red-500" onClick={() => {
+                if (useKachamak.getState().activeNovelId === deleteInBook) deleteNode(section, node.id);
+              }}>Move to Trash</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {/* Move — pick any section root or any other note as the new parent */}

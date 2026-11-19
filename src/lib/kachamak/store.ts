@@ -21,7 +21,7 @@ import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
 import {moveWorkspaceTabOrder} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
-import {validFamilyMembers,validFamilyRelationships} from './family-tree';
+import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
@@ -157,7 +157,7 @@ interface KachamakState {
   ) => void;
 
   /* trash */
-  restoreFromTrash: (trashId: string) => void;
+  restoreFromTrash: (trashId: string) => string | undefined;
   deleteForever: (trashId: string) => void;
   emptyTrash: () => void;
 }
@@ -545,7 +545,11 @@ export const useKachamak = create<KachamakState>()(
         if(!remove && existing.some(same))return 'This relationship already exists.';
         const next=remove ? existing.filter(edge=>!same(edge)) : [...existing,relation];
         if(!validFamilyRelationships(next))return 'A person cannot be their own ancestor.';
-        set({novels:state.novels.map(n=>n===novel?touch({...novel,familyRelationships:next}):n)});
+        // Removing a shared link explicitly also cancels its restoration from older tree snapshots.
+        const trash = remove ? novel.trash.map(item => item.familyRelationships?.some(same)
+          ? {...item, familyRelationships:item.familyRelationships.filter(edge => !same(edge))}
+          : item) : novel.trash;
+        set({novels:state.novels.map(n=>n===novel?touch({...novel,trash,familyRelationships:next}):n)});
         return null;
       },
       setTimeline: (patch) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,timeline:{rootId:null,detail:'synopsis',compact:false,...n.timeline,...patch}}):n)})),
@@ -653,9 +657,14 @@ export const useKachamak = create<KachamakState>()(
           id
         );
         if (!removed) return;
+        const impact = section === 'family' ? familyDeletionImpact(novel, id) : undefined;
+        if (impact?.exclusive.size) {
+          novel.familyRelationships = novel.familyRelationships!.filter(edge => !impact.exclusive.has(edge));
+        }
         novel.sections = { ...novel.sections, [section]: nodes };
         novel.trash = [
-          { id: uid(), parentId, section, node: removed, deletedAt: Date.now(), originalIndex: originalIndex ?? undefined },
+          { id: uid(), parentId, section, node: removed, deletedAt: Date.now(), originalIndex: originalIndex ?? undefined,
+            ...(impact?.related.length ? {familyRelationships:impact.related} : {}) },
           ...novel.trash,
         ];
         const removedNode: NoteNode = removed;
@@ -809,6 +818,15 @@ export const useKachamak = create<KachamakState>()(
         if (!novel) return;
         const item = novel.trash.find((t) => t.id === trashId);
         if (!item) return;
+        if (item.section === 'family' && item.familyRelationships?.length) {
+          const live = novel.familyRelationships ?? [];
+          const keys = new Set(live.map(relationshipKey));
+          const merged = [...live, ...item.familyRelationships.filter(edge => !keys.has(relationshipKey(edge)))];
+          if (!validFamilyRelationships(merged)) {
+            return 'Restoring this tree would create a loop in the current ancestry. Review the parent links and try again. The tree is still in Trash.';
+          }
+          novel.familyRelationships = merged;
+        }
         const restoreAtOriginalPosition = (list: NoteNode[]) => {
           if (typeof item.originalIndex === "number" && Number.isInteger(item.originalIndex) && item.originalIndex >= 0) {
             list.splice(Math.min(item.originalIndex, list.length), 0, item.node);
@@ -853,7 +871,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 34,
+      version: 35,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -866,6 +884,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<35){ /* Earlier Trash items have no saved family links. */ }
         if(version<34){ /* Existing three-block layouts are valid; Timeline is added at display time. */ }
         if(version<33){ /* Existing parent and partner records retain their original terms and endpoints. */ }
         if(version<32){for(const novel of s.novels??[])if(novel.sections && novel.sections.family===undefined)novel.sections.family=[];}
