@@ -140,9 +140,9 @@ function ProjectSearch() {
                     style={{ color: r.node.color || "#a1a1aa" }}
                   />
                 ) : (
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" style={{ color: r.node.color || undefined }} />
                 )}
-                <span className="min-w-0 flex-1 truncate">{r.node.title}</span>
+                <span className="min-w-0 flex-1 truncate" style={{ color: r.node.color || undefined }}>{r.node.title}</span>
                 <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
                   {TABS.find((t) => t.key === r.section)?.label ?? r.section}
                 </span>

@@ -1,3 +1,5 @@
+> **2026-11-19 — Boja naziva u levom panelu.** Naziv u stablu, polje za preimenovanje i rezultati pretrage prikazuju odabranu boju beleške. Na probnim beleškama provereni su izabrani i neizabrani red, promena i uklanjanje boje i ponovno učitavanje.
+
 > **2026-11-19 — Boja naslova beleške.** Naslov u prikazima Write, Split, Continuous, Grid i List preuzima boju beleške iz Document colour. Na probnim beleškama u Chrome-u provereni su promena boje, No colour, različite boje u dva okna i ponovno učitavanje. Podnaslovi u tekstu zadržavaju sopstveno formatiranje.
 
 > **2026-11-19 — Nazivi u levom Timeline stablu.** Svaki red prikazuje samo naziv beleške. U Chrome-u na probnoj knjizi provereni su ugnježdeni periodi i događaji, njihove ikone i datumi u Details.
@@ -479,6 +481,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Boja naziva u levom panelu.** Naziv u stablu, polje za preimenovanje i rezultati pretrage prikazuju odabranu boju beleške. Na probnim beleškama provereni su izabrani i neizabrani red, promena i uklanjanje boje i ponovno učitavanje.
 
 > **2026-11-19 — Boja naslova beleške.** Naslov u prikazima Write, Split, Continuous, Grid i List preuzima boju beleške iz Document colour. Na probnim beleškama u Chrome-u provereni su promena boje, No colour, različite boje u dva okna i ponovno učitavanje. Podnaslovi u tekstu zadržavaju sopstveno formatiranje.
 

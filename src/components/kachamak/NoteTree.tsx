@@ -54,14 +54,15 @@ import {addTimelineNote} from '@/lib/kachamak/timeline-actions';
 
 /* fallback only for old notes that never got an icon — the user picks the real one */
 const kindIcon = (n: NoteNode, open: boolean) => {
-  if (n.kind === "act") return <Landmark className="h-3.5 w-3.5 text-orange-400/80" />;
+  const style = { color: n.color || undefined };
+  if (n.kind === "act") return <Landmark className="h-3.5 w-3.5 text-orange-400/80" style={style} />;
   if (n.kind === "chapter" || n.kind === "folder")
     return open ? (
-      <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
+      <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" style={style} />
     ) : (
-      <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+      <Folder className="h-3.5 w-3.5 text-muted-foreground" style={style} />
     );
-  return <BookText className="h-3.5 w-3.5 text-muted-foreground" />;
+  return <BookText className="h-3.5 w-3.5 text-muted-foreground" style={style} />;
 };
 
 /* the note's own icon (user-chosen) tinted with its colour */
@@ -364,6 +365,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
         {renaming ? (
           <input
             ref={renameRef}
+            style={{ color: node.color || undefined }}
             onFocus={(e) => e.currentTarget.select()}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -375,7 +377,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             className="flex-1 min-w-0 bg-black/40 border border-orange-500/50 rounded px-1 text-sm outline-none"
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate" title={node.title}>{node.title}</span>
+          <span className="min-w-0 flex-1 truncate" style={{ color: node.color || undefined }} title={node.title}>{node.title}</span>
         )}
         {/* three-dot menu at the END of the row — exact structure from the
             documentation; the dots stay visible while a menu/picker is open */}
