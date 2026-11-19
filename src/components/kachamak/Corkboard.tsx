@@ -91,7 +91,7 @@ function IndexCard({
         ) : (
           <FileText className="h-3.5 w-3.5 shrink-0" style={{color:node.color||"var(--muted-foreground)"}} />
         )}
-        <span className="truncate text-[13px] font-semibold leading-tight">{node.title}</span>
+        <span className="truncate text-[13px] font-semibold leading-tight" style={{color:node.color || undefined}}>{node.title}</span>
       </div>
       <p className="flex-1 overflow-hidden px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
         {stripHtml(node.synopsis) || (

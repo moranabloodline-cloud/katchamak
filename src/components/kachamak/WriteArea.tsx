@@ -329,6 +329,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
             value={node.title}
             onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
             aria-label="Title"
+            style={{color:node.color || undefined}}
             className="mb-4 w-full bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
             placeholder="Title"
           />

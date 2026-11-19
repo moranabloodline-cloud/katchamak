@@ -141,7 +141,7 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
                   <td className={`px-4 py-2.5 ${dropLine}`}>
                     <span className="flex items-center gap-2">
                       <Icon className="h-4 w-4 shrink-0" style={{ color: n.color || "var(--muted-foreground)" }} />
-                      <span className={parent ? "font-medium" : ""}>{n.title}</span>
+                      <span className={parent ? "font-medium" : ""} style={{color:n.color || undefined}}>{n.title}</span>
                     </span>
                   </td>
                   <td className={`px-4 py-2.5 text-muted-foreground ${dropLine}`}>
