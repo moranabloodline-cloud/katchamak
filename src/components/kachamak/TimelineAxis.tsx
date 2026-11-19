@@ -1,14 +1,35 @@
 'use client';
-import {useRef,useState} from 'react';
-import {TIMELINE_LIMIT,eventType,formatDate,type StoryCalendar,type TimelineGroup} from '@/lib/kachamak/story-calendar';
+import {useEffect,useRef,useState} from 'react';
+import {TIMELINE_LIMIT,TIMELINE_MAX_SPAN,eventType,formatDate,type StoryCalendar,type TimelineGroup} from '@/lib/kachamak/story-calendar';
 import {groupFor,type EventRow} from '@/lib/kachamak/timeline-data';
 import {timelineAxisRows,timelineGeometry,timelineOutsideParent,timelineParent,timelineTicks} from '@/lib/kachamak/timeline-layout';
 import {iconByName} from '@/lib/kachamak/icons';
 import {Hourglass,Zap,TriangleAlert,ChevronLeft,ChevronRight} from 'lucide-react';
-interface Props {calendar:StoryCalendar;rows:EventRow[];groups:TimelineGroup[];center:number;span:number;compact:boolean;onPan:(center:number)=>void;onOpen:(r:EventRow)=>void;selectedId?:string}
+interface Props {calendar:StoryCalendar;rows:EventRow[];groups:TimelineGroup[];center:number;span:number;compact:boolean;onPan:(center:number)=>void;onZoom:(viewport:{center:number;span:number})=>void;onOpen:(r:EventRow)=>void;selectedId?:string}
 type Drag={x:number;width:number;delta:number};
-export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onOpen,selectedId}:Props) {
+export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onZoom,onOpen,selectedId}:Props) {
+  const chartRef=useRef<HTMLDivElement>(null),scaleRef=useRef<HTMLDivElement>(null);
   const gesture=useRef<Drag|null>(null),[drag,setDrag]=useState<Drag|null>(null);
+  useEffect(()=>{
+    const chart=chartRef.current;
+    if(!chart)return;
+    const wheel=(event:WheelEvent)=>{
+      if(!event.ctrlKey)return;
+      event.preventDefault();
+      event.stopPropagation();
+      if(!event.deltaY||gesture.current)return;
+      const unit=event.deltaMode===1?16:event.deltaMode===2?Math.max(chart.clientHeight,1):1;
+      const step=Math.max(-1,Math.min(1,event.deltaY*unit/300));
+      const nextSpan=Math.max(Math.min(60,span),Math.min(TIMELINE_MAX_SPAN,Math.round(span*2**step)));
+      if(nextSpan===span)return;
+      const scale=scaleRef.current?.getBoundingClientRect();
+      const anchor=scale?.width&&event.clientX>=scale.left&&event.clientX<=scale.right
+        ? (event.clientX-scale.left)/scale.width : 0.5;
+      onZoom({center:center+(anchor-0.5)*(span-nextSpan),span:nextSpan});
+    };
+    chart.addEventListener('wheel',wheel,{passive:false});
+    return ()=>chart.removeEventListener('wheel',wheel);
+  },[center,span,onZoom]);
   const left=center-span/2-(drag?.delta??0);
   const begin=(e:React.PointerEvent)=>{if(e.button!==0)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);const value={x:e.clientX,width:e.currentTarget.getBoundingClientRect().width,delta:0};gesture.current=value;setDrag(value);};
   const move=(e:React.PointerEvent)=>{const g=gesture.current;if(!g)return;const delta=Math.round((e.clientX-g.x)/Math.max(1,g.width)*span);const next={...g,delta:Math.max(center-TIMELINE_LIMIT,Math.min(center+TIMELINE_LIMIT,delta))};gesture.current=next;setDrag(next);};
@@ -17,11 +38,11 @@ export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onO
   const ticks=timelineTicks(calendar,left,span);
   const ordered=timelineAxisRows(rows),visible=rows.filter(row=>timelineGeometry(row.event,left,span));
   const grid={gridTemplateColumns:'minmax(180px,240px) minmax(360px,1fr)'};
-  return <div className="min-h-0 flex-1 overflow-auto kachamak-scroll" aria-label="Timeline chart">
+  return <div ref={chartRef} className="min-h-0 flex-1 overflow-auto kachamak-scroll" aria-label="Timeline chart">
     <div className="min-w-[600px]">
       <div className="sticky top-0 z-20 grid border-b border-border bg-background" style={grid}>
         <div className="sticky left-0 z-10 flex h-12 items-center border-r border-border bg-background px-4 text-xs text-muted-foreground">Events &amp; time periods</div>
-        <div className="relative h-12 overflow-hidden" aria-label="Timeline date scale">{ticks.map(tick=><div key={tick.value} className="absolute bottom-0 h-8 truncate border-l border-border pl-2 text-[11px] font-medium text-foreground/80" title={tick.label} style={{left:`${(tick.value-left)/span*100}%`,maxWidth:'24%'}}>{tick.label}</div>)}</div>
+        <div ref={scaleRef} className="relative h-12 overflow-hidden" aria-label="Timeline date scale">{ticks.map(tick=><div key={tick.value} className="absolute bottom-0 h-8 truncate border-l border-border pl-2 text-[11px] font-medium text-foreground/80" title={tick.label} style={{left:`${(tick.value-left)/span*100}%`,maxWidth:'24%'}}>{tick.label}</div>)}</div>
       </div>
       {ordered.map(({row,depth})=>{const period=eventType(row.event)==='period',geometry=timelineGeometry(row.event,left,span),parent=timelineParent(row),parentGeometry=parent?.event?timelineGeometry(parent.event,left,span):null,outside=timelineOutsideParent(row),group=groups.find(g=>g.id===groupFor(row.event,groups)),color=row.node.color||group?.color||'#d6a64a',Icon=iconByName(row.node.icon)??(period?Hourglass:Zap),dates=formatDate(calendar,row.event.start,row.event.precision)+(row.event.end!==undefined?' – '+formatDate(calendar,row.event.end,row.event.endPrecision??row.event.precision):''),label=`Open ${period?'time period':'event'} ${row.node.title}`;
         return <div key={row.node.id} data-timeline-row={row.node.id} className={`grid border-b border-border/50 ${selectedId===row.node.id?'bg-amber-400/[.07]':period?'bg-muted/20':''}`} style={grid}>
@@ -39,6 +60,6 @@ export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onO
       })}
     </div>
     {!!rows.length&&!visible.length&&<p className="p-5 text-center text-xs text-muted-foreground">No events in this range. Use Fit events to return to your dates.</p>}
-    {!!rows.length&&<p className="px-4 py-3 text-[11px] text-muted-foreground">Select a note to edit its dates. Drag empty space to browse.</p>}
+    {!!rows.length&&<p className="px-4 py-3 text-[11px] text-muted-foreground">Select a note to edit its dates. Drag empty space to browse. Ctrl + scroll to zoom.</p>}
   </div>;
 }

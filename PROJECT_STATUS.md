@@ -1,3 +1,5 @@
+> **2026-11-19 — Ctrl + skrol na Timeline osi:** zum vremenskog opsega oko kursora radi iznad grafikona. Običan skrol je nativan, a datumi i zoom panela se ne menjaju. Potvrđeno ciljanim testovima i u Chrome-u na sintetičkom projektu.
+
 > **2026-11-18 — Calendar bez gornje navigacije:** strelice meseca, skok na datum i First event premešteni su u postojeći meni ⋯. Mreža dana počinje odmah ispod glavnih tabova. Ciljani testovi potvrđuju navigaciju, zadržavanje meseca i filtere, a Chrome provera potvrđuje raspored i meni.
 
 > **2026-11-18 — Calendar bez No exact day:** uklonjen je izdvojeni blok iznad mreže dana. Događaji sa preciznošću meseca ili godine ostaju u podacima, stablu i na Timeline osi. Ciljani test i Chrome provera sa sintetičkim beleškama potvrđuju da mreža i datirani događaji rade.
@@ -445,6 +447,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Ctrl + skrol na Timeline osi:** zum vremenskog opsega oko kursora radi iznad grafikona. Običan skrol je nativan, a datumi i zoom panela se ne menjaju. Potvrđeno ciljanim testovima i u Chrome-u na sintetičkom projektu.
 
 > **2026-11-18 — Calendar bez gornje navigacije:** strelice meseca, skok na datum i First event premešteni su u postojeći meni ⋯. Mreža dana počinje odmah ispod glavnih tabova. Ciljani testovi potvrđuju navigaciju, zadržavanje meseca i filtere, a Chrome provera potvrđuje raspored i meni.
 

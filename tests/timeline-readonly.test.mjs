@@ -34,17 +34,36 @@ assert.ok(timelineDateErrors([parent],{type:'period',start:tick(1960),end:tick(1
 const loose=timelineCalendarBroadDates(rows,GREGORIAN,tick(1960,1));assert.deepEqual(loose.map(row=>row.node.id),['Year only','Month only']);
 const month=timelineCalendarWeeks(rows,GREGORIAN,tick(1960,1));assert.ok(!month.flatMap(week=>week.items).some(item=>item.row.node.id.includes('only')),'Year/month precision never invents a day in the calendar');
 for(const calendar of [GREGORIAN,calendarPreset('uniform')])for(const [left,span] of [[-7e15,8e15],[0,minutesPerDay(calendar)*14],[-1e8,2e8],[100,60]]){const ticks=timelineTicks(calendar,left,span);assert.ok(ticks.length>0&&ticks.length<=10);assert.ok(ticks.every(t=>Number.isSafeInteger(t.value)&&t.value>=left&&t.value<=left+span));}
-const box=document.createElement('div');document.body.append(box);const root=createRoot(box);let panned=null,opened=null;
+const box=document.createElement('div');document.body.append(box);const root=createRoot(box);let panned=null,opened=null,zoomed=null;
 const {TimelineCalendar}=await import('../src/components/kachamak/TimelineCalendar.tsx');
 await React.act(async()=>root.render(React.createElement(TimelineCalendar,{calendar:GREGORIAN,rows,groups:[],center:tick(1960,1),compact:false,onOpen(){},onAdd(){}})));
 assert.equal(box.querySelector('[aria-label="Events without an exact day"]'),null);
 assert.doesNotMatch(box.textContent,/No exact day|Year only|Month only/);
 assert.ok(box.querySelector('[aria-label^="Add event on "]'),'Calendar still renders its day grid');
-await React.act(async()=>root.render(React.createElement(TimelineAxis,{calendar:GREGORIAN,rows,groups:[],center:tick(1950),span:tick(2001)-tick(1900),compact:false,onOpen:row=>opened=row.node.id,onPan:value=>panned=value})));
+const chartCenter=tick(1950),chartSpan=tick(2001)-tick(1900);
+await React.act(async()=>root.render(React.createElement(TimelineAxis,{calendar:GREGORIAN,rows,groups:[],center:chartCenter,span:chartSpan,compact:false,onOpen:row=>opened=row.node.id,onPan:value=>panned=value,onZoom:value=>zoomed=value})));
 assert.equal(box.querySelectorAll('[aria-label^="Resize end"]').length,0);assert.equal(box.querySelectorAll('[draggable="true"]').length,0);
 assert.equal(box.querySelectorAll('[data-timeline-row]').length,rows.length,'Every note gets a separate row; no label competes for time range width');
 const pointer=async(el,type,x)=>React.act(async()=>el.dispatchEvent(new dom.MouseEvent(type,{bubbles:true,button:0,clientX:x})));
 const marker=box.querySelector('[aria-label="Show dates for Nested"]');await pointer(marker,'pointerdown',100);await pointer(marker,'pointermove',500);await pointer(marker,'pointerup',500);assert.equal(panned,null,'Dragging a note does not pan or edit it');assert.equal(JSON.stringify(novel.sections),before);
+const scale=box.querySelector('[aria-label="Timeline date scale"]');
+scale.getBoundingClientRect=()=>({left:200,right:1000,width:800});
+let bubbled=0;
+box.addEventListener('wheel',()=>bubbled++);
+const wheel=async(ctrlKey,deltaY)=>{
+  const event=new dom.WheelEvent('wheel',{ctrlKey,deltaY,clientX:800,bubbles:true,cancelable:true});
+  await React.act(async()=>marker.dispatchEvent(event));
+  return event;
+};
+assert.equal((await wheel(false,-300)).defaultPrevented,false);
+assert.equal(zoomed,null);
+assert.equal(bubbled,1,'Plain scroll stays native');
+assert.equal((await wheel(true,-300)).defaultPrevented,true);
+assert.equal(bubbled,1,'Timeline zoom does not trigger the outer panel zoom');
+assert.deepEqual(zoomed,{span:Math.round(chartSpan/2),center:chartCenter+(chartSpan-Math.round(chartSpan/2))/4});
+await wheel(true,300);
+assert.equal(zoomed.span,chartSpan*2);
+assert.equal(JSON.stringify(novel.sections),before,'Zoom changes the viewport, not the events');
 await React.act(async()=>marker.click());assert.equal(opened,'Nested');
 const track=box.querySelector('[data-timeline-track="Nested"]');track.getBoundingClientRect=()=>({width:1000});await pointer(track,'pointerdown',100);await pointer(track,'pointermove',200);await pointer(track,'pointerup',200);assert.ok(Number.isSafeInteger(panned));assert.equal(JSON.stringify(novel.sections),before,'Browsing the viewport cannot mutate dates, parents or content');
 useKachamak.setState({novels:[novel],activeNovelId:novel.id});
