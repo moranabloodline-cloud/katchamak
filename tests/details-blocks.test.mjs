@@ -31,7 +31,7 @@ await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:[
 assert.deepEqual(blocks(),['Image block','Codex block']);
 assert.ok(document.querySelector('section[aria-label="Codex block"] header button[aria-label="Add Codex link"]'),'The link picker sits beside the Codex header');
 await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:['image','aliases','codex']}));
-assert.deepEqual(blocks(),[]);assert.ok([...document.querySelectorAll('button')].some(button=>button.textContent==='Add block'));
+assert.deepEqual(blocks(),[]);assert.ok(document.querySelector('button[aria-label="Add block"]'));
 const {hiddenDetailBlocks,updatedAt,...rest}=node(),{updatedAt:originalTime,...original}=preserved;assert.deepEqual(rest,original,'Hiding all blocks preserves image, aliases, links and text');
 const roundtrip=JSON.parse(JSON.stringify(useKachamak.getState().novels[0]));assert.ok(isUsableBackup(roundtrip));
 await React.act(async()=>useKachamak.setState({novels:[roundtrip]}));assert.deepEqual(blocks(),[],'Visibility survives portable roundtrip');
@@ -63,5 +63,28 @@ for(const [key,values] of [['collapsedDetailBlocks',[['unknown'],['image','image
  await React.act(async()=>actions.updateNode('research',one,{[key]:value}));assert.deepEqual(node()[key],key==='detailBlockOrder'?reordered:['image']);
 }
 assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},24).novels[0],legacy,'v25 migration leaves legacy layouts and content untouched');
+let spouse,tree;
+await React.act(async()=>{
+  spouse=actions.addNode('codex',null,'doc','Other character');
+  tree=actions.addNode('family',null,'doc','Test family');
+  actions.updateNode('family',tree,{familyMembers:[target,spouse]});
+  actions.setTab('codex');
+  actions.select(target);
+});
+const bookId=useKachamak.getState().activeNovelId;
+const wife={kind:'wife',from:target,to:spouse};
+const relationshipBox=()=>document.querySelector('section[aria-label="Relationships block"]');
+assert.equal(relationshipBox(),null);
+await React.act(async()=>assert.equal(actions.changeFamilyRelationship(bookId,tree,wife),null));
+assert.deepEqual(blocks(),['Image block','Aliases block','Relationships block','Codex block']);
+assert.equal(relationshipBox().querySelector('li span').textContent,'Wife of');
+await React.act(async()=>relationshipBox().querySelector('li button').click());
+assert.equal(useKachamak.getState().selectedNodeId,spouse);
+assert.equal(relationshipBox().querySelector('li span').textContent,'Spouse of');
+assert.equal(relationshipBox().querySelector('li button').textContent,'Reference');
+await React.act(async()=>actions.updateNode('codex',spouse,{hiddenDetailBlocks:['aliases']}));
+assert.deepEqual(blocks(),['Image block','Relationships block','Codex block']);
+await React.act(async()=>assert.equal(actions.changeFamilyRelationship(bookId,tree,wife,true),null));
+assert.equal(relationshipBox(),null);
 await React.act(async()=>root.unmount());dom.close();
 console.log('Details blocks passed: autosave aliases, hide/restore, order, collapse/expand, content preservation, per-note isolation, portable roundtrip, validation and legacy migrations.');

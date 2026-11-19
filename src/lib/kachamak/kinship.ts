@@ -66,7 +66,7 @@ const catalog = [
 type Entry = typeof catalog[number]['entries'][number];
 type Preset = Entry['forward'][number] | Entry['reverse'][number];
 export type KinshipKind = Preset | 'custom';
-interface Definition { family:Preset; group:string; reverse:boolean; mutual:boolean; line:Line; steps:number; peer:boolean }
+interface Definition { family:Preset; inverse:Preset; group:string; reverse:boolean; mutual:boolean; line:Line; steps:number; peer:boolean }
 const definitions = new Map<string,Definition>();
 export const kinshipGroups = catalog.map(({group,entries})=>{
   const kinds:Preset[]=[];
@@ -74,7 +74,8 @@ export const kinshipGroups = catalog.map(({group,entries})=>{
     for(const kind of [...entry.forward,...entry.reverse]){
       const reverse=(entry.reverse as readonly string[]).includes(kind);
       const peer=entry.line==='couple'||group==='Siblings'||['first_cousin','second_cousin','third_cousin'].includes(kind);
-      definitions.set(kind,{family:entry.forward[0],group,reverse,mutual:entry.mutual,line:entry.line,steps:entry.steps,peer});
+      const inverse=reverse?entry.forward[0]:(entry.reverse[0]??entry.forward[0]);
+      definitions.set(kind,{family:entry.forward[0],inverse,group,reverse,mutual:entry.mutual,line:entry.line,steps:entry.steps,peer});
       kinds.push(kind);
     }
   }
@@ -88,6 +89,16 @@ export function kinshipName(kind:KinshipKind) {
 
 export function relationshipName(edge:FamilyRelationship) {
   return edge.kind==='custom' ? edge.label : kinshipName(edge.kind);
+}
+
+export function relationshipCaption(edge:FamilyRelationship,person:string) {
+  if(edge.from===person)return relationshipName(edge)+' of';
+  if(edge.kind==='custom')return edge.mutual?edge.label+' of':'Has as '+edge.label;
+  const inverse=definitions.get(edge.kind)!.inverse;
+  if(inverse==='fiancé')return 'Engaged to';
+  if(inverse==='aunt-in-law')return 'Aunt or uncle by marriage of';
+  if(inverse==='niece-in-law')return 'Niece or nephew by marriage of';
+  return kinshipName(inverse)+' of';
 }
 
 export function kinshipFamily(kind:KinshipKind) {

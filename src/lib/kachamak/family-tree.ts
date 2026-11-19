@@ -1,6 +1,6 @@
 import type {FamilyRelationship, NoteNode, Novel} from './types';
 import {forEachNode} from './utils';
-import {directParentage,isSiblingRole,kinshipFamily,relationshipDirection,relationshipKey,validKind} from './kinship';
+import {directParentage,isSiblingRole,kinshipFamily,relationshipCaption,relationshipDirection,relationshipKey,validKind} from './kinship';
 
 export function validFamilyMembers(value:unknown):boolean {
   return value===undefined || Array.isArray(value) && value.every(id=>typeof id==='string' && id.length>0) && new Set(value).size===value.length;
@@ -88,9 +88,28 @@ export function familyTreeView(novel:Novel,tree:NoteNode|null) {
   const codex=codexIndex(novel);
   const people=tree?familyMembers(novel,tree,codex):[];
   const edges=familyEdges(novel,people);
+  const reasons=inferredRelationships(novel,codex,new Set(people.map(p=>p.id)),edges);
+  return {people,edges:[...edges,...reasons.keys()],reasons};
+}
+
+export function noteRelationships(novel:Novel,person:string) {
+  const rows:{target:NoteNode;label:string;reason?:string}[]=[];
+  if(!novel.familyRelationships?.length)return rows;
+  const codex=codexIndex(novel);
+  if(!codex.has(person))return rows;
+  const visible=new Set(codex.keys());
+  const edges=novel.familyRelationships.filter(e=>(e.from===person||e.to===person)&&visible.has(e.from)&&visible.has(e.to));
+  const reasons=inferredRelationships(novel,codex,visible,edges,person);
+  for(const edge of [...edges,...reasons.keys()]){
+    const target=codex.get(edge.from===person?edge.to:edge.from)!;
+    rows.push({target,label:relationshipCaption(edge,person),reason:reasons.get(edge)});
+  }
+  return rows;
+}
+
+function inferredRelationships(novel:Novel,codex:Map<string,NoteNode>,visible:Set<string>,edges:FamilyRelationship[],focus?:string) {
   const reasons=new Map<FamilyRelationship,string>();
-  if(people.length<2)return {people,edges,reasons};
-  const visible=new Set(people.map(p=>p.id));
+  if(visible.size<2)return reasons;
   const roles=new Map<string,FamilyRole>();
   const parents=new Map<string,Set<string>>();
   const childrenInView=new Map<string,Set<string>>();
@@ -112,14 +131,17 @@ export function familyTreeView(novel:Novel,tree:NoteNode|null) {
   }
 
   const names=(ids:Set<string>)=>[...ids].map(id=>codex.get(id)!.title||'Untitled note').join(', ');
-  for(const child of visible){
+  for(const child of parents.keys()){
+    if(!visible.has(child))continue;
     const viaBySibling=new Map<string,Set<string>>();
     const viaByGrandparent=new Map<string,Set<string>>();
     for(const parent of parents.get(child)??[]){
-      for(const sibling of childrenInView.get(parent)??[]){
-        if(child<sibling && !explicitSiblings.has(siblingPair(child,sibling)))addToIndex(viaBySibling,sibling,parent);
+      if(!focus||child===focus)for(const sibling of childrenInView.get(parent)??[]){
+        if((focus?child!==sibling:child<sibling) && !explicitSiblings.has(siblingPair(child,sibling)))addToIndex(viaBySibling,sibling,parent);
       }
-      for(const grandparent of parents.get(parent)??[]){
+      const grandparents=parents.get(parent);
+      const candidates=focus && child!==focus ? (grandparents?.has(focus)?[focus]:[]) : grandparents??[];
+      for(const grandparent of candidates){
         if(visible.has(grandparent) && !explicitGrandparents.has(JSON.stringify([grandparent,child])))
           addToIndex(viaByGrandparent,grandparent,parent);
       }
@@ -139,7 +161,7 @@ export function familyTreeView(novel:Novel,tree:NoteNode|null) {
       reasons.set(edge,'Through · '+names(via));
     }
   }
-  return {people,edges:[...edges,...reasons.keys()],reasons};
+  return reasons;
 }
 
 // A pair can have several descriptions (e.g. sibling and twin). Draw one
@@ -161,11 +183,29 @@ export const familyCard={width:168,height:62};
 export function familyLayout(people:NoteNode[],edges:FamilyRelationship[]) {
   const ids=people.map(person=>person.id);
   const peers=new Map<string,string[]>();
+  const parents=new Map<string,Set<string>>();
+  const partners=new Map<string,Set<string>>();
+  const children=new Map<string,Set<string>>();
   const directions=edges.map(relationshipDirection);
+  for(const edge of edges){
+    const parent=directParentage(edge);
+    if(parent){addToIndex(parents,parent.to,parent.from);addToIndex(children,parent.from,parent.to);}
+  }
+  for(const edge of directions.filter(e=>e.line==='couple')){
+    addToIndex(partners,edge.from,edge.to);addToIndex(partners,edge.to,edge.from);
+  }
   for(const edge of directions.filter(e=>e.peer)){
     for(const [id,mate] of [[edge.from,edge.to],[edge.to,edge.from]]){
       if(!peers.has(id))peers.set(id,[]);
       peers.get(id)!.push(mate);
+    }
+  }
+  // Co-parents can occupy the same generation without a recorded partnership.
+  for(const family of parents.values()){
+    const [first,...rest]=family;
+    for(const other of rest){
+      peers.set(first,[...(peers.get(first)??[]),other]);
+      peers.set(other,[...(peers.get(other)??[]),first]);
     }
   }
   const group=new Map<string,string>();
@@ -193,10 +233,42 @@ export function familyLayout(people:NoteNode[],edges:FamilyRelationship[]) {
   const width=widest*stepX+24,height=rows.size*stepY+16;
   const positions=new Map<string,{x:number;y:number}>();
   const levels=[...rows.keys()].sort((a,b)=>a-b);
+  const blocksByLevel:string[][][]=[];
   for(const [level,rank] of levels.entries()){
     const row=rows.get(rank)!;
+    // Keep couples together and put each branch beneath its parents, even
+    // when the user added people from different families in alternating order.
+    const blocks:string[][]=[],assigned=new Set<string>();
+    for(const id of row){
+      if(assigned.has(id))continue;
+      const block=[id,...[...(partners.get(id)??[])].filter(mate=>row.includes(mate)&&!assigned.has(mate))];
+      block.forEach(member=>assigned.add(member));
+      blocks.push(block);
+    }
+    const anchor=(block:string[])=>{
+      const xs=block.flatMap(id=>[...(parents.get(id)??[])].flatMap(parent=>positions.has(parent)?[positions.get(parent)!.x]:[]));
+      return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:Infinity;
+    };
+    for(const block of blocks)block.sort((a,b)=>anchor([a])-anchor([b]));
+    blocks.sort((a,b)=>anchor(a)-anchor(b));
+    blocksByLevel.push(blocks);
     const left=(width-(row.length*stepX-40))/2;
-    row.forEach((id,i)=>positions.set(id,{x:left+i*stepX,y:30+level*stepY}));
+    blocks.flat().forEach((id,i)=>positions.set(id,{x:left+i*stepX,y:30+level*stepY}));
+  }
+  // Center each parental household over its children while reserving room
+  // for the other households in the same generation.
+  for(const blocks of blocksByLevel.reverse()){
+    let remaining=blocks.reduce((sum,block)=>sum+block.length*stepX,0);
+    let minLeft=32;
+    for(const block of blocks){
+      const xs=block.flatMap(id=>[...(children.get(id)??[])].map(child=>positions.get(child)!.x));
+      const span=(block.length-1)*stepX;
+      const desired=xs.length?(Math.min(...xs)+Math.max(...xs)-span)/2:positions.get(block[0])!.x;
+      const left=Math.max(minLeft,Math.min(width+8-remaining,desired));
+      block.forEach((id,i)=>positions.get(id)!.x=left+i*stepX);
+      remaining-=block.length*stepX;
+      minLeft=left+block.length*stepX;
+    }
   }
   return {width,height,positions};
 }

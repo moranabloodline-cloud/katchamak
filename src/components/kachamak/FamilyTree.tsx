@@ -2,14 +2,15 @@
 import {useId,useMemo,useState} from 'react';
 import {Check,ChevronDown,GitFork,Network,Plus,UserRound,X} from 'lucide-react';
 import type {FamilyRelationship,NoteNode,Novel} from '@/lib/kachamak/types';
-import {familyCard,familyConnections,familyLayout,familyTreeView} from '@/lib/kachamak/family-tree';
-import {customNameLimit,kinshipGroups,kinshipName,relationshipDirection,relationshipName,type KinshipKind} from '@/lib/kachamak/kinship';
+import {familyCard,familyTreeView} from '@/lib/kachamak/family-tree';
+import {customNameLimit,kinshipGroups,kinshipName,relationshipName,type KinshipKind} from '@/lib/kachamak/kinship';
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {iconByName} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
+import {familyDiagram} from '@/lib/kachamak/family-diagram';
 
 const field='h-8 w-full min-w-0 rounded border border-border bg-background px-2 text-xs';
 const action='inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent';
@@ -88,14 +89,9 @@ export function FamilyTreeEditor({novel,tree}:{novel:Novel;tree:NoteNode}){
 export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:NoteNode|null;onCreate:()=>void;onEdit:()=>void}){
   const [preview,setPreview]=useState<string|null>(null);
   const marker=useId().replace(/[^\w-]/g,'');
-  const {people,edges,reasons}=useMemo(()=>familyTreeView(novel,tree),[novel,tree]);
-  const {width,height,positions}=familyLayout(people,edges);
+  const {people,width,height,positions,paths}=useMemo(()=>familyDiagram(novel,tree),[novel,tree]);
   const names=new Map(people.map(p=>[p.id,p.title]));
-  const connections=familyConnections(edges);
-  const lineTypes=new Set(connections.map(({edge})=>{
-    const line=relationshipDirection(edge).line;
-    return reasons.has(edge)?(line==='ancestry'?'grandparents':'siblings'):line;
-  }));
+  const lineTypes=new Set(paths.map(path=>path.style));
   const {width:w,height:h}=familyCard;
   const rightOpen=useKachamak(s=>s.rightPanelOpen);
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">
@@ -110,27 +106,14 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
       <div className="relative mx-auto" style={{width,height}} aria-label="People and relationships">
         <svg aria-hidden="true" width={width} height={height} className="pointer-events-none absolute inset-0 overflow-visible text-muted-foreground">
           <defs><marker id={marker} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8" fill="currentColor"/></marker></defs>
-          {connections.map(({edge,roles})=>{
-            const direction=relationshipDirection(edge);
-            const inferred=reasons.has(edge);
-            const a=positions.get(direction.from)!,b=positions.get(direction.to)!;
-            const lateral=direction.line!=='ancestry';
-            const near=lateral && a.y===b.y && Math.abs(a.x-b.x)<=w+40;
-            const x1=a.x+w/2,x2=b.x+w/2,mid=(a.y+h+b.y)/2;
-            let d=near ? `M${a.x<b.x?a.x+w:a.x} ${a.y+h/2} H${a.x<b.x?b.x:b.x+w}` : lateral && a.y===b.y
-              ? `M${x1} ${a.y} C${x1} ${a.y-28},${x2} ${b.y-28},${x2} ${b.y}`
-              : lateral && a.y>b.y ? `M${x1} ${a.y} C${x1} ${(a.y+b.y+h)/2},${x2} ${(a.y+b.y+h)/2},${x2} ${b.y+h+2}`
-              : `M${x1} ${a.y+h} C${x1} ${mid},${x2} ${mid},${x2} ${b.y-2}`;
-            // An inferred grandparent in the same column needs its own path
-            // around the intervening parent card.
-            if(inferred && !lateral && a.x===b.x){
-              const side=a.x+w,bend=side+32;
-              d=`M${side} ${a.y+h/2} C${bend} ${a.y+h/2},${bend} ${b.y+h/2},${side+2} ${b.y+h/2}`;
-            }
-            const description=roles.map(role=>[names.get(role.from),relationshipName(role),names.get(role.to),reasons.get(role)].filter(Boolean).join(' · ')).join('\n');
-            const dash=inferred&&!lateral?'6 3':direction.line==='couple'?'4 4':lateral?'1.5 3':undefined;
-            return <path key={JSON.stringify(edge)} d={d} data-relation={edge.kind} fill="none" stroke="currentColor" strokeWidth="1.5" className={'pointer-events-stroke'+(inferred?' text-amber-400/75':'')} strokeDasharray={dash} markerEnd={direction.mutual?undefined:`url(#${marker})`}><title>{description}</title></path>;
-          })}
+          {paths.map(({roles,style,arrow,d})=><g key={JSON.stringify(roles)}>
+            <path d={d} fill="none" className="stroke-background" strokeWidth="4.5"/>
+            <path d={d} data-relation={roles[0].kind} fill="none" stroke="currentColor" strokeWidth="1.5"
+              className="pointer-events-stroke" strokeDasharray={style==='couple'?'4 4':style==='kin'?'1.5 3':undefined}
+              markerEnd={arrow?`url(#${marker})`:undefined}>
+              <title>{roles.map(e=>[names.get(e.from),relationshipName(e),names.get(e.to)].join(' · ')).join('\n')}</title>
+            </path>
+          </g>)}
         </svg>
         {people.map(person=>{
           const {x,y}=positions.get(person.id)!,Icon=iconByName(person.icon)??UserRound;
@@ -142,12 +125,10 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
           </button>;
         })}
       </div>
-      {edges.length>0 && <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {paths.length>0 && <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {lineTypes.has('ancestry')&&<span className="inline-flex items-center gap-1"><GitFork className="size-3"/>Ancestry</span>}
         {lineTypes.has('couple')&&<span className="inline-flex items-center gap-1"><span aria-hidden="true" className="w-4 border-t border-dashed"/>Partners</span>}
         {lineTypes.has('kin')&&<span className="inline-flex items-center gap-1"><span aria-hidden="true" className="w-4 border-t border-dotted"/>Other kinship</span>}
-        {lineTypes.has('siblings')&&<span className="inline-flex items-center gap-1"><span aria-hidden="true" className="w-4 border-t border-dotted border-amber-400/75"/>Siblings</span>}
-        {lineTypes.has('grandparents')&&<span className="inline-flex items-center gap-1"><span aria-hidden="true" className="w-4 border-t border-dashed border-amber-400/75"/>Grandparents &amp; grandchildren</span>}
       </div>}
     </div>}
     <NotePreview noteId={preview} onClose={()=>setPreview(null)}/>

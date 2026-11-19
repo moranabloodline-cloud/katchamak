@@ -5,6 +5,8 @@ globalThis.document=window.document;
 const {useKachamak,exportNovelJson,isUsableBackup}=await import('../src/lib/kachamak/store.ts');
 const {familyMembers,familyEdges,familyLayout,familyConnections,familyTreeView,validFamilyRelationships}=await import('../src/lib/kachamak/family-tree.ts');
 const {kinshipGroups,relationshipKey}=await import('../src/lib/kachamak/kinship.ts');
+const {familyDiagram}=await import('../src/lib/kachamak/family-diagram.ts');
+const {noteRelationships}=await import('../src/lib/kachamak/family-tree.ts');
 const {validCloudLibrary}=await import('../scripts/cloud-library-runtime.mjs');
 const state=useKachamak.getState;
 state().createNovel('Synthetic family','QA');
@@ -132,4 +134,32 @@ for(const kind of ['guardian','partner','stepparent','foster_parent','godparent'
   assert.deepEqual(inferred([rel(kind,'m','a'),rel('parent','m','b')]),[]);
 }
 assert.deepEqual(inferred([rel('parent','g','x'),rel('parent','x','m'),rel('parent','m','a')]),[]);
+const sheet=id=>noteRelationships(lineageBook,id).map(r=>[r.target.id,r.label,!!r.reason]);
+assert.deepEqual(sheet('m'),[['a','Mother of',false],['b','Parent of',false],['g','Child of',false]]);
+assert.ok(sheet('b').some(([id,label,auto])=>id==='a'&&label==='Brother of'&&auto));
+assert.ok(sheet('g').some(([id,label,auto])=>id==='a'&&label==='Grandfather of'&&auto));
+const onlyInferred=familyDiagram(lineageBook,lineageTree);
+assert.equal(onlyInferred.people.length,3);assert.equal(onlyInferred.paths.length,0);
+const recorded=[...lineage,rel('spouse','m','p'),rel('father','p','a'),rel('father','p','b'),rel('mother','m','x'),rel('grandparent','g','a')];
+const routes=familyDiagram({...lineageBook,familyRelationships:recorded},{familyMembers:['a','g','x','p','b','m']});
+assert.equal(routes.paths.flatMap(p=>p.roles).length,recorded.length);
+assert.ok(routes.paths.some(p=>p.roles.length===4&&p.roles.every(r=>['a','b'].includes(r.to)||r.kind==='son')));
+assert.ok(routes.paths.some(p=>p.roles.length===1&&p.roles[0].to==='x'));
+assert.equal(new Set(routes.paths.flatMap(p=>p.roles)).size,recorded.length);
+for(const {d} of routes.paths){
+  assert.match(d,/^[MHV\d\s.\-]+$/);
+  let x,y;
+  for(const [,op,v,v2] of d.matchAll(/([MHV])(-?[\d.]+)(?: (-?[\d.]+))?/g)){
+    const nx=op==='V'?x:Number(v),ny=op==='M'?Number(v2):op==='V'?Number(v):y;
+    if(op!=='M')for(const box of routes.positions.values()){
+      const crosses=op==='H'? y>box.y&&y<box.y+62&&Math.min(x,nx)<box.x+168&&Math.max(x,nx)>box.x
+        : x>box.x&&x<box.x+168&&Math.min(y,ny)<box.y+62&&Math.max(y,ny)>box.y;
+      assert.ok(!crosses,'A connector crossed the inside of a card: '+d);
+    }
+    x=nx;y=ny;
+  }
+}
+assert.deepEqual(noteRelationships({...lineageBook,familyRelationships:[]},'a'),[]);
+assert.deepEqual(noteRelationships({...lineageBook,sections:{codex:lineageBook.sections.codex.filter(n=>n.id!=='m')}},'a'),[]);
+assert.equal(JSON.stringify(lineageBook),before);
 console.log('Family trees passed: shared book relationships, per-tree membership, generations, cycles, Codex rename/trash/restore, isolation, JSON export/import, cloud validation and legacy migration.');
