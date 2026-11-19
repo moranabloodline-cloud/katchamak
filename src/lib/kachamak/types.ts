@@ -82,6 +82,7 @@ export interface NoteNode {
   links?: string[];
   familyMembers?: string[]; // Codex IDs included in this graph
   aliases?: string[];
+  ignoreAutoLinking?: boolean; // skip this note as a target during automatic link review
   linkChoices?: LinkChoice[];
   event?: StoryEvent;
   timelineKind?: 'event' | 'period'; // an undated Timeline note awaiting its dates

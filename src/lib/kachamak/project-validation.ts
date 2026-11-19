@@ -26,6 +26,7 @@ export function isReadableProject(value: unknown): boolean {
     const node = value as Record<string, unknown>;
     return typeof node.id === "string" && typeof node.title === "string" &&
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
+      (node.ignoreAutoLinking === undefined || typeof node.ignoreAutoLinking === 'boolean') &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
       validFamilyMembers(node.familyMembers) && validCoverImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validHiddenDetailBlocks(node.hiddenDetailBlocks) &&

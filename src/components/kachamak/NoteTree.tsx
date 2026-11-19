@@ -28,6 +28,7 @@ import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -452,6 +453,12 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
               >
                 {node.hidden ? "Show" : "Hide"}
               </DropdownMenuItem>
+              <DropdownMenuCheckboxItem
+                checked={node.ignoreAutoLinking === true}
+                onCheckedChange={checked => updateNode(section, node.id, { ignoreAutoLinking: checked === true })}
+              >
+                Ignore in auto-linking
+              </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
                 disabled={!hasChildren}

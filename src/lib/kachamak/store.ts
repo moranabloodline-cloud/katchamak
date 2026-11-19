@@ -629,6 +629,7 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         if (!target) return;
+        if(patch.ignoreAutoLinking !== undefined && typeof patch.ignoreAutoLinking !== 'boolean')return;
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
@@ -871,7 +872,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 35,
+      version: 36,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -884,6 +885,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<36){ /* Notes without an explicit opt-out remain automatic link targets. */ }
         if(version<35){ /* Earlier Trash items have no saved family links. */ }
         if(version<34){ /* Existing three-block layouts are valid; Timeline is added at display time. */ }
         if(version<33){ /* Existing parent and partner records retain their original terms and endpoints. */ }

@@ -31,7 +31,8 @@ export function removeUnavailableNoteLinks(source:Pick<NoteNode,'content'|'linkC
 }
 
 export function pendingLinkReview(novel:Novel, source:NoteNode) {
-  return scanLinks(contentText(source.content),flattenNotes(novel).map(row=>row.node),source.linkChoices,source.id).filter(match=>!match.explicit);
+  const targets = flattenNotes(novel).map(row => row.node).filter(note => !note.ignoreAutoLinking);
+  return scanLinks(contentText(source.content),targets,source.linkChoices,source.id).filter(match=>!match.explicit);
 }
 
 /** A batch never resolves an ambiguous name without a selected target. */

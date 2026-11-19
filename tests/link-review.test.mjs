@@ -66,4 +66,30 @@ assert.deepEqual(pendingLinkReview(novel(),{...node(),...repaired}).map(m=>m.tex
 assert.ok(pendingLinkReview(novel(),{...node(),...repaired}).every(m=>m.candidates.length===2),'Repair never silently picks between namesakes');
 const stale=prepareLinkReview(novel(),{...node(),content:scanHtml,linkChoices:[{...skipped,targetId:'deleted-note'},kept]});
 assert.equal(stale.unavailable,1);assert.deepEqual(stale.linkChoices,[kept]);
+// An opt-out belongs to the target note, across documents and Save passes.
+s.updateNode('codex',a,{aliases:['Cast'],ignoreAutoLinking:true});
+s.updateNode('codex',one,{ignoreAutoLinking:true});
+const sample='<p>People, Cast, People. Morrigan at Gateway. <a href="#note/'+a+'">People</a></p>';
+const acceptedFolder={start:0,end:6,text:'People',targetId:a};
+for (const id of [source,gate]) {
+  const document={...findNodeInNovel(novel(),id).node,content:sample,linkChoices:[acceptedFolder]};
+  const prepared=prepareLinkReview(novel(),document);
+  assert.equal(prepared.unavailable,0);
+  assert.equal(prepared.content,sample);
+  assert.deepEqual(prepared.linkChoices,[acceptedFolder]);
+  const pending=pendingLinkReview(novel(),{...document,...prepared});
+  assert.ok(pending.every(hit=>!hit.candidates.some(note=>note.id===a||note.id===one)));
+  assert.deepEqual(pending.find(hit=>hit.text==='Morrigan').candidates.map(note=>note.id),[two]);
+}
+s.updateNode('codex',one,{ignoreAutoLinking:false});
+s.updateNode('timeline',source,{content:sample,linkChoices:[acceptedFolder]});
+const reloaded=JSON.parse(JSON.stringify(novel()));
+const reopened=findNodeInNovel(reloaded,source).node;
+assert.deepEqual(pendingLinkReview(reloaded,reopened).map(hit=>hit.text),['Morrigan','Gateway']);
+assert.deepEqual(pendingLinkReview(reloaded,reopened)[0].candidates.map(note=>note.id),[one,two]);
+const {validCloudLibrary}=await import('../scripts/cloud-library-runtime.mjs');
+assert.ok(validCloudLibrary({novels:[reloaded],collections:[]}));
+assert.deepEqual(pendingLinkReview(novel(),{...findNodeInNovel(novel(),a).node,content:'<p>Gateway</p>'}).map(hit=>hit.targetId),[gate]);
+s.updateNode('codex',a,{ignoreAutoLinking:false});
+assert.deepEqual(pendingLinkReview(novel(),node()).map(hit=>hit.text),['Cast','People','Morrigan','Gateway']);
 console.log('Link review passed: every tab, duplicate names, aliases, all/one/ignore decisions, preserved HTML, stable IDs, rebasing, roundtrip and stale-content rejection.');

@@ -1,3 +1,5 @@
+> **2026-11-19 — Ignorisanje beleške pri automatskom linkovanju.** Stavka „Ignore in auto-linking“ u meniju beleške izuzima njen naslov i aliase iz predloga pri svakom Save u celoj knjizi. Deca foldera i druge istoimene beleške ostaju zasebni ciljevi. Postojeće veze i ručni izbor su sačuvani. Na probnom projektu u Chrome-u provereni su uključivanje, dva snimanja, ponovno učitavanje i isključivanje.
+
 > **2026-11-19 — Relationships u Codexu.** Direktne veze se vide ako oba lika pripadaju istom postojećem stablu knjige. Izvedeno srodstvo se računa iz tih veza. Provereni su stari zapisi sa stablom u korpi, ispražnjena korpa, zajednička veza u više stabala, ugnježdeno stablo i vraćanje posle ponovnog učitavanja. Prikaz samo čita postojeće podatke.
 
 > **2026-11-19 — Porodično stablo u korpi.** Pre brisanja korisnik vidi koliko direktnih veza nestaje iz Codexa. Veze koje prikazuje drugo stablo ostaju aktivne. Korpa čuva stablo sa vezama za vraćanje, uključujući ugnježdene grane. Chrome provera na probnoj porodici pokriva otkazivanje, potvrdu, čuvanje, ponovno otvaranje i vraćanje iz korpe.
@@ -469,6 +471,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Ignorisanje beleške pri automatskom linkovanju.** Stavka „Ignore in auto-linking“ u meniju beleške izuzima njen naslov i aliase iz predloga pri svakom Save u celoj knjizi. Deca foldera i druge istoimene beleške ostaju zasebni ciljevi. Postojeće veze i ručni izbor su sačuvani. Na probnom projektu u Chrome-u provereni su uključivanje, dva snimanja, ponovno učitavanje i isključivanje.
 
 > **2026-11-19 — Relationships u Codexu.** Direktne veze se vide ako oba lika pripadaju istom postojećem stablu knjige. Izvedeno srodstvo se računa iz tih veza. Provereni su stari zapisi sa stablom u korpi, ispražnjena korpa, zajednička veza u više stabala, ugnježdeno stablo i vraćanje posle ponovnog učitavanja. Prikaz samo čita postojeće podatke.
 
