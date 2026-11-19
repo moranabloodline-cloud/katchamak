@@ -1,3 +1,5 @@
+> **2026-11-19 — Automatsko srodstvo:** Family Tree izvodi braću i sestre iz zajedničkog roditelja, a babe, dede i unuke iz dve roditeljske veze. Graf i Relationships koriste iste veze knjige i kada posrednik nije u prikazanom stablu. Ručni unos ima prednost. Izvedene veze se računaju pri prikazu. Ciljani testovi i Chrome na sintetičkoj knjizi proverili su oba prikaza, uklanjanje roditeljske veze, čuvanje i ponovno učitavanje.
+
 > **2026-11-19 — Porodične veze:** Relationships ima pretragu 138 naziva srodstva i slobodan unos za dodatne nazive. Smer i obostrane veze koriste ista pravila u svim stablima knjige. Provereni su duplikati, petlje u poreklu, raniji zapisi, JSON, cloud i izbor tastaturom na sintetičkom stablu.
 
 > **2026-11-19 — Family Tree:** svaka beleška u novom tabu bira osobe iz Codexa iste knjige. Graf i standardni desni panel sa dodatkom Family koriste zajedničke veze roditelj–dete i partnerstvo. Uklanjanje osobe iz prikaza čuva lik i veze. Provere obuhvataju ugnježdene beleške, dve porodice, izolaciju knjiga, preimenovanje, Trash/restore, stare projekte, JSON i cloud čuvanje/učitavanje.
@@ -455,6 +457,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Automatsko srodstvo:** Family Tree izvodi braću i sestre iz zajedničkog roditelja, a babe, dede i unuke iz dve roditeljske veze. Graf i Relationships koriste iste veze knjige i kada posrednik nije u prikazanom stablu. Ručni unos ima prednost. Izvedene veze se računaju pri prikazu. Ciljani testovi i Chrome na sintetičkoj knjizi proverili su oba prikaza, uklanjanje roditeljske veze, čuvanje i ponovno učitavanje.
 
 > **2026-11-19 — Porodične veze:** Relationships ima pretragu 138 naziva srodstva i slobodan unos za dodatne nazive. Smer i obostrane veze koriste ista pravila u svim stablima knjige. Provereni su duplikati, petlje u poreklu, raniji zapisi, JSON, cloud i izbor tastaturom na sintetičkom stablu.
 

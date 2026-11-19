@@ -66,7 +66,7 @@ const catalog = [
 type Entry = typeof catalog[number]['entries'][number];
 type Preset = Entry['forward'][number] | Entry['reverse'][number];
 export type KinshipKind = Preset | 'custom';
-interface Definition { family:Preset; reverse:boolean; mutual:boolean; line:Line; steps:number; peer:boolean }
+interface Definition { family:Preset; group:string; reverse:boolean; mutual:boolean; line:Line; steps:number; peer:boolean }
 const definitions = new Map<string,Definition>();
 export const kinshipGroups = catalog.map(({group,entries})=>{
   const kinds:Preset[]=[];
@@ -74,7 +74,7 @@ export const kinshipGroups = catalog.map(({group,entries})=>{
     for(const kind of [...entry.forward,...entry.reverse]){
       const reverse=(entry.reverse as readonly string[]).includes(kind);
       const peer=entry.line==='couple'||group==='Siblings'||['first_cousin','second_cousin','third_cousin'].includes(kind);
-      definitions.set(kind,{family:entry.forward[0],reverse,mutual:entry.mutual,line:entry.line,steps:entry.steps,peer});
+      definitions.set(kind,{family:entry.forward[0],group,reverse,mutual:entry.mutual,line:entry.line,steps:entry.steps,peer});
       kinds.push(kind);
     }
   }
@@ -88,6 +88,22 @@ export function kinshipName(kind:KinshipKind) {
 
 export function relationshipName(edge:FamilyRelationship) {
   return edge.kind==='custom' ? edge.label : kinshipName(edge.kind);
+}
+
+export function kinshipFamily(kind:KinshipKind) {
+  return definitions.get(kind)?.family;
+}
+
+export function isSiblingRole(kind:KinshipKind) {
+  return definitions.get(kind)?.group==='Siblings';
+}
+
+// Only an immediate parent/child role establishes parentage. An ancestor,
+// spouse, guardian or stepparent alone does not establish it.
+export function directParentage(edge:FamilyRelationship) {
+  const family=kinshipFamily(edge.kind);
+  if(family!=='parent' && family!=='biological_parent' && family!=='adoptive_parent')return;
+  return relationshipDirection(edge);
 }
 
 export const customNameLimit=100;
