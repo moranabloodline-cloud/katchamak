@@ -29,14 +29,13 @@ import {
 import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
 import {PageSurface} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
-import {PAGE_FONTS,DEFAULT_PAGE_FORMAT,pageVariables} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES,DEFAULT_PAGE_FORMAT,pageVariables} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 
 const FONTS = PAGE_FONTS;
-const SIZES = [12, 14, 16, 18, 20, 24];
 const SPACINGS = ["1.0", "1.15", "1.5", "2.0"];
 
 /* Text Style (tačka 8, spec §8): dropdown ISpred font kontrola,
@@ -89,11 +88,12 @@ const cmd = (command: string, value?: string) => {
 
 /* One fixed text toolbar, shared by Split panes. It formats its saved selection;
    the separate Format menu owns the page defaults used as fallback values. */
-export function EditorToolbar() {
+export function EditorToolbar({node,section}: {node?: NoteNode | null; section?: SectionKey} = {}) {
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const setSpellCheck=useKachamak(state=>state.setEditorSpellCheck);
   const font = useKachamak((s) => s.editorFont ?? "Segoe UI");
-  const size = useKachamak((s) => s.editorSize ?? 16);
+  const pageSize = useKachamak((s) => s.editorSize ?? 16);
+  const size = node?.bodyFontSize ?? pageSize;
   const spacing = useKachamak((s) => s.editorSpacing ?? "1.5");
   const [selectedTypography,setSelectedTypography]=useState<{font:string;size:number;spacing:string}|null>(null);
 
@@ -123,7 +123,7 @@ export function EditorToolbar() {
     };
     document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
     return()=>{document.removeEventListener('selectionchange',sync);document.removeEventListener('focusin',sync);document.removeEventListener('input',sync);};
-  },[]);
+  },[font,size,spacing]);
 
   return (
     <div data-editor-toolbar className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
@@ -162,10 +162,21 @@ export function EditorToolbar() {
       <select
         aria-label="Font size"
         value={selectedTypography?.size??size}
-        onChange={(e) => {if(applyEditorTypography(savedRange.current,'fontSize',e.target.value+'px'))setSelectedTypography(old=>({...old??{font,size,spacing},size:Number(e.target.value)}));}}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          const range = savedRange.current;
+          const view = useKachamak.getState().view;
+          const canType = view === "write" || view === "split";
+          if (applyEditorTypography(range,'fontSize',next+'px')) {
+            setSelectedTypography(old=>({...old??{font,size,spacing},size:next}));
+          } else if (canType && section && node?.content === '' && (!range || editorForRange(range)?.dataset.noteId === node.id)) {
+            useKachamak.getState().updateNode(section,node.id,{bodyFontSize:next});
+            setSelectedTypography(null);
+          }
+        }}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
       >
-        {[...new Set([selectedTypography?.size??size,...SIZES])].sort((a,b)=>a-b).map((s) => (
+        {[...new Set([selectedTypography?.size??size,...NOTE_FONT_SIZES])].sort((a,b)=>a-b).map((s) => (
           <option key={s} value={s}>
             {s}
           </option>
@@ -336,7 +347,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
           <div
             style={{
               fontFamily: `'${font}', system-ui, sans-serif`,
-              fontSize: `${size}px`,
+              fontSize: `${node.bodyFontSize ?? size}px`,
               lineHeight: spacing,
             }}
           >

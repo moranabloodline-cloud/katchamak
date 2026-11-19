@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://test.local' }).window;
-for (const key of ['window','document','Document','DocumentFragment','DOMRect','HTMLElement','Element','Node','NodeFilter','Event','MouseEvent','KeyboardEvent','CustomEvent','MutationObserver','getComputedStyle','navigator']) {
+for (const key of ['window','document','Document','DocumentFragment','DOMRect','HTMLElement','HTMLInputElement','Element','Node','NodeFilter','Event','MouseEvent','KeyboardEvent','CustomEvent','MutationObserver','getComputedStyle','navigator']) {
   Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:typeof dom[key]==='function'&&!/^[A-Z]/.test(key)?dom[key].bind(dom):dom[key]});
 }
 globalThis.requestAnimationFrame=callback=>setTimeout(callback,0);
@@ -36,6 +36,8 @@ assert.deepEqual(novel.sections.binder.map(n=>n.id),[act1,act2],'Row menu must n
 assert.deepEqual(parent.children.map(n=>n.id),[chapter1,chapter2,added],'New note follows Chapter 2 inside the selected Act 1');
 assert.equal(parent.collapsed,false,'Parent expands to show its newly appended note');
 assert.equal(findNode(novel.sections.binder,added).content,'','New note starts empty');
+assert.equal(findNode(novel.sections.binder,added).bodyFontSize,8);
+assert.equal(findNode(novel.sections.binder,added).hiddenDetailBlocks,undefined,'Children keep the existing Details layout');
 assert.equal(findNode(novel.sections.binder,added).title,'Untitled','No automatic chapter numbering');
 assert.equal(useKachamak.getState().renamingNodeId,added,'New note is ready for naming');
 await React.act(async()=>actions.select(chapter1));
@@ -43,6 +45,10 @@ const nested=await createFromTree(chapter1);
 assert.deepEqual(findNode(useKachamak.getState().novels[0].sections.binder,chapter1).children.map(n=>n.id),[nested],'Selecting a note also appends inside that note');
 await React.act(async()=>actions.select(null));
 const top=await createFromTree(null,'Create top-level note');
+const topNote=findNode(useKachamak.getState().novels[0].sections.binder,top);
+assert.deepEqual(topNote.hiddenDetailBlocks,['image','aliases','codex','timeline']);
+assert.equal(topNote.bodyFontSize,8);
+assert.equal(topNote.content,'');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder.map(n=>n.id),[act1,act2,top],'No selected item appends at section root');
 // A selection from another section must not capture the new note.
 await React.act(async()=>{actions.select(chapter2);root.render(React.createElement(NoteTree,{section:'codex'}));});

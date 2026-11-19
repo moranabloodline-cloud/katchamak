@@ -97,7 +97,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
         const errors=timelineDateErrors(live.sections[row?.section??section],event,row?.node.id,parentId);
         if(errors.length)throw new Error(errors[0]);
       }
-      const id=row?.node.id||state.addNode(section,parentId??null,'doc',title.trim());
+      const id=row?.node.id||state.addNode(section,parentId??null,'doc',title.trim(),['timeline']);
       if(!id)throw new Error('The note could not be created.');
       state.updateNode(row?.section??section,id,{title:title.trim(),event,timelineKind:kind,icon:icon||undefined,links:[...new Set(links.filter(link=>link!==id))]});state.setRenamingNode(null);state.select(id);onSaved(start);onClose();
     }catch(e){setError(e instanceof Error?e.message:String(e));}

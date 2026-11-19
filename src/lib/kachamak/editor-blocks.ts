@@ -1,4 +1,4 @@
-import {PAGE_FONTS} from './page-format-validation.mjs';
+import {PAGE_FONTS,NOTE_FONT_SIZES} from './page-format';
 export function editorForRange(range:Range|null):HTMLElement|null {
   if(!range)return null;
   const element=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer as Element:range.commonAncestorContainer.parentElement;
@@ -54,7 +54,7 @@ export function applyEditorTypography(range:Range|null,property:'fontFamily'|'fo
   const editor=editorForRange(range);
   if(!editor||!range||range.collapsed||editor.getAttribute('contenteditable')!=='true')return false;
   if(property==='fontFamily'&&!PAGE_FONTS.includes(value))return false;
-  if(property==='fontSize'&&!/^(12|14|16|18|20|24)px$/.test(value))return false;
+  if(property==='fontSize'&&!NOTE_FONT_SIZES.some(size=>value===`${size}px`))return false;
   if(property==='lineHeight'&&!['1.0','1.15','1.5','2.0'].includes(value))return false;
   const leaves:{node:Text;start:number;end:number}[]=[];
   const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);

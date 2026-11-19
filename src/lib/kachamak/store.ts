@@ -18,8 +18,8 @@ import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel } from "./utils";
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
-import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
-import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
+import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
+import {DEFAULT_PAGE_FORMAT,validNoteFontSize,validPageFormat,type PageFormat} from './page-format';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -140,7 +140,8 @@ interface KachamakState {
     section: SectionKey,
     parentId: string | null,
     kind?: NoteNode["kind"],
-    title?: string
+    title?: string,
+    visibleRootBlocks?: DetailBlockKey[]
   ) => string | null;
   updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>) => void;
   deleteNode: (section: SectionKey, id: string) => void;
@@ -302,6 +303,7 @@ function makeNode(kind: NoteNode["kind"], title: string): NoteNode {
     id: uid(),
     title,
     kind,
+    bodyFontSize: 8,
     synopsis: "",
     content: "",
     notes: "",
@@ -612,7 +614,7 @@ export const useKachamak = create<KachamakState>()(
 
       /* ---------- notes ---------- */
 
-      addNode: (section, parentId, kind, title) => {
+      addNode: (section, parentId, kind, title, visibleRootBlocks = []) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return null;
         const roots = novel.sections[section];
@@ -622,6 +624,7 @@ export const useKachamak = create<KachamakState>()(
            (inline rename opens right away), picks its icon and its colour */
         const n = makeNode(kind ?? "doc", title ?? "Untitled");
         if (parentId === null) {
+          n.hiddenDetailBlocks = DETAIL_BLOCKS.map(block => block.key).filter(key => !visibleRootBlocks.includes(key));
           created = n;
           roots.push(n);
         } else {
@@ -652,7 +655,7 @@ export const useKachamak = create<KachamakState>()(
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
         if (!validCoverImage(patch.image)||!validDocumentTarget(patch.documentTarget)) return;
-        if (!validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
+        if (!validNoteFontSize(patch.bodyFontSize) || !validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (!validHiddenDetailBlocks(patch.collapsedDetailBlocks)||!validDetailBlockOrder(patch.detailBlockOrder)) return;
         if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
         if(section==='codex' && (patch.title!==undefined || patch.aliases!==undefined)) preserveCodexLinks(novel);
@@ -890,7 +893,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 38,
+      version: 39,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -903,6 +906,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<39){ /* Earlier notes keep their page font size and saved Details layout. */ }
         if(version<38){ /* Missing inspector preferences show every tab, without rewriting books. */ }
         if(version<37){ /* Existing books retain their tab order and legacy hidden sections. */ }
         if(version<36){ /* Notes without an explicit opt-out remain automatic link targets. */ }

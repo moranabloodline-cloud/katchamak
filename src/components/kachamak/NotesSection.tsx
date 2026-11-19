@@ -386,7 +386,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
       <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
-        {view!=="timeline"&&view!=="family"&&<EditorToolbar />}
+        {view!=="timeline"&&view!=="family"&&<EditorToolbar node={selected} section={selectedSection} />}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
           {view==='family' && novel && <FamilyTreeGraph key={treeScopeKey+':'+selected?.id} novel={novel} tree={selected}

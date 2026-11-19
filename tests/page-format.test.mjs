@@ -19,6 +19,7 @@ const root=createRoot(document.body.appendChild(document.createElement('div')));
 function Editor(){const novels=useKachamak(s=>s.novels);return React.createElement(EditorPage,{node:findNodeInNovel(novels[0],id).node,section:'binder'});}
 await React.act(async()=>root.render(React.createElement(Editor)));
 const editor=document.querySelector('[aria-label="Note content"]'),original=editor.innerHTML;
+assert.equal(editor.closest('[style*="font-size"]').style.fontSize,'8px','The new note body starts at 8 in the workspace');
 let range=document.createRange();range.setStart(editor.querySelector('p').firstChild,2);range.setEnd(editor.querySelector('b').firstChild,2);
 await React.act(async()=>assert.equal(applyEditorTypography(range,'fontSize','20px'),true));
 assert.equal(editor.textContent,'Alpha beta gamma.Second paragraph.');

@@ -16,6 +16,9 @@ const root=createRoot(document.body.appendChild(document.createElement('div')));
 function App(){const state=useKachamak(),hit=findNodeInNovel(state.novels[0],state.selectedNodeId);return React.createElement(NoteConnections,{node:hit.node,section:hit.section,mode:'details'});}
 await React.act(async()=>root.render(React.createElement(App)));
 const blocks=()=>[...document.querySelectorAll('section[aria-label$=" block"]')].map(el=>el.getAttribute('aria-label'));
+assert.deepEqual(blocks(),[],'A new root starts without optional blocks');
+assert.ok(document.querySelector('button[aria-label="Add block"]'));
+await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:[]}));
 assert.deepEqual(blocks(),['Image block','Aliases block','Codex block']);
 const aliasArea=document.querySelector('textarea[aria-label=Aliases]');
 const typeAliases=async(value)=>React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLTextAreaElement.prototype,'value').set.call(aliasArea,value);aliasArea.dispatchEvent(new dom.Event('input',{bubbles:true}));});
@@ -32,10 +35,12 @@ assert.deepEqual(blocks(),['Image block','Codex block']);
 assert.ok(document.querySelector('section[aria-label="Codex block"] header button[aria-label="Add Codex link"]'),'The link picker sits beside the Codex header');
 await React.act(async()=>actions.updateNode('research',one,{hiddenDetailBlocks:['image','aliases','codex']}));
 assert.deepEqual(blocks(),[]);assert.ok(document.querySelector('button[aria-label="Add block"]'));
-const {hiddenDetailBlocks,updatedAt,...rest}=node(),{updatedAt:originalTime,...original}=preserved;assert.deepEqual(rest,original,'Hiding all blocks preserves image, aliases, links and text');
+const {hiddenDetailBlocks,updatedAt,...rest}=node(),{updatedAt:originalTime,hiddenDetailBlocks:originalHidden,...original}=preserved;assert.deepEqual(rest,original,'Hiding all blocks preserves image, aliases, links and text');
 const roundtrip=JSON.parse(JSON.stringify(useKachamak.getState().novels[0]));assert.ok(isUsableBackup(roundtrip));
 await React.act(async()=>useKachamak.setState({novels:[roundtrip]}));assert.deepEqual(blocks(),[],'Visibility survives portable roundtrip');
-await React.act(async()=>actions.select(two));assert.deepEqual(blocks(),['Image block','Aliases block','Codex block'],'Visibility belongs to one note');
+await React.act(async()=>actions.select(two));assert.deepEqual(blocks(),[],'Choosing blocks in one new root does not affect another');
+await React.act(async()=>actions.updateNode('binder',two,{hiddenDetailBlocks:undefined}));
+assert.deepEqual(blocks(),['Image block','Aliases block','Codex block'],'Legacy notes without a saved layout show the original blocks');
 await React.act(async()=>{actions.select(one);actions.updateNode('research',one,{hiddenDetailBlocks:[]});});
 assert.equal(document.querySelector('textarea[aria-label=Aliases]').value,'Alternate name');assert.ok(document.querySelector('img'));
 for(const value of [['unknown'],['image','image'],'aliases',null]){
@@ -69,6 +74,7 @@ await React.act(async()=>{
   tree=actions.addNode('family',null,'doc','Test family');
   actions.updateNode('family',tree,{familyMembers:[target,spouse]});
   actions.setTab('codex');
+  actions.updateNode('codex',target,{hiddenDetailBlocks:[]});
   actions.select(target);
 });
 const bookId=useKachamak.getState().activeNovelId;
