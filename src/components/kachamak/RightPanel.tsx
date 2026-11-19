@@ -86,20 +86,20 @@ export function RightPanel({
   const rightZoom = useKachamak((s) => s.rightZoom ?? 1);
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
-  const [tab, setTab] = useState(familySettings ? 'family' : timelineSettings ? 'timeline' : 'info');
-  const activeTab = (tab==='timeline' && !timelineSettings) || (tab==='family' && !familySettings) ? 'info' : tab;
-  const extraTab = !!(timelineSettings || familySettings);
+  const [tab, setTab] = useState<string|null>(null);
+  const activeTab = tab==='family' && !familySettings ? 'info' : tab ?? (familySettings?'family':timelineSettings?'details':'info');
+  const extraTab = !!familySettings;
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addRequest = useTimelineAddRequest();
   const hasTimelineSettings = !!timelineSettings;
-  const timelineTabRef = useRef<HTMLButtonElement>(null);
+  const detailsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!hasTimelineSettings || !addRequest || addRequest.novelId !== activeNovelId || addRequest.section !== section
       || addRequest.noteId !== node.id || usesCompactTimelineEditor()) return;
-    setTab("timeline");
-    timelineTabRef.current?.scrollIntoView?.({block:"nearest",inline:"nearest"});
+    if(activeTab!=='details'){setTab('details');return;}
+    detailsRef.current?.querySelector('[aria-label="Timeline block"]')?.scrollIntoView?.({block:"nearest"});
     finishTimelineAdd(addRequest);
-  }, [addRequest, activeNovelId, hasTimelineSettings, node.id, section]);
+  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node.id, section]);
 
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
@@ -127,7 +127,6 @@ export function RightPanel({
             Mentions
           </TabsTrigger>
           {familySettings && <TabsTrigger value="family" className={tabCls}>Family</TabsTrigger>}
-          {timelineSettings && <TabsTrigger value="timeline" ref={timelineTabRef} className={tabCls}>Timeline</TabsTrigger>}
         </TabsList>
         {onHide && (
           <button
@@ -193,8 +192,8 @@ export function RightPanel({
 
         {/* Details — postojeće veze, aliasi i podaci note
             (arhitektura §11); osnovni podaci note ostaju ispod */}
-        <TabsContent value="details" className="mt-0 h-full min-h-0 flex-col gap-4 data-[state=active]:flex">
-          <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll"><NoteConnections node={node} section={section} mode="details" /></div>
+        <TabsContent ref={detailsRef} value="details" forceMount={timelineSettings?true:undefined} hidden={activeTab!=='details'} className="mt-0 h-full min-h-0 flex-col gap-1 data-[state=active]:flex data-[state=inactive]:hidden">
+          <NoteConnections node={node} section={section} mode="details" timelineSettings={timelineSettings}/>
 
           <dl className="mt-auto shrink-0 space-y-2 rounded-lg border border-white/10 bg-black/20 p-3 text-xs">
             <div className="flex justify-between gap-3">
@@ -217,7 +216,6 @@ export function RightPanel({
           <NoteConnections node={node} section={section} mode="mentions" />
         </TabsContent>
         {familySettings && <TabsContent value="family" className="mt-0">{familySettings}</TabsContent>}
-        {timelineSettings && <TabsContent value="timeline" forceMount hidden={activeTab !== 'timeline'} className="mt-0 data-[state=inactive]:hidden">{timelineSettings}</TabsContent>}
       </div>
     </Tabs>
   );

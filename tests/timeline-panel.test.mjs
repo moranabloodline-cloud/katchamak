@@ -32,13 +32,24 @@ assert.equal(JSON.stringify(b),untouchedB);
 await React.act(async()=>useKachamak.setState({activeNovelId:a.id,selectedNodeId:'period',paneAId:'period'}));
 const inspector=()=>document.querySelector('[aria-label="Note inspector"]');
 const tab=label=>[...inspector().querySelectorAll('[role="tab"]')].find(el=>el.textContent===label);
-assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions','Timeline']);
+assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions']);
 assert.equal(document.querySelectorAll('[aria-label="Timeline note settings"]').length,1);
 assert.ok(field('Timeline note settings').closest('[role="tabpanel"]'),'The existing editor belongs to the standard panel, not a parallel block');
-await click(tab('Timeline'));assert.equal(field('Event title').value,'A period');assert.equal(field('Timeline note type').value,'period');assert.ok(button('End date'));
+await click(tab('Details'));assert.equal(field('Event title').value,'A period');assert.equal(field('Timeline note type').value,'period');assert.ok(button('End date'));
 await change('Event title','Draft period title');
+const toggleMenu=async el=>React.act(async()=>el.dispatchEvent(new dom.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})));
+const menuItem=label=>[...document.querySelectorAll('[role="menuitem"]')].find(el=>el.textContent===label);
+const periodDates=structuredClone(a.sections.timeline[0].event);
+await toggleMenu(field('Timeline block options'));await click(menuItem('Hide block'));
+assert.ok(field('Timeline block').hidden);
+assert.deepEqual(a.sections.timeline[0].hiddenDetailBlocks,['timeline']);
+assert.equal(a.sections.timeline[0].title,'A period');
+assert.deepEqual(a.sections.timeline[0].event,periodDates);
+await toggleMenu(field('Add block'));await click(menuItem('Timeline'));
+assert.equal(field('Timeline block').hidden,false);
+assert.equal(field('Event title').value,'Draft period title','Hiding and restoring keeps the unapplied editor draft');
 for(const label of ['Info','Details','Mentions']){await click(tab(label));assert.equal(tab(label).getAttribute('aria-selected'),'true');}
-await click(tab('Timeline'));assert.equal(field('Event title').value,'Draft period title','Switching inspector tabs preserves unapplied form values');
+await click(tab('Details'));assert.equal(field('Event title').value,'Draft period title','Switching inspector tabs preserves unapplied form values');
 await click(button('Apply dates'));assert.equal(a.sections.timeline[0].title,'Draft period title');
 // Every modal belongs to this book, including group edits and navigation dates.
 for(const label of ['Groups','Go to date']){
@@ -59,13 +70,13 @@ const event=a.sections.timeline[0].children[0];assert.equal(event.event.groupId,
 // Changes made by another existing editor must not be overwritten by a stale inspector.
 await React.act(async()=>useKachamak.getState().updateNode('timeline','event',{event:{...event.event,cardColor:'#123456',groupId:''},links:[]}));
 await click(button('Apply dates'));assert.equal(event.event.cardColor,'#123456');assert.equal(event.event.groupId,'');assert.deepEqual(event.links,[]);
-for(const mode of ['Timeline','Calendar','Cards']){const list=field('Timeline display');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,4);assert.equal(field('Event title').value,'A event');}
+for(const mode of ['Timeline','Calendar','Cards']){const list=field('Timeline display');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,3);assert.equal(field('Event title').value,'A event');}
 await click(tab('Info'));assert.ok(document.querySelector('[aria-label="Resize Synopsis and Notes"]'));assert.match(document.body.textContent,/Keep synopsis/);
 await click(tab('Details'));assert.match(document.body.textContent,/Created/);await click(tab('Mentions'));
 assert.equal(JSON.stringify(b),untouchedB,'All edits stay in one book');
-await React.act(async()=>useKachamak.setState({view:'write'}));await click(tab('Timeline'));assert.equal(field('Event title').value,'A event','Timeline notes keep their date tab in Write mode too');
+await React.act(async()=>useKachamak.setState({view:'write'}));await click(tab('Details'));assert.equal(field('Event title').value,'A event','Timeline notes keep their Timeline block in Write mode too');
 await React.act(async()=>{useKachamak.setState({activeTab:'codex',selectedNodeId:'link',paneAId:'link'});root.render(React.createElement(NotesSection,{section:'codex'}));});
-assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions']);assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Info');
+assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions']);assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Details');assert.equal(field('Timeline block'),null);
 // Switching the existing-note chooser must not carry another note's dates/group.
 const {TimelineEventEditor}=await import('../src/components/kachamak/TimelineEventEditor.tsx');
 await React.act(async()=>{useKachamak.getState().updateNode('timeline','event',{event:{...event.event,groupId:'group'}});root.render(React.createElement(TimelineEventEditor,{novel:a,calendar:GREGORIAN,section:'timeline',start:tick(1920),onClose(){},onSaved(){}}));});
@@ -120,7 +131,7 @@ const beforeNew=JSON.stringify(qa.sections.timeline[0].children[1]);
 await option('Add event');
 const addedEvent=qa.sections.timeline[0].children.at(-1);
 assert.equal(addedEvent.timelineKind,'event');assert.equal(addedEvent.event,undefined);
-assert.equal(tab('Timeline').getAttribute('aria-selected'),'true','Explicit Add event opens the existing dates inspector');
+assert.equal(tab('Details').getAttribute('aria-selected'),'true','Explicit Add event opens the existing dates inspector');
 assert.equal(field('Event title').value,'New Event');
 assert.equal(button('Apply dates').disabled,true,'Do not invent a date');
 assert.equal(document.querySelector('[role="dialog"]'),null,'Wide layout uses the existing inspector without a dialog');
@@ -128,7 +139,7 @@ await click(tab('Info'));
 await option('Time Period');
 const addedPeriod=qa.sections.timeline[0].children.at(-1);
 assert.equal(addedPeriod.timelineKind,'period');assert.equal(addedPeriod.event,undefined);
-assert.equal(tab('Timeline').getAttribute('aria-selected'),'true');
+assert.equal(tab('Details').getAttribute('aria-selected'),'true');
 assert.equal(field('Event title').value,'New Time Period');
 assert.ok(button('End date'));
 assert.equal(JSON.stringify(qa.sections.timeline[0].children[1]),beforeNew);
@@ -164,4 +175,4 @@ assert.equal(useKachamak.getState().view,'corkboard');assert.equal(field('Timeli
 await click([...workspace.querySelectorAll('button')].find(el=>el.textContent==='List'));
 assert.equal(useKachamak.getState().view,'list');
 await React.act(async()=>root.unmount());dom.close();
-console.log('Timeline panel passed: single standard inspector/four tabs, complete editor, preserved tab draft, validation and apply, links/group/icon, three modes/Write, note/book isolation, calendar draft closure, legacy Outline fallback, calendar tree reveal, separate navigation, and explicit creation on wide and narrow layouts.');
+console.log('Timeline panel passed: Timeline block in the standard inspector, complete editor, preserved tab draft, validation and apply, links/group/icon, three modes/Write, note/book isolation, calendar draft closure, legacy Outline fallback, calendar tree reveal, separate navigation, and explicit creation on wide and narrow layouts.');

@@ -1,3 +1,5 @@
+> **2026-11-19 — Timeline u Details:** Standardni blok sadrži ceo editor datuma i može da se sakrije, vrati, skupi ili premesti po belešci. Plus je odmah iznad leve ivice kartice Created/Updated i dostupan je pri skrolovanju. Raniji rasporedi sa tri bloka ostaju čitljivi. Provereni su čuvanje i vraćanje rasporeda, neprimenjen unos pri skrivanju i promeni kartice, postojeća pravila za datume i otvaranje novih događaja na širokom i uskom prikazu.
+
 > **2026-11-19 — Zum porodičnog stabla:** Ctrl + skrol iznad Family Tree grafikona uvećava ili umanjuje prikaz oko kursora. Donja granica uzima u obzir dimenzije stabla i radne površine. Chrome provera sa 50 sintetičkih likova pokriva celo stablo, otvaranje umanjene kartice, običan skrol i izolaciju od zuma editora.
 
 > **2026-11-19 — Raspored porodica:** Family Tree slaže likove bez vidljive ručno unete veze u jednu levu kolonu, a svaku povezanu porodicu raspoređuje zasebno desno. Dodavanje i uklanjanje veze odmah računa novi raspored. Browser test sa osam probnih likova potvrđuje roditelja iznad dvoje dece, nezavisnu drugu porodicu, vraćanje u kolonu i ponovno otvaranje. Menja se isključivo prikaz.
@@ -463,6 +465,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Timeline u Details:** Standardni blok sadrži ceo editor datuma i može da se sakrije, vrati, skupi ili premesti po belešci. Plus je odmah iznad leve ivice kartice Created/Updated i dostupan je pri skrolovanju. Raniji rasporedi sa tri bloka ostaju čitljivi. Provereni su čuvanje i vraćanje rasporeda, neprimenjen unos pri skrivanju i promeni kartice, postojeća pravila za datume i otvaranje novih događaja na širokom i uskom prikazu.
 
 > **2026-11-19 — Zum porodičnog stabla:** Ctrl + skrol iznad Family Tree grafikona uvećava ili umanjuje prikaz oko kursora. Donja granica uzima u obzir dimenzije stabla i radne površine. Chrome provera sa 50 sintetičkih likova pokriva celo stablo, otvaranje umanjene kartice, običan skrol i izolaciju od zuma editora.
 

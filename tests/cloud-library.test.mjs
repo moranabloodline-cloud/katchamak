@@ -173,6 +173,8 @@ const reviewMatches=pendingLinkReview(reviewNovel,reviewSource);
 writer.updateNode('binder','note-1',{linkChoices:mergeReviewChoices(reviewNovel,reviewSource,reviewSource.content,reviewMatches.map((m,i)=>({start:m.start,end:m.end,text:m.text,targetId:i===0?target:i===1?otherTarget:null})))});
 const timelineRoot=writer.addNode('timeline',null,'doc','Timeline root'),timelineChild=writer.addNode('timeline',timelineRoot,'doc','Nested event');writer.updateNode('timeline',timelineChild,{content:'<p>Nested timeline prose.</p>',event:{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'}});writer.select('note-1');
 const eraCalendar={...calendarPreset('uniform'),eras:[{id:'third-age',name:'Third Age',abbreviation:'TA',startYear:101,color:'#f0883e'}]};
+const timelineLayout={detailBlockOrder:['codex','timeline','image','aliases'],hiddenDetailBlocks:['timeline'],collapsedDetailBlocks:['aliases','timeline']};
+writer.updateNode('timeline',timelineChild,timelineLayout);
 writer.openNoteTab('note-1');writer.setView('timeline');writer.setTimeline({detail:'titles',compact:true,display:'calendar',calendar:eraCalendar,groups:[{id:'history',name:'History',color:'#123456'}]});writer.updateNode('binder','note-1',{event:{start:-1440,end:2880,precision:'day',groupId:'history',banner:'data:image/png;base64,aGVsbG8='}});writer.closeTab('research');
 await cloud.saveWebLibrary();
 cloud.useWebLibrary.setState({ready:false});
@@ -181,6 +183,8 @@ useKachamak.setState({novels:[],activeNovelId:null,activeTab:'binder',view:'writ
 window.history.replaceState(null,'','/');
 await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().activeTab,'note:note-1');
+const restoredTimelineNote=useKachamak.getState().novels[0].sections.timeline.find(n=>n.id===timelineRoot).children[0];
+for(const [key,expected] of Object.entries(timelineLayout))assert.deepEqual(restoredTimelineNote[key],expected);
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].image,'data:image/png;base64,aW1hZ2U=','Note images survive authenticated cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].hiddenDetailBlocks,['aliases','codex'],'Block visibility survives cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].tabOrder,savedTabOrder,'Tab order survives authenticated cloud save/reload');
