@@ -1,5 +1,5 @@
 'use client';
-import {useId,useMemo,useState} from 'react';
+import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {Check,ChevronDown,GitFork,Network,Plus,UserRound,X} from 'lucide-react';
 import type {FamilyRelationship,NoteNode,Novel} from '@/lib/kachamak/types';
 import {familyCard,familyTreeView} from '@/lib/kachamak/family-tree';
@@ -90,6 +90,35 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const [preview,setPreview]=useState<string|null>(null);
   const marker=useId().replace(/[^\w-]/g,'');
   const {people,width,height,positions,paths}=useMemo(()=>familyDiagram(novel,tree),[novel,tree]);
+  const viewportRef=useRef<HTMLDivElement>(null),diagramRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const viewport=viewportRef.current,diagram=diagramRef.current;
+    if(!viewport||!diagram)return;
+    const wheel=(event:WheelEvent)=>{
+      if(!event.ctrlKey)return;
+      event.preventDefault();
+      event.stopPropagation();
+      const unit=event.deltaMode===1?16:event.deltaMode===2?viewport.clientHeight:1;
+      const step=Math.max(-1,Math.min(1,event.deltaY*unit/300));
+      if(!step)return;
+      const padding=getComputedStyle(viewport);
+      const availableWidth=Math.max(1,viewport.clientWidth-parseFloat(padding.paddingLeft)-parseFloat(padding.paddingRight));
+      const availableHeight=Math.max(1,viewport.clientHeight-parseFloat(padding.paddingTop)-parseFloat(padding.paddingBottom));
+      const current=Number(diagram.style.zoom)||1;
+      const minimum=Math.min(current,0.25,availableWidth/width,availableHeight/height);
+      const next=Math.max(minimum,Math.min(3,current*2**-step));
+      if(next===current)return;
+      const before=diagram.getBoundingClientRect();
+      diagram.style.zoom=String(next);
+      const after=diagram.getBoundingClientRect();
+      // Centering and scroll limits can move the scaled diagram's origin.
+      // Keep the same point under the pointer wherever there is room to scroll.
+      viewport.scrollLeft+=after.left+(event.clientX-before.left)*next/current-event.clientX;
+      viewport.scrollTop+=after.top+(event.clientY-before.top)*next/current-event.clientY;
+    };
+    viewport.addEventListener('wheel',wheel,{passive:false});
+    return ()=>viewport.removeEventListener('wheel',wheel);
+  },[width,height]);
   const names=new Map(people.map(p=>[p.id,p.title]));
   const lineTypes=new Set(paths.map(path=>path.style));
   const {width:w,height:h}=familyCard;
@@ -102,8 +131,8 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
     {people.length===0 ? <div className="m-auto max-w-sm px-5 py-12 text-center">
       <Network aria-hidden="true" className="mx-auto mb-4 size-8 text-amber-400/70"/>
       {tree?<p className="text-sm text-muted-foreground">Choose people from the Codex using + next to People in the Family tab.</p>:<button type="button" onClick={onCreate} className={action}><Plus className="size-4"/>New family tree</button>}
-    </div> : <div className="min-h-0 flex-1 overflow-auto kachamak-scroll px-4 py-5">
-      <div className="relative mx-auto" style={{width,height}} aria-label="People and relationships">
+    </div> : <div ref={viewportRef} className="min-h-0 flex-1 overflow-auto kachamak-scroll px-4 py-5 [overflow-anchor:none]">
+      <div ref={diagramRef} className="relative mx-auto" style={{width,height}} aria-label="People and relationships">
         <svg aria-hidden="true" width={width} height={height} className="pointer-events-none absolute inset-0 overflow-visible text-muted-foreground">
           <defs><marker id={marker} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8" fill="currentColor"/></marker></defs>
           {paths.map(({roles,style,arrow,d})=><g key={JSON.stringify(roles)}>

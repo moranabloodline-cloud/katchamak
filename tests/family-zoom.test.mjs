@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+
+const {window}=new JSDOM('<div id="root"></div>',{url:'https://test.local'});
+Object.assign(globalThis,{window,document:window.document,getComputedStyle:window.getComputedStyle.bind(window),IS_REACT_ACT_ENVIRONMENT:true});
+const React=await import('react');
+const {createRoot}=await import('react-dom/client');
+const {FamilyTreeGraph}=await import('../src/components/kachamak/FamilyTree.tsx');
+const people=Array.from({length:32},(_,i)=>({id:String(i),title:'Person '+i,children:[]}));
+const tree={id:'family',title:'Family',familyMembers:people.map(p=>p.id)};
+const novel={id:'book',sections:{codex:people},familyRelationships:people.slice(1).map(p=>({kind:'parent',from:'0',to:p.id}))};
+const root=createRoot(document.getElementById('root'));
+await React.act(async()=>root.render(React.createElement(FamilyTreeGraph,{novel,tree})));
+const chart=document.querySelector('[aria-label="People and relationships"]'),viewport=chart.parentElement;
+viewport.style.padding='20px';
+Object.defineProperties(viewport,{clientWidth:{value:600},clientHeight:{value:320}});
+const zoom=()=>Number(chart.style.zoom)||1;
+chart.getBoundingClientRect=()=>({left:20-viewport.scrollLeft,top:20-viewport.scrollTop});
+let bubbled=0;
+document.addEventListener('wheel',()=>bubbled++);
+function wheel(ctrlKey,deltaY,deltaMode=0){
+  const event=new window.WheelEvent('wheel',{bubbles:true,cancelable:true,ctrlKey,deltaY,deltaMode,clientX:120,clientY:80});
+  chart.dispatchEvent(event);
+  return event;
+}
+assert.equal(wheel(false,-300).defaultPrevented,false);
+assert.equal(zoom(),1);
+assert.equal(wheel(true,-300).defaultPrevented,true);
+assert.equal(zoom(),2);
+assert.equal(viewport.scrollLeft,100);
+assert.equal(viewport.scrollTop,60);
+wheel(true,-20,1);
+assert.equal(zoom(),3);
+for(let i=0;i<10;i++)wheel(true,1,2);
+assert.ok(zoom()<0.25 && parseFloat(chart.style.width)*zoom()<=560.01,'A wide tree can fit fully inside the padded viewport');
+const smallest=zoom();
+wheel(true,300);
+assert.equal(zoom(),smallest);
+assert.equal(bubbled,1,'Only the ordinary wheel reaches the surrounding workspace');
+await React.act(async()=>root.unmount());
+assert.equal(wheel(true,300).defaultPrevented,false);
+window.close();
+console.log('Family Tree wheel zoom, cursor anchor, bounds, fit and cleanup passed.');
