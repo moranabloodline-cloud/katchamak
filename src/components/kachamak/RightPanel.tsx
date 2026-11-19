@@ -125,11 +125,9 @@ export function RightPanel({
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
   const infoBoxRef = useRef<HTMLDivElement | null>(null);
 
-  /* tabovi bez ikonica i bez okvira — svetli samo selektovani (zlatna pilula,
-     isti aktivni jezik kao tabovi u topbaru); po Nikoli. dark: parnjaci su
-     nužni jer dark:data-... varijante iz ui/tabs.tsx inače pobeđuju */
+  // The context-menu trigger shares this button's data-state. aria-selected belongs to the tab.
   const tabCls =
-    "h-8 flex-none rounded-lg border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors data-[state=active]:border-[#ad7e2e]/80 dark:data-[state=active]:border-[#ad7e2e]/80 data-[state=active]:bg-[#3a2c18] dark:data-[state=active]:bg-[#3a2c18] data-[state=active]:text-[#fbe4a6] dark:data-[state=active]:text-[#fbe4a6] data-[state=active]:shadow-none dark:data-[state=active]:shadow-none";
+    "h-8 flex-none rounded-md border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors aria-selected:border-[#ad7e2e]/70 aria-selected:bg-[#3a2c18] aria-selected:text-[#fbe4a6] dark:aria-selected:text-[#fbe4a6]";
 
   return (
     <Tabs value={activeTab} onValueChange={setTab} className="flex h-full flex-col gap-0">

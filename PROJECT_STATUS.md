@@ -1,3 +1,5 @@
+> **2026-11-19 — Izabrani tab desnog panela.** Izabrani tab koristi isti zlatni okvir, pozadinu i boju teksta kao izabrani gornji tab. U pregledaču su proverena sva četiri taba, strelice na tastaturi i desni klik.
+
 > **2026-11-19 — Boja naziva u levom panelu.** Naziv u stablu, polje za preimenovanje i rezultati pretrage prikazuju odabranu boju beleške. Na probnim beleškama provereni su izabrani i neizabrani red, promena i uklanjanje boje i ponovno učitavanje.
 
 > **2026-11-19 — Boja naslova beleške.** Naslov u prikazima Write, Split, Continuous, Grid i List preuzima boju beleške iz Document colour. Na probnim beleškama u Chrome-u provereni su promena boje, No colour, različite boje u dva okna i ponovno učitavanje. Podnaslovi u tekstu zadržavaju sopstveno formatiranje.
@@ -481,6 +483,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Izabrani tab desnog panela.** Izabrani tab koristi isti zlatni okvir, pozadinu i boju teksta kao izabrani gornji tab. U pregledaču su proverena sva četiri taba, strelice na tastaturi i desni klik.
 
 > **2026-11-19 — Boja naziva u levom panelu.** Naziv u stablu, polje za preimenovanje i rezultati pretrage prikazuju odabranu boju beleške. Na probnim beleškama provereni su izabrani i neizabrani red, promena i uklanjanje boje i ponovno učitavanje.
 
