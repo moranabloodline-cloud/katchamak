@@ -140,6 +140,39 @@ assert.ok(sheet('b').some(([id,label,auto])=>id==='a'&&label==='Brother of'&&aut
 assert.ok(sheet('g').some(([id,label,auto])=>id==='a'&&label==='Grandfather of'&&auto));
 const onlyInferred=familyDiagram(lineageBook,lineageTree);
 assert.equal(onlyInferred.people.length,3);assert.equal(onlyInferred.paths.length,0);
+assert.equal(new Set([...onlyInferred.positions.values()].map(p=>p.x)).size,1);
+const extras=Array.from({length:12},(_,i)=>'extra-'+i);
+const cast=['m',...extras,'a','b','g','p','x'];
+const castBook={...lineageBook,sections:{codex:cast.map(id=>({id,title:id,children:[]}))}};
+const parentLinks=[rel('parent','m','a'),rel('parent','m','b')];
+const diagram=(edges,members=cast)=>familyDiagram({...castBook,familyRelationships:edges},{familyMembers:members});
+const column=diagram([]),small=diagram(parentLinks,['m','a','b']),mixed=diagram(parentLinks);
+assert.equal(new Set([...column.positions.values()].map(p=>p.x)).size,1);
+const left=mixed.positions.get(extras[0]).x;
+extras.forEach((id,i)=>{
+  const card=mixed.positions.get(id);
+  assert.equal(card.x,left);
+  if(i)assert.ok(card.y>=mixed.positions.get(extras[i-1]).y+62);
+});
+const parentCard=mixed.positions.get('m'),childA=mixed.positions.get('a'),childB=mixed.positions.get('b');
+assert.ok(childA.x>=left+168 && childA.y>parentCard.y);
+assert.equal(parentCard.x,(childA.x+childB.x)/2);
+assert.equal(childA.y,childB.y);
+const shift=parentCard.x-small.positions.get('m').x;
+for(const id of ['m','a','b']){
+  const p=small.positions.get(id);
+  assert.deepEqual(mixed.positions.get(id),{x:p.x+shift,y:p.y});
+}
+assert.equal(mixed.width,diagram(parentLinks,['m',extras[0],'a','b']).width);
+const separate=diagram([...parentLinks,rel('spouse','g','p')]);
+assert.deepEqual(separate.positions.get('m'),parentCard);
+assert.ok(separate.positions.get('g').y>=childA.y+62);
+assert.equal(separate.positions.get('g').y,separate.positions.get('p').y);
+const joined=diagram([...parentLinks,rel('spouse','g','p'),rel('parent','a','g')]);
+assert.ok(joined.positions.get('g').y>joined.positions.get('a').y);
+assert.equal(joined.positions.size,cast.length);
+assert.ok(diagram([...parentLinks,rel('parent','a',extras[0])]).positions.get(extras[0]).x>left);
+assert.equal(diagram(parentLinks).positions.get(extras[0]).x,left);
 const recorded=[...lineage,rel('spouse','m','p'),rel('father','p','a'),rel('father','p','b'),rel('mother','m','x'),rel('grandparent','g','a')];
 const routes=familyDiagram({...lineageBook,familyRelationships:recorded},{familyMembers:['a','g','x','p','b','m']});
 assert.equal(routes.paths.flatMap(p=>p.roles).length,recorded.length);
