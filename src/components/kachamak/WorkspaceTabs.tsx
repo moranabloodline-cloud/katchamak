@@ -10,6 +10,7 @@ import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertD
 import {DndContext,closestCenter,PointerSensor,KeyboardSensor,useSensors,useSensor,type Modifier} from '@dnd-kit/core';
 import {SortableContext,useSortable,horizontalListSortingStrategy,sortableKeyboardCoordinates} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
+import {findNode} from '@/lib/kachamak/utils';
 import {workspaceTabs} from '@/lib/kachamak/workspace-tabs';
 import {cloneableWorkspaceTabs} from '@/lib/kachamak/clone-workspace-tab';
 import {CloneWorkspaceTabDialog} from './CloneWorkspaceTabDialog';
@@ -31,9 +32,22 @@ function SortableWorkspaceTab({tab,active,onOpen,onDelete,onClone}:{tab:{key:Tab
 export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
   const active=useKachamak(s=>s.activeTab), setTab=useKachamak(s=>s.setTab), closeTab=useKachamak(s=>s.closeTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
-  const lastNoteView=useRef(view==='timeline'?'write':view);
-  useEffect(()=>{if(view!=='timeline')lastNoteView.current=view;},[view]);
-  const openTab=(key:TabKey)=>{if(key==='timeline'){setTab('timeline');setView('timeline');useKachamak.setState({selectedNodeId:null});return;}const nextView=view==='timeline'?lastNoteView.current:view;if(view==='timeline')setView(nextView);setTab(key);if(nextView==='continuous'&&key!=='trash')useKachamak.setState({selectedNodeId:null});};
+  const specialView=view==='timeline'||view==='family';
+  const lastNoteView=useRef(specialView?'write':view);
+  useEffect(()=>{if(!specialView)lastNoteView.current=view;},[view,specialView]);
+  const openTab=(key:TabKey)=>{
+    if(key==='family'){
+      const state=useKachamak.getState(), roots=novel.sections.family;
+      const tree=state.selectedNodeId && findNode(roots,state.selectedNodeId);
+      setTab(key);setView('family');state.select(tree ? tree.id : roots.find(n=>!n.hidden)?.id??null);
+      return;
+    }
+    if(key==='timeline'){setTab('timeline');setView('timeline');useKachamak.setState({selectedNodeId:null});return;}
+    const nextView=specialView?lastNoteView.current:view;
+    if(specialView)setView(nextView);
+    setTab(key);
+    if(nextView==='continuous'&&key!=='trash')useKachamak.setState({selectedNodeId:null});
+  };
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const [pendingDelete,setPendingDelete]=useState<{key:TabKey;label:string;projectId:string}|null>(null);
   const [pendingClone,setPendingClone]=useState<typeof pendingDelete>(null);

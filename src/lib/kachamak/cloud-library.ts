@@ -101,7 +101,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
   const preferredView = route?.view ?? data.snapshot.view;
-  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline'].includes(preferredView ?? '') ? { view: preferredView! } : {};
+  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline','family'].includes(preferredView ?? '') ? { view: preferredView! } : {};
   if(data.snapshot.editorAppearance!==undefined&&!validEditorAppearance(data.snapshot.editorAppearance))throw new Error('The saved page format could not be read.');
   const appearance=data.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;
   const restoredAppearance=keepAppearance?{}:{editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page},editorSpellCheck:appearance.spellCheck??true};
@@ -111,7 +111,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
     const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
-    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
     navigation.selectedNodeId = note(saved.selectedNodeId);
     if(preferredView==='timeline'&&(!navigation.selectedNodeId||novel&&findNodeInNovel(novel,navigation.selectedNodeId)?.section==='timeline')&&navigation.activeTab!=='trash')navigation.activeTab='timeline';
     navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);

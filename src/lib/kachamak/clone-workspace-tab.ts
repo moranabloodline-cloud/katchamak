@@ -5,8 +5,8 @@ import { removeUnavailableNoteLinks } from './link-review';
 
 export function cloneableWorkspaceTabs(novel: Novel) {
   return workspaceTabs(novel).filter(({key}) => {
-    if (key === 'timeline' || key === 'trash') return false;
-    return !key.startsWith('note:') || findNodeInNovel(novel, key.slice(5))?.section !== 'timeline';
+    if (key === 'timeline' || key === 'family' || key === 'trash') return false;
+    return !key.startsWith('note:') || !['timeline','family'].includes(findNodeInNovel(novel, key.slice(5))?.section ?? '');
   });
 }
 
@@ -75,6 +75,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
       content: repaired.content, linkChoices: repaired.linkChoices,
       synopsis: remapHtml(node.synopsis ?? '', ids, true),
       notes: remapHtml(node.notes ?? '', ids, true),
+      familyMembers: node.familyMembers?.flatMap(id => ids.get(id) ?? []),
       links: Array.isArray(node.links) ? node.links.flatMap(id => ids.get(id) ?? []) : undefined,
       children: original.children.map(child => copy(child, depth + 1)),
     };

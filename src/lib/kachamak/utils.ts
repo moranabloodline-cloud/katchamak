@@ -59,7 +59,7 @@ export function findNodeInNovel(
   id: string
 ): { node: NoteNode; section: SectionKey } | null {
   for (const key of SECTION_KEYS) {
-    const node = findNode(novel.sections[key], id);
+    const node = findNode(novel.sections[key] ?? [], id);
     if (node) return { node, section: key };
   }
   return null;
@@ -123,7 +123,7 @@ export function countScenes(roots: NoteNode[]): number {
 }
 
 export function sectionWords(novel: Novel, key: SectionKey): number {
-  return novel.sections[key].reduce((a, r) => a + nodeWords(r), 0);
+  return (novel.sections[key] ?? []).reduce((a, r) => a + nodeWords(r), 0);
 }
 
 export function novelWords(novel: Novel): number {

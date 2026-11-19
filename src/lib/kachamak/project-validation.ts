@@ -4,6 +4,7 @@ import { validNovelMetadata, validCoverImage } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validDocumentTarget } from './document-target';
+import {validFamilyMembers,validFamilyRelationships} from './family-tree';
 import { validEvent, validTimelineExtra } from './story-calendar';
 
 // The existing reader contract, shared with cloud writes. Do not normalize,
@@ -26,7 +27,7 @@ export function isReadableProject(value: unknown): boolean {
     return typeof node.id === "string" && typeof node.title === "string" &&
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
-      validCoverImage(node.image) && validDocumentTarget(node.documentTarget) &&
+      validFamilyMembers(node.familyMembers) && validCoverImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
@@ -44,8 +45,8 @@ export function isReadableProject(value: unknown): boolean {
     isTree([t.node])
   ))) return false;
   if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
-  if(!validWorkspaceTabOrder(n.tabOrder))return false;
-  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts'].includes(k)))) return false;
+  if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder))return false;
+  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];
     if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;

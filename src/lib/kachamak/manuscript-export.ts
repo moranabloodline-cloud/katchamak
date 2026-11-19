@@ -22,7 +22,7 @@ export const manuscriptWords=(novel:Novel,selected:Set<string>|boolean=false)=>m
 
 export function downloadManuscript(novel:Novel,format:'md'|'html',allSections=false) {
   const clean=(node:NoteNode):NoteNode=>({...node,content:DOMPurify.sanitize(node.content,{FORBID_TAGS:['style','script','iframe','object','embed']}),children:node.children.map(clean)});
-  const safe={...novel,sections:Object.fromEntries(SECTION_KEYS.map(key=>[key,novel.sections[key].map(clean)])) as Novel['sections']};
+  const safe={...novel,sections:Object.fromEntries(SECTION_KEYS.map(key=>[key,(novel.sections[key]??[]).map(clean)])) as Novel['sections']};
   const body=format==='md'?manuscriptMarkdown(safe,allSections):'<!doctype html>\n'+DOMPurify.sanitize(manuscriptHtml(safe,allSections),{WHOLE_DOCUMENT:true,ADD_TAGS:['style']});
   const url=URL.createObjectURL(new Blob([body],{type:format==='md'?'text/markdown;charset=utf-8':'text/html;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download=(novel.title.replace(/[<>:"/\\|?*]/g,'_')||'Manuscript')+(allSections?' - All notes':' - Manuscript')+'.'+format;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);

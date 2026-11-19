@@ -156,6 +156,11 @@ writer.updateNode('binder','note-1',{detailBlockOrder:['codex','image','aliases'
 assert.equal(writer.updateNovelSettings(novel.id,{language:'en-US',genres:['Science Fiction','Thriller'],subgenres:['Cyberpunk','Near Future'],chapterCount:21,targetAudience:'Adult speculative fiction readers',tones:['Melancholic'],writingStyles:['Poetic'],plotTechniques:['Corruption Exposed'],sellingPoints:['Rich Worldbuilding'],explicitContent:true}),true);
 const target=writer.addNode('codex',null,'doc','Černobog');
 writer.updateNode('codex',target,{aliases:['Cernobog']});
+const familyMember=writer.addNode('codex',null,'doc','Rowan');
+const familyTree=writer.addNode('family',null,'doc','Rowan family');
+writer.updateNode('family',familyTree,{familyMembers:[target,familyMember]});
+const familyRelation={kind:'parent',from:target,to:familyMember};
+assert.equal(writer.changeFamilyRelationship(novel.id,familyTree,familyRelation),null);
 const otherTarget=writer.addNode('research',null,'doc','Portal');
 writer.updateNode('binder','note-1',{content:'<p>Cernobog arrived. Portal, then Portal.</p>'});
 const {pendingLinkReview,mergeReviewChoices}=await import('../src/lib/kachamak/link-review.ts');
@@ -187,6 +192,8 @@ assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].event,{star
 assert.equal(useKachamak.getState().novels[0].timeline.groups[0].name,'History');
 assert.equal(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).id,timelineRoot);assert.equal(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).children[0].content,'<p>Nested timeline prose.</p>');assert.deepEqual(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).children[0].event,{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'});
 assert.equal(useKachamak.getState().novels[0].sections.codex[0].aliases[0],'Cernobog');
+assert.deepEqual(useKachamak.getState().novels[0].familyRelationships,[familyRelation]);
+assert.deepEqual(useKachamak.getState().novels[0].sections.family[0].familyMembers,[target,familyMember]);
 assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[0].targetId,target);assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[1].targetId,otherTarget);assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[2].targetId,null);
 assert.ok(useKachamak.getState().novels[0].hiddenSections.includes('research'));
 const collection=await cloud.createWebCollection('From Preview',null);

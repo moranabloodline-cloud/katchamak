@@ -4,6 +4,7 @@ import { projectStorage, isWebSession, folderSaved } from "./session-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
+  FamilyRelationship,
   NoteNode,
   Novel,
   SectionKey,
@@ -20,6 +21,7 @@ import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
 import {moveWorkspaceTabOrder} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
+import {validFamilyMembers,validFamilyRelationships} from './family-tree';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
 
@@ -115,6 +117,7 @@ interface KachamakState {
   moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
+  changeFamilyRelationship: (projectId:string, treeId:string, relation:FamilyRelationship, remove?:boolean) => string | null;
   setTimeline: (patch: Partial<NonNullable<Novel['timeline']>>) => void;
   setView: (v: ViewMode) => void;
   setTreeScope: (s: TreeScope) => void;
@@ -509,7 +512,7 @@ export const useKachamak = create<KachamakState>()(
       /* prelazak na drugi tab NE menja radnu površinu — selekcija ostaje
          (editor toolbar i desni panel drže tekuću notu) dok korisnik ne klikne
          novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
-      setTab: (tab) => set(s => ({ activeTab: tab, renamingNodeId: null, ...(tab==="timeline"?{view:"timeline" as const}:s.activeTab==="timeline"&&s.view==="timeline"?{view:"write" as const}:{}),
+      setTab: (tab) => set(s => ({ activeTab: tab, renamingNodeId: null, ...(tab==="timeline"?{view:"timeline" as const}:(s.activeTab==="timeline"&&s.view==="timeline" || tab!=='family' && s.view==='family')?{view:"write" as const}:{}),
         ...(s.novels.find(n=>n.id===s.activeNovelId)?.hiddenSections?.includes(tab as SectionKey)
           ? {novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:n.hiddenSections?.filter(k=>k!==tab)}):n)} : {})
       })),
@@ -528,7 +531,20 @@ export const useKachamak = create<KachamakState>()(
         if(['binder','codex','timeline','trash'].includes(tab)) return;
         set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,...(tab.startsWith('note:')?{openNoteTabs:(n.openNoteTabs||[]).filter(id=>id!==tab.slice(5))}:{hiddenSections:[...new Set([...(n.hiddenSections||[]),tab as SectionKey])]})}):n),activeTab:s.activeTab===tab?'binder':s.activeTab}));
       },
-      showSection: (section) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:(n.hiddenSections||[]).filter(k=>k!==section)}):n),activeTab:section})),
+      showSection: (section) => set(s=>({...(section==='family'?{view:'family' as const,selectedNodeId:s.novels.find(n=>n.id===s.activeNovelId)?.sections.family?.find(n=>!n.hidden)?.id??null}:{}),novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:(n.hiddenSections||[]).filter(k=>k!==section)}):n),activeTab:section})),
+      changeFamilyRelationship: (projectId,treeId,relation,remove=false) => {
+        const state=get(), novel=state.novels.find(n=>n.id===projectId);
+        const tree=novel && findNode(novel.sections.family,treeId);
+        if(!novel || state.activeNovelId!==projectId || !tree || ![relation.from,relation.to].every(id=>tree.familyMembers?.includes(id) && findNode(novel.sections.codex,id)))return 'Choose two people in this tree.';
+        if(relation.from===relation.to)return 'Choose two different people.';
+        const existing=novel.familyRelationships??[];
+        const same=(edge:typeof relation)=>edge.kind===relation.kind && ((edge.from===relation.from && edge.to===relation.to) || (edge.kind==='partner' && edge.from===relation.to && edge.to===relation.from));
+        if(!remove && existing.some(same))return 'This relationship already exists.';
+        const next=remove ? existing.filter(edge=>!same(edge)) : [...existing,relation];
+        if(!validFamilyRelationships(next))return 'A person cannot be their own ancestor.';
+        set({novels:state.novels.map(n=>n===novel?touch({...novel,familyRelationships:next}):n)});
+        return null;
+      },
       setTimeline: (patch) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,timeline:{rootId:null,detail:'synopsis',compact:false,...n.timeline,...patch}}):n)})),
 
       /* ulazak u Split (prvi put, kad paneli još nemaju note — kao u
@@ -606,6 +622,7 @@ export const useKachamak = create<KachamakState>()(
         const roots = novel.sections[section];
         const target = findNode(roots, id);
         if (!target) return;
+        if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
         if (!validCoverImage(patch.image)||!validDocumentTarget(patch.documentTarget)) return;
@@ -833,7 +850,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 31,
+      version: 32,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -846,6 +863,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<32){for(const novel of s.novels??[])if(novel.sections && novel.sections.family===undefined)novel.sections.family=[];}
         if(version<31){ /* Optional undated Timeline types and date precision; preserve all saved dates. */ }
         if(version<30){ /* Optional era colours; existing eras keep the default without changing dates. */ }
         if(version<29){if(typeof s.editorSpellCheck!=='boolean')s.editorSpellCheck=true;}

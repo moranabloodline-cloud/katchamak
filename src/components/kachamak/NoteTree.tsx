@@ -102,7 +102,7 @@ interface TreeRowProps {
 function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissReveal }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const selectNode = useKachamak((s) => s.select);
-  const select=(id:string|null)=>{selectNode(id);if(section==="timeline")useKachamak.getState().setView("timeline");};
+  const select=(id:string|null)=>{selectNode(id);if(section==="timeline" || section==="family")useKachamak.getState().setView(section);};
   const updateNode = useKachamak((s) => s.updateNode);
   const addNode = useKachamak((s) => s.addNode);
   const deleteNode = useKachamak((s) => s.deleteNode);

@@ -8,7 +8,8 @@ export type SectionKey =
   | "research"
   | "templates"
   | "prompts"
-  | "timeline";
+  | "timeline"
+  | "family";
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
@@ -18,6 +19,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "templates",
   "prompts",
   "timeline",
+  "family",
 ];
 
 export type TabKey = SectionKey | "trash" | `note:${string}`;
@@ -37,6 +39,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "templates", label: "Templates" },
   { key: "prompts", label: "Prompts" },
   { key: "timeline", label: "Timeline" },
+  { key: "family", label: "Family Tree" },
   { key: "trash", label: "Trash" },
 ];
 
@@ -76,6 +79,7 @@ export interface NoteNode {
      titles resolve live from the Codex section. Optional — older stores and
      backups simply lack the field. */
   links?: string[];
+  familyMembers?: string[]; // Codex IDs included in this graph
   aliases?: string[];
   linkChoices?: LinkChoice[];
   event?: StoryEvent;
@@ -95,6 +99,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
+  familyRelationships?: FamilyRelationship[];
   demo?: { key: string; version: number; edition?: number; source?: boolean; timelineRootId?: string };
   id: string;
   title: string;
@@ -125,7 +130,13 @@ export interface Novel {
   updatedAt: number;
 }
 
-export type ViewMode = "split" | "write" | "corkboard" | "list" | "continuous" | "timeline";
+export interface FamilyRelationship {
+  kind: 'parent' | 'partner';
+  from: string; // parent for a directed parent–child relationship
+  to: string;
+}
+
+export type ViewMode = "split" | "write" | "corkboard" | "list" | "continuous" | "timeline" | "family";
 
 /* the top-bar dropdown: which level of the tree the panel shows */
 export type TreeScope = "all" | "folders" | "top";

@@ -14,6 +14,7 @@ import { SplitEditors } from "./SplitEditors";
 import {timelineDefaultStart} from "@/lib/kachamak/timeline-tree";
 import {TimelineEventEditor} from "./TimelineEventEditor";
 import {GREGORIAN} from "@/lib/kachamak/story-calendar";
+import {FamilyTreeGraph,FamilyTreeEditor} from './FamilyTree';
 import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
@@ -275,7 +276,11 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
-  const view = useKachamak((s) => s.view);
+  const storedView = useKachamak((s) => s.view);
+  const view = storedView==='family' && section!=='family' ? 'write' : storedView;
+  const [editFamily,setEditFamily]=useState(0);
+  const [compactFamily,setCompactFamily]=useState(false);
+  useEffect(()=>setCompactFamily(false),[activeNovelId,section,selectedNodeId]);
   const activePane = useKachamak((s) => s.activePane);
   const setView = useKachamak((s) => s.setView);
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
@@ -304,7 +309,14 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
      matičnu sekciju note (selectedSection), ne u tekući tab. */
   const hit =
     selectedNodeId && novel ? findNodeInNovel(novel, selectedNodeId) : null;
-  const selected = view==="timeline"&&section==="timeline"&&hit?.section!==section?null:hit?.node ?? null;
+  const selected = ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
+  const familySettings=section==='family' && selected && novel && hit?.section==='family'
+    ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
+  const openFamilyInspector=()=>{
+    if(!rightPanelOpen)toggleRightPanel();
+    setEditFamily(n=>n+1);
+    setCompactFamily(true);
+  };
   const selectedSection = hit?.section ?? section;
 
   const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
@@ -373,9 +385,11 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
       <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
-        {view!=="timeline"&&<EditorToolbar />}
+        {view!=="timeline"&&view!=="family"&&<EditorToolbar />}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
+          {view==='family' && novel && <FamilyTreeGraph key={treeScopeKey+':'+selected?.id} novel={novel} tree={selected}
+            onCreate={()=>useKachamak.getState().addNode('family',rootId??null,'doc','New family tree')} onEdit={openFamilyInspector}/>}
           {view === "timeline" && <TimelineView key={treeScopeKey} section={section} rootId={rootId} onRevealNote={id => setTreeReveal({ id, scope: treeScopeKey })} />}
           {view === "list" && <ListView section={section} rootId={rootId} />}
           {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
@@ -413,7 +427,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
             className="ml-auto flex min-w-0 items-center gap-0.5 overflow-x-auto px-1 @[440px]:px-2"
           >
             {view==="timeline"&&<span aria-hidden="true" className="hidden shrink-0 border-r border-border pr-2 text-[11px] font-medium text-muted-foreground @[440px]:mr-1 @[440px]:inline">Workspace</span>}
-            {(section==="timeline"?[{key:"timeline" as const,label:"Timeline"},...VIEW_BTNS]:VIEW_BTNS).map((b) => (
+            {(section==="timeline"?[{key:"timeline" as const,label:"Timeline"},...VIEW_BTNS]:section==="family"?[{key:"family" as const,label:"Tree"},...VIEW_BTNS]:VIEW_BTNS).map((b) => (
               <button
                 key={b.key}
                 type="button"
@@ -442,13 +456,13 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
             data-workspace-chrome
             ref={rightPanelRef}
             style={{ width: rightPanelWidth }}
-            className="hidden shrink-0 flex-col bg-black/20 lg:flex"
+            className={compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "hidden shrink-0 flex-col bg-black/20 lg:flex"}
           >
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {selected ? (
               <>
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="min-h-0 flex-1"><RightPanel key={novel!.id} node={selected} section={selectedSection} onHide={toggleRightPanel} timelineSettings={(section==='timeline'||view==='timeline')&&selectedSection===section ? <TimelineEventEditor key={`${novel!.id}:${selected.id}:${selected.title}:${JSON.stringify(selected.event)}:${selected.icon}:${JSON.stringify(selected.links)}:${JSON.stringify(novel?.timeline?.calendar)}`} embedded start={timelineDefaultStart(novel!.sections[section],selected.id)} novel={novel!} calendar={novel?.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}} section={section} onClose={()=>{}} onSaved={()=>{}}/> : undefined} /></div>
+                  <div className="min-h-0 flex-1"><RightPanel key={familySettings?`${novel!.id}:family:${editFamily}`:novel!.id} node={selected} section={selectedSection} familySettings={familySettings} onHide={()=>{if(compactFamily && !window.matchMedia('(min-width:64rem)').matches)setCompactFamily(false);else {setCompactFamily(false);toggleRightPanel();}}} timelineSettings={(section==='timeline'||view==='timeline')&&selectedSection===section ? <TimelineEventEditor key={`${novel!.id}:${selected.id}:${selected.title}:${JSON.stringify(selected.event)}:${selected.icon}:${JSON.stringify(selected.links)}:${JSON.stringify(novel?.timeline?.calendar)}`} embedded start={timelineDefaultStart(novel!.sections[section],selected.id)} novel={novel!} calendar={novel?.timeline?.calendar??GREGORIAN} current={{node:selected,section:selectedSection}} section={section} onClose={()=>{}} onSaved={()=>{}}/> : undefined} /></div>
                 </div>
                 <NoteMetaBar section={selectedSection} node={selected} />
               </>

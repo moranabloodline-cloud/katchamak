@@ -1,5 +1,5 @@
 const MORRIGAN_DEMO_KEY='morrigans-ocean';
-const demoSections=['binder','codex','planning','research','templates','prompts','timeline'];
+const demoSections=['binder','codex','planning','research','templates','prompts','timeline','family'];
 // Fictional demonstration dates, anchored to the novel's surveillance duration,
 // the 03:11 ledger entry and the final three-to-five-AM corridor.
 const morriganScenes=[
