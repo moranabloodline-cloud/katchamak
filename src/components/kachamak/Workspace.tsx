@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { ChevronLeft, Save, Settings,Minimize2,LoaderCircle } from "lucide-react";
 import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
 import { WorkspaceBrand } from "./WorkspaceBrand";
+import { activeWritingEditor } from "./WorkspaceNavigation";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
@@ -29,11 +31,19 @@ export function Workspace() {
   const activeTab = useKachamak((s) => s.activeTab);
   const savePhase=useSaveReviewState(s=>s.phase);
   const setTab = useKachamak((s) => s.setTab);
+  const [searchShortcut,setSearchShortcut]=useState(false);
   useEffect(()=>{
     const keyboard=(event:KeyboardEvent)=>{
       if(!(event.ctrlKey||event.metaKey))return;
       if(event.key.toLowerCase()==='s'){event.preventDefault();requestLinkReview();}
-      if(event.shiftKey&&event.key.toLowerCase()==='f'){event.preventDefault();document.querySelector<HTMLInputElement>('[aria-label="Search"]')?.focus();}
+      if(event.shiftKey && !event.altKey && event.key.toLowerCase()==='f' && !event.defaultPrevented
+        && useKachamak.getState().activeTab!=='trash' && !document.querySelector('[role="dialog"],[role="alertdialog"]')){
+        event.preventDefault();
+        flushSync(()=>setSearchShortcut(true));
+        const search=document.querySelector<HTMLInputElement>('[data-project-search]');
+        search?.focus();
+        search?.select();
+      }
     };
     document.addEventListener('keydown',keyboard);return()=>document.removeEventListener('keydown',keyboard);
   },[]);
@@ -57,8 +67,7 @@ export function Workspace() {
     document.addEventListener('keydown',exit);return()=>document.removeEventListener('keydown',exit);
   },[focusMode]);
   const enterFocus=()=>{
-    const {view,activePane}=useKachamak.getState();
-    const editor=document.querySelector<HTMLElement>(view==='split'?`main [data-pane="${activePane}"] .kachamak-editor[contenteditable="true"]`:'main .kachamak-editor[contenteditable="true"]');
+    const editor=activeWritingEditor();
     const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0).cloneRange():null;
     setFocusMode(true);
     if(editor){editor.focus({preventScroll:true});if(range&&editor.contains(range.startContainer)&&editor.contains(range.endContainer)){selection?.removeAllRanges();selection?.addRange(range);}}
@@ -79,7 +88,9 @@ export function Workspace() {
       .toUpperCase() || "?";
 
   return (
-    <div data-workspace data-focus-mode={focusMode} className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
+    <div data-workspace data-focus-mode={focusMode} onBlur={event=>{
+      if(event.target instanceof HTMLInputElement && event.target.hasAttribute('data-project-search'))setSearchShortcut(false);
+    }} className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
       {focusMode&&<button type="button" aria-label="Exit focus" title="Exit focus (Esc)" onMouseDown={event=>event.preventDefault()} onClick={()=>setFocusMode(false)} className="fixed right-4 top-4 z-40 flex items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 text-xs text-muted-foreground opacity-30 shadow transition-opacity hover:opacity-100 focus:opacity-100"><Minimize2 className="h-4 w-4"/>Exit focus · Esc</button>}
       {/* top bar — ONE strip, identical on every tab: home + search over the left
           panel, then the section tabs (all in one row), then scope/save/account/
@@ -158,7 +169,7 @@ export function Workspace() {
       {activeTab === "trash" ? (
         <TrashView />
       ) : (
-        <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} />
+        <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} revealSearch={searchShortcut}/>
       )}
 
       <AutoLinkReview />

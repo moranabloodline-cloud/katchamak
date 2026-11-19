@@ -1,5 +1,6 @@
 "use client";
-import {useEffect,useMemo,useState} from 'react';
+import {useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {flushSync} from 'react-dom';
 import {ArrowLeft,FileText,Search} from 'lucide-react';
 import {useKachamak} from '@/lib/kachamak/store';
 import {TABS,type NoteNode,type SectionKey} from '@/lib/kachamak/types';
@@ -17,6 +18,12 @@ function NoteBackButton() {
   return <button type="button" aria-label="Back to previous note" title={name?'Back to '+name:'Back to previous view'} onClick={returnToPreviousNote} className="shrink-0 rounded p-1 text-sky-400 hover:bg-white/10"><ArrowLeft className="h-4 w-4"/></button>;
 }
 
+export function activeWritingEditor() {
+  const {view,activePane}=useKachamak.getState();
+  const scope=view==='split' ? `main [data-pane="${activePane}"]` : 'main';
+  return document.querySelector<HTMLElement>(`${scope} .kachamak-editor[contenteditable="true"]`);
+}
+
 function ProjectSearch() {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
@@ -25,42 +32,103 @@ function ProjectSearch() {
 
   const novel = novels.find((n) => n.id === activeNovelId);
 
+  const listId=useId();
+  const input=useRef<HTMLInputElement>(null);
+  const origin=useRef<HTMLElement|null>(null);
+  const caret=useRef<Range|null>(null);
   const [highlight,setHighlight]=useState(0);
   const results = useMemo(() => novel && q.trim() ? searchNotes(indexNotes(novel),q).slice(0,20) : [], [novel,q]);
-  useEffect(()=>setHighlight(0),[q]);
+  const expanded=open && !!q.trim();
+  const activeIndex=Math.min(highlight,results.length-1);
+  const activeId=expanded && activeIndex>=0 ? `${listId}-${activeIndex}` : undefined;
+  useLayoutEffect(()=>{
+    if(activeId)document.getElementById(activeId)?.scrollIntoView({block:'nearest'});
+  },[activeId]);
 
-  const go = (r: { node: NoteNode; section: SectionKey }) => {
-    openProjectNote(r.node.id);
-    setQ("");
-    setOpen(false);
+  useLayoutEffect(()=>{
+    // Capture the manuscript selection before the browser moves it into Search.
+    const remember=(event:FocusEvent)=>{
+      if(event.relatedTarget!==input.current)return;
+      origin.current=event.target instanceof HTMLElement ? event.target : null;
+      const selection=window.getSelection();
+      const range=selection?.rangeCount ? selection.getRangeAt(0) : null;
+      caret.current=range && activeWritingEditor()?.contains(range.commonAncestorContainer) ? range.cloneRange() : null;
+    };
+    document.addEventListener('blur',remember,true);
+    return ()=>document.removeEventListener('blur',remember,true);
+  },[]);
+
+  const returnToText=()=>{
+    const editor=activeWritingEditor();
+    const fallback=origin.current?.isConnected ? origin.current : document.querySelector<HTMLElement>('main');
+    (editor ?? fallback)?.focus({preventScroll:true});
+    const range=caret.current;
+    if(range && editor?.contains(range.commonAncestorContainer)){
+      const selection=window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  };
+
+  const go = (r: { node: NoteNode; section: SectionKey }, keyboard=false) => {
+    flushSync(()=>{
+      const view=useKachamak.getState().view;
+      const opened=openProjectNote(r.node.id);
+      if(keyboard && opened && useKachamak.getState().view==='timeline'){
+        useKachamak.getState().setView(view==='split' ? 'split' : 'write');
+      }
+      setQ("");
+      setHighlight(0);
+      setOpen(false);
+    });
+    if(keyboard)returnToText();
+    else if(document.activeElement===input.current)input.current?.blur();
   };
 
   return (
     <div className="relative min-w-0 flex-1">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
+        ref={input}
+        data-project-search
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={expanded}
+        aria-controls={expanded ? listId : undefined}
+        aria-activedescendant={activeId}
+        aria-keyshortcuts="Control+Shift+F Meta+Shift+F"
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => {setQ(e.target.value);setHighlight(0);setOpen(true);}}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => setOpen(false)}
         onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-          if (e.key === "ArrowDown") {e.preventDefault();setHighlight(i=>Math.max(0,Math.min(i+1,results.length-1)));}
-          if (e.key === "ArrowUp") {e.preventDefault();setHighlight(i=>Math.max(0,i-1));}
-          if (e.key === "Enter" && results[highlight]) {e.preventDefault();go(results[highlight]);}
+          if(e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)return;
+          if(e.key==='Escape'){
+            e.preventDefault();
+            setQ('');setHighlight(0);setOpen(false);
+            returnToText();
+          }else if(expanded && results.length){
+            if(e.key==='ArrowDown'){e.preventDefault();setHighlight(Math.min(activeIndex+1,results.length-1));}
+            if(e.key==='ArrowUp'){e.preventDefault();setHighlight(Math.max(0,activeIndex-1));}
+            if(e.key==='Enter'){e.preventDefault();go(results[activeIndex],true);}
+          }
         }}
         placeholder="Search"
         aria-label="Search"
         className="h-9 w-full rounded-lg border border-white/15 bg-[#10151d] pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-amber-500/50"
       />
-      {open && q.trim() && (
-        <div className="absolute inset-x-0 top-11 z-50 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
+      {expanded && (
+        <div id={listId} role="listbox" aria-label="Search results" className="absolute inset-x-0 top-11 z-50 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
           {results.map((r, i) => {
             const Icon = iconByName(r.node.icon);
             return (
               <button
                 key={r.node.id}
-                data-highlighted={i === highlight}
+                id={`${listId}-${i}`}
+                role="option"
+                tabIndex={-1}
+                aria-selected={i === activeIndex}
+                data-highlighted={i === activeIndex}
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => go(r)}

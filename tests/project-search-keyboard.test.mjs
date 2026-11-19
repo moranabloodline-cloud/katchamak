@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {Window} from 'happy-dom';
+
+const dom=new Window({url:'https://test.local'});
+for(const key of ['window','document','HTMLElement','Element','Node','navigator']){
+  Object.defineProperty(globalThis,key,{configurable:true,value:dom[key]});
+}
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const {act,createElement}=await import('react');
+const {createRoot}=await import('react-dom/client');
+const {WorkspaceNavigation}=await import('../src/components/kachamak/WorkspaceNavigation.tsx');
+const {useKachamak}=await import('../src/lib/kachamak/store.ts');
+const actions=useKachamak.getState();
+actions.createNovel('Search fixture','Tester');
+const current=actions.addNode('binder',null,'doc','Opening page');
+const first=actions.addNode('codex',null,'doc','Marker A');
+const second=actions.addNode('codex',null,'doc','Marker B');
+useKachamak.setState({activeTab:'binder',view:'split',activePane:'b',paneAId:first,paneBId:current,selectedNodeId:current});
+document.body.innerHTML='<aside></aside><main><div data-pane="a"><div contenteditable="true" class="kachamak-editor"></div></div><div data-pane="b"><div contenteditable="true" class="kachamak-editor" tabindex="0">Writing</div></div></main>';
+const root=createRoot(document.querySelector('aside'));
+await act(()=>root.render(createElement(WorkspaceNavigation)));
+const editor=document.querySelector('[data-pane="b"] .kachamak-editor');
+const input=document.querySelector('[role="combobox"]');
+const key=name=>act(()=>input.dispatchEvent(new dom.KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true})));
+const query=async value=>act(()=>{
+  input.focus();
+  Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(input,value);
+  input.dispatchEvent(new dom.Event('input',{bubbles:true}));
+});
+const active=()=>document.getElementById(input.getAttribute('aria-activedescendant'))?.textContent;
+editor.focus();
+await query('Marker');
+assert.match(active(),/Marker A/);
+await key('ArrowDown');
+assert.match(active(),/Marker B/);
+assert.equal(useKachamak.getState().selectedNodeId,current);
+await key('ArrowUp');
+assert.match(active(),/Marker A/);
+await key('Escape');
+assert.equal(document.querySelector('[role="listbox"]'),null);
+assert.equal(document.activeElement,editor);
+await query('no matching note');
+await key('Enter');
+assert.equal(useKachamak.getState().selectedNodeId,current);
+await query('Marker');
+await key('ArrowDown');
+await key('Enter');
+const state=useKachamak.getState();
+assert.equal(state.activeTab,'codex');
+assert.equal(state.selectedNodeId,second);
+assert.equal(state.paneAId,first);
+assert.equal(state.paneBId,second);
+assert.equal(document.activeElement,editor);
+await act(()=>root.unmount());
+console.log('Project Search keyboard passed: result order, cancel, empty results, open and active split pane.');

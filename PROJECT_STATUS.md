@@ -1,3 +1,5 @@
+> **2026-11-19 — Pretraga projekta tastaturom:** Ctrl+Shift+F fokusira postojeći Search. Strelice pomeraju izbor kroz vidljive rezultate, Enter otvara belešku u aktivnom editoru, a Esc vraća kursor na prethodno mesto u tekstu. Provereno ciljanim testom i u Chrome-u na sintetičkom projektu, uključujući Split, Focus i zatvoren levi panel.
+
 > **2026-11-19 — Čistiji Timeline grafikon:** uklonjeno uputstvo ispod ose. Ctrl + skrol i dalje zumira oko kursora, što je potvrđeno ciljanim testom i u Chrome-u.
 
 > **2026-11-19 — Ctrl + skrol na Timeline osi:** zum vremenskog opsega oko kursora radi iznad grafikona. Običan skrol je nativan, a datumi i zoom panela se ne menjaju. Potvrđeno ciljanim testovima i u Chrome-u na sintetičkom projektu.
@@ -449,6 +451,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Pretraga projekta tastaturom:** Ctrl+Shift+F fokusira postojeći Search. Strelice pomeraju izbor kroz vidljive rezultate, Enter otvara belešku u aktivnom editoru, a Esc vraća kursor na prethodno mesto u tekstu. Provereno ciljanim testom i u Chrome-u na sintetičkom projektu, uključujući Split, Focus i zatvoren levi panel.
 
 > **2026-11-19 — Čistiji Timeline grafikon:** uklonjeno uputstvo ispod ose. Ctrl + skrol i dalje zumira oko kursora, što je potvrđeno ciljanim testom i u Chrome-u.
 

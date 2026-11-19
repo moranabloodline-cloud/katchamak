@@ -330,3 +330,8 @@ html[data-theme="light"] [aria-label="Page format"] select { color-scheme: light
 [data-workspace][data-focus-mode="true"] [data-workspace-chrome],
 [data-workspace][data-focus-mode="true"] [data-editor-toolbar],
 [data-workspace][data-focus-mode="true"] aside[aria-label="Document outline"] { display: none !important; }
+
+[data-workspace][data-focus-mode="true"] aside[data-search-shortcut="true"] { display: flex !important; }
+@media (width < 48rem) {
+  aside[data-search-shortcut="true"] { display: flex; position: absolute; z-index: 40; background: var(--background); }
+}

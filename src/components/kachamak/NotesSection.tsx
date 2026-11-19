@@ -270,7 +270,7 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   );
 }
 
-export function NotesSection({ section, rootId }: { section: SectionKey; rootId?: string }) {
+export function NotesSection({ section, rootId, revealSearch }: { section: SectionKey; rootId?: string; revealSearch?: boolean }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
@@ -313,10 +313,11 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
 
   return (
     <div className="flex min-h-0 flex-1">
-      {leftPanelOpen ? (
+      {leftPanelOpen || revealSearch ? (
         <>
           <aside
             data-workspace-chrome
+            data-search-shortcut={revealSearch || undefined}
             ref={leftPanelRef}
             style={{ width: leftPanelWidth }}
             className="hidden shrink-0 flex-col bg-black/20 md:flex"
@@ -369,7 +370,7 @@ export function NotesSection({ section, rootId }: { section: SectionKey; rootId?
         </div>
       )}
 
-      <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
+      <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
         {view!=="timeline"&&<EditorToolbar />}
