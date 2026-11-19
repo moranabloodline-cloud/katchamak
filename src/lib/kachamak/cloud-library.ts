@@ -15,6 +15,7 @@ import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} f
 import { requestJson } from './request-json';
 import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
 import { cloneWorkspaceTab } from './clone-workspace-tab';
+import { cloneLayout, withExistingTexts } from './clone-text-recovery';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
 type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
@@ -42,8 +43,8 @@ const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: 
 // Recovery protects project/collection data, not transient navigation or account preferences.
 const projectPayload = (value: string) => { const data = JSON.parse(value); return JSON.stringify({ novels: data.novels, collections: data.collections }); };
 let recoveryBase = '', recoveryBasePayload = '';
-async function bookHash(book: Novel) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(book)));
+async function fingerprint(serialized: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(serialized));
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 // Throttled independently of cloud debounce: continuous typing still checkpoints.
@@ -59,7 +60,11 @@ export function checkpointLocalDraft(clone?: { key: string; base: Novel }) {
   activeDraft = draft;
   useLocalRecovery.setState({ writing: true });
   localWrites = localWrites.then(async () => {
-    if (clone && draft.clone) draft.clone.baseHash = await bookHash(clone.base);
+    if (clone && draft.clone) {
+      [draft.clone.baseHash, draft.clone.layoutHash] = await Promise.all([
+        fingerprint(JSON.stringify(clone.base)), fingerprint(cloneLayout(clone.base)),
+      ]);
+    }
     await draftStorage.put(draft);
   }).then(() => {
     if (useLocalRecovery.getState().owner === draft.owner && activeDraft === draft) useLocalRecovery.setState({ writing: false, error: null });
@@ -75,12 +80,17 @@ function lockAccount() {
 }
 type ConfirmedLibrary = { revision: number; snapshot: Snapshot };
 async function checkClone(draft: LocalDraft, source: Snapshot, remote: ConfirmedLibrary) {
-  const { destinationId, baseHash } = draft.clone!;
+  const { destinationId, baseHash, layoutHash } = draft.clone!;
   const copy = source.novels.find(n => n.id === destinationId);
   const book = remote.snapshot.novels.find(n => n.id === destinationId);
-  const committed = !!book && !!copy && remote.revision > draft.revision && JSON.stringify(book) === JSON.stringify(copy);
-  const canRetry = !!book && !!copy && (remote.revision === draft.revision || (remote.revision > draft.revision && await bookHash(book) === baseHash));
-  return { copy, committed, canRetry };
+  if (!book || !copy || remote.revision < draft.revision) return {committed:false, copy:undefined};
+  if (remote.revision === draft.revision) return {committed:false, copy};
+  const currentLayout = cloneLayout(book);
+  if (currentLayout === cloneLayout(copy)) return {committed:true, copy:undefined};
+  if (layoutHash && await fingerprint(currentLayout) === layoutHash)
+    return {committed:false, copy:withExistingTexts(copy, book)};
+  // Earlier drafts have only the exact pre-clone fingerprint.
+  return {committed:false, copy:await fingerprint(JSON.stringify(book)) === baseHash ? copy : undefined};
 }
 async function loadLocalDrafts(confirmed?: ConfirmedLibrary) {
   const owner = useLocalRecovery.getState().owner, epoch = accountEpoch;
@@ -98,12 +108,12 @@ async function loadLocalDrafts(confirmed?: ConfirmedLibrary) {
           let source: Snapshot;
           try { source = readDraft(draft); }
           catch { summaries.push({...summary, retryClone:false}); continue; }
-          const {committed, canRetry} = await checkClone(draft, source, confirmed);
+          const {committed, copy} = await checkClone(draft, source, confirmed);
           if (committed) {
             await draftStorage.remove(owner, draft.id, draft.generation);
             continue;
           }
-          summary.retryClone = canRetry;
+          summary.retryClone = !!copy;
         }
       }
       summaries.push(summary);
@@ -275,8 +285,8 @@ export function saveWorkspaceClone(source: Novel, sourceTab: TabKey, destination
   void checkpointLocalDraft(clean ? {key, base: destination} : undefined);
   return {count: result.count, saving: flushWebLibrary()};
 }
-// Navigation is window-local during reconciliation. Never overwrite competing
-// manuscript/collection edits; only retry when one content version is unchanged.
+// Keep navigation window-local. A clone and disjoint text edits can be retried
+// together. Competing edits to the same prose still require a user decision.
 async function reconcileRevision(){
   const remote=await api('/api/library');
   if(!Array.isArray(remote.snapshot?.novels)||!remote.snapshot.novels.every(isUsableBackup)||!Array.isArray(remote.snapshot.collections)||!Number.isSafeInteger(remote.revision))throw new Error('The saved library could not be read.');
@@ -292,6 +302,33 @@ async function reconcileRevision(){
     return;
   }
   if(remoteContent!==baseContent){
+    const value = snapshot(), checkpoint = activeDraft, epoch = accountEpoch;
+    const clone = checkpoint?.snapshot === projectPayload(value) ? checkpoint.clone : undefined;
+    let merged: Novel | undefined;
+    if (checkpoint && clone) {
+      const result = await checkClone(checkpoint, local, remote);
+      if (epoch !== accountEpoch || value !== snapshot()) throw new Error('The library changed while checking this clone. Retry saving.');
+      if (result.committed) {
+        apply(remote, keepAppearance);
+        await removeAcknowledgedDraft(checkpoint, value);
+        return;
+      }
+      merged = result.copy;
+    } else if (JSON.stringify(local.collections) === JSON.stringify(base.collections) &&
+        local.novels.length === base.novels.length && local.novels.every((n,i) => n.id === base.novels[i].id)) {
+      const edits = local.novels.filter((n,i) => JSON.stringify(n) !== JSON.stringify(base.novels[i]));
+      if (edits.length === 1) {
+        const latest = remote.snapshot.novels.find((n: Novel) => n.id === edits[0].id);
+        if (latest) merged = withExistingTexts(latest, edits[0], base.novels.find(n => n.id === latest.id)!);
+      }
+    }
+    if (merged) {
+      const next = merged;
+      apply(remote, keepAppearance);
+      useKachamak.setState(s => ({novels:s.novels.map(n => n.id === next.id ? next : n)}));
+      if (clone) void checkpointLocalDraft({key:clone.key, base:remote.snapshot.novels.find((n: Novel) => n.id === next.id)!});
+      return;
+    }
     useWebLibrary.setState({conflict:true});
     throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
   }
@@ -361,9 +398,9 @@ export async function recoverLocalDraft(summary: DraftSummary) {
       const remote: ConfirmedLibrary = await api('/api/library');
       if (!Number.isSafeInteger(remote.revision) || remote.revision < draft.revision || !Array.isArray(remote.snapshot?.novels) || !remote.snapshot.novels.every(isUsableBackup) || !Array.isArray(remote.snapshot.collections))
         throw new Error('The saved library could not be verified. Your clone draft was kept.');
-      const {copy, committed, canRetry} = await checkClone(draft, source, remote);
+      const {copy, committed} = await checkClone(draft, source, remote);
       if (!committed) {
-        if (!canRetry || !copy) {
+        if (!copy) {
           await loadLocalDrafts(remote);
           throw new Error('The destination changed. Your draft is still available to recover separately.');
         }

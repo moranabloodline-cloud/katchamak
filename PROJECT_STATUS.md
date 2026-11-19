@@ -1,3 +1,5 @@
+> **2026-11-19 — Clone to project u dva prozora.** Kada jedan prozor izgubi vezu pri kloniranju, drugi može da sačuva tekst postojeće beleške u odredišnoj knjizi. Ponovni pokušaj koristi prvobitne kopije i sačuvani tekst. Četiri provere u dva Chrome prozora na dve probne knjige potvrdile su iste rezultate posle osvežavanja, neizmenjenu izvornu knjigu i tačno jedan upis kopija i jedan upis teksta.
+
 > **2026-11-19 — Prekid veze tokom Clone to project.** Retry save i ponavljanje istog kloniranja dovršavaju započeti upis. Posle osvežavanja potvrđeni nalog može nastaviti kloniranje u odredišnu knjigu preko My Account → Storage. Ako je server sačuvao kopije pre prekida odgovora, aplikacija prepoznaje postojeće beleške. Konflikt odredišta ili druge nesnimljene izmene ostaju dostupni kroz oporavak nacrta. U osam provera u Chrome-u na dve sintetičke knjige potvrđeni su jedan serverski upis, isti ID-jevi i sadržaj kopija i neizmenjena izvorna knjiga.
 
 > **2026-11-19 — Clone to project.** Kopije preusmeravaju i interne HTML veze zapisane pomoću entiteta, a automatski opis ručne veze prikazuje novu putanju. Zatvaranje dijaloga ponovo omogućava klikove u radnom prostoru. U Chrome-u na dve sintetičke knjige provereni su otkazivanje, dva kloniranja u isti Sort This, redosled i sadržaj četiri beleške na tri nivoa, veze i otvaranje kopirane beleške posle čuvanja i ponovnog učitavanja. Izvorna knjiga ostala je identična.
@@ -499,6 +501,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-19 — Kloniranje i istovremena izmena teksta.** Provereni su prekid pre upisa i gubitak odgovora posle upisa, svaki uz Retry save i oporavak posle osvežavanja. Sva četiri slučaja očuvala su tekst, četiri kopije, interne veze i izvor. Ciljani testovi pokrivaju i postojeći Sort This, sukob dve izmene istog teksta i preimenovanje odredišne beleške tokom oporavka.
 
 > **2026-11-19 — Prekid veze tokom Clone to project.** Retry save i ponavljanje istog kloniranja dovršavaju započeti upis. Posle osvežavanja potvrđeni nalog može nastaviti kloniranje u odredišnu knjigu preko My Account → Storage. Ako je server sačuvao kopije pre prekida odgovora, aplikacija prepoznaje postojeće beleške. Konflikt odredišta ili druge nesnimljene izmene ostaju dostupni kroz oporavak nacrta. U osam provera u Chrome-u na dve sintetičke knjige potvrđeni su jedan serverski upis, isti ID-jevi i sadržaj kopija i neizmenjena izvorna knjiga.
 

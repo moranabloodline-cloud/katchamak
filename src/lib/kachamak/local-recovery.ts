@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 // Plaintext, same-browser recovery only; this is not protection from profile access.
 // A new writer ID for every window/load prevents one window overwriting another.
-export type LocalDraft = { version: 1; owner: string; id: string; generation: string; updatedAt: number; revision: number; snapshot: string; clone?: { key: string; destinationId: string; baseHash: string } };
+export type LocalDraft = { version: 1; owner: string; id: string; generation: string; updatedAt: number; revision: number; snapshot: string; clone?: { key: string; destinationId: string; baseHash: string; layoutHash?: string } };
 export type DraftSummary = Pick<LocalDraft, 'id' | 'generation' | 'updatedAt'> & { cloneKey?: string; retryClone?: boolean };
 export const useLocalRecovery = create<{ owner: string | null; drafts: DraftSummary[]; error: string | null; writing: boolean }>(() => ({ owner: null, drafts: [], error: null, writing: false }));
 const database = 'kachamak-local-recovery-v1';

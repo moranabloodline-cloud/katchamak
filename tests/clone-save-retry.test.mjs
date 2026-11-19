@@ -90,20 +90,80 @@ assert.equal(w.useLocalRecovery.getState().drafts[0].retryClone,true);
 await clone(w);
 assert.deepEqual(remote.snapshot.novels[1],expectedBook);
 assert.equal(remote.snapshot.novels[0].sections.prompts[0].notes,'<p>Newer text in source</p>');
-reset('conflict');
+for (const failureAt of ['before','after']) {
+  for (const action of ['retry','reload']) {
+    reset('two-windows-'+failureAt+'-'+action);
+    const existingInbox = note('inbox','<p>Folder text</p>');
+    existingInbox.title = 'Sort This';
+    existingInbox.children = [note('previous','<p>Previous copy</p>')];
+    remote.snapshot.novels[1].sections.research.push(existingInbox);
+    let writer = await openWindow();
+    const editor = await openWindow();
+    failure = failureAt;
+    await assert.rejects(clone(writer));
+    const expectedInbox = structuredClone(books(writer)[1].sections.research[1]);
+    failure = null;
+    editor.useKachamak.setState({activeNovelId:destination.id});
+    editor.useKachamak.getState().updateNode('research','previous',{
+      content:'<p><b>Concurrent text</b> Čuvaj.</p>', notes:'New notes', synopsis:'New synopsis',
+      linkChoices:[{start:0,end:10,text:'Concurrent',targetId:'child'}],
+    });
+    await editor.flushWebLibrary();
+    const revisionAfterEdit = remote.revision;
+    const edited = structuredClone(remote.snapshot.novels[1].sections.research[1].children[0]);
+    assert.match(edited.content,/Concurrent text/);
+    if (action === 'retry') await writer.flushWebLibrary();
+    else {
+      writer = await openWindow();
+      const drafts = writer.useLocalRecovery.getState().drafts;
+      if (failureAt === 'before') {
+        assert.equal(drafts.length,1);
+        assert.equal(drafts[0].retryClone,true);
+        await writer.recoverLocalDraft(drafts[0]);
+      } else assert.deepEqual(drafts,[]);
+    }
+    const reopened = await openWindow(), [original,updated] = books(reopened);
+    assert.deepEqual(original,source);
+    assert.equal(books(reopened).length,2);
+    const [unrelated,inbox] = updated.sections.research;
+    assert.equal(updated.sections.research.length,2);
+    assert.deepEqual(unrelated,destination.sections.research[0]);
+    assert.equal(inbox.id,'inbox');
+    assert.deepEqual(inbox.children,[edited, ...JSON.parse(JSON.stringify(expectedInbox.children.slice(1)))]);
+    assert.equal(inbox.children[1].content,'<p><a href="#note/'+inbox.children[1].children[0].id+'">Čitaj dalje</a></p>');
+    assert.equal(remote.revision,revisionAfterEdit+(failureAt==='before'?1:0));
+    assert.deepEqual(await writer.draftStorage.list(owner),[]);
+  }
+}
+reset('structural-conflict');
 w = await openWindow();
 failure = 'before';
 await assert.rejects(clone(w));
 failure = null;
 w = await openWindow();
 const [stale] = w.useLocalRecovery.getState().drafts;
-remote.snapshot.novels[1].sections.research[0].content = '<p>Concurrent destination edit</p>';
+remote.snapshot.novels[1].sections.research[0].title = 'Concurrent rename';
 remote.revision++;
 const before = structuredClone(remote);
 await assert.rejects(w.recoverLocalDraft(stale),/destination changed/);
 assert.deepEqual(remote,before);
 assert.equal(w.useLocalRecovery.getState().drafts[0].retryClone,false);
 assert.equal((await w.draftStorage.list(owner)).length,1);
+reset('competing-text');
+const first = await openWindow(), second = await openWindow();
+failure = 'after';
+await assert.rejects(clone(first));
+failure = null;
+const third = await openWindow();
+third.useKachamak.setState({activeNovelId:destination.id});
+third.useKachamak.getState().updateNode('research','child',{content:'<p>Third window saved first</p>'});
+await third.flushWebLibrary();
+second.useKachamak.setState({activeNovelId:destination.id});
+second.useKachamak.getState().updateNode('research','child',{content:'<p>Competing text</p>'});
+const beforeConflict = structuredClone(remote);
+await assert.rejects(second.flushWebLibrary(),/Another window changed/);
+assert.deepEqual(remote,beforeConflict);
+assert.equal(books(second)[1].sections.research[0].content,'<p>Competing text</p>');
 reset('other-local-edits');
 w = await openWindow();
 w.useKachamak.setState({activeNovelId:source.id});
