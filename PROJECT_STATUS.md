@@ -1,3 +1,5 @@
+> **2026-11-19 — Porodične veze:** Relationships ima pretragu 138 naziva srodstva i slobodan unos za dodatne nazive. Smer i obostrane veze koriste ista pravila u svim stablima knjige. Provereni su duplikati, petlje u poreklu, raniji zapisi, JSON, cloud i izbor tastaturom na sintetičkom stablu.
+
 > **2026-11-19 — Family Tree:** svaka beleška u novom tabu bira osobe iz Codexa iste knjige. Graf i standardni desni panel sa dodatkom Family koriste zajedničke veze roditelj–dete i partnerstvo. Uklanjanje osobe iz prikaza čuva lik i veze. Provere obuhvataju ugnježdene beleške, dve porodice, izolaciju knjiga, preimenovanje, Trash/restore, stare projekte, JSON i cloud čuvanje/učitavanje.
 
 > **2026-11-19 — Pretraga projekta tastaturom:** Ctrl+Shift+F fokusira postojeći Search. Strelice pomeraju izbor kroz vidljive rezultate, Enter otvara belešku u aktivnom editoru, a Esc vraća kursor na prethodno mesto u tekstu. Provereno ciljanim testom i u Chrome-u na sintetičkom projektu, uključujući Split, Focus i zatvoren levi panel.
@@ -453,6 +455,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Porodične veze:** Relationships ima pretragu 138 naziva srodstva i slobodan unos za dodatne nazive. Smer i obostrane veze koriste ista pravila u svim stablima knjige. Provereni su duplikati, petlje u poreklu, raniji zapisi, JSON, cloud i izbor tastaturom na sintetičkom stablu.
 
 > **2026-11-19 — Family Tree:** svaka beleška u novom tabu bira osobe iz Codexa iste knjige. Graf i standardni desni panel sa dodatkom Family koriste zajedničke veze roditelj–dete i partnerstvo. Uklanjanje osobe iz prikaza čuva lik i veze. Provere obuhvataju ugnježdene beleške, dve porodice, izolaciju knjiga, preimenovanje, Trash/restore, stare projekte, JSON i cloud čuvanje/učitavanje.
 

@@ -22,6 +22,7 @@ import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format
 import {moveWorkspaceTabOrder} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {validFamilyMembers,validFamilyRelationships} from './family-tree';
+import {relationshipKey,validKind} from './kinship';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
 
@@ -537,8 +538,10 @@ export const useKachamak = create<KachamakState>()(
         const tree=novel && findNode(novel.sections.family,treeId);
         if(!novel || state.activeNovelId!==projectId || !tree || ![relation.from,relation.to].every(id=>tree.familyMembers?.includes(id) && findNode(novel.sections.codex,id)))return 'Choose two people in this tree.';
         if(relation.from===relation.to)return 'Choose two different people.';
+        if(!validKind(relation))return 'Choose a relationship or enter a valid name.';
         const existing=novel.familyRelationships??[];
-        const same=(edge:typeof relation)=>edge.kind===relation.kind && ((edge.from===relation.from && edge.to===relation.to) || (edge.kind==='partner' && edge.from===relation.to && edge.to===relation.from));
+        const key=relationshipKey(relation);
+        const same=(edge:typeof relation)=>relationshipKey(edge)===key;
         if(!remove && existing.some(same))return 'This relationship already exists.';
         const next=remove ? existing.filter(edge=>!same(edge)) : [...existing,relation];
         if(!validFamilyRelationships(next))return 'A person cannot be their own ancestor.';
@@ -850,7 +853,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 32,
+      version: 33,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -863,6 +866,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<33){ /* Existing parent and partner records retain their original terms and endpoints. */ }
         if(version<32){for(const novel of s.novels??[])if(novel.sections && novel.sections.family===undefined)novel.sections.family=[];}
         if(version<31){ /* Optional undated Timeline types and date precision; preserve all saved dates. */ }
         if(version<30){ /* Optional era colours; existing eras keep the default without changing dates. */ }

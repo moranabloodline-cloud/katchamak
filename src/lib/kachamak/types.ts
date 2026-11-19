@@ -1,5 +1,6 @@
 import type { StoryEvent, TimelinePreferences } from './story-calendar';
 import type {DetailBlockKey} from './detail-blocks';
+import type {KinshipKind} from './kinship';
 /* every tab is the same note system — Codex included */
 export type SectionKey =
   | "binder"
@@ -130,11 +131,10 @@ export interface Novel {
   updatedAt: number;
 }
 
-export interface FamilyRelationship {
-  kind: 'parent' | 'partner';
-  from: string; // parent for a directed parent–child relationship
+export type FamilyRelationship = {
+  from: string;
   to: string;
-}
+} & ({kind:Exclude<KinshipKind,'custom'>} | {kind:'custom';label:string;mutual?:boolean});
 
 export type ViewMode = "split" | "write" | "corkboard" | "list" | "continuous" | "timeline" | "family";
 
