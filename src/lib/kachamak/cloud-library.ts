@@ -14,6 +14,7 @@ import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
 import { requestJson } from './request-json';
 import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
+import { cloneWorkspaceTab } from './clone-workspace-tab';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
 type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
@@ -41,8 +42,12 @@ const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: 
 // Recovery protects project/collection data, not transient navigation or account preferences.
 const projectPayload = (value: string) => { const data = JSON.parse(value); return JSON.stringify({ novels: data.novels, collections: data.collections }); };
 let recoveryBase = '', recoveryBasePayload = '';
+async function bookHash(book: Novel) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(book)));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
 // Throttled independently of cloud debounce: continuous typing still checkpoints.
-export function checkpointLocalDraft() {
+export function checkpointLocalDraft(clone?: { key: string; base: Novel }) {
   if (localTimer) { clearTimeout(localTimer); localTimer = null; }
   if (!accountId || !saved || snapshot() === saved) return localWrites;
   if (recoveryBase !== saved) { recoveryBase = saved; recoveryBasePayload = projectPayload(saved); }
@@ -50,9 +55,13 @@ export function checkpointLocalDraft() {
   if (value === recoveryBasePayload) return localWrites;
   if (activeDraft?.snapshot === value) return localWrites;
   const draft: LocalDraft = { version: 1, owner: accountId, id: writerId, generation: crypto.randomUUID(), updatedAt: Date.now(), revision, snapshot: value };
+  if (clone) draft.clone = { key: clone.key, destinationId: clone.base.id, baseHash: '' };
   activeDraft = draft;
   useLocalRecovery.setState({ writing: true });
-  localWrites = draftStorage.put(draft).then(() => {
+  localWrites = localWrites.then(async () => {
+    if (clone && draft.clone) draft.clone.baseHash = await bookHash(clone.base);
+    await draftStorage.put(draft);
+  }).then(() => {
     if (useLocalRecovery.getState().owner === draft.owner && activeDraft === draft) useLocalRecovery.setState({ writing: false, error: null });
   }).catch(error => { if (activeDraft === draft) activeDraft = null; if (useLocalRecovery.getState().owner === draft.owner) recoveryStorageError(error); });
   return localWrites;
@@ -64,15 +73,49 @@ function lockAccount() {
   lockLocalRecovery();
   useWebLibrary.setState({ ready: false, busy: false, email: '', error: 'Sign in again to access your library and local recovery drafts.' });
 }
-async function loadLocalDrafts() {
+type ConfirmedLibrary = { revision: number; snapshot: Snapshot };
+async function checkClone(draft: LocalDraft, source: Snapshot, remote: ConfirmedLibrary) {
+  const { destinationId, baseHash } = draft.clone!;
+  const copy = source.novels.find(n => n.id === destinationId);
+  const book = remote.snapshot.novels.find(n => n.id === destinationId);
+  const committed = !!book && !!copy && remote.revision > draft.revision && JSON.stringify(book) === JSON.stringify(copy);
+  const canRetry = !!book && !!copy && (remote.revision === draft.revision || (remote.revision > draft.revision && await bookHash(book) === baseHash));
+  return { copy, committed, canRetry };
+}
+async function loadLocalDrafts(confirmed?: ConfirmedLibrary) {
   const owner = useLocalRecovery.getState().owner, epoch = accountEpoch;
   if (!owner || owner !== accountId) return;
   try {
-    const drafts = await draftStorage.list(owner);
-    if (epoch === accountEpoch && useLocalRecovery.getState().owner === owner) useLocalRecovery.setState({ drafts: drafts.filter(d => d.id !== writerId).map(({ id, generation, updatedAt }) => ({ id, generation, updatedAt })).sort((a,b) => b.updatedAt-a.updatedAt) });
+    const drafts = (await draftStorage.list(owner)).filter(draft => draft.id !== writerId);
+    const summaries: DraftSummary[] = [];
+    for (const draft of drafts) {
+      if (epoch !== accountEpoch || useLocalRecovery.getState().owner !== owner) return;
+      const summary: DraftSummary = { id: draft.id, generation: draft.generation, updatedAt: draft.updatedAt };
+      if (draft.clone) {
+        summary.cloneKey = draft.clone.key;
+        summary.retryClone = true;
+        if (confirmed) {
+          let source: Snapshot;
+          try { source = readDraft(draft); }
+          catch { summaries.push({...summary, retryClone:false}); continue; }
+          const {committed, canRetry} = await checkClone(draft, source, confirmed);
+          if (committed) {
+            await draftStorage.remove(owner, draft.id, draft.generation);
+            continue;
+          }
+          summary.retryClone = canRetry;
+        }
+      }
+      summaries.push(summary);
+    }
+    if (epoch === accountEpoch && useLocalRecovery.getState().owner === owner) useLocalRecovery.setState({ drafts: summaries.sort((a,b) => b.updatedAt-a.updatedAt) });
   } catch (error) { if (epoch === accountEpoch && useLocalRecovery.getState().owner === owner) recoveryStorageError(error); }
 }
-export async function refreshLocalDrafts() { await verifyRecoveryOwner(); await loadLocalDrafts(); }
+export async function refreshLocalDrafts() {
+  await verifyRecoveryOwner();
+  const checkClones = useWebLibrary.getState().ready && useLocalRecovery.getState().drafts.some(d => d.retryClone !== undefined);
+  await loadLocalDrafts(checkClones ? await api('/api/library') : undefined);
+}
 async function removeAcknowledgedDraft(draft: LocalDraft | null, value: string) {
   if (!draft || draft.snapshot !== projectPayload(value)) return;
   try { await localWrites; const removed = await draftStorage.remove(draft.owner, draft.id, draft.generation); if (removed && activeDraft?.generation === draft.generation) activeDraft = null; }
@@ -160,7 +203,8 @@ export async function initializeWebLibrary() {
       useWebLibrary.setState({ready:true,busy:false,conflict:true,error:'Unsaved changes were kept after sign-in. Choose Retry save to save them, or export backups.'});
       return;
     }
-    apply(await api('/api/library/demo/install',{method:'POST'}));
+    const confirmed = await api('/api/library/demo/install',{method:'POST'});
+    apply(confirmed);
     writeWorkspaceRoute();
     if (!subscribed) {
       subscribed = true;
@@ -178,6 +222,7 @@ export async function initializeWebLibrary() {
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
       useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
     }
+    if (useLocalRecovery.getState().drafts.some(d => d.retryClone)) await loadLocalDrafts(confirmed);
   })().catch(error => { fail(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
 }
@@ -214,6 +259,22 @@ export async function flushWebLibrary() {
   return running;
 }
 export const saveWebLibrary = flushWebLibrary;
+export function saveWorkspaceClone(source: Novel, sourceTab: TabKey, destination: Novel, destinationTab: TabKey) {
+  const key = JSON.stringify([source.id, sourceTab, destination.id, destinationTab]);
+  if (activeDraft?.owner === accountId && activeDraft.clone?.key === key && activeDraft.snapshot === projectPayload(snapshot()))
+    return {count: null, saving: flushWebLibrary()};
+  const prior = useLocalRecovery.getState().drafts.find(draft => draft.cloneKey === key);
+  if (prior) {
+    if (!prior.retryClone) throw new Error('The destination changed. Review the previous clone in My Account → Storage.');
+    return {count: null, saving: recoverLocalDraft(prior)};
+  }
+  const result = cloneWorkspaceTab(source, sourceTab, destination, destinationTab);
+  // A scoped retry is safe only when this clone accounts for all unsaved project data.
+  const clean = projectPayload(snapshot()) === projectPayload(saved);
+  useKachamak.setState(s => ({novels: s.novels.map(n => n.id === destination.id ? result.novel : n)}));
+  void checkpointLocalDraft(clean ? {key, base: destination} : undefined);
+  return {count: result.count, saving: flushWebLibrary()};
+}
 // Navigation is window-local during reconciliation. Never overwrite competing
 // manuscript/collection edits; only retry when one content version is unchanged.
 async function reconcileRevision(){
@@ -224,7 +285,12 @@ async function reconcileRevision(){
   const keepAppearance=JSON.stringify(local.editorAppearance??DEFAULT_EDITOR_APPEARANCE)!==JSON.stringify(base.editorAppearance??DEFAULT_EDITOR_APPEARANCE);
   const content=(value:Snapshot)=>JSON.stringify([value.novels,value.collections]);
   const localContent=content(local),remoteContent=content(remote.snapshot),baseContent=content(base);
-  if(localContent===remoteContent||localContent===baseContent){apply(remote,keepAppearance);return;}
+  if(localContent===remoteContent||localContent===baseContent){
+    const checkpoint = activeDraft;
+    apply(remote,keepAppearance);
+    if (localContent === remoteContent) await removeAcknowledgedDraft(checkpoint, saved);
+    return;
+  }
   if(remoteContent!==baseContent){
     useWebLibrary.setState({conflict:true});
     throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
@@ -291,6 +357,26 @@ export async function recoverLocalDraft(summary: DraftSummary) {
     if (!useWebLibrary.getState().ready) throw new Error('Open the cloud library before recovering copies. You can still export this draft.');
     await flushWebLibrary();
     if (epoch !== accountEpoch || useLocalRecovery.getState().owner !== draft.owner) throw new Error('Sign in again to recover this draft.');
+    if (summary.retryClone && draft.clone) {
+      const remote: ConfirmedLibrary = await api('/api/library');
+      if (!Number.isSafeInteger(remote.revision) || remote.revision < draft.revision || !Array.isArray(remote.snapshot?.novels) || !remote.snapshot.novels.every(isUsableBackup) || !Array.isArray(remote.snapshot.collections))
+        throw new Error('The saved library could not be verified. Your clone draft was kept.');
+      const {copy, committed, canRetry} = await checkClone(draft, source, remote);
+      if (!committed) {
+        if (!canRetry || !copy) {
+          await loadLocalDrafts(remote);
+          throw new Error('The destination changed. Your draft is still available to recover separately.');
+        }
+        if (epoch !== accountEpoch || useLocalRecovery.getState().owner !== draft.owner) throw new Error('Sign in again to retry this clone.');
+        const next = {...remote.snapshot, novels: remote.snapshot.novels.map(n => n.id === copy.id ? copy : n)};
+        const ack = await api('/api/library', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({revision:remote.revision,snapshot:next})});
+        if (!Number.isSafeInteger(ack.revision) || ack.revision !== remote.revision + 1) throw new Error('The server did not confirm this clone. Retry saving.');
+      }
+      await draftStorage.remove(draft.owner, draft.id, draft.generation);
+      await refreshWebLibrary();
+      await refreshLocalDrafts();
+      return;
+    }
     // A draft generation is immutable. Its copy IDs must also survive retries and reloads.
     const root = 'recovered-' + draft.generation;
     const ids = new Map(source.novels.map((n, index) => [n.id, root + '-book-' + index]));

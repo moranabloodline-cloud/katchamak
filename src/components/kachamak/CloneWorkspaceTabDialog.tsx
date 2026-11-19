@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { cloneableWorkspaceTabs, cloneWorkspaceTab } from '@/lib/kachamak/clone-workspace-tab';
-import { saveWebLibrary, useWebLibrary } from '@/lib/kachamak/cloud-library';
+import { cloneableWorkspaceTabs } from '@/lib/kachamak/clone-workspace-tab';
+import { saveWorkspaceClone, useWebLibrary } from '@/lib/kachamak/cloud-library';
 import { useKachamak } from '@/lib/kachamak/store';
 import type { TabKey } from '@/lib/kachamak/types';
 
@@ -34,14 +34,13 @@ export function CloneWorkspaceTabDialog({sourceId, tab, onClose}: {
       return;
     }
     try {
-      const result = cloneWorkspaceTab(source, tab.key, target, selected.key);
+      const { count, saving } = saveWorkspaceClone(source, tab.key, target, selected.key);
       submitted.current = true;
-      useKachamak.setState({ novels: state.novels.map(novel => novel.id === target.id ? result.novel : novel) });
       onClose();
       const location = `${target.title} → ${selected.label} → Sort This`;
-      void saveWebLibrary().then(
-        () => toast.success(`Copied ${result.count} ${result.count === 1 ? 'note' : 'notes'} to ${location}.`),
-        () => toast.error('The copies are pending in this window. Use Retry save to keep them.'),
+      void saving.then(
+        () => toast.success(count === null ? `Saved the previous clone to ${location}.` : `Copied ${count} ${count === 1 ? 'note' : 'notes'} to ${location}.`),
+        () => toast.error(count === null ? 'Could not confirm this clone. Check Retry save or My Account → Storage.' : 'The copies are pending in this window. Use Retry save to keep them.'),
       );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The tab could not be copied.');

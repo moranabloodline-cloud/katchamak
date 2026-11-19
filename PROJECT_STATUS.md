@@ -1,3 +1,5 @@
+> **2026-11-19 — Prekid veze tokom Clone to project.** Retry save i ponavljanje istog kloniranja dovršavaju započeti upis. Posle osvežavanja potvrđeni nalog može nastaviti kloniranje u odredišnu knjigu preko My Account → Storage. Ako je server sačuvao kopije pre prekida odgovora, aplikacija prepoznaje postojeće beleške. Konflikt odredišta ili druge nesnimljene izmene ostaju dostupni kroz oporavak nacrta. U osam provera u Chrome-u na dve sintetičke knjige potvrđeni su jedan serverski upis, isti ID-jevi i sadržaj kopija i neizmenjena izvorna knjiga.
+
 > **2026-11-19 — Clone to project.** Kopije preusmeravaju i interne HTML veze zapisane pomoću entiteta, a automatski opis ručne veze prikazuje novu putanju. Zatvaranje dijaloga ponovo omogućava klikove u radnom prostoru. U Chrome-u na dve sintetičke knjige provereni su otkazivanje, dva kloniranja u isti Sort This, redosled i sadržaj četiri beleške na tri nivoa, veze i otvaranje kopirane beleške posle čuvanja i ponovnog učitavanja. Izvorna knjiga ostala je identična.
 
 > **2026-11-19 — Korpa, uvoz i čuvanje dubokih stabala.** Potvrda trajnog brisanja važi za izabranu knjigu i prikazani sadržaj korpe. Cloud uvoz proverava normalizovanu kopiju pre dodavanja u biblioteku i prekida čitanje rezultata posle promene prijave. Dodavanje, premeštanje, vraćanje i Timeline uvoz poštuju postojeću granicu za cloud snimanje. Mentions prikazuje i ručne linkove iz Synopsis i Notes.
@@ -497,6 +499,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Prekid veze tokom Clone to project.** Retry save i ponavljanje istog kloniranja dovršavaju započeti upis. Posle osvežavanja potvrđeni nalog može nastaviti kloniranje u odredišnu knjigu preko My Account → Storage. Ako je server sačuvao kopije pre prekida odgovora, aplikacija prepoznaje postojeće beleške. Konflikt odredišta ili druge nesnimljene izmene ostaju dostupni kroz oporavak nacrta. U osam provera u Chrome-u na dve sintetičke knjige potvrđeni su jedan serverski upis, isti ID-jevi i sadržaj kopija i neizmenjena izvorna knjiga.
 
 > **2026-11-19 — Clone to project.** Kopije preusmeravaju i interne HTML veze zapisane pomoću entiteta, a automatski opis ručne veze prikazuje novu putanju. Zatvaranje dijaloga ponovo omogućava klikove u radnom prostoru. U Chrome-u na dve sintetičke knjige provereni su otkazivanje, dva kloniranja u isti Sort This, redosled i sadržaj četiri beleške na tri nivoa, veze i otvaranje kopirane beleške posle čuvanja i ponovnog učitavanja. Izvorna knjiga ostala je identična.
 

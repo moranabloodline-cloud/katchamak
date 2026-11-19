@@ -19,11 +19,11 @@ export function LocalRecovery({ accountId }: { accountId?: string }) {
     </div>
     <ul className="max-h-48 overflow-auto">{state.drafts.map(draft => <li key={draft.id} className="mt-2 flex flex-wrap items-center gap-3">
       <span>{new Date(draft.updatedAt).toLocaleString()}</span>
-      <button disabled={working || !ready} className="underline disabled:opacity-50" onClick={() => void run(() => recoverLocalDraft(draft))}>Recover as copies</button>
+      <button disabled={working || !ready} className="underline disabled:opacity-50" onClick={() => void run(() => recoverLocalDraft(draft))}>{draft.retryClone ? 'Retry clone save' : 'Recover as copies'}</button>
       <button disabled={working} className="underline" onClick={() => void run(() => exportLocalDraft(draft))}>Export project backups</button>
       <button disabled={working} className="underline" onClick={() => { if (window.confirm('Discard this local draft? This cannot be undone. Cloud projects will not be changed.')) void run(() => discardLocalDraft(draft)); }}>Discard</button>
     </li>)}</ul>
-    {!!state.drafts.length && <p className="mt-2 text-xs text-muted-foreground">Recovery adds copies in a Recovered collection and keeps cloud originals. A draft may belong to another open window; newer changes in that window are preserved.</p>}
+    {state.drafts.some(draft => !draft.retryClone) && <p className="mt-2 text-xs text-muted-foreground">Recovery adds copies in a Recovered collection and keeps cloud originals. A draft may belong to another open window; newer changes in that window are preserved.</p>}
   </section>;
 }
 
