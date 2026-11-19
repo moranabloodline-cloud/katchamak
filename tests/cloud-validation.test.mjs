@@ -160,7 +160,7 @@ for (const [label, source] of [['current', modern], ['missing author', missingAu
   for (const wrapped of [false, true]) {
     const beforeImport = clone(useKachamak.getState().novels);
     const input = wrapped ? {format:'katchamak-project', version:1, storeVersion:7, novel:source} : source;
-    await cloud.importWebProject(JSON.stringify(input), null);
+    await cloud.importWebProject(wrapped ? new Blob([JSON.stringify(input)]) : JSON.stringify(input), null);
     const importedId = useKachamak.getState().activeNovelId;
     assert.ok(importedId && importedId !== source.id && !beforeImport.some(n => n.id === importedId), label + ': new copy, never replace');
     const expectedImport = {...clone(source), id:importedId, author:source.author??'', trash:clone(source.trash??[]), statuses:clone(source.statuses??[]), labels:clone(source.labels??[])};
@@ -186,4 +186,9 @@ const beforeInvalidImport = clone(useKachamak.getState().novels), savedBeforeInv
 await assert.rejects(() => cloud.importWebProject(JSON.stringify({...modern, author:42}), null), /Not a Katchamak project/);
 assert.deepEqual(useKachamak.getState().novels, beforeInvalidImport, 'Invalid author is rejected before changing the open library');
 assert.deepEqual(await (await call()).json(), savedBeforeInvalidImport, 'Invalid author leaves saved library and revision unchanged');
+const duplicate = clone(modern);
+duplicate.sections.binder.push(clone(duplicate.sections.binder[0]));
+await assert.rejects(() => cloud.importWebProject(JSON.stringify(duplicate),null));
+assert.deepEqual(useKachamak.getState().novels,beforeInvalidImport,'A rejected cloud import must never become the active or pending book');
+assert.deepEqual(await (await call()).json(),savedBeforeInvalidImport);
 console.log(`Cloud validation passed: ${invalidCases.length} rejected cases without writes; modern/legacy/custom/imported formats; real client save/reload; six active JSON/desktop imports with library preservation${process.env.KATCHAMAK_TEST_PACKAGED_VALIDATION === '1' ? ' against packaged Worker' : ''}.`);

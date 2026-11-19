@@ -1,7 +1,7 @@
 "use client";
 
 /** Project dialogs reuse the existing manuscript actions; the library owns navigation. */
-import { createWebCollection, createWebProject, prepareWebImport, importWebProject, flushWebLibrary } from "@/lib/kachamak/cloud-library";
+import { createWebCollection, createWebProject, importWebProject, flushWebLibrary } from "@/lib/kachamak/cloud-library";
 import { useEffect, useRef, useState } from "react";
 import { exportNovelJson, projectsSavedLocally, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
@@ -26,7 +26,6 @@ export function Dashboard() {
   const renameCollection = useCollections((s) => s.renameCollection);
   const removeCollection = useCollections((s) => s.removeCollection);
   const setMembership = useCollections((s) => s.setMembership);
-  const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -52,22 +51,15 @@ export function Dashboard() {
       onDeleteCollection={setPendingDelete}
       onDeleteProject={setPendingProjectDelete}
     >
-      <input ref={fileRef} type="file" accept="application/json,.json" className="sr-only" aria-label="Import JSON backup" onChange={(event) => {
+      <input ref={fileRef} type="file" accept="application/json,.json" className="sr-only" aria-label="Import JSON backup" onChange={async (event) => {
         const file = event.target.files?.[0];
         event.target.value = "";
         if (!file) return;
-        const destination = selectedCollection;
-        const reader = new FileReader();
-        reader.onload = async () => {
-          try {
-            await importWebProject(String(reader.result), destination);
-            toast.success("Project imported from backup.");
-          } catch (error) { toast.error(String(error)); }
-        };
-        reader.onerror = () => toast.error("Could not read the backup file.");
-        reader.readAsText(file);
+        try {
+          await importWebProject(file, selectedCollection);
+          toast.success("Project imported from backup.");
+        } catch (error) { toast.error(String(error)); }
       }} />
-      <Dialog open={importOpen} onOpenChange={setImportOpen}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>Import project</DialogTitle></DialogHeader><p>Choose a JSON backup to import into your account library.</p><button className="rounded bg-amber-400 p-2 text-black" onClick={() => { setImportOpen(false); fileRef.current?.click(); }}>Choose JSON backup</button></DialogContent></Dialog>
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="border-white/10 bg-[#1b1b1b]">
           <DialogHeader><DialogTitle>Create a new project</DialogTitle></DialogHeader>

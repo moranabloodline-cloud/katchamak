@@ -2,6 +2,7 @@
 import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
 import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections, exportNovelJson } from './store';
+import { validCloudLibrary } from './cloud-write-validation.mjs';
 import { useCollections, type Collection } from './collections-store';
 import { findNode, findNodeInNovel } from './utils';
 import { useLibraryPreferences } from './library-preferences';
@@ -349,12 +350,20 @@ function addNovel(novel: Novel, collectionId: string | null) {
   if (collectionId) useCollections.getState().setMembership(collectionId, novel.id, true);
 }
 export async function prepareWebImport(_collectionId: string | null) { await flushWebLibrary(); }
-export async function importWebProject(json: string, collectionId: string | null) {
+export async function importWebProject(file: string | Blob, collectionId: string | null) {
+  const owner = accountId, epoch = accountEpoch;
+  if (!owner || !useWebLibrary.getState().ready) throw new Error('Open your account library before importing.');
+  const json = typeof file === 'string' ? file : await file.text();
+  if (owner !== accountId || epoch !== accountEpoch || !useWebLibrary.getState().ready)
+    throw new Error('Your account session changed. Choose the backup again.');
   const input = JSON.parse(json), value = input?.format === 'katchamak-project' ? input.novel : input;
   if (!isUsableBackup(value)) throw new Error('Not a Katchamak project.');
   // Match the established store.importNovel defaults for older JSON backups.
   const novel: Novel = { ...value, id: crypto.randomUUID(), author: value.author ?? '', trash: value.trash ?? [], statuses: value.statuses ?? [], labels: value.labels ?? [] };
-  normalizeNovelSections(novel); addNovel(novel, collectionId); await flushWebLibrary();
+  normalizeNovelSections(novel);
+  if (!validCloudLibrary({novels:[novel],collections:[]}))
+    throw new Error('This backup contains project data that cannot be saved to your cloud library.');
+  addNovel(novel, collectionId); await flushWebLibrary();
 }
 function filesPath(id: string | null) { if (!id) throw new Error('Open a project first.'); return '/api/library/files/' + encodeURIComponent(id); }
 export async function projectAttachments(projectId = useKachamak.getState().activeNovelId): Promise<{ id: string; name: string; size: number }[]> {

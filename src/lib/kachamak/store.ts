@@ -16,7 +16,8 @@ import type {
 import {novelSettingsPatch,validCoverImage,type NovelSettingsPatch} from "./project-settings";
 import { SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
-import { uid, findNode, findNodeInNovel } from "./utils";
+import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
+import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validNoteFontSize,validPageFormat,type PageFormat} from './page-format';
@@ -162,8 +163,8 @@ interface KachamakState {
 
   /* trash */
   restoreFromTrash: (trashId: string) => string | undefined;
-  deleteForever: (trashId: string) => void;
-  emptyTrash: () => void;
+  deleteForever: (trashId: string, projectId: string) => void;
+  emptyTrash: (projectId: string, confirmed: ReadonlySet<string>) => boolean;
 }
 
 /* ---------- legacy codex (pre-unification data) ---------- */
@@ -630,6 +631,10 @@ export const useKachamak = create<KachamakState>()(
         } else {
           const parent = findNode(roots, parentId);
           if (!parent) return null;
+          if (!canPlaceNote(roots, parentId, n)) {
+            toast.error('This note would be nested too deeply to save. Choose a higher-level parent.');
+            return null;
+          }
           created = n;
           parent.children.push(n);
           parent.collapsed = false;
@@ -745,6 +750,12 @@ export const useKachamak = create<KachamakState>()(
           (destParentId === id || findNode([moving], destParentId))
         )
           return;
+        const destination = novel.sections[destSection];
+        if (destParentId && !findNode(destination, destParentId)) return;
+        if (!canPlaceNote(destination, destParentId, moving)) {
+          toast.error('This branch would be nested too deeply to save. Choose a higher-level parent.');
+          return;
+        }
         if(fromSection==='codex' && destSection!=='codex') preserveCodexLinks(novel);
         const { nodes, removed } = removeFromNodes(fromRoots, id);
         if (!removed) return;
@@ -840,6 +851,13 @@ export const useKachamak = create<KachamakState>()(
         if (!novel) return;
         const item = novel.trash.find((t) => t.id === trashId);
         if (!item) return;
+        const roots = novel.sections[item.section];
+        const parent = item.parentId ? findNode(roots, item.parentId) : null;
+        if (!canPlaceNote(roots, parent?.id ?? null, item.node)) {
+          return parent
+            ? 'This branch would be nested too deeply to save. Move its original parent up and try Restore again.'
+            : 'This branch exceeds the cloud nesting limit even at the top level. It is still available in Trash and in your JSON backup.';
+        }
         if (item.section === 'family' && item.familyRelationships?.length) {
           const live = novel.familyRelationships ?? [];
           const keys = new Set(live.map(relationshipKey));
@@ -856,16 +874,13 @@ export const useKachamak = create<KachamakState>()(
             list.push(item.node);
           }
         };
-        if (item.parentId) {
-          const parent = findNode(novel.sections[item.section], item.parentId);
-          if (parent) {
-            restoreAtOriginalPosition(parent.children);
-            parent.collapsed = false;
-          } else {
-            novel.sections[item.section].push(item.node);
-          }
+        if (parent) {
+          restoreAtOriginalPosition(parent.children);
+          parent.collapsed = false;
+        } else if (item.parentId) {
+          roots.push(item.node);
         } else {
-          restoreAtOriginalPosition(novel.sections[item.section]);
+          restoreAtOriginalPosition(roots);
         }
         novel.trash = novel.trash.filter((t) => t.id !== trashId);
         set((s) => ({
@@ -873,22 +888,24 @@ export const useKachamak = create<KachamakState>()(
         }));
       },
 
-      deleteForever: (trashId) => {
+      deleteForever: (trashId, projectId) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
+        if (!novel || novel.id !== projectId || !novel.trash.some(t => t.id === trashId)) return;
         novel.trash = novel.trash.filter((t) => t.id !== trashId);
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
       },
 
-      emptyTrash: () => {
+      emptyTrash: (projectId, confirmed) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
-        if (!novel) return;
+        if (!novel || novel.id !== projectId || novel.trash.length !== confirmed.size ||
+            !novel.trash.every(t => confirmed.has(t.id))) return false;
         novel.trash = [];
         set((s) => ({
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
         }));
+        return true;
       },
     }),
     {

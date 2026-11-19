@@ -1,5 +1,5 @@
 import type { NoteNode, Novel, SectionKey, TabKey } from './types';
-import { ancestorIds, findNodeInNovel, forEachNode, uid } from './utils';
+import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, forEachNode, uid } from './utils';
 import { workspaceTabs } from './workspace-tabs';
 import { removeUnavailableNoteLinks } from './link-review';
 
@@ -58,8 +58,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
   const now = Date.now();
   const statuses = new Set(destination.statuses);
   const copy = (original: NoteNode, depth: number): NoteNode => {
-    // The existing cloud reader requires even the final empty child list to be below depth 100.
-    if (depth >= 99) throw new Error('The copied notes would be nested too deeply. Choose a higher-level destination tab.');
+    if (depth >= CLOUD_NOTE_LEVELS) throw new Error('The copied notes would be nested too deeply. Choose a higher-level destination tab.');
     const node = structuredClone({ ...original, children: [] });
     if (node.status) statuses.add(node.status);
     const content = remapHtml(node.content ?? '', ids, false);

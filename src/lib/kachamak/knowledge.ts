@@ -45,7 +45,6 @@ export function groupLinkedNotes(novel: Novel, ids: string[]): LinkedNoteGroup[]
     return [match];
   });
 }
-export const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 export function matchName(text: string, node: NoteNode): {name:string;index:number} | null {
   const match=scanLinks(text,[node]).find(m=>m.targetId===node.id);
   return match?{name:match.text,index:match.start}:null;
@@ -54,8 +53,9 @@ export function inlineNoteIds(html: string): string[] {
   return [...html.matchAll(/(?:data-katchamak-note\s*=\s*["']|href\s*=\s*["']#note\/)([a-zA-Z0-9_-]{1,128})["']/gi)].map(m=>m[1]);
 }
 export function referenceTo(source: IndexedNote, target: NoteNode, novel?: Novel) {
-  const explicit=(source.node.links??[]).includes(target.id)||inlineNoteIds(source.node.content).includes(target.id);
   if(source.node.id===target.id)return null;
+  const explicit=(source.node.links??[]).includes(target.id) ||
+    [source.node.content,source.node.synopsis,source.node.notes].some(html=>html && inlineNoteIds(html).includes(target.id));
   const candidates=novel?flattenNotes(novel).map(entry=>entry.node):[target];
   const body=scanLinks(contentText(source.node.content),candidates,source.node.linkChoices,source.node.id);
   const metadata=scanLinks(contentText(source.node.synopsis)+'\n'+contentText(source.node.notes),candidates,[],source.node.id);

@@ -1,7 +1,7 @@
 import {useKachamak} from './store';
 import {GREGORIAN,validCalendar,validEvent,type StoryCalendar} from './story-calendar';
 import type {NoteNode} from './types';
-import {uid} from './utils';
+import {CLOUD_NOTE_LEVELS,uid} from './utils';
 
 // A timeline file contains dated prose and hierarchy, never an entire library.
 // Import is append-only and does not replace the destination calendar or notes.
@@ -13,8 +13,9 @@ export function importTimeline(projectId:string,json:string) {
   if(file?.format!=='kachamak-timeline'||file.version!==1||!validCalendar(file.calendar)||!Array.isArray(file.notes)||!file.notes.length)throw new Error('Choose a Kachamak timeline JSON file.');
   if(calendarRules(file.calendar)!==calendarRules(novel.timeline?.calendar??GREGORIAN))throw new Error('This timeline uses different calendar rules. The project calendar has not been changed.');
   let count=0;const now=Date.now();
+  const maxLevels=process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP==='1'?100:CLOUD_NOTE_LEVELS;
   const read=(value:unknown,depth:number):NoteNode=>{
-    if(!value||typeof value!=='object'||Array.isArray(value)||depth>=100||++count>10000)throw new Error('The timeline hierarchy is invalid or too large.');
+    if(!value||typeof value!=='object'||Array.isArray(value)||depth>=maxLevels||++count>10000)throw new Error('The timeline hierarchy is invalid or too large.');
     const n=value as Record<string,unknown>;
     if(typeof n.title!=='string'||!n.title.trim()||n.title.length>500||!Array.isArray(n.children)||!['content','synopsis','notes'].every(k=>n[k]===undefined||typeof n[k]==='string')||n.event!==undefined&&!validEvent(n.event)||n.timelineKind!==undefined&&!['event','period'].includes(String(n.timelineKind)))throw new Error('A timeline note has invalid text or dates.');
     const event=n.event?{...(n.event as NonNullable<NoteNode['event']>)}:undefined;

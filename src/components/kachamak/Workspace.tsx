@@ -167,7 +167,7 @@ export function Workspace() {
 
       {/* body — every tab is the same note system; only Trash is different */}
       {activeTab === "trash" ? (
-        <TrashView />
+        <TrashView key={activeNovelId} />
       ) : (
         <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} revealSearch={searchShortcut}/>
       )}

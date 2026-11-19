@@ -43,7 +43,8 @@ export function TrashView() {
   const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
   const novel = novels.find((n) => n.id === activeNovelId);
   const [filter, setFilter] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ projectId: string; id: string; title: string } | null>(null);
+  const [pendingEmpty, setPendingEmpty] = useState<{ projectId: string; ids: Set<string> } | null>(null);
 
   if (!novel) return null;
 
@@ -132,7 +133,7 @@ export function TrashView() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPendingDelete({ id: t.id, title: t.node.title })}
+                  onClick={() => setPendingDelete({ projectId: novel.id, id: t.id, title: t.node.title })}
                   aria-label={`Delete ${t.node.title} forever`}
                   className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
                 >
@@ -163,7 +164,9 @@ export function TrashView() {
               {novel.trash.length === 1 ? "" : "s"} and their entire history. This cannot
               be undone.
             </p>
-            <AlertDialog>
+            <AlertDialog open={!!pendingEmpty} onOpenChange={open => setPendingEmpty(open
+              ? {projectId:novel.id, ids:new Set(novel.trash.map(item => item.id))}
+              : null)}>
               <AlertDialogTrigger asChild>
                 <button
                   type="button"
@@ -177,14 +180,17 @@ export function TrashView() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Empty the Trash?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    All {novel.trash.length} deleted items will be permanently destroyed.
+                    All {pendingEmpty?.ids.size} deleted items will be permanently destroyed.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel className="bg-white/10">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-red-600 hover:bg-red-500"
-                    onClick={emptyTrash}
+                    onClick={() => {
+                      if (pendingEmpty && !emptyTrash(pendingEmpty.projectId, pendingEmpty.ids))
+                        toast.error('The Trash changed. Review its contents and try again.');
+                    }}
                   >
                     Empty Trash
                   </AlertDialogAction>
@@ -203,7 +209,7 @@ export function TrashView() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-white/10">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={() => { if (pendingDelete) deleteForever(pendingDelete.id); setPendingDelete(null); }}>Delete forever</AlertDialogAction>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={() => { if (pendingDelete) deleteForever(pendingDelete.id, pendingDelete.projectId); setPendingDelete(null); }}>Delete forever</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

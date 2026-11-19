@@ -87,3 +87,8 @@ assert.deepEqual(chapterReferences.map(ref=>ref.source.node.id),['body-source','
 assert.ok(!chapterReferences.some(ref=>ref.source.node.id==='unrelated'),'A character mentioned in the selected chapter is not an incoming chapter mention');
 assert.deepEqual(mentionIndex.map(source=>referenceTo(source,personTarget,mentionsNovel)).filter(Boolean).map(ref=>ref.source.node.id),['codex-source','unrelated'],'Each note has its own incoming mentions');
 assert.equal(chapterReferences.find(ref=>ref.source.node.id==='planning-source').snippet,'Ch 1 - The Query opens here.');
+for (const field of ['synopsis','notes']) {
+  const source = {...note('source','Notes'),[field]:'<p>See <a href="#note/target-chapter">the opening</a>.</p>'};
+  const ref = referenceTo({node:source,text:'See the opening.',section:'planning',path:'Planning'},chapterTarget,mentionsNovel);
+  assert.equal(ref?.explicit,true,'An existing link in '+field+' survives a different caption or renamed target');
+}

@@ -72,7 +72,7 @@ members(other,[a,b,d]); remove(root);
 const codexTrash = book().trash.find(t=>t.section==='codex');
 assert.equal(restore(codexTrash.id),undefined);
 assert.deepEqual(noteRelationships(book(),c),[]);
-state().emptyTrash();
+assert.ok(state().emptyTrash(book().id,new Set(book().trash.map(item=>item.id))));
 assert.equal(book().familyRelationships.length,2);
 // Old family records may still be in the book. Codex reads only pairs shown by a live tree.
 const legacy = structuredClone(deleted);

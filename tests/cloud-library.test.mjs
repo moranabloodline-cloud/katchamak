@@ -331,10 +331,22 @@ assert.equal(useKachamak.getState().novels[0].sections.binder[0].content,'<p>Loc
 assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Text saved in another window</p>');
 assert.equal(cloud.useWebLibrary.getState().ready,true);assert.equal(cloud.useWebLibrary.getState().pending,true);assert.equal(cloud.useWebLibrary.getState().conflict,true);
 await cloud.reloadWebLibrary(true); // Only this explicit discard may replace the pending version.
+const originalBook = JSON.stringify(useKachamak.getState().novels[0]);
+let finishReading;
+const delayedFile = {text:() => new Promise(resolve => { finishReading=resolve; })};
+const delayedImport = cloud.importWebProject(delayedFile,null);
+const originalAccount = await (await call(a)).json();
+const otherAccount = await (await call(b)).json();
 browserUser=b;
 await assert.rejects(()=>cloud.refreshWebLibrary(),/account changed/);
 assert.equal(cloud.useWebLibrary.getState().ready,false,'Account switch hides the old library before rendering the next account');
 await assert.rejects(()=>cloud.saveWebLibrary(),/Open your account/);
+await cloud.initializeWebLibrary();
+finishReading(originalBook);
+await assert.rejects(delayedImport,/session changed/);
+assert.deepEqual(await (await call(a)).json(),originalAccount);
+assert.deepEqual(await (await call(b)).json(),otherAccount);
+assert.deepEqual(useKachamak.getState().novels,otherAccount.snapshot.novels);
 console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, nested library, Unicode manuscript roundtrip, attachments, failed-save recovery, two-view refresh and conflict preservation.');
 
 const invalidBannerLibrary={novels:structuredClone(useKachamak.getState().novels),collections:[]};
