@@ -60,6 +60,5 @@ export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onZ
       })}
     </div>
     {!!rows.length&&!visible.length&&<p className="p-5 text-center text-xs text-muted-foreground">No events in this range. Use Fit events to return to your dates.</p>}
-    {!!rows.length&&<p className="px-4 py-3 text-[11px] text-muted-foreground">Select a note to edit its dates. Drag empty space to browse. Ctrl + scroll to zoom.</p>}
   </div>;
 }
