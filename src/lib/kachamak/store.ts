@@ -19,7 +19,7 @@ import { uid, findNode, findNodeInNovel } from "./utils";
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validPageFormat,type PageFormat} from './page-format';
-import {moveWorkspaceTabOrder} from './workspace-tabs';
+import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
@@ -116,6 +116,7 @@ interface KachamakState {
   setTab: (tab: TabKey) => void;
   openNoteTab: (id: string) => void;
   moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
+  hideTab: (projectId:string,tab:TabKey) => void;
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
   changeFamilyRelationship: (projectId:string, treeId:string, relation:FamilyRelationship, remove?:boolean) => string | null;
@@ -514,13 +515,13 @@ export const useKachamak = create<KachamakState>()(
          (editor toolbar i desni panel drže tekuću notu) dok korisnik ne klikne
          novu note u levom panelu; čisti se samo inline preimenovanje (po Nikoli) */
       setTab: (tab) => set(s => ({ activeTab: tab, renamingNodeId: null, ...(tab==="timeline"?{view:"timeline" as const}:(s.activeTab==="timeline"&&s.view==="timeline" || tab!=='family' && s.view==='family')?{view:"write" as const}:{}),
-        ...(s.novels.find(n=>n.id===s.activeNovelId)?.hiddenSections?.includes(tab as SectionKey)
-          ? {novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:n.hiddenSections?.filter(k=>k!==tab)}):n)} : {})
+        ...(s.novels.some(n=>n.id===s.activeNovelId && isWorkspaceTabHidden(n,tab))
+          ? {novels:s.novels.map(n=>n.id===s.activeNovelId?touch(revealWorkspaceTab(n,tab)):n)} : {})
       })),
       openNoteTab: (id) => {
         const novel=get().novels.find(n=>n.id===get().activeNovelId);
         if(!novel || !findNodeInNovel(novel,id)) return;
-        set(s=>({novels:s.novels.map(n=>n.id===novel.id?touch({...n,openNoteTabs:[...new Set([...(n.openNoteTabs||[]),id])]}):n),activeTab:`note:${id}`,renamingNodeId:null}));
+        set(s=>({novels:s.novels.map(n=>n.id===novel.id?touch({...revealWorkspaceTab(n,`note:${id}`),openNoteTabs:[...new Set([...(n.openNoteTabs||[]),id])]}):n),activeTab:`note:${id}`,renamingNodeId:null}));
       },
       moveWorkspaceTab: (projectId,from,to)=>set(s=>{
         if(s.activeNovelId!==projectId)return s;
@@ -528,11 +529,18 @@ export const useKachamak = create<KachamakState>()(
         const tabOrder=moveWorkspaceTabOrder(novel,from,to);if(!tabOrder)return s;
         return {novels:s.novels.map(n=>n.id===projectId?touch({...n,tabOrder}):n)};
       }),
+      hideTab: (projectId,tab) => set(s=>{
+        const novel=s.novels.find(n=>n.id===projectId);
+        if(projectId!==s.activeNovelId||!novel||!workspaceTabs(novel).some(t=>t.key===tab))return s;
+        const updated=touch({...novel,hiddenTabs:[...(novel.hiddenTabs??[]),tab]});
+        return {novels:s.novels.map(n=>n===novel?updated:n),
+          ...(s.activeTab===tab?{...visibleTabLocation(updated,tab,s.view),renamingNodeId:null}:{})};
+      }),
       closeTab: (tab) => {
         if(['binder','codex','timeline','trash'].includes(tab)) return;
         set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,...(tab.startsWith('note:')?{openNoteTabs:(n.openNoteTabs||[]).filter(id=>id!==tab.slice(5))}:{hiddenSections:[...new Set([...(n.hiddenSections||[]),tab as SectionKey])]})}):n),activeTab:s.activeTab===tab?'binder':s.activeTab}));
       },
-      showSection: (section) => set(s=>({...(section==='family'?{view:'family' as const,selectedNodeId:s.novels.find(n=>n.id===s.activeNovelId)?.sections.family?.find(n=>!n.hidden)?.id??null}:{}),novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,hiddenSections:(n.hiddenSections||[]).filter(k=>k!==section)}):n),activeTab:section})),
+      showSection: (section) => set(s=>({...(section==='family'?{view:'family' as const,selectedNodeId:s.novels.find(n=>n.id===s.activeNovelId)?.sections.family?.find(n=>!n.hidden)?.id??null}:{}),novels:s.novels.map(n=>n.id===s.activeNovelId?touch(revealWorkspaceTab(n,section)):n),activeTab:section})),
       changeFamilyRelationship: (projectId,treeId,relation,remove=false) => {
         const state=get(), novel=state.novels.find(n=>n.id===projectId);
         const tree=novel && findNode(novel.sections.family,treeId);
@@ -872,7 +880,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 36,
+      version: 37,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -885,6 +893,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<37){ /* Existing books retain their tab order and legacy hidden sections. */ }
         if(version<36){ /* Notes without an explicit opt-out remain automatic link targets. */ }
         if(version<35){ /* Earlier Trash items have no saved family links. */ }
         if(version<34){ /* Existing three-block layouts are valid; Timeline is added at display time. */ }

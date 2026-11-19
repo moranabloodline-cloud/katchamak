@@ -20,6 +20,28 @@ assert.equal(novel().sections,sections,'Moving tabs never rewrites manuscript no
 actions.closeTab(`note:${folder}`);assert.ok(!keys().includes(`note:${folder}`));actions.openNoteTab(folder);assert.equal(keys()[2],`note:${folder}`,'Reopening a folder restores its remembered position');
 actions.updateNode('binder',folder,{title:'Renamed World'});assert.equal(workspaceTabs(novel())[2].label,'Renamed World','Labels follow renaming without changing identity/order');
 const planningPosition=keys().indexOf('planning');actions.closeTab('planning');assert.ok(!keys().includes('planning'));actions.showSection('planning');assert.equal(keys().indexOf('planning'),planningPosition);
+const allTabs=keys();
+const folderTab=`note:${folder}`;
+actions.setTab('codex');
+actions.hideTab(projectId,folderTab);
+assert.equal(useKachamak.getState().activeTab,'codex','Hiding a background tab keeps the active tab');
+actions.hideTab(projectId,'codex');
+assert.equal(useKachamak.getState().activeTab,'planning','Hiding the active tab opens its visible neighbour');
+assert.equal(novel().sections.binder[0].content,'<p>Keep this manuscript.</p>');
+assert.deepEqual(workspaceTabs(novel(),true).map(t=>t.key),[folderTab,'codex']);
+const hiddenBook=JSON.parse(JSON.stringify(novel()));
+assert.ok(isUsableBackup(hiddenBook));
+assert.ok(validCloudLibrary({novels:[hiddenBook],collections:[]}));
+useKachamak.setState({novels:[hiddenBook]});
+assert.equal(keys().includes('codex'),false);
+actions.setTab('codex');
+actions.openNoteTab(folder);
+assert.deepEqual(keys(),allTabs,'Restoring tabs recovers their original positions');
+for(const key of allTabs) actions.hideTab(projectId,key);
+assert.deepEqual(keys(),[]);
+assert.deepEqual(workspaceTabs(novel(),true).map(t=>t.key),allTabs,'Every hidden tab remains available under +');
+for(const key of allTabs) actions.setTab(key);
+assert.deepEqual(keys(),allTabs);
 const portable=JSON.parse(JSON.stringify(novel()));assert.ok(isUsableBackup(portable));assert.equal(validCloudLibrary({novels:[portable],collections:[]}),true);
 const ordered=keys();useKachamak.setState({novels:[portable]});assert.deepEqual(keys(),ordered,'The saved project order survives a portable roundtrip');
 for(const invalid of [['binder','binder'],['trash'],['unknown'],['note:'],['note:bad id'],null,{}]){
@@ -29,6 +51,8 @@ for(const invalid of [['binder','binder'],['trash'],['unknown'],['note:'],['note
 const before=useKachamak.getState();actions.moveWorkspaceTab(projectId,'trash','binder');assert.equal(useKachamak.getState(),before);actions.moveWorkspaceTab(projectId,'binder','binder');assert.equal(useKachamak.getState(),before);
 actions.createNovel('Other project','Tester');const other=useKachamak.getState().activeNovelId;
 assert.equal(useKachamak.getState().novels.find(n=>n.id===other).tabOrder,undefined,'A project has its own default order');
+actions.hideTab(projectId,'codex');
+assert.deepEqual(workspaceTabs(useKachamak.getState().novels.find(n=>n.id===other),true),[],'Hiding from an inactive book cannot affect the open book');
 const guarded=useKachamak.getState();actions.moveWorkspaceTab(projectId,'binder','timeline');assert.equal(useKachamak.getState(),guarded,'A late drag from another project cannot change either order');
 const legacy=structuredClone(portable);delete legacy.tabOrder;
 assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},26).novels,[legacy],'v27 migration preserves legacy projects exactly');

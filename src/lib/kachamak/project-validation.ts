@@ -46,7 +46,7 @@ export function isReadableProject(value: unknown): boolean {
     validFamilyRelationships(t.familyRelationships) && isTree([t.node])
   ))) return false;
   if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
-  if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder))return false;
+  if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];

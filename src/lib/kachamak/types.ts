@@ -128,6 +128,7 @@ export interface Novel {
   openNoteTabs?: string[];
   tabOrder?: TabKey[];
   hiddenSections?: SectionKey[];
+  hiddenTabs?: TabKey[];
   timeline?: TimelinePreferences;
   createdAt: number;
   updatedAt: number;
