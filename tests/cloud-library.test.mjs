@@ -167,10 +167,13 @@ assert.equal(writer.changeFamilyRelationship(novel.id,familyTree,customKin),null
 assert.equal(writer.changeFamilyRelationship(novel.id,familyTree,godchild),null);
 const otherTarget=writer.addNode('codex',null,'doc','Portal');
 writer.updateNode('binder','note-1',{content:'<p>Černobog arrived. Portal, then Portal.</p>'});
-const {pendingLinkReview,mergeReviewChoices}=await import('../src/lib/kachamak/link-review.ts');
+const {pendingLinkReview,mergeReviewChoice}=await import('../src/lib/kachamak/link-review.ts');
 const reviewNovel=useKachamak.getState().novels.find(n=>n.id===novel.id),reviewSource=reviewNovel.sections.binder[0];
 const reviewMatches=pendingLinkReview(reviewNovel,reviewSource);
-writer.updateNode('binder','note-1',{linkChoices:mergeReviewChoices(reviewNovel,reviewSource,reviewSource.content,reviewMatches.map((m,i)=>({start:m.start,end:m.end,text:m.text,targetId:i===0?target:i===1?otherTarget:null})))});
+for (const [index, match] of reviewMatches.entries()) {
+  const targetId = [target, otherTarget, null][index];
+  writer.updateNode('binder','note-1',{linkChoices:mergeReviewChoice(reviewNovel,reviewSource,reviewSource.content,match,targetId)});
+}
 const timelineRoot=writer.addNode('timeline',null,'doc','Timeline root'),timelineChild=writer.addNode('timeline',timelineRoot,'doc','Nested event');writer.updateNode('timeline',timelineChild,{content:'<p>Nested timeline prose.</p>',event:{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'}});writer.select('note-1');
 const eraCalendar={...calendarPreset('uniform'),eras:[{id:'third-age',name:'Third Age',abbreviation:'TA',startYear:101,color:'#f0883e'}]};
 const timelineLayout={detailBlockOrder:['codex','timeline','image','aliases'],hiddenDetailBlocks:['timeline'],collapsedDetailBlocks:['aliases','timeline']};

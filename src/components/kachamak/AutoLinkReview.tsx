@@ -6,7 +6,7 @@ import {saveWebLibrary,useWebLibrary} from '@/lib/kachamak/cloud-library';
 import {contentText,flattenNotes,type NoteMatch} from '@/lib/kachamak/note-links';
 import {TABS} from '@/lib/kachamak/types';
 import {findNodeInNovel} from '@/lib/kachamak/utils';
-import {mergeReviewChoices,pendingLinkReview,prepareLinkReview,reviewDecisions} from '@/lib/kachamak/link-review';
+import {mergeReviewChoice,pendingLinkReview,prepareLinkReview} from '@/lib/kachamak/link-review';
 import {toast} from 'sonner';
 import {create} from 'zustand';
 import {BookText,Folder,Landmark,CalendarRange,Diamond} from 'lucide-react';
@@ -105,9 +105,7 @@ export function AutoLinkReview() {
       if(state.activeNovelId!==session.projectId)throw new Error('Return to the original project before reviewing links.');
       const current=state.novels.find(novel=>novel.id===session.projectId),hit=current?findNodeInNovel(current,session.noteId):null;
       if(!current||!hit)throw new Error('The original note is no longer available.');
-      const decisions=reviewDecisions(session.matches,match,targetId,'one');
-      if(!decisions.length){toast.info('This name has multiple targets. Choose its note before continuing.');return;}
-      const choices=mergeReviewChoices(current,hit.node,session.html,decisions);
+      const choices=mergeReviewChoice(current,hit.node,session.html,match,targetId);
       state.updateNode(hit.section,hit.node.id,{linkChoices:choices});
       const latest=useKachamak.getState().novels.find(novel=>novel.id===session.projectId);
       const source=latest?findNodeInNovel(latest,session.noteId):null;
