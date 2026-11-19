@@ -1,3 +1,5 @@
+> **2026-11-19 — Uklonjen WebSocket demo.** Provera poziva u aplikaciji, desktopu, skriptama i testovima potvrdila je da se primer četa ne koristi. Posle uklanjanja njegova dva fajla prolaze puna TypeScript provera i produkcijski build.
+
 > **2026-11-19 — Pojedinačno linkovanje.** Uklonjene su stare grupne odluke za sva pojavljivanja istog imena i za sve preostale predloge. Provereno je pojedinačno prihvatanje, ignorisanje, odlaganje, izbor između istoimenih beležaka iz Codexa i ponovno učitavanje sačuvanih veza.
 
 > **2026-11-19 — Skeniranje naslova iz Codexa.** Pri čuvanju se kao novi linkovi nude samo naslovi beležaka iz Codexa iste knjige, uključujući ugnježdene beleške. Skener preskače aliase, druge tabove i beleške označene za ignorisanje. Provereni su istoimeni naslovi, postojeće veze i čuvanje izabranog linka posle ponovnog učitavanja.
@@ -489,6 +491,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Uklonjen WebSocket demo.** Provera poziva u aplikaciji, desktopu, skriptama i testovima potvrdila je da se primer četa ne koristi. Posle uklanjanja njegova dva fajla prolaze puna TypeScript provera i produkcijski build.
 
 > **2026-11-19 — Pojedinačno linkovanje.** Uklonjene su stare grupne odluke za sva pojavljivanja istog imena i za sve preostale predloge. Provereno je pojedinačno prihvatanje, ignorisanje, odlaganje, izbor između istoimenih beležaka iz Codexa i ponovno učitavanje sačuvanih veza.
 
