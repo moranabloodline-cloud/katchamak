@@ -1,3 +1,5 @@
+> **2026-11-19 — Clone to project.** Kopije preusmeravaju i interne HTML veze zapisane pomoću entiteta, a automatski opis ručne veze prikazuje novu putanju. Zatvaranje dijaloga ponovo omogućava klikove u radnom prostoru. U Chrome-u na dve sintetičke knjige provereni su otkazivanje, dva kloniranja u isti Sort This, redosled i sadržaj četiri beleške na tri nivoa, veze i otvaranje kopirane beleške posle čuvanja i ponovnog učitavanja. Izvorna knjiga ostala je identična.
+
 > **2026-11-19 — Korpa, uvoz i čuvanje dubokih stabala.** Potvrda trajnog brisanja važi za izabranu knjigu i prikazani sadržaj korpe. Cloud uvoz proverava normalizovanu kopiju pre dodavanja u biblioteku i prekida čitanje rezultata posle promene prijave. Dodavanje, premeštanje, vraćanje i Timeline uvoz poštuju postojeću granicu za cloud snimanje. Mentions prikazuje i ručne linkove iz Synopsis i Notes.
 
 > **2026-11-19 — Oporavak nacrta i prilozi.** Ponovljeni oporavak prepoznaje već sačuvanu kopiju iste verzije nacrta i proverava je u cloudu. Prilozi i njihove adrese ostaju vezani za izabranu knjigu tokom snimanja. Skener poštuje granice reči i uz kombinovane akcente i slova van osnovne Unicode ravni. Test starog kalendara proverava sadržaj nakon migracije i drugog učitavanja. Uklonjene su četiri nekorišćene zavisnosti. Offline paket izostavlja kontrolu za objavljivanje cloud demoa. Na čistoj instalaciji prošlo je 60 testnih datoteka, a na Windowsu i dva Rust testa.
@@ -495,6 +497,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Clone to project.** Kopije preusmeravaju i interne HTML veze zapisane pomoću entiteta, a automatski opis ručne veze prikazuje novu putanju. Zatvaranje dijaloga ponovo omogućava klikove u radnom prostoru. U Chrome-u na dve sintetičke knjige provereni su otkazivanje, dva kloniranja u isti Sort This, redosled i sadržaj četiri beleške na tri nivoa, veze i otvaranje kopirane beleške posle čuvanja i ponovnog učitavanja. Izvorna knjiga ostala je identična.
 
 > **2026-11-19 — Regresije posle v357.** Na sintetičkim knjigama provereni su promena korpe tokom potvrde, dve knjige sa istim ID-jevima u korpi, odloženo čitanje datoteke pri promeni naloga, odbijen uvoz sa ponovljenim ID-jem, granica od 99 nivoa i očuvanje teksta pri odbijenom vraćanju. Prošli su 61 testna datoteka, TypeScript i oba produkcijska builda. Chrome je potvrdio brisanje, odustajanje, Mentions i ponovno učitavanje. Uklonjeni su nedostižni dijalog za uvoz sa početnog ekrana i nekorišćena funkcija escapePattern.
 

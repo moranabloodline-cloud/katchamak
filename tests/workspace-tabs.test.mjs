@@ -100,5 +100,39 @@ assert.throws(()=>cloneWorkspaceTab(source,'binder',target,'timeline'),/no longe
 assert.throws(()=>cloneWorkspaceTab(source,'binder',source,'codex'),/different/);
 assert.throws(()=>cloneWorkspaceTab(source,'templates',target,'binder'),/no notes/);
 assert.throws(()=>cloneWorkspaceTab(source,'binder',{...target,hiddenSections:['prompts']},'prompts'),/no longer available/);
+// A saved/imported HTML link can use character references for its fragment.
+// Both books deliberately have a note with the original target's ID.
+const original = structuredClone(source), destination = structuredClone(target);
+const chapter = original.sections.binder[0], linked = chapter.children[0];
+const hint = ' · Click to preview · Ctrl+click to open';
+const anchor = html => { const t = document.createElement('template'); t.innerHTML = html; return t.content.querySelector('a'); };
+const sideNote = {...linked, id:'side', title:'Postscript', hidden:true, children:[],
+  content:'<p><a href="&#35;note/child">Read <em>on</em></a></p>',
+  synopsis:'<a href="#note&#47;child" title="My caption">Source</a>',
+  notes:'<p><a href="&#35;note/external"><strong>Outside scope</strong></a></p>'};
+original.sections.binder.push(sideNote);
+linked.notes = '<a href="#note/side" data-katchamak-note="side" title="Postscript · Binder'+hint+'">Next</a>';
+destination.sections.research = [{...linked, id:'child', title:'Archive', content:'<p>Keep this original.</p>', children:[]}];
+destination.openNoteTabs = ['child'];
+const initialBooks = structuredClone([original,destination]);
+const result = cloneWorkspaceTab(original,'binder',destination,'note:child');
+const saved = JSON.parse(JSON.stringify({novels:[original,result.novel], collections:[]}));
+assert.ok(validCloudLibrary(saved));
+const archive = saved.novels[1].sections.research[0], wrapper = archive.children[0];
+const [newChapter,newSide] = wrapper.children, newLinked = newChapter.children[0];
+assert.equal(result.count,3);
+assert.equal(wrapper.title,'Sort This');
+assert.deepEqual(wrapper.children.map(n=>n.title),[chapter.title,sideNote.title]);
+assert.equal(newSide.hidden,true);
+assert.equal(anchor(newSide.content).getAttribute('href'),'#note/'+newLinked.id);
+assert.equal(anchor(newSide.content).innerHTML,'Read <em>on</em>');
+assert.equal(anchor(newSide.synopsis).getAttribute('href'),'#note/'+newLinked.id);
+assert.equal(anchor(newSide.synopsis).title,'My caption');
+assert.equal(newSide.notes,'<p><strong>Outside scope</strong></p>');
+assert.equal(anchor(newLinked.notes).getAttribute('data-katchamak-note'),newSide.id);
+assert.equal(anchor(newLinked.notes).title,'Postscript · Research / Archive / Sort This'+hint);
+assert.deepEqual([original,destination],initialBooks);
+assert.deepEqual(saved.novels[0],JSON.parse(JSON.stringify(initialBooks[0])));
+assert.equal(archive.content,destination.sections.research[0].content);
 console.log('Tab cloning passed: hierarchy, fresh IDs and internal links, reusable Sort This, folder destinations, project isolation and cloud validation.');
 console.log('Workspace tabs passed: defaults, section/Timeline/folder moves, unchanged manuscript/navigation, close/reopen, rename, project isolation, roundtrip, validation and migration.');

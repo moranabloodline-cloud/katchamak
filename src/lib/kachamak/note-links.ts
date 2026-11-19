@@ -153,6 +153,11 @@ export function noteLinkColor(color?:string) {
   return color&&/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)?color:'#60a5fa';
 }
 
+export const noteLinkInstructions = 'Click to preview · Ctrl+click to open';
+export function noteLinkTitle(title: string, path: string) {
+  return [title, path, noteLinkInstructions].join(' · ');
+}
+
 /** Display-only rules keep old anchors in sync without rewriting prose/history. */
 export function noteAnchorStyles(novel:Novel|undefined,scope:string,colorize=true) {
   if(!novel||!/^[a-zA-Z0-9_-]+$/.test(scope))return '';

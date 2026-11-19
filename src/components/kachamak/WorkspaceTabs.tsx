@@ -20,7 +20,7 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
   const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:tab.key});
   const button=<button ref={setNodeRef} {...attributes} {...listeners} type="button" onClick={onOpen} aria-current={active?'page':undefined} title={tab.label} style={{transform:CSS.Transform.toString(transform),transition,position:'relative',zIndex:isDragging?10:undefined}} className={`max-w-44 shrink-0 cursor-grab touch-none select-none truncate whitespace-nowrap rounded-md border px-2.5 py-1 text-sm active:cursor-grabbing ${active?'border-[#ad7e2e]/70 bg-[#3a2c18] text-[#fbe4a6]':'border-transparent text-muted-foreground hover:text-white'} ${isDragging?'bg-background shadow-lg ring-1 ring-amber-400/40':''}`}>{tab.label}</button>;
   const canDelete = !['binder','codex','timeline'].includes(tab.key);
-  return <ContextMenu><ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
+  return <ContextMenu modal={false}><ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
     <ContextMenuContent aria-label={`${tab.label} tab actions`} className="min-w-36 border-white/15 bg-[#1b1b1b]">
       <ContextMenuItem onSelect={onHide}>Hide tab</ContextMenuItem>
       {onClone && <ContextMenuItem onSelect={onClone}>Clone to project</ContextMenuItem>}

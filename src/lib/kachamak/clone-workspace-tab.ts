@@ -1,7 +1,8 @@
-import type { NoteNode, Novel, SectionKey, TabKey } from './types';
-import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, forEachNode, uid } from './utils';
+import { TABS, type NoteNode, type Novel, type SectionKey, type TabKey } from './types';
+import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, uid } from './utils';
 import { workspaceTabs } from './workspace-tabs';
 import { removeUnavailableNoteLinks } from './link-review';
+import { noteLinkInstructions, noteLinkTitle } from './note-links';
 
 export function cloneableWorkspaceTabs(novel: Novel) {
   return workspaceTabs(novel).filter(({key}) => {
@@ -18,22 +19,29 @@ function tabLocation(novel: Novel, key: TabKey) {
 
 // HTML is parsed in an inert template. Copy only project-local references
 // whose targets are part of this batch; retain their visible text otherwise.
-function remapHtml(html: string, ids: ReadonlyMap<string, string>, unwrap: boolean) {
-  if (!/data-katchamak-note|#note\//i.test(html)) return html;
+type CopyTarget = { id: string; title: string; path: string };
+function remapHtml(html: string, copies: ReadonlyMap<string, CopyTarget>, unwrap: boolean) {
+  if (!/<a\b|data-katchamak-note/i.test(html)) return html;
   const template = document.createElement('template');
   template.innerHTML = html;
-  for (const element of template.content.querySelectorAll('[data-katchamak-note], a[href^="#note/"]')) {
+  const links = template.content.querySelectorAll('[data-katchamak-note], a[href^="#note/"]');
+  if (!links.length) return html;
+  for (const element of links) {
     const id = element.getAttribute('data-katchamak-note');
     if (id !== null) {
-      const target = ids.get(id);
-      if (target) element.setAttribute('data-katchamak-note', target);
+      const target = copies.get(id);
+      if (target) element.setAttribute('data-katchamak-note', target.id);
       else element.removeAttribute('data-katchamak-note');
     }
     const href = element.getAttribute('href');
     if (element.tagName !== 'A' || !href?.startsWith('#note/')) continue;
-    const target = ids.get(href.slice(6));
-    if (target) element.setAttribute('href', '#note/' + target);
-    else if (unwrap) element.replaceWith(...element.childNodes);
+    const target = copies.get(href.slice(6));
+    if (target) {
+      element.setAttribute('href', '#note/' + target.id);
+      if (element.getAttribute('title')?.endsWith(' · ' + noteLinkInstructions)) {
+        element.setAttribute('title', noteLinkTitle(target.title, target.path));
+      }
+    } else if (unwrap) element.replaceWith(...element.childNodes);
   }
   return template.innerHTML;
 }
@@ -52,30 +60,43 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
   const path = parentId ? ancestorIds(destinationRoots, parentId) : [];
   const wrapperDepth = parentId ? path.length + 1 : 0;
   const ancestors = new Set(path);
-  const ids = new Map<string, string>();
-  forEachNode(roots, node => ids.set(node.id, uid()));
-  const targets = new Set(ids.values());
+  const inboxPath = [TABS.find(tab => tab.key === to.section)?.label ?? to.section];
+  let level = destinationRoots;
+  for (const id of parentId ? [...path, parentId] : []) {
+    const parent = level.find(node => node.id === id)!;
+    inboxPath.push(parent.title);
+    level = parent.children;
+  }
+  const mapping = new Map<string, CopyTarget>();
+  function indexCopies(nodes: NoteNode[], parentPath: string) {
+    for (const node of nodes) {
+      mapping.set(node.id, { id: uid(), title: node.title, path: parentPath });
+      indexCopies(node.children, parentPath + ' / ' + node.title);
+    }
+  }
+  indexCopies(roots, [...inboxPath, 'Sort This'].join(' / '));
+  const targets = new Set(Array.from(mapping.values(), target => target.id));
   const now = Date.now();
   const statuses = new Set(destination.statuses);
   const copy = (original: NoteNode, depth: number): NoteNode => {
     if (depth >= CLOUD_NOTE_LEVELS) throw new Error('The copied notes would be nested too deeply. Choose a higher-level destination tab.');
     const node = structuredClone({ ...original, children: [] });
     if (node.status) statuses.add(node.status);
-    const content = remapHtml(node.content ?? '', ids, false);
+    const content = remapHtml(node.content ?? '', mapping, false);
     const linkChoices = node.linkChoices?.flatMap(choice => {
-      const targetId = choice.targetId && ids.get(choice.targetId);
+      const targetId = choice.targetId && mapping.get(choice.targetId)?.id;
       return targetId ? [{...choice, targetId}] : [];
     });
     const repaired = content.includes('#note/')
       ? removeUnavailableNoteLinks({content, linkChoices}, targets)
       : {content, linkChoices};
     return {
-      ...node, id: ids.get(original.id)!, createdAt: now, updatedAt: now,
+      ...node, id: mapping.get(original.id)!.id, createdAt: now, updatedAt: now,
       content: repaired.content, linkChoices: repaired.linkChoices,
-      synopsis: remapHtml(node.synopsis ?? '', ids, true),
-      notes: remapHtml(node.notes ?? '', ids, true),
-      familyMembers: node.familyMembers?.flatMap(id => ids.get(id) ?? []),
-      links: Array.isArray(node.links) ? node.links.flatMap(id => ids.get(id) ?? []) : undefined,
+      synopsis: remapHtml(node.synopsis ?? '', mapping, true),
+      notes: remapHtml(node.notes ?? '', mapping, true),
+      familyMembers: node.familyMembers?.flatMap(id => mapping.get(id)?.id ?? []),
+      links: Array.isArray(node.links) ? node.links.flatMap(id => mapping.get(id)?.id ?? []) : undefined,
       children: original.children.map(child => copy(child, depth + 1)),
     };
   };
@@ -89,7 +110,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
     return ancestors.has(node.id) ? {...node, children: insert(node.children)} : node;
   });
   return {
-    count: ids.size,
+    count: mapping.size,
     novel: {
       ...destination, updatedAt: now, statuses: [...statuses],
       sections: {...destination.sections, [to.section]: parentId ? insert(destinationRoots) : nextSiblings},

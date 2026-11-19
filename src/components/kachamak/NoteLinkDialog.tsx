@@ -5,7 +5,7 @@ import {indexNotes,searchNotes,type IndexedNote} from '@/lib/kachamak/knowledge'
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {createLinkedCodexNote} from '@/lib/kachamak/create-linked-note';
 import {toast} from 'sonner';
-import {noteLinkColor} from '@/lib/kachamak/note-links';
+import {noteLinkColor,noteLinkTitle} from '@/lib/kachamak/note-links';
 export function NoteLinkDialog() {
   const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[url,setUrl]=useState(''),[canInsert,setCanInsert]=useState(false);
   const range=useRef<Range|null>(null),editor=useRef<HTMLElement|null>(null);
@@ -38,7 +38,7 @@ export function NoteLinkDialog() {
     const walker=document.createTreeWalker(link,NodeFilter.SHOW_TEXT),texts:Text[]=[];
     let textNode:Node|null;while((textNode=walker.nextNode()))texts.push(textNode as Text);
     if(texts.length){texts[0].data=texts[0].data.replace(/^[ \t]+/,s=>s.replace(/ /g,'\u00a0'));const last=texts.at(-1)!;last.data=last.data.replace(/[ \t]+$/,s=>s.replace(/ /g,'\u00a0'));}
-    if(target){link.style.color=noteLinkColor(target.node.color);link.dataset.katchamakNote=target.node.id;link.title=target.node.title+' · '+target.path+' · Click to preview · Ctrl+click to open';}
+    if(target){link.style.color=noteLinkColor(target.node.color);link.dataset.katchamakNote=target.node.id;link.title=noteLinkTitle(target.node.title,target.path);}
     if(!document.execCommand('insertHTML',false,link.outerHTML)){toast.error('The link could not be inserted. Your text is unchanged.');return false;}editor.current.dispatchEvent(new Event('input',{bubbles:true}));setOpen(false);return true;
   };
   const create=()=>{
