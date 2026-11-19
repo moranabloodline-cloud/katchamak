@@ -12,6 +12,8 @@ const place=s.addNode('codex',null,'doc','Old Gate');s.updateNode('codex',place,
 const person=s.addNode('codex',null,'doc','Gatekeeper');s.updateNode('codex',person,{aliases:['Gate']});
 const chapter=s.addNode('binder',null,'doc','Chapter One');const scene=s.addNode('binder',chapter,'doc','Meeting');
 const novel=()=>useKachamak.getState().novels[0], node=()=>findNode(novel().sections.binder,scene);
+const unicodeNames = '𐐀Gate Gate𐐀 Gate\u0301. Gate.';
+assert.deepEqual(scanLinks(unicodeNames, [{id:'gate', title:'Gate'}]).map(m=>m.start), [unicodeNames.lastIndexOf('Gate')], 'A Codex title inside a Unicode word is not a separate mention');
 const html='<p><strong>Černo</strong>bog met Cernobog at Old Gate. Gate and Gatehouse.</p><p><a href="https://example.com">Gate</a> <code>Gate</code></p>';
 s.updateNode('binder',scene,{content:html});
 assert.deepEqual(findNode(novel().sections.codex,id).aliases,['Cernobog','CB']);

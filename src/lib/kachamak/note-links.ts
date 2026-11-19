@@ -101,10 +101,11 @@ export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[]
   const overlap = (start: number, end: number) => found.some(m => start < m.end && end > m.start);
   // Long names win over shorter aliases, with Unicode word boundaries.
   for (const [term, candidates] of [...terms].sort((a,b) => b[0].length-a[0].length)) {
-    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'giu');
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(String.raw`(?<![\p{L}\p{M}\p{N}_])${escaped}(?![\p{L}\p{M}\p{N}_])`, 'giu');
     for (const match of text.matchAll(re)) {
       const start = match.index!, end = start + match[0].length;
-      if (overlap(start,end) || /[\p{L}\p{N}_]/u.test(text.slice(0,start).slice(-1)) || /[\p{L}\p{N}_]/u.test(text.slice(end,end+1))) continue;
+      if (overlap(start,end)) continue;
       found.push({start,end,text:match[0],targetId:candidates.length===1?candidates[0].id:null,candidates,explicit:false,missing:false,context:context(start,end)});
     }
   }

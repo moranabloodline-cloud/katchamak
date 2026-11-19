@@ -69,7 +69,15 @@ failLibrary=false;await reload.initializeWebLibrary();
 // A different cloud version remains untouched when recovery is chosen.
 const remote=libraries.get('a');remote.snapshot.novels[0].sections.binder[0].content='<p>Other window version</p>';remote.revision++;
 await reload.refreshWebLibrary();const cloudOriginal=structuredClone(libraries.get('a').snapshot.novels[0]);
-await reload.recoverLocalDraft(reload.useLocalRecovery.getState().drafts[0]);
+const recoverySource = reload.useLocalRecovery.getState().drafts[0];
+failSave = true;
+await assert.rejects(() => reload.recoverLocalDraft(recoverySource), /outage/);
+assert.ok(await a.draftStorage.get('a', original.id), 'A failed recovery save keeps the source');
+assert.deepEqual(libraries.get('a').snapshot.novels, [cloudOriginal]);
+failSave = false;
+await reload.recoverLocalDraft(recoverySource);
+assert.equal(libraries.get('a').snapshot.novels.length, 2, 'Retrying recovery creates one copy of each book');
+assert.equal(libraries.get('a').snapshot.collections.length, 1, 'Retrying recovery creates one folder');
 const saved=libraries.get('a').snapshot;
 assert.deepEqual(saved.novels[0],cloudOriginal);assert.equal(saved.novels[1].sections.binder[0].content,'<p>Draft before crash</p>');
 assert.deepEqual(saved.novels[1].sections.timeline,draftTimeline,'Recovery keeps Timeline hierarchy, dates, text, links, status and style');
@@ -77,6 +85,30 @@ assert.deepEqual(saved.novels[1].timeline,source.timeline,'Custom calendar and g
 const reopened=await openWindow();assert.deepEqual(reopened.useKachamak.getState().novels,saved.novels,'Recovered Timeline survives cloud save and reload');reopened.useWebLibrary.setState({ready:false});
 assert.notEqual(saved.novels[1].id,saved.novels[0].id);assert.ok(saved.collections[0].name.startsWith('Recovered'));
 assert.deepEqual(await a.draftStorage.list('a'),[],'Only acknowledged recovered copies remove their source draft');
+
+// A lost cleanup acknowledgement leaves the same source available after restart.
+await a.draftStorage.put(original);
+const resumed = await openWindow();
+await resumed.recoverLocalDraft(original);
+assert.equal(libraries.get('a').snapshot.novels.length, 2, 'Reloaded recovery reuses the acknowledged copy');
+assert.deepEqual(await a.draftStorage.list('a'), []);
+
+await a.draftStorage.put(original);
+const remoteChange = libraries.get('a');
+remoteChange.snapshot.novels[1].sections.binder[0].content = '<p>Remote edit after recovery</p>';
+remoteChange.revision++;
+await assert.rejects(() => resumed.recoverLocalDraft(original), /copies have changed/, 'A stale window must verify the cloud copy before deleting a draft');
+assert.deepEqual(await a.draftStorage.get('a', original.id), original);
+await resumed.refreshWebLibrary();
+const copy = libraries.get('a').snapshot.novels[1];
+resumed.useKachamak.setState({activeNovelId: copy.id});
+resumed.useKachamak.getState().updateNode('binder','note',{content:'<p>Edited recovered copy</p>'});
+await assert.rejects(() => resumed.recoverLocalDraft(original), /copies have changed/);
+assert.equal(libraries.get('a').snapshot.novels[1].sections.binder[0].content, '<p>Edited recovered copy</p>');
+assert.deepEqual(await a.draftStorage.get('a', original.id), original, 'A changed copy keeps the original recovery draft exportable');
+await resumed.discardLocalDraft(original);
+resumed.useWebLibrary.setState({ready:false});
+await reload.refreshWebLibrary();
 
 // Independent windows, exact-generation deletion, quota and aborted transactions.
 const c=await openWindow();edit(reload,'<p>Window one</p>');edit(c,'<p>Window two</p>');

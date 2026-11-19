@@ -1,3 +1,5 @@
+> **2026-11-19 — Oporavak nacrta i prilozi.** Ponovljeni oporavak prepoznaje već sačuvanu kopiju iste verzije nacrta i proverava je u cloudu. Prilozi i njihove adrese ostaju vezani za izabranu knjigu tokom snimanja. Skener poštuje granice reči i uz kombinovane akcente i slova van osnovne Unicode ravni. Test starog kalendara proverava sadržaj nakon migracije i drugog učitavanja. Uklonjene su četiri nekorišćene zavisnosti. Offline paket izostavlja kontrolu za objavljivanje cloud demoa. Na čistoj instalaciji prošlo je 60 testnih datoteka, a na Windowsu i dva Rust testa.
+
 > **2026-11-19 — Uklonjen WebSocket demo.** Provera poziva u aplikaciji, desktopu, skriptama i testovima potvrdila je da se primer četa ne koristi. Posle uklanjanja njegova dva fajla prolaze puna TypeScript provera i produkcijski build.
 
 > **2026-11-19 — Pojedinačno linkovanje.** Uklonjene su stare grupne odluke za sva pojavljivanja istog imena i za sve preostale predloge. Provereno je pojedinačno prihvatanje, ignorisanje, odlaganje, izbor između istoimenih beležaka iz Codexa i ponovno učitavanje sačuvanih veza.
@@ -491,6 +493,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+> **2026-11-19 — Oporavak nacrta i prilozi.** Ponovljeni oporavak prepoznaje već sačuvanu kopiju iste verzije nacrta i proverava je u cloudu. Prilozi i njihove adrese ostaju vezani za izabranu knjigu tokom snimanja. Skener poštuje granice reči i uz kombinovane akcente i slova van osnovne Unicode ravni. Test starog kalendara proverava sadržaj nakon migracije i drugog učitavanja. Uklonjene su četiri nekorišćene zavisnosti. Offline paket izostavlja kontrolu za objavljivanje cloud demoa. Na čistoj instalaciji prošlo je 60 testnih datoteka, a na Windowsu i dva Rust testa.
 
 > **2026-11-19 — Uklonjen WebSocket demo.** Provera poziva u aplikaciji, desktopu, skriptama i testovima potvrdila je da se primer četa ne koristi. Posle uklanjanja njegova dva fajla prolaze puna TypeScript provera i produkcijski build.
 

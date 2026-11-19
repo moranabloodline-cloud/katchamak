@@ -290,22 +290,42 @@ export async function recoverLocalDraft(summary: DraftSummary) {
     if (!useWebLibrary.getState().ready) throw new Error('Open the cloud library before recovering copies. You can still export this draft.');
     await flushWebLibrary();
     if (epoch !== accountEpoch || useLocalRecovery.getState().owner !== draft.owner) throw new Error('Sign in again to recover this draft.');
-    const ids = new Map(source.novels.map(n => [n.id, crypto.randomUUID()]));
-    const folders = new Map(source.collections.map(c => [c.id, crypto.randomUUID()]));
+    // A draft generation is immutable. Its copy IDs must also survive retries and reloads.
+    const root = 'recovered-' + draft.generation;
+    const ids = new Map(source.novels.map((n, index) => [n.id, root + '-book-' + index]));
+    const folders = new Map(source.collections.map((c, index) => [c.id, root + '-folder-' + index]));
     if (folders.size !== source.collections.length || source.collections.some(c => typeof c.name !== 'string' || !Array.isArray(c.projectIds) || c.projectIds.some(id => !ids.has(id)) || c.parentId !== null && !folders.has(c.parentId))) throw new Error('This draft has invalid collections. Export its project backups instead.');
-    const root = crypto.randomUUID(), now = Date.now();
     const novels = source.novels.map(n => { const copy = { ...n, id: ids.get(n.id)!, title: n.title + ' (Recovered)', author: n.author ?? '', trash: n.trash ?? [], statuses: n.statuses ?? [], labels: n.labels ?? [] }; normalizeNovelSections(copy); return copy; });
     const assigned = new Set(source.collections.flatMap(c => c.projectIds));
+    const current = { novels: useKachamak.getState().novels, collections: useCollections.getState().collections };
+    const groupName = current.collections.find(c => c.id === root)?.name ?? 'Recovered · ' + new Date(draft.updatedAt).toLocaleString();
     const collections: Collection[] = [
-      { id: root, name: 'Recovered · ' + new Date(draft.updatedAt).toLocaleString(), parentId: null, projectIds: source.novels.filter(n => !assigned.has(n.id)).map(n => ids.get(n.id)!), createdAt: now, updatedAt: now },
+      { id: root, name: groupName, parentId: null, projectIds: source.novels.filter(n => !assigned.has(n.id)).map(n => ids.get(n.id)!), createdAt: draft.updatedAt, updatedAt: draft.updatedAt },
       ...source.collections.map(c => ({ ...c, id: folders.get(c.id)!, parentId: c.parentId === null ? root : folders.get(c.parentId)!, projectIds: c.projectIds.map(id => ids.get(id)!) })),
     ];
-    useKachamak.setState(s => ({ novels: [...s.novels, ...novels] }));
-    useCollections.setState(s => ({ collections: [...s.collections, ...collections] }));
+    const matches = (available: Snapshot) => {
+      if (!Array.isArray(available?.novels) || !Array.isArray(available.collections)) return false;
+      const books = new Map(available.novels.map(n => [n.id, n]));
+      const groups = new Map(available.collections.map(c => [c.id, c]));
+      return novels.every(n => JSON.stringify(books.get(n.id)) === JSON.stringify(n))
+        && collections.every(c => JSON.stringify(groups.get(c.id)) === JSON.stringify(c));
+    };
+    const copyIds = new Set([...ids.values(), ...folders.values(), root]);
+    if (current.novels.some(n => copyIds.has(n.id)) || current.collections.some(c => copyIds.has(c.id))) {
+      // A retry may be using a stale window. Confirm the copies on the server
+      // before releasing their source, even if this window has no edits to save.
+      if (!matches(current) || !matches((await api('/api/library')).snapshot)) {
+        throw new Error('Previously recovered copies have changed. Your draft is still available to export.');
+      }
+    } else {
+      useKachamak.setState(s => ({ novels: [...s.novels, ...novels] }));
+      useCollections.setState(s => ({ collections: [...s.collections, ...collections] }));
+    }
     await flushWebLibrary();
     // Only this exact selected generation, and only after its copies are acknowledged.
     const acknowledged = JSON.parse(saved) as Snapshot;
-    if (novels.every(n => acknowledged.novels.some(v => JSON.stringify(v) === JSON.stringify(n))) && collections.every(c => acknowledged.collections.some(v => JSON.stringify(v) === JSON.stringify(c)))) await draftStorage.remove(draft.owner, draft.id, draft.generation);
+    if (!matches(acknowledged)) throw new Error('The recovered copies changed during saving. Your draft is still available to export.');
+    await draftStorage.remove(draft.owner, draft.id, draft.generation);
     await refreshLocalDrafts();
   } finally { recovering = false; }
 }
@@ -336,10 +356,21 @@ export async function importWebProject(json: string, collectionId: string | null
   const novel: Novel = { ...value, id: crypto.randomUUID(), author: value.author ?? '', trash: value.trash ?? [], statuses: value.statuses ?? [], labels: value.labels ?? [] };
   normalizeNovelSections(novel); addNovel(novel, collectionId); await flushWebLibrary();
 }
-function filesPath() { const id = useKachamak.getState().activeNovelId; if (!id) throw new Error('Open a project first.'); return '/api/library/files/' + encodeURIComponent(id); }
-export async function projectAttachments(): Promise<{ id: string; name: string; size: number }[]> { return (await api(filesPath())).files; }
-export async function addProjectAttachment(file: File) { await flushWebLibrary(); const data = new FormData(); data.set('file', file); await api(filesPath(), { method: 'POST', body: data }); }
-export function attachmentUrl(id: string) { return filesPath() + '/' + encodeURIComponent(id); }
+function filesPath(id: string | null) { if (!id) throw new Error('Open a project first.'); return '/api/library/files/' + encodeURIComponent(id); }
+export async function projectAttachments(projectId = useKachamak.getState().activeNovelId): Promise<{ id: string; name: string; size: number }[]> {
+  return (await api(filesPath(projectId))).files;
+}
+export async function addProjectAttachment(file: File, projectId = useKachamak.getState().activeNovelId) {
+  const path = filesPath(projectId), epoch = accountEpoch;
+  await flushWebLibrary();
+  if (epoch !== accountEpoch || !useWebLibrary.getState().ready) throw new Error('Sign in again before adding a file.');
+  const data = new FormData();
+  data.set('file', file);
+  await api(path, { method: 'POST', body: data });
+}
+export function attachmentUrl(id: string, projectId = useKachamak.getState().activeNovelId) {
+  return filesPath(projectId) + '/' + encodeURIComponent(id);
+}
 registerFolderStorage(() => useWebLibrary.getState().ready && !useWebLibrary.getState().error && !useWebLibrary.getState().pending && snapshot() === saved, flushWebLibrary);
 
 export async function removeWebProject(id:string) {
@@ -355,7 +386,7 @@ export async function removeWebProject(id:string) {
   }
 }
 
-export async function publishMorriganDemo(projectId:string) {
+export async function publishDemoProject(projectId:string) {
   await saveWebLibrary();
   const result=await api('/api/library/demo/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectId})});
   await saveWebLibrary();

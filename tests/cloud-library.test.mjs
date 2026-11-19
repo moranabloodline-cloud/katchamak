@@ -60,7 +60,7 @@ const dom=new Window({url:'https://test.local'});globalThis.window=dom;globalThi
 globalThis.localStorage={getItem(){throw new DOMException('Storage denied','SecurityError');},setItem(){browserStorageWrites++;throw new DOMException('Storage full','QuotaExceededError');},removeItem(){throw new DOMException('Storage denied','SecurityError');}};
 let browserUser=a;
 globalThis.fetch=async(path,init={})=>{
- const body=init.body?JSON.parse(init.body):undefined;
+ const body=init.body instanceof FormData ? init.body : init.body ? JSON.parse(init.body) : undefined;
  return path==='/api/account'?accountApi(new Request('https://test.local/api/account',{headers:{'oai-authenticated-user-id':browserUser,'oai-authenticated-user-email':browserUser}}),env):call(browserUser,path,init.method||'GET',body,'https://test.local',new Headers(init.headers).get('X-Katchamak-Account')||browserUser);
 };
 const cloud=await import('../src/lib/kachamak/cloud-library.ts');
@@ -209,6 +209,16 @@ assert.equal(useKachamak.getState().novels[0].sections.binder[0].linkChoices[0].
 assert.ok(useKachamak.getState().novels[0].hiddenSections.includes('research'));
 const collection=await cloud.createWebCollection('From Preview',null);
 const project=await cloud.createWebProject('Same account project','Tester',collection);
+{
+ const file = new File(['Synthetic attachment'], 'project-switch.txt');
+ useKachamak.getState().setView('list');
+ const uploading = cloud.addProjectAttachment(file);
+ useKachamak.setState({activeNovelId: novel.id});
+ await uploading;
+ const filesIn = async id => (await (await call(a, '/api/library/files/'+id)).json()).files;
+ assert.ok((await filesIn(project)).some(f => f.name === file.name), 'An upload stays with the project selected before Save');
+ assert.ok(!(await filesIn(novel.id)).some(f => f.name === file.name), 'Switching projects cannot redirect an upload');
+}
 assert.ok((await (await call(a)).json()).snapshot.collections.some(c=>c.id===collection&&c.projectIds.includes(project)));
 useKachamak.setState(s=>({novels:s.novels.map(n=>n.id===novel.id?{...n,title:'Edited in Preview'}:n)}));
 await cloud.saveWebLibrary();
