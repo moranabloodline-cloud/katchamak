@@ -1,3 +1,5 @@
+> **2026-11-20 — Meni beleški.** Uklonjena opcija View as Timeline.
+
 > **2026-11-20 — Insert Template.** Iz menija levog stabla korisnik bira šablon tekuće knjige po nazivu i putanji. Nova beleška dobija svoj ID i sadržaj izabranog šablona na odabranom mestu.
 
 > **2026-11-20 — Čišćenje starog Timeline prikaza.** Test dodavanja događaja sada koristi meni aktivnog Timeline prikaza i proverava odredišni folder u Codexu i Binderu. Uklonjeni su nekorišćeni OutlineView, četiri importa i tri pretplate u Dashboard-u i privatna funkcija mapNodes.
@@ -507,6 +509,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Uklonjena komanda za otvaranje beleške kao Timeline iz zajedničkog menija stabla.
 
 - **20.11.2026.** Insert Template dodaje jednu belešku u koren taba ili pod izabranu belešku. Test menija pokriva praznu listu, skrivene šablone, promenu knjige i nezavisnost kopije. U Chrome-u na dve probne knjige provereni su pretraga istoimenih šablona, izmena kopije, čuvanje, ponovno učitavanje i otkazivanje.
 

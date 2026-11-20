@@ -416,7 +416,6 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                 Rename
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => useKachamak.getState().openNoteTab(node.id)}>Open as tab</DropdownMenuItem>
-              <DropdownMenuItem onSelect={()=>{const state=useKachamak.getState();state.select(node.id);state.setView('timeline');}}>View as Timeline</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => duplicateNode(section, node.id)}>
                 Duplicate
               </DropdownMenuItem>
