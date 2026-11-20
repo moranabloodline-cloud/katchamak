@@ -104,7 +104,7 @@ export function Workspace() {
           className={`flex shrink-0 items-center gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[50%] border-r border-white/10 bg-black/20 ${leftPanelOpen?"pl-3 pr-1":"px-0"}`}
           style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
         >
-          <WorkspaceBrand />
+          <WorkspaceBrand compact={!leftPanelOpen} />
           {leftPanelOpen&&<button type="button" aria-label="Hide left panel" title="Hide panel" onClick={toggleLeftPanel} className="ml-auto shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"><ChevronLeft className="h-4 w-4"/></button>}
         </div>
 
@@ -113,14 +113,12 @@ export function Workspace() {
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
-          className={`ml-auto flex shrink-0 items-center gap-3 max-xl:max-w-[50%] border-l border-white/10 bg-black/20 ${rightPanelOpen ? "px-3.5" : "justify-center"}`}
+          className={`ml-auto flex shrink-0 items-center gap-2 max-xl:max-w-[50%] border-l border-white/10 bg-black/20 ${rightPanelOpen ? "justify-end px-3" : "justify-center"}`}
           style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
         >
           {rightPanelOpen ? (
             <>
 
-
-              <span className="ml-auto" />
 
               <button
                 type="button"
@@ -128,9 +126,9 @@ export function Workspace() {
                 title={savePhase==='preparing'?'Preparing link review…':savePhase==='saving'?'Saving to your account…':'Save'}
                 aria-busy={savePhase!=='idle'}
                 onClick={requestLinkReview}
-                className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+                className="grid size-10 shrink-0 place-items-center rounded-md text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
-                {savePhase==='idle'?<Save className="size-[22px]"/>:<LoaderCircle className="size-[22px] animate-spin"/>}
+                {savePhase==='idle'?<Save className="size-9" strokeWidth={1.75}/>:<LoaderCircle className="size-9 animate-spin" strokeWidth={1.75}/>}
               </button>
               <button
                 type="button"
@@ -146,9 +144,9 @@ export function Workspace() {
                 aria-label="Settings"
                 title="Settings"
                 onClick={() => setSettingsOpen(true)}
-                className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+                className="grid size-10 shrink-0 place-items-center rounded-md text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <Settings className="size-[22px]" />
+                <Settings className="size-9" strokeWidth={1.75} />
               </button>
             </>
           ) : (
@@ -157,9 +155,9 @@ export function Workspace() {
               aria-label="Settings"
               title="Settings"
               onClick={() => setSettingsOpen(true)}
-              className="rounded-md px-0.5 py-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-md py-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <Settings className="size-[22px]" />
+              <Settings className="size-[26px]" strokeWidth={1.75} />
             </button>
           )}
         </div>
