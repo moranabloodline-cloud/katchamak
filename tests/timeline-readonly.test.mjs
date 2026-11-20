@@ -74,7 +74,6 @@ const year=box.ownerDocument.querySelector('[aria-label="Start year"]');await Re
 await React.act(async()=>button('Apply date').click());await React.act(async()=>button('Apply dates').click());assert.ok(box.querySelector('[role="alert"]').textContent.includes('Parent'));assert.equal(parent.children[0].event.start,tick(1900),'Invalid date form is rejected without writes');
 const click=async(label)=>{const control=button(label);assert.ok(control,label);await React.act(async()=>control.click());};
 const options=()=>document.querySelector('[aria-label="Timeline controls"]');
-const summary=()=>button('Timeline options').title;
 const openOptions=async()=>{if(!options())await click('Timeline options');};
 const closeOptions=async()=>{if(options())await click('Timeline options');};
 const clickOption=async(label)=>{await openOptions();await click(label);};
@@ -101,51 +100,39 @@ const detail=document.querySelector('[aria-label="Event card content"]');
 await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLSelectElement.prototype,'value').set.call(detail,'titles');detail.dispatchEvent(new dom.Event('change',{bubbles:true}));});
 assert.ok(!box.textContent.includes('Synopsis'),'The global card detail option changes actual card content');
 assert.deepEqual(contextNovel.sections.timeline[0].children.map(node=>node.title),['Later','Era'],'Chronological rendering does not rewrite saved note order');
-// Closed View options must still tell the user when a group filter applies.
-const filterBook=newNovel('Filter QA',''),otherBook=newNovel('Separate filters QA','');
+// Older group filters must never conceal events after removal of the controls.
+const filterBook=newNovel('Legacy group QA',''),otherBook=newNovel('Other book QA','');
 const groupDefs=[{id:'sea',name:'Sea watch',color:'#58a6ff'},{id:'land',name:'Land watch',color:'#f0b045'}];
 const sea=note('Sea signal',tick(1965,10,5));sea.event.groupId='sea';
 const land=note('Land lantern',tick(1965,10,9));land.event.groupId='land';
-filterBook.sections.timeline=[sea,land];filterBook.timeline={...filterBook.timeline,groups:groupDefs,display:'axis'};
+filterBook.sections.timeline=[sea,land];filterBook.timeline={...filterBook.timeline,groups:groupDefs,hiddenGroups:['sea'],display:'axis'};
 otherBook.sections.timeline=[structuredClone(sea)];otherBook.timeline={...otherBook.timeline,groups:groupDefs,display:'axis'};
 const sectionsBefore=JSON.stringify(filterBook.sections);
 await React.act(async()=>{
   useKachamak.setState({novels:[filterBook,otherBook],activeNovelId:filterBook.id,selectedNodeId:land.id,view:'timeline'});
   root.render(React.createElement(TimelineView,{key:filterBook.id,section:'timeline'}));
 });
-assert.ok(!options());
-assert.doesNotMatch(summary(),/groups? hidden/);
-await openOptions();await clickOption('Sea watch');await closeOptions();
-assert.match(summary(),/1 group hidden/);
-assert.equal(useKachamak.getState().selectedNodeId,land.id);
-for(const mode of ['Timeline','Calendar','Cards']){
-  await click(mode);
-  assert.equal(options(),null);
-  assert.match(summary(),/1 group hidden/);
-  assert.ok(box.textContent.includes(land.title),mode+' retains visible event');
-  assert.ok(!box.textContent.includes(sea.title),mode+' still hides the selected group');
+const viewTabs=()=>[...box.querySelectorAll('[aria-label="Timeline display"] [role="tab"]')];
+const chooseView=async label=>{
+  const tab=viewTabs().find(el=>el.textContent===label);
+  assert.ok(tab,label);await React.act(async()=>tab.click());
+  assert.equal(tab.getAttribute('aria-selected'),'true');
+};
+await openOptions();
+assert.ok(!button('Groups')&&!button('Sea watch')&&!button('Show all groups'));
+await closeOptions();
+for(const label of ['Calendar','Cards','Timeline']){
+  await chooseView(label);
+  assert.ok(box.textContent.includes(land.title)&&box.textContent.includes(sea.title),label+' shows formerly grouped events');
 }
-await click('Calendar');
-assert.match(summary(),/1 group hidden/,'Switching back to a filtered view recalls the filter');
-await openOptions();await clickOption('Land watch');await closeOptions();
-assert.match(summary(),/2 groups hidden/);
-assert.ok(box.textContent.includes('No notes match these filters.'));
-await click('Show all groups');
-assert.doesNotMatch(summary(),/groups? hidden/);
-assert.ok(box.textContent.includes(sea.title)&&box.textContent.includes(land.title));
-assert.equal(useKachamak.getState().selectedNodeId,land.id,'Reset does not change selection');
-await openOptions();await clickOption('Sea watch');await closeOptions();
+assert.deepEqual(filterBook.timeline.hiddenGroups,['sea']);
 const switchBook=async(book,id)=>React.act(async()=>{
   useKachamak.setState({activeNovelId:book.id,selectedNodeId:id});
   root.render(React.createElement(TimelineView,{key:book.id,section:'timeline'}));
 });
-await switchBook(otherBook,sea.id);
-assert.doesNotMatch(summary(),/groups? hidden/,'Another book with matching group IDs does not inherit the badge');
-assert.ok(box.textContent.includes(sea.title));
-await switchBook(filterBook,land.id);
-assert.match(summary(),/1 group hidden/,'Returning restores only the original book filter');
-assert.equal(JSON.stringify(filterBook.sections),sectionsBefore,'Toggling and resetting groups does not rewrite note content or dates');
-// The Calendar cursor is a browsing choice, not a calculation on filtered rows.
+await switchBook(otherBook,sea.id);assert.ok(box.textContent.includes(sea.title));assert.ok(!box.textContent.includes(land.title));
+assert.equal(JSON.stringify(filterBook.sections),sectionsBefore);
+// The Calendar cursor follows deliberate navigation.
 const cursorBook=newNovel('Calendar cursor QA',''),cursorOther=newNovel('Calendar cursor second book','');
 const first=note('November beacon',tick(1965,10,14));first.event.groupId='sea';
 const next=note('February crossing',tick(1966,1,17));next.event.groupId='land';
@@ -162,32 +149,18 @@ assert.ok(button('November 1965 CE'));
 await click('Open event November beacon');
 await openOptions();
 assert.ok(button('November 1965 CE'),'Calendar selection keeps the current month');
-await openOptions();
-await clickOption('Sea watch');
-assert.ok(button('November 1965 CE'),'Partial filter does not select a month from the remaining rows');
-await clickOption('Land watch');
-assert.ok(button('November 1965 CE'),'Complete filter does not jump to 1 CE without prior navigation');
-assert.ok(button('First event').disabled);
-await click('Show all groups');
-assert.ok(button('November 1965 CE'));
 await clickOption('Next month');await clickOption('Next month');
 assert.ok(button('January 1966 CE'));
 await clickOption('January 1966 CE');
 const jumpDay=()=>box.ownerDocument.querySelector('[role="dialog"] [aria-label="Go to day"]');
 await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(jumpDay(),'14');jumpDay().dispatchEvent(new dom.Event('input',{bubbles:true}));});
 await click('Go');
-await clickOption('Sea watch');await clickOption('Land watch');
-assert.ok(button('January 1966 CE'),'Manual month and year persist when all groups are hidden');
+await openOptions();assert.ok(button('January 1966 CE'),'Jump keeps the chosen month');
 await clickOption('January 1966 CE');
-assert.equal(jumpDay().value,'14','Explicit day cursor survives an empty filter');
+assert.equal(jumpDay().value,'14','Explicit day cursor is kept');
 await click('Close');
 await clickOption('Next month');
-assert.ok(button('February 1966 CE'),'Month navigation still works with no results');
-await click('Show all groups');
-assert.ok(button('February 1966 CE'),'Reset does not jump to the first event');
-await clickOption('Sea watch');
-await clickOption('First event');assert.ok(button('February 1966 CE'),'First event uses a visible event');
-await clickOption('Sea watch');
+assert.ok(button('February 1966 CE'),'Month navigation still works');
 await clickOption('First event');assert.ok(button('November 1965 CE'),'First event deliberately navigates to the earliest shown event');
 await clickOption('Next month');
 const customCalendar=calendarPreset('uniform');
@@ -196,21 +169,12 @@ await React.act(async()=>useKachamak.getState().setTimeline({calendar:customCale
 assert.ok(button(customCalendar.months[customStart.month].name+' '+yearText(customCalendar,customStart.year)),'Changing Time System opens on the first event in the new calendar');
 await switchBook(cursorOther,distant.id);
 await openOptions();
-assert.ok(button('September 1987 CE'),'On entry with all events filtered, use the existing dates for the initial view');
+assert.ok(button('September 1987 CE'),'An obsolete group filter does not suppress the initial event');
 assert.equal(JSON.stringify([cursorBook.sections,cursorOther.sections]),cursorNotesBefore,'Browsing and filtering do not alter dates or prose');
-// The shared toolbar filters all three views and creates timelines in this book only.
+// Date range intersects each view independently of the visible navigation buttons.
 await React.act(async()=>useKachamak.setState({novels:[filterBook,otherBook]}));
 await switchBook(filterBook,land.id);
-await React.act(async()=>useKachamak.getState().setTimeline({hiddenGroups:[],display:'axis'}));
 const toolbar=()=>box.querySelector('nav[aria-label="Timeline tools"]');
-const chooseView=async label=>{
-  await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,0));});
-  await click('View');
-  const choice=[...document.querySelectorAll('[aria-label="Choose timeline view"] button')].find(el=>el.textContent===label);
-  assert.ok(choice,label);
-  await React.act(async()=>choice.click());
-  assert.equal(box.querySelector('[aria-label="Timeline display"] [aria-selected="true"]').textContent,label);
-};
 const setRangeDay=async(label,day)=>{
   const field=document.querySelector('[aria-label="'+label+' day"]');
   await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(field,String(day));field.dispatchEvent(new dom.Event('input',{bubbles:true}));});
@@ -229,11 +193,49 @@ await click('Range');await click('Clear range');assert.ok(box.textContent.includ
 await click('Range');await setRangeDay('From',9);await click('Apply range');
 await switchBook(otherBook,sea.id);assert.ok(box.textContent.includes(sea.title),'The other book starts with its full range');
 await switchBook(filterBook,land.id);
-const rootsBefore=filterBook.sections.timeline.length, otherBefore=JSON.stringify(otherBook.sections);
-await click('Create timeline');
-const created=useKachamak.getState().novels.find(n=>n.id===filterBook.id).sections.timeline;
-assert.equal(created.length,rootsBefore+1);
-assert.equal(created.at(-1).timelineKind,'period');assert.equal(useKachamak.getState().renamingNodeId,created.at(-1).id);
-assert.equal(JSON.stringify(otherBook.sections),otherBefore);
+const rootMenu=()=>document.querySelector('[aria-label="Timeline root notes"]');
+async function pick(label){
+  await click('Select timeline root');
+  const item=[...rootMenu().querySelectorAll('button')].find(el=>el.textContent===label);assert.ok(item,label);
+  await React.act(async()=>item.click());
+}
+const nested=note('Subperiod',tick(1965),tick(1966),[sea]);
+const invisible={...note('Hidden branch',tick(1900)),hidden:true};
+const tree=note('Tree',tick(1950),tick(1980),[nested,land,invisible]);
+const branchBook=newNovel('Nested roots QA','');branchBook.sections.timeline=[tree];
+const initialBranches=JSON.stringify(branchBook.sections),untouchedOther=JSON.stringify(otherBook.sections);
+await React.act(async()=>useKachamak.setState({novels:[branchBook,otherBook],treeScope:'all'}));
+await switchBook(branchBook,tree.id);
+await click('Select timeline root');
+assert.deepEqual([...rootMenu().querySelectorAll('button')].map(b=>b.textContent),['Follow tree selection','Tree','Subperiod',sea.title,land.title]);
+await click('Select timeline root');
+await pick(nested.title);assert.equal(useKachamak.getState().selectedNodeId,nested.id);
+const activePrefs=()=>useKachamak.getState().novels.find(n=>n.id===branchBook.id).timeline;
+assert.equal(activePrefs().pinnedRootId,nested.id);
+for(const label of ['Calendar','Cards','Timeline']){
+  await chooseView(label);assert.ok(box.textContent.includes(sea.title)&&!box.textContent.includes(land.title),label+' uses the nested root');
+}
+await React.act(async()=>useKachamak.getState().select(land.id));
+assert.ok(box.textContent.includes(sea.title)&&!box.textContent.includes(land.title),'Inspector selection does not unpin the chart');
+await pick(sea.title);
+for(const label of ['Cards','Calendar','Timeline']){
+  await chooseView(label);assert.ok(box.textContent.includes(sea.title)&&!box.textContent.includes(land.title),label+' shows the leaf without its sibling');
+  if(label==='Cards')assert.deepEqual([...box.querySelectorAll('[aria-label^="Edit event "]')].map(el=>el.getAttribute('aria-label')),['Edit event '+sea.title]);
+}
+await click('View');
+const toggle=async label=>{
+  const option=[...document.querySelectorAll('[aria-label="Visible view buttons"] label')].find(el=>el.textContent===label);
+  assert.ok(option,label);await React.act(async()=>option.querySelector('input').click());
+};
+for(const label of ['Timeline','Calendar','Cards'])await toggle(label);
+assert.equal(viewTabs().length,0);assert.ok(box.querySelector('[aria-label="Timeline chart"]'),'Hiding the active button keeps the chart open');
+await toggle('Cards');await click('View');assert.deepEqual(viewTabs().map(el=>el.textContent),['Cards']);await chooseView('Cards');
+await switchBook(otherBook,sea.id);
+assert.deepEqual(viewTabs().map(el=>el.textContent),['Timeline','Calendar','Cards']);
+assert.equal(useKachamak.getState().novels.find(n=>n.id===otherBook.id).timeline.pinnedRootId,undefined);
+await switchBook(branchBook,land.id);assert.deepEqual(viewTabs().map(el=>el.textContent),['Cards']);
+assert.ok(box.textContent.includes(sea.title)&&!box.textContent.includes(land.title));
+await pick('Follow tree selection');assert.equal(activePrefs().pinnedRootId,null);assert.ok(box.textContent.includes(land.title));
+assert.equal(JSON.stringify(branchBook.sections),initialBranches);assert.equal(JSON.stringify(otherBook.sections),untouchedOther);
 await React.act(async()=>root.unmount());dom.close();
-console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details, persistent group filter status and stable calendar dates.');
+console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details, legacy group visibility, stable dates, root selection, per-book button visibility, and range filtering.');

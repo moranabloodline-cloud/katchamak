@@ -1,4 +1,4 @@
-import type {NoteNode} from './types';
+import type {NoteNode,SectionKey,TreeScope} from './types';
 import {eventType,formatDate,type StoryCalendar,type StoryEvent} from './story-calendar';
 import {findNode,locateNode} from './utils';
 
@@ -12,6 +12,14 @@ export function timelineDefaultStart(nodes:NoteNode[],id:string):number {
 export function chronologicalNotes(nodes:NoteNode[]):NoteNode[] {
   const first=(node:NoteNode):number=>node.event?.start??Math.min(Infinity,...node.children.map(first));
   return [...nodes].sort((a,b)=>first(a)-first(b)).map(node=>({...node,children:chronologicalNotes(node.children)}));
+}
+export function visibleNoteTree(roots:NoteNode[],section:SectionKey,scope:TreeScope) {
+  const omitHidden=(nodes:NoteNode[]):NoteNode[]=>nodes.filter(n=>!n.hidden).map(n=>({...n,children:omitHidden(n.children)}));
+  const visible=omitHidden(roots);
+  const ordered=section==='timeline'?chronologicalNotes(visible):visible;
+  if(scope==='top')return ordered.map(n=>({...n,children:[]}));
+  const folders=(nodes:NoteNode[]):NoteNode[]=>nodes.filter(n=>n.children.length).map(n=>({...n,children:folders(n.children)}));
+  return scope==='folders'?folders(ordered):ordered;
 }
 export function timelineScope(nodes:NoteNode[],selectedId:string|null,rootId?:string) {
   const selected=selectedId?findNode(nodes,selectedId):null;

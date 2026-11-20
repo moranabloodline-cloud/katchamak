@@ -39,10 +39,14 @@ export function eventDuration(event:StoryEvent,c:StoryCalendar) {
   return [days?days+'d':'',hours?hours+'h':'',minutes?minutes+'m':''].filter(Boolean).join(' ');
 }
 export interface TimelineGroup { id: string; name: string; color: string }
+export type TimelineDisplay = 'axis' | 'calendar' | 'chronicle';
 export interface TimelinePreferences {
   rootId: string | null; detail: 'titles' | 'synopsis'; compact: boolean;
   calendar?: StoryCalendar;
-  display?: 'axis' | 'calendar' | 'chronicle' | 'outline';
+  display?: TimelineDisplay | 'outline';
+  // Only a root chosen in the toolbar pins the view. Older rootId values did not pin it.
+  pinnedRootId?: string | null;
+  hiddenDisplayButtons?: TimelineDisplay[];
   groups?: TimelineGroup[];
   hiddenGroups?: string[];
   eventScope?: 'book' | 'section' | 'folder';
@@ -84,6 +88,8 @@ export function validEvent(value:unknown):value is StoryEvent {
 export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&
     (t.display===undefined||['axis','calendar','chronicle','outline'].includes(t.display))&&
+    (t.pinnedRootId==null||typeof t.pinnedRootId==='string')&&
+    (t.hiddenDisplayButtons===undefined||Array.isArray(t.hiddenDisplayButtons)&&t.hiddenDisplayButtons.length<=3&&new Set(t.hiddenDisplayButtons).size===t.hiddenDisplayButtons.length&&t.hiddenDisplayButtons.every(key=>['axis','calendar','chronicle'].includes(key)))&&
     (t.eventScope===undefined||['book','section','folder'].includes(t.eventScope))&&
     (t.center===undefined||integer(t.center,-TIMELINE_LIMIT,TIMELINE_LIMIT))&&
     (t.span===undefined||integer(t.span,1,TIMELINE_MAX_SPAN))&&

@@ -50,7 +50,7 @@ import { TemplatePicker } from "./TemplatePicker";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
-import {chronologicalNotes,timelineKind} from '@/lib/kachamak/timeline-tree';
+import {visibleNoteTree,timelineKind} from '@/lib/kachamak/timeline-tree';
 import {addTimelineNote} from '@/lib/kachamak/timeline-actions';
 
 /* fallback only for old notes that never got an icon — the user picks the real one */
@@ -683,29 +683,8 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
     moveNodeTo(section, srcId, section, rootId ?? null);
   };
 
-  /* Hide — hidden notes (and everything inside them) leave the navigation tree.
-     NOTE: computed on every render on purpose — store actions push into the same
-     arrays (mutation), so a useMemo keyed on them would serve stale trees. */
-  const dropHidden = (nodes: NoteNode[]): NoteNode[] =>
-    nodes
-      .filter((n) => !n.hidden)
-      .map((n) => ({ ...n, children: dropHidden(n.children) }));
-
   const scopedRoot = rootId ? findNode(roots, rootId) : null;
-  const visible = dropHidden(scopedRoot ? [scopedRoot] : roots);
-  const shown = section==="timeline"?chronologicalNotes(visible):visible;
-
-  /* the top-bar dropdown: which level of the tree the panel shows */
-  const visibleRoots = (() => {
-    if (treeScope === "all") return shown;
-    if (treeScope === "top") return shown.map((n) => ({ ...n, children: [] }));
-    /* folders only — containers at every depth, leaf notes hidden */
-    const keep = (nodes: NoteNode[]): NoteNode[] =>
-      nodes
-        .filter((n) => n.children.length > 0)
-        .map((n) => ({ ...n, children: keep(n.children) }));
-    return keep(shown);
-  })();
+  const visibleRoots = visibleNoteTree(scopedRoot ? [scopedRoot] : roots, section, treeScope);
 
   // A selection can temporarily disclose its path without modifying saved notes.
   const revealed = new Set<string>();

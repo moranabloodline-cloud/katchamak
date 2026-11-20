@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useKachamak } from '@/lib/kachamak/store';
 import { readNovelCover } from '@/lib/kachamak/project-settings';
-import { groupFor } from '@/lib/kachamak/timeline-data';
 import { flattenNotes } from '@/lib/kachamak/note-links';
 import { TIMELINE_LIMIT, dateAtPrecision, type DatePrecision, eventType, minutesPerDay, absoluteYear, eraYear, dateToMinute, minuteToDate, monthDays, type StoryCalendar, type StoryDate, type StoryEvent } from '@/lib/kachamak/story-calendar';
 import type { NoteNode, Novel, SectionKey } from '@/lib/kachamak/types';
@@ -44,7 +43,6 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
   const [startDirty,setStartDirty]=useState(!current?.node.event),[endDirty,setEndDirty]=useState(!current?.node.event);
   const [precision,setPrecision]=useState<DatePrecision>(current?.node.event?.precision??'day');
   const [endPrecision,setEndPrecision]=useState<DatePrecision>(current?.node.event?.endPrecision??current?.node.event?.precision??'day');
-  const [group,setGroup]=useState(current?.node.event?groupFor(current.node.event,novel.timeline?.groups??[]):'');
   const [error,setError]=useState('');
   const [banner,setBanner]=useState<string|undefined>(current?.node.event?.banner);
   const [icon,setIcon]=useState(current?.node.icon??'');
@@ -74,7 +72,6 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
     setFrom(minuteToDate(calendar,event?.start??start));
     setTo(minuteToDate(calendar,event?.end??Math.min(TIMELINE_LIMIT,(event?.start??start)+minutesPerDay(calendar))));
     setPrecision(event?.precision??'day');setEndPrecision(event?.endPrecision??event?.precision??'day');
-    setGroup(event?groupFor(event,novel.timeline?.groups??[]):'');
   };
   const save=()=>{
     if(loadingBanner)return;
@@ -85,7 +82,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       if(style==='image'&&!banner)throw new Error('Choose an image for the Image style.');
       if(end!==undefined&&end<=start)throw new Error('A Time Period must end after its start.');
       if(calendar.range&&(start<calendar.range.start||(end??start)>calendar.range.end))throw new Error('Choose dates within the earliest and latest dates in Time System.');
-      const event:StoryEvent={...(chosen?.node.event??{}),type:kind,cardStyle:style,cardColor,start,...(end!==undefined?{end}:{}),groupId:group,precision,...(hasEnd?{endPrecision}:{}),...(banner?{banner}:{})};
+      const event:StoryEvent={...(chosen?.node.event??{}),type:kind,cardStyle:style,cardColor,start,...(end!==undefined?{end}:{}),precision,...(hasEnd?{endPrecision}:{}),...(banner?{banner}:{})};
       if(end===undefined){delete event.end;delete event.endPrecision;}if(!banner)delete event.banner;
       const state=useKachamak.getState();
       if(state.activeNovelId!==novel.id)throw new Error('The active book changed. Reopen the event.');
@@ -102,7 +99,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       state.updateNode(row?.section??section,id,{title:title.trim(),event,timelineKind:kind,icon:icon||undefined,links:[...new Set(links.filter(link=>link!==id))]});state.setRenamingNode(null);state.select(id);onSaved(start);onClose();
     }catch(e){setError(e instanceof Error?e.message:String(e));}
   };
-  const selectedGroup=novel.timeline?.groups?.find(value=>value.id===group),color=cardColor??selectedGroup?.color??chosen?.node.color??'#a57435';
+  const legacyColor=novel.timeline?.groups?.find(value=>value.id===chosen?.node.event?.groupId)?.color,color=cardColor??legacyColor??chosen?.node.color??'#a57435';
   const Icon=iconByName(icon)??(hasEnd?Hourglass:Zap);
   let dateText='Choose a date';try{dateText=formatDate(calendar,dateToMinute(calendar,from),precision);}catch{/* Show validation on Update. */}
   const content=<>
@@ -115,7 +112,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
         <span className="font-semibold">Start</span><DateButton label="Start" calendar={calendar} value={from} optional={!hasStart} precision={precision} onChange={(value,detail)=>{setFrom(value);setPrecision(detail);setStartDirty(true);setHasStart(true);}}/>
         {hasEnd&&<><span className="font-semibold">End</span><DateButton label="End" calendar={calendar} value={to} optional={!hasEndDate} precision={endPrecision} onChange={(value,detail)=>{setTo(value);setKind('period');setEndPrecision(detail);setEndDirty(true);setHasEndDate(true);}} onClear={()=>setKind('event')}/></>}
       </div>
-      <details><summary className="cursor-pointer text-[11px] text-muted-foreground">Appearance & links</summary><label className="mt-2 flex items-center gap-2 text-xs">Group<select aria-label="Event group" value={group} onChange={e=>setGroup(e.target.value)} className={timeField}><option value="">Ungrouped</option>{novel.timeline?.groups?.map(value=><option key={value.id} value={value.id}>{value.name}</option>)}</select></label><div className="mt-2 grid grid-cols-[52px_minmax(0,1fr)] items-center gap-2 text-[11px]">
+      <details><summary className="cursor-pointer text-[11px] text-muted-foreground">Appearance & links</summary><div className="mt-2 grid grid-cols-[52px_minmax(0,1fr)] items-center gap-2 text-[11px]">
         <span className="font-semibold">Style</span><Popover><PopoverTrigger asChild><button type="button" aria-label="Event style" className="flex h-8 items-center gap-2 rounded border border-white/10 bg-black/10 px-2">{style==='image'?<ImageIcon className="h-3.5 w-3.5"/>:<Palette className="h-3.5 w-3.5"/>}{style==='image'?'Image':'Color'}<ChevronDown className="ml-auto h-3 w-3 text-muted-foreground"/></button></PopoverTrigger><PopoverContent align="end" className="w-60 space-y-3 font-sans"><div className="flex gap-2">{(['image','color'] as const).map(value=><button type="button" key={value} aria-pressed={style===value} className={`${timeButton} aria-pressed:bg-accent`} onClick={()=>setStyle(value)}>{value==='image'?'Image':'Color'}</button>)}</div>{style==='image'?<><label className={`${timeButton} cursor-pointer`}>{banner?'Change image':'Upload image'}<input type="file" aria-label="Upload event banner" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void uploadBanner(file);}}/></label>{banner&&<img src={banner} alt="Event image preview" className="h-20 w-full rounded object-cover"/>}{loadingBanner&&<p role="status" className="text-xs">Preparing image…</p>}</>:<ColourPalette label="Event card color" value={cardColor} onChange={value=>setCardColor(value||undefined)}/>}</PopoverContent></Popover>
         <span className="font-semibold">Link</span><Popover open={linkOpen} onOpenChange={setLinkOpen}><PopoverTrigger asChild><button type="button" aria-label="Link a note to event" className="flex h-8 items-center gap-2 rounded border border-white/10 bg-black/10 px-2 text-muted-foreground"><Plus className="h-3.5 w-3.5"/>Add{links.length>0&&<span className="ml-auto text-[10px]">{links.length}</span>}</button></PopoverTrigger><PopoverContent align="end" className="w-64 space-y-2 font-sans"><label className="flex items-center gap-2"><Search className="h-3.5 w-3.5"/><input aria-label="Search linked notes" value={linkQuery} onChange={e=>setLinkQuery(e.target.value)} placeholder="Search notes…" className="min-w-0 flex-1 bg-transparent text-xs outline-none"/></label><div className="max-h-48 overflow-auto">{rows.filter(row=>row.node.id!==target&&!links.includes(row.node.id)&&row.node.title.toLocaleLowerCase().includes(linkQuery.toLocaleLowerCase())).slice(0,50).map(row=><button type="button" key={row.node.id} className="block w-full rounded p-2 text-left text-xs hover:bg-accent" onClick={()=>{setLinks([...links,row.node.id]);setLinkOpen(false);setLinkQuery('');}}>{row.node.title}</button>)}</div></PopoverContent></Popover>
       </div>

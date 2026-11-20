@@ -13,7 +13,7 @@ const {GREGORIAN,dateToMinute,minuteToDate,calendarPreset}=await import('../src/
 const tick=year=>dateToMinute(GREGORIAN,{year,month:0,day:1,hour:0,minute:0});
 const note=(id,title,event,children=[])=>({id,title,kind:'doc',content:'<p>Keep prose</p>',synopsis:'<p>Keep synopsis</p>',notes:'<p>Keep notes</p>',status:'',label:'',children,event,createdAt:1,updatedAt:1});
 const a=newNovel('Book A',''),b=newNovel('Book B','');
-a.sections.timeline=[note('period','A period',{type:'period',start:tick(1900),end:tick(2000),precision:'year'},[note('event','A event',{type:'event',start:tick(1950),precision:'year'}),note('other','A other',{type:'event',start:tick(1970),precision:'year'})])];
+a.sections.timeline=[note('period','A period',{type:'period',start:tick(1900),end:tick(2000),precision:'year'},[note('event','A event',{type:'event',groupId:'group',start:tick(1950),precision:'year'}),note('other','A other',{type:'event',start:tick(1970),precision:'year'})])];
 const oldDetails={image:'data:image/png;base64,aW1hZ2U=',aliases:['Period alias'],links:['link']};
 Object.assign(a.sections.timeline[0],oldDetails);
 a.sections.codex=[note('link','Codex link')];a.timeline={...a.timeline,display:'axis',groups:[{id:'group',name:'Storyline',color:'#58a6ff'}]};
@@ -75,20 +75,18 @@ assert.equal(field('Event title').value,'Draft period title');
 await React.act(async()=>settings.setInspectorTabHidden(a.id,'details',false));
 await click(tab('Details'));assert.equal(field('Event title').value,'Draft period title');
 await click(button('Apply dates'));assert.equal(a.sections.timeline[0].title,'Draft period title');
-// Every modal belongs to this book, including group edits and navigation dates.
-for(const label of ['Groups','Go to date']){
-  await option(label);assert.ok(document.querySelector('[role="dialog"]'));
-  await React.act(async()=>useKachamak.setState({activeNovelId:b.id,selectedNodeId:'period',paneAId:'period'}));
-  assert.ok(!document.querySelector('[role="dialog"]'),label+' closes on book change');
-  await React.act(async()=>useKachamak.setState({activeNovelId:a.id,selectedNodeId:'period',paneAId:'period'}));
-}
+// The open date navigator belongs to its book.
+await option('Go to date');assert.ok(document.querySelector('[role="dialog"]'));
+await React.act(async()=>useKachamak.setState({activeNovelId:b.id,selectedNodeId:'period',paneAId:'period'}));
+assert.ok(!document.querySelector('[role="dialog"]'),'Date navigation closes on book change');
+await React.act(async()=>useKachamak.setState({activeNovelId:a.id,selectedNodeId:'period',paneAId:'period'}));
 await click(button('Open event A event'));assert.equal(field('Event title').value,'A event');assert.equal(field('Timeline note type').value,'event');assert.equal(button('End date'),undefined);
 await click(button('Start date'));await change('Start year','1800');await click(button('Apply date'));await click(button('Apply dates'));
 assert.match(field('Timeline note settings').textContent,/must stay within/);assert.equal(a.sections.timeline[0].children[0].event.start,tick(1950));
 await click(button('Start date'));await change('Start year','1960');await click(button('Apply date'));await click(button('Apply dates'));
 assert.equal(minuteToDate(GREGORIAN,a.sections.timeline[0].children[0].event.start).year,1960);
 await click([...document.querySelectorAll('summary')].find(el=>el.textContent==='Appearance & links'));
-await change('Event group','group');await click(button('Event icon'));await click(button('Choose icon Time period'));
+assert.equal(field('Event group'),null);await click(button('Event icon'));await click(button('Choose icon Time period'));
 await click(button('Link a note to event'));await change('Search linked notes','Codex link');await click(button('Codex link'));await click(button('Apply dates'));
 const event=a.sections.timeline[0].children[0];assert.equal(event.event.groupId,'group');assert.deepEqual(event.links,['link']);assert.ok(event.icon);assert.equal(event.content,'<p>Keep prose</p>');
 // Changes made by another existing editor must not be overwritten by a stale inspector.
@@ -105,9 +103,9 @@ assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.te
 const {TimelineEventEditor}=await import('../src/components/kachamak/TimelineEventEditor.tsx');
 await React.act(async()=>{useKachamak.getState().updateNode('timeline','event',{event:{...event.event,groupId:'group'}});root.render(React.createElement(TimelineEventEditor,{novel:a,calendar:GREGORIAN,section:'timeline',start:tick(1920),onClose(){},onSaved(){}}));});
 await change('Find an existing note','A event');await click(button('A event'));
-assert.equal(field('Event group').value,'group');
+assert.equal(field('Event title').value,'A event');
 await change('Find an existing note','Codex link');await click(button('Codex link'));
-assert.equal(field('Event group').value,'','An undated note must not inherit another note’s group');
+assert.equal(field('Event title').value,'Codex link');
 await click(button('Start date'));assert.equal(field('Start year').value,'1920');assert.equal(field('Start precision').value,'day');
 // A saved Outline preference falls back to the Timeline chart without rewriting notes.
 const qa=newNovel('Navigation QA','');

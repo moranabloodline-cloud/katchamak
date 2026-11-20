@@ -84,6 +84,9 @@ const invalidCases = [
   ['calendar range', n => n.timeline.calendar.range = {start:10, end:1}],
   ['calendar moon', n => n.timeline.calendar.moons = [{id:'x', name:'X', period:0, offset:0, color:'#123456'}]],
   ['timeline groups', n => n.timeline.groups = [{id:'x', name:'X', color:'invalid'}]],
+  ['unknown view button', n => n.timeline.hiddenDisplayButtons = ['missing']],
+  ['duplicate view button', n => n.timeline.hiddenDisplayButtons = ['axis','axis']],
+  ['pinned timeline root', n => n.timeline.pinnedRootId = 3],
   ['hidden groups', n => n.timeline.hiddenGroups = [3]],
   ['timeline span', n => n.timeline.span = 0],
   ['timeline center', n => n.timeline.center = 9e15],
@@ -108,6 +111,8 @@ const custom = clone(modern);
 custom.timeline.calendar = calendarPreset('uniform');
 Object.assign(custom.timeline.calendar, {yearZero:true, eras:[{id:'second', name:'Second Age', abbreviation:'SA', startYear:2}], moons:[{id:'moon', name:'Moon', period:7, offset:0, color:'#123456'}]});
 custom.timeline.eventScope = 'book';
+custom.timeline.pinnedRootId = 'period';
+custom.timeline.hiddenDisplayButtons = ['chronicle','calendar'];
 const partial = clone(legacy); partial.sections = {binder: partial.sections.binder}; delete partial.author;
 partial.codex = [{id:'category', name:'Characters', children:[], entries:[{id:'person', title:'Person', content:'<p>Legacy Codex text.</p>', aliases:[], entryType:'', status:'', createdAt:1, updatedAt:1}]}];
 assert.equal(isUsableBackup(partial), true, 'Pre-unification backup remains readable');

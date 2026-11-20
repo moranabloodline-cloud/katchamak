@@ -1,14 +1,15 @@
 'use client';
 
-import {useState} from 'react';
-import {ArrowLeftRight, CalendarCog, Eye, Group} from 'lucide-react';
+import {useState, type ReactNode} from 'react';
+import {ArrowLeftRight, CalendarCog, Check, Eye, GitBranch} from 'lucide-react';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {dateToMinute, formatDate, minutesPerDay, minuteToDate, TIMELINE_LIMIT, type StoryCalendar} from '@/lib/kachamak/story-calendar';
 import {DateFields} from './TimelineEventEditor';
 import {timeButton} from './CalendarSettings';
+import type {NoteNode} from '@/lib/kachamak/types';
+import type {TimelineDisplay} from '@/lib/kachamak/story-calendar';
 
 export const timelineDisplays = [['axis', 'Timeline'], ['calendar', 'Calendar'], ['chronicle', 'Cards']] as const;
-type Display = typeof timelineDisplays[number][0];
 export type DisplayRange = {start: number; end: number};
 const tool = 'inline-flex h-8 shrink-0 items-center gap-1.5 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-amber-400 data-[state=open]:bg-muted data-[state=open]:text-foreground';
 
@@ -37,22 +38,36 @@ function RangeFields({calendar, initial, onApply, onClear}: {
   </form>;
 }
 
-export function TimelineToolbar({calendar, mode, range, initialRange, onCalendar, onCreate, onRange, onGroups, onView}: {
-  calendar: StoryCalendar; mode: Display; range: DisplayRange | null; initialRange: DisplayRange;
-  onCalendar: () => void; onCreate: () => void; onRange: (value: DisplayRange | null) => void;
-  onGroups: () => void; onView: (mode: Display) => void;
+export function TimelineToolbar({calendar, roots, root, range, initialRange, hiddenButtons, onCalendar, onPickRoot, onRange, onToggleButton}: {
+  calendar: StoryCalendar; roots: NoteNode[]; root: NoteNode | null; range: DisplayRange | null; initialRange: DisplayRange;
+  hiddenButtons: TimelineDisplay[]; onCalendar: () => void; onPickRoot: (id: string | null) => void;
+  onRange: (value: DisplayRange | null) => void; onToggleButton: (mode: TimelineDisplay) => void;
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
+  const [rootOpen, setRootOpen] = useState(false);
+  const pick=(id:string|null)=>{onPickRoot(id);setRootOpen(false);};
+  const rootChoices=(nodes:NoteNode[],depth:number):ReactNode=>nodes.map(node=><li key={node.id}>
+    <button type="button" aria-pressed={root?.id===node.id} onClick={()=>pick(node.id)}
+      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted aria-pressed:bg-muted"
+      style={{paddingLeft:8+Math.min(depth,8)*12,color:node.color||undefined}}>
+      <span className="break-words">{node.title||'Untitled'}</span>{root?.id===node.id&&<Check className="ml-auto size-3 shrink-0"/>}
+    </button>{node.children.length>0&&<ul>{rootChoices(node.children,depth+1)}</ul>}
+  </li>);
   const apply = (value: DisplayRange | null) => {onRange(value); setRangeOpen(false);};
   return <nav aria-label="Timeline tools" className="flex shrink-0 flex-wrap items-center gap-x-1 border-b border-border bg-background px-2 py-1">
     <button type="button" className={tool + ' max-w-full'} title={calendar.name} onClick={onCalendar}>
       <CalendarCog className="size-4 shrink-0"/><span className="max-w-40 truncate">{calendar.name}</span>
     </button>
     <span aria-hidden="true" className="mx-1 h-4 border-l border-border"/>
-    <button type="button" className={tool} aria-label="Create timeline" title="Create timeline" onClick={onCreate}>
-      <span aria-hidden="true" className="text-base leading-none">+</span>Timeline
-    </button>
+    <Popover open={rootOpen} onOpenChange={setRootOpen}>
+      <PopoverTrigger asChild><button type="button" className={tool} aria-label="Select timeline root" title={root?.title??'Select timeline root'}>
+        <GitBranch className="size-4"/>Timeline
+      </button></PopoverTrigger>
+      <PopoverContent aria-label="Timeline root notes" align="start" className="max-h-[min(60vh,var(--radix-popover-content-available-height))] w-64 max-w-[90vw] overflow-y-auto p-1">
+        <button type="button" aria-pressed={!root} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={()=>pick(null)}>Follow tree selection{!root&&<Check className="ml-auto size-3"/>}</button>
+        {rootOpen&&<ul className="border-t border-border">{rootChoices(roots,0)}</ul>}
+      </PopoverContent>
+    </Popover>
     <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
       <PopoverTrigger asChild><button type="button" className={tool} title={range ? formatDate(calendar,range.start,'day') + ' – ' + formatDate(calendar,range.end,'day') : 'Filter by date range'}>
         <ArrowLeftRight className="size-4"/><span className={range ? 'text-amber-400' : undefined}>Range</span>
@@ -61,13 +76,12 @@ export function TimelineToolbar({calendar, mode, range, initialRange, onCalendar
         <RangeFields calendar={calendar} initial={range ?? initialRange} onApply={apply} onClear={range ? () => apply(null) : undefined}/>
       </PopoverContent>
     </Popover>
-    <button type="button" className={tool} onClick={onGroups}><Group className="size-4"/>Groups</button>
-    <Popover open={viewOpen} onOpenChange={setViewOpen}>
+    <Popover>
       <PopoverTrigger asChild><button type="button" className={tool}><Eye className="size-4"/>View</button></PopoverTrigger>
-      <PopoverContent aria-label="Choose timeline view" align="start" className="grid w-36 gap-0.5 p-1">
-        {timelineDisplays.map(([key,label]) => <button type="button" key={key} aria-pressed={mode===key}
-          className="rounded px-3 py-1.5 text-left text-xs hover:bg-muted aria-pressed:bg-amber-500/15 aria-pressed:text-amber-300"
-          onClick={() => {onView(key); setViewOpen(false);}}>{label}</button>)}
+      <PopoverContent aria-label="Visible view buttons" align="start" className="grid w-40 gap-0.5 p-1">
+        {timelineDisplays.map(([key,label]) => <label key={key} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted">
+          <input type="checkbox" checked={!hiddenButtons.includes(key)} onChange={()=>onToggleButton(key)}/>{label}
+        </label>)}
       </PopoverContent>
     </Popover>
   </nav>;
