@@ -46,6 +46,7 @@ export interface TimelinePreferences {
   display?: TimelineDisplay | 'outline';
   // Only a root chosen in the toolbar pins the view. Older rootId values did not pin it.
   pinnedRootId?: string | null;
+  toolsHidden?: boolean;
   hiddenDisplayButtons?: TimelineDisplay[];
   groups?: TimelineGroup[];
   hiddenGroups?: string[];
@@ -89,6 +90,7 @@ export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&
     (t.display===undefined||['axis','calendar','chronicle','outline'].includes(t.display))&&
     (t.pinnedRootId==null||typeof t.pinnedRootId==='string')&&
+    (t.toolsHidden===undefined||typeof t.toolsHidden==='boolean')&&
     (t.hiddenDisplayButtons===undefined||Array.isArray(t.hiddenDisplayButtons)&&t.hiddenDisplayButtons.length<=3&&new Set(t.hiddenDisplayButtons).size===t.hiddenDisplayButtons.length&&t.hiddenDisplayButtons.every(key=>['axis','calendar','chronicle'].includes(key)))&&
     (t.eventScope===undefined||['book','section','folder'].includes(t.eventScope))&&
     (t.center===undefined||integer(t.center,-TIMELINE_LIMIT,TIMELINE_LIMIT))&&

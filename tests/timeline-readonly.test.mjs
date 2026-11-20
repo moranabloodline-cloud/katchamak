@@ -73,9 +73,9 @@ await React.act(async()=>button('Start date').click());
 const year=box.ownerDocument.querySelector('[aria-label="Start year"]');await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(year,'1800');year.dispatchEvent(new dom.Event('input',{bubbles:true}));});
 await React.act(async()=>button('Apply date').click());await React.act(async()=>button('Apply dates').click());assert.ok(box.querySelector('[role="alert"]').textContent.includes('Parent'));assert.equal(parent.children[0].event.start,tick(1900),'Invalid date form is rejected without writes');
 const click=async(label)=>{const control=button(label);assert.ok(control,label);await React.act(async()=>control.click());};
-const options=()=>document.querySelector('[aria-label="Timeline controls"]');
-const openOptions=async()=>{if(!options())await click('Timeline options');};
-const closeOptions=async()=>{if(options())await click('Timeline options');};
+const options=()=>document.querySelector('[aria-label="Filter timeline dates"]');
+const openOptions=async()=>{if(!options())await click('Range');};
+const closeOptions=async()=>{if(options())await click('Range');};
 const clickOption=async(label)=>{await openOptions();await click(label);};
 // Keep context while inspecting a nested event and changing chart views.
 const {TimelineView}=await import('../src/components/kachamak/TimelineView.tsx');
@@ -91,11 +91,13 @@ await React.act(async()=>button('Next month').click());assert.ok(button('Decembe
 await React.act(async()=>[...box.querySelectorAll('button')].find(el=>el.textContent==='December event').click());
 assert.equal(useKachamak.getState().selectedNodeId,'December event');
 assert.ok(button('December 1965 CE'),'Inspecting an event keeps the visible calendar month');
-await openOptions();
+await closeOptions();await click('Select timeline root');
 const scope=()=>document.querySelector('[aria-label="Timeline location"] [aria-current="page"]')?.textContent;
 assert.equal(scope(),'World','Inspecting a nested event keeps the enclosing scope');
-await React.act(async()=>button('Cards').click());assert.equal(scope(),'World','Switching views keeps the inspected scope');
+await click('Select timeline root');await click('Cards');await click('Select timeline root');
+assert.equal(scope(),'World','Switching views keeps the inspected scope');await click('Select timeline root');
 assert.ok(box.textContent.includes('Synopsis'));
+await click('View');
 const detail=document.querySelector('[aria-label="Event card content"]');
 await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLSelectElement.prototype,'value').set.call(detail,'titles');detail.dispatchEvent(new dom.Event('change',{bubbles:true}));});
 assert.ok(!box.textContent.includes('Synopsis'),'The global card detail option changes actual card content');
@@ -207,7 +209,7 @@ const initialBranches=JSON.stringify(branchBook.sections),untouchedOther=JSON.st
 await React.act(async()=>useKachamak.setState({novels:[branchBook,otherBook],treeScope:'all'}));
 await switchBook(branchBook,tree.id);
 await click('Select timeline root');
-assert.deepEqual([...rootMenu().querySelectorAll('button')].map(b=>b.textContent),['Follow tree selection','Tree','Subperiod',sea.title,land.title]);
+assert.deepEqual([...rootMenu().querySelectorAll('[aria-label="Choose a root note"] button')].map(b=>b.textContent),['Tree','Subperiod',sea.title,land.title]);
 await click('Select timeline root');
 await pick(nested.title);assert.equal(useKachamak.getState().selectedNodeId,nested.id);
 const activePrefs=()=>useKachamak.getState().novels.find(n=>n.id===branchBook.id).timeline;
@@ -222,6 +224,16 @@ for(const label of ['Cards','Calendar','Timeline']){
   await chooseView(label);assert.ok(box.textContent.includes(sea.title)&&!box.textContent.includes(land.title),label+' shows the leaf without its sibling');
   if(label==='Cards')assert.deepEqual([...box.querySelectorAll('[aria-label^="Edit event "]')].map(el=>el.getAttribute('aria-label')),['Edit event '+sea.title]);
 }
+const hideTools=async()=>{
+  await click('Hide timeline tools');
+  assert.equal(button('Show timeline tools').getAttribute('aria-expanded'),'false');
+  assert.ok(document.getElementById(button('Show timeline tools').getAttribute('aria-controls')).hidden);
+  assert.equal(button('Timeline options'),undefined);
+};
+for(const label of ['Calendar','Cards','Timeline']){
+  await chooseView(label);await hideTools();assert.equal(viewTabs().find(tab=>tab.textContent===label).getAttribute('aria-selected'),'true');
+  await click('Show timeline tools');assert.equal(button('Hide timeline tools').getAttribute('aria-expanded'),'true');
+}
 await click('View');
 const toggle=async label=>{
   const option=[...document.querySelectorAll('[aria-label="Visible view buttons"] label')].find(el=>el.textContent===label);
@@ -230,10 +242,11 @@ const toggle=async label=>{
 for(const label of ['Timeline','Calendar','Cards'])await toggle(label);
 assert.equal(viewTabs().length,0);assert.ok(box.querySelector('[aria-label="Timeline chart"]'),'Hiding the active button keeps the chart open');
 await toggle('Cards');await click('View');assert.deepEqual(viewTabs().map(el=>el.textContent),['Cards']);await chooseView('Cards');
-await switchBook(otherBook,sea.id);
+await hideTools();
+await switchBook(otherBook,sea.id);assert.ok(button('Hide timeline tools'),'Other books keep their own toolbar preference');
 assert.deepEqual(viewTabs().map(el=>el.textContent),['Timeline','Calendar','Cards']);
 assert.equal(useKachamak.getState().novels.find(n=>n.id===otherBook.id).timeline.pinnedRootId,undefined);
-await switchBook(branchBook,land.id);assert.deepEqual(viewTabs().map(el=>el.textContent),['Cards']);
+await switchBook(branchBook,land.id);assert.ok(button('Show timeline tools'));await click('Show timeline tools');assert.deepEqual(viewTabs().map(el=>el.textContent),['Cards']);
 assert.ok(box.textContent.includes(sea.title)&&!box.textContent.includes(land.title));
 await pick('Follow tree selection');assert.equal(activePrefs().pinnedRootId,null);assert.ok(box.textContent.includes(land.title));
 assert.equal(JSON.stringify(branchBook.sections),initialBranches);assert.equal(JSON.stringify(otherBook.sections),untouchedOther);

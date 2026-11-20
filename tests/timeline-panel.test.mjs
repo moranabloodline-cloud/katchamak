@@ -24,10 +24,10 @@ const field=label=>document.querySelector(`[aria-label="${label}"]`);
 const button=label=>[...document.querySelectorAll('button')].find(el=>el.getAttribute('aria-label')===label||el.textContent===label)??[...document.querySelectorAll('button')].find(el=>el.textContent.startsWith(label));
 const click=async(el)=>{assert.ok(el);await React.act(async()=>{el.dispatchEvent(new dom.MouseEvent('mousedown',{bubbles:true,button:0}));el.click();});await React.act(async()=>new Promise(resolve=>setTimeout(resolve,5)));};
 const change=async(label,value)=>{const el=field(label);assert.ok(el,label);await React.act(async()=>{Object.getOwnPropertyDescriptor(el.tagName==='SELECT'?dom.HTMLSelectElement.prototype:dom.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});};
-const option=async(label)=>{await click(button('Timeline options'));await click(button(label));};
+const option=async(label)=>{await click(button(label==='Go to date'?'Range':'Select timeline root'));await click(button(label));};
 assert.ok(!button('Go to date')&&!button('Time System'),'The axis starts without either toolbar');
 // Regression: a Time System draft must not survive switching to another book.
-await option('Time System');await change('Time system name','Unsaved A calendar');
+await click(button('Gregorian'));await change('Time system name','Unsaved A calendar');
 await React.act(async()=>useKachamak.setState({activeNovelId:b.id,selectedNodeId:'period',paneAId:'period'}));
 assert.ok(!document.querySelector('[role="dialog"]'),'Book change closes the old calendar draft instead of offering to save it into the new book');
 assert.equal(JSON.stringify(b),untouchedB);

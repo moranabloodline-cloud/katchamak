@@ -906,7 +906,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 40,
+      version: 41,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -919,6 +919,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<41){ /* An unset toolsHidden preference keeps the Timeline toolbar visible. */ }
         if(version<40){ /* Books without button preferences show all three Timeline views. */ }
         if(version<39){ /* Earlier notes keep their page font size and saved Details layout. */ }
         if(version<38){ /* Missing inspector preferences show every tab, without rewriting books. */ }

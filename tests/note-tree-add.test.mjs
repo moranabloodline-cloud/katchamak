@@ -74,10 +74,10 @@ await React.act(async()=>{
 assert.ok(container.textContent.includes('Codex timeline target'));
 assert.ok(!container.textContent.includes('Chapter 1'));
 async function addEventFromOptions() {
-  await React.act(async()=>container.querySelector('button[aria-label="Timeline options"]').click());
-  const menu=document.querySelector('[aria-label="Timeline controls"]');
+  await React.act(async()=>container.querySelector('button[aria-label="Select timeline root"]').click());
+  const menu=document.querySelector('[aria-label="Timeline root notes"]');
   const add=[...menu.querySelectorAll('button')].find(button=>button.textContent==='Add event');
-  assert.ok(add,'Timeline options offers Add event');
+  assert.ok(add,'The Timeline menu offers Add event');
   await React.act(async()=>add.click());
   return useKachamak.getState().selectedNodeId;
 }
