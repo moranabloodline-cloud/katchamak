@@ -14,6 +14,7 @@ import { findNode,findNodeInNovel } from "@/lib/kachamak/utils";
 import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { NotesSection } from "./NotesSection";
+import { ProjectHomepage } from "./ProjectHomepage";
 import { TrashView } from "./TrashView";
 import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
 import { AccountDialog } from "./AccountDialog";
@@ -76,6 +77,7 @@ export function Workspace() {
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const pageView = useKachamak(s=>s.view);
+  const trashOpen = activeTab==='trash' && pageView!=='homepage';
   const pageId = useKachamak(s=>s.view==='split'?(s.activePane==='a'?s.paneAId:s.paneBId):s.selectedNodeId);
 
   const openTab = useOpenWorkspaceTab(novel);
@@ -129,12 +131,12 @@ export function Workspace() {
             onClick={requestLinkReview} className="workspace-action text-[#56c8b5]">
             {savePhase==='idle'?<Save aria-hidden="true"/>:<LoaderCircle aria-hidden="true" className="animate-spin"/>}
           </button>
-          <button type="button" aria-label="Focus" title="Focus" disabled={activeTab==='trash'}
+          <button type="button" aria-label="Focus" title="Focus" disabled={trashOpen}
             onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
             <EyeOff aria-hidden="true"/>
           </button>
           <PageFormatMenu key={visiblePage?.node.id??'empty'} note={visiblePage}/>
-          <button type="button" aria-label="Trash" title="Trash" aria-current={activeTab==='trash'?'page':undefined}
+          <button type="button" aria-label="Trash" title="Trash" aria-current={trashOpen?'page':undefined}
             onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
             <Trash2 aria-hidden="true"/>
           </button>
@@ -150,8 +152,10 @@ export function Workspace() {
       </header>
 
       {/* body — every tab is the same note system; only Trash is different */}
-      {activeTab === "trash" ? (
+      {trashOpen ? (
         <TrashView key={activeNovelId} />
+      ) : activeTab === "trash" ? (
+        <ProjectHomepage key={novel.id} novel={novel} onBack={()=>openTab("trash")} />
       ) : (
         <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} revealSearch={searchShortcut}/>
       )}

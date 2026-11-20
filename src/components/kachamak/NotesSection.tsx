@@ -279,7 +279,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
   const view = storedView==='family' && section!=='family' ? 'write' : storedView;
-  const previousView=useRef<ViewMode>('write');
+  const previousView=useRef<ViewMode>(section==='timeline'||section==='family'?section:'write');
   useEffect(()=>{if(view!=='homepage')previousView.current=view;},[view]);
   const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);

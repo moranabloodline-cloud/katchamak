@@ -1,3 +1,5 @@
+> **2026-11-20 — Homepage u glavnoj navigaciji.** Homepage je prvi tab projekta. Otvara sačuvanu početnu stranu i ostaje na prvom mestu kada se ostali tabovi premeste. Traka za uređivanje teksta počinje komandom Undo.
+
 > **2026-11-20 — Pozadina širokih logotipa.** Početna strana prepoznaje jednobojnu podlogu i kada natpis dodiruje ivice banera. Duge i kratke ivice učestvuju srazmerno svojoj dužini. U editoru Reprocess logo ponavlja obradu iz sačuvanog originala.
 
 > **2026-11-20 — Kadriranje i uklanjanje pozadine.** Na otključanoj početnoj strani dugme Reposition image otvara kadar sa ručicama, zumom i donjim prelivom. Remove background obrađuje sliku na uređaju. Original je sačuvan i pozadina se može vratiti.
@@ -559,6 +561,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Homepage ispred Bindera.** U pregledaču su na probnoj knjizi provereni aktivni tab, povratak u belešku, Timeline, Relationships i Trash, kao i zaključana kartica i njena veza posle osvežavanja stare adrese početne strane.
 
 - **2026-11-20 — Ispravka uklanjanja pozadine logotipa.** Na JPEG isečku iz referentnog snimka ponovljeni su gubitak sitnog naslova i ostatak podloge. U pregledaču su provereni odvojena slova, tekstura, providnost, ponovna obrada iz originala, odustajanje i ponovno učitavanje sačuvane strane.
 

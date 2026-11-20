@@ -30,7 +30,7 @@ export function revealWorkspaceTab(novel:Novel,key:TabKey):Novel {
   };
 }
 export function visibleTabLocation(novel:Novel,key:TabKey,view:ViewMode) {
-  if(!isWorkspaceTabHidden(novel,key))return null;
+  if(view==='homepage' || !isWorkspaceTabHidden(novel,key))return null;
   const tabs=orderedTabs(novel), index=tabs.findIndex(tab=>tab.key===key);
   const adjacent=[...tabs.slice(index+1),...tabs.slice(0,Math.max(index,0)).reverse()];
   const next=adjacent.find(tab=>!isWorkspaceTabHidden(novel,tab.key))?.key;
