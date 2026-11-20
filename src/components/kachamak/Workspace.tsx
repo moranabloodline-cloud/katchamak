@@ -113,7 +113,7 @@ export function Workspace() {
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
-          className="ml-auto flex shrink-0 items-center gap-3 max-xl:max-w-[50%] border-l border-white/10 bg-black/20 px-3.5"
+          className={`ml-auto flex shrink-0 items-center gap-3 max-xl:max-w-[50%] border-l border-white/10 bg-black/20 ${rightPanelOpen ? "px-3.5" : "justify-center"}`}
           style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
         >
           {rightPanelOpen ? (
@@ -130,14 +130,14 @@ export function Workspace() {
                 onClick={requestLinkReview}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
-                {savePhase==='idle'?<Save className="h-5 w-5"/>:<LoaderCircle className="h-5 w-5 animate-spin"/>}
+                {savePhase==='idle'?<Save className="size-[22px]"/>:<LoaderCircle className="size-[22px] animate-spin"/>}
               </button>
               <button
                 type="button"
                 aria-label="My account"
                 title="My account"
                 onClick={() => setAccountOpen(true)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-[11px] font-bold text-stone-200 transition-colors hover:border-white/50"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-xs font-bold text-stone-200 transition-colors hover:border-white/50"
               >
                 {photo ? <img src={photo} alt="" className="h-full w-full rounded-full object-cover" /> : initials}
               </button>
@@ -148,7 +148,7 @@ export function Workspace() {
                 onClick={() => setSettingsOpen(true)}
                 className="rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="size-[22px]" />
               </button>
             </>
           ) : (
@@ -157,9 +157,9 @@ export function Workspace() {
               aria-label="Settings"
               title="Settings"
               onClick={() => setSettingsOpen(true)}
-              className="mx-auto rounded-md p-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-md px-0.5 py-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="size-[22px]" />
             </button>
           )}
         </div>

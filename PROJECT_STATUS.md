@@ -1,3 +1,5 @@
+> **2026-11-20 — Ikonice iznad desnog panela.** Save i Settings imaju 22 px, a avatar naloga 36 px.
+
 > **2026-11-20 — Relationships.** Gornji tab za porodično stablo dobio je novi naziv. Uklonjen je red sa nazivima grupa.
 
 > **2026-11-20 — Gornja traka radnog prostora.** Tabovi imaju obojenu ikonicu iznad naziva i jednake dimenzije. Ispod susednih tabova iste namene prikazan je naziv grupe. Sačuvani redosled važi u svakoj knjizi.
@@ -513,6 +515,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Blago povećane ikonice čuvanja i podešavanja i avatar naloga. Kada je desni panel sklopljen, Settings je centriran u svojoj koloni.
 
 - **20.11.2026.** Skraćena gornja traka. Isti tab i sačuvane veze dostupni su kroz Relationships.
 
