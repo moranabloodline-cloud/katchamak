@@ -12,7 +12,8 @@
 .workspace-ribbon-grid {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 5.625rem;
+  width: max-content;
+  grid-auto-columns: 1fr;
   grid-template-rows: 3rem;
   gap: 2px;
   flex: none;
@@ -24,6 +25,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding-inline: 3px;
   gap: 3px;
   border: 1px solid transparent;
   border-radius: .375rem;

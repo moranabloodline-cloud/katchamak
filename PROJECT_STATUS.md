@@ -1,3 +1,5 @@
+> **2026-11-20 — Širina gornjih tabova.** Svi vidljivi tabovi dobijaju jednaku širinu prema najdužem prikazanom nazivu.
+
 > **2026-11-20 — Ikonice iznad desnog panela.** Save i Settings imaju 22 px, a avatar naloga 36 px.
 
 > **2026-11-20 — Relationships.** Gornji tab za porodično stablo dobio je novi naziv. Uklonjen je red sa nazivima grupa.
@@ -515,6 +517,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Provereno u Chrome-u na probnoj knjizi da dodavanje, preimenovanje, skrivanje i vraćanje najdužeg taba odmah menja širinu ostalih. Na uskom ekranu provereni su listanje i promena redosleda.
 
 - **20.11.2026.** Blago povećane ikonice čuvanja i podešavanja i avatar naloga. Kada je desni panel sklopljen, Settings je centriran u svojoj koloni.
 
