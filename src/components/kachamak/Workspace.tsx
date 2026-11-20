@@ -98,10 +98,10 @@ export function Workspace() {
           headers + editor toolbar) the top of the app has TWO tracks. The vertical
           dividers line up with the panel edges below and run to the very top
           (the +1 covers the 1px resizer column so the lines are never bent) */}
-      <header className="flex h-10 shrink-0 items-stretch border-b border-white/10">
+      <header className="flex shrink-0 flex-wrap items-stretch border-b border-white/10 xl:h-20 xl:flex-nowrap">
         {/* Static program branding above the navigation row. */}
         <div
-          className={`flex shrink-0 items-center gap-1.5 overflow-hidden border-r border-white/10 bg-black/20 ${leftPanelOpen?"pl-3 pr-1":"px-0"}`}
+          className={`flex shrink-0 items-center gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[50%] border-r border-white/10 bg-black/20 ${leftPanelOpen?"pl-3 pr-1":"px-0"}`}
           style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
         >
           <WorkspaceBrand />
@@ -113,7 +113,7 @@ export function Workspace() {
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
-          className="flex shrink-0 items-center gap-3 border-l border-white/10 bg-black/20 px-3.5"
+          className="ml-auto flex shrink-0 items-center gap-3 max-xl:max-w-[50%] border-l border-white/10 bg-black/20 px-3.5"
           style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
         >
           {rightPanelOpen ? (

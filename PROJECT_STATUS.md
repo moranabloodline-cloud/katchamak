@@ -1,3 +1,5 @@
+> **2026-11-20 — Gornja traka radnog prostora.** Tabovi imaju obojenu ikonicu iznad naziva i jednake dimenzije. Ispod susednih tabova iste namene prikazan je naziv grupe. Sačuvani redosled važi u svakoj knjizi.
+
 > **2026-11-20 — Meni beleški.** Uklonjena opcija View as Timeline.
 
 > **2026-11-20 — Insert Template.** Iz menija levog stabla korisnik bira šablon tekuće knjige po nazivu i putanji. Nova beleška dobija svoj ID i sadržaj izabranog šablona na odabranom mestu.
@@ -509,6 +511,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Traka grupiše postojeće tabove i komande. Na užem ekranu dobija sopstveni red i vodoravno listanje. U Chrome-u provereni su aktivni tab, skrivanje, vraćanje, promena redosleda tastaturom i pristup korpi na užem ekranu.
 
 - **20.11.2026.** Uklonjena komanda za otvaranje beleške kao Timeline iz zajedničkog menija stabla.
 
