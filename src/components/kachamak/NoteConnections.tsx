@@ -7,7 +7,7 @@ import {NotePreview} from './NotePreview';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NoteImage} from './NoteImage';
 import {DetailsBlock,DetailsBlocks,AddDetailsBlock} from './DetailsBlock';
-import {detailBlockOrder,moveDetailBlock,type DetailBlockKey} from '@/lib/kachamak/detail-blocks';
+import {DEFAULT_HIDDEN_TIMELINE_BLOCKS,detailBlockOrder,moveDetailBlock,type DetailBlockKey} from '@/lib/kachamak/detail-blocks';
 import {cleanAliases} from '@/lib/kachamak/note-links';
 import {noteRelationships} from '@/lib/kachamak/family-tree';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
@@ -24,18 +24,20 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
     if(next.join('\n')!==(node.aliases??[]).join('\n'))update(section,node.id,{aliases:next});
     if(finish){setAliases(next.join('\n'));setAliasDirty(false);}
   };
-  const hidden=node.hiddenDetailBlocks??[];
+  const defaultHidden=section==='timeline'?DEFAULT_HIDDEN_TIMELINE_BLOCKS:[];
+  const hidden=node.hiddenDetailBlocks??defaultHidden;
   const collapsed=node.collapsedDetailBlocks??[],order=detailBlockOrder(node.detailBlockOrder,!!timelineSettings);
   const available=order.filter(key=>key!=='timeline'||!!timelineSettings),visibleOrder=available.filter(key=>!hidden.includes(key));
   const updateLayout=(patch:Partial<NoteNode>)=>{if(useKachamak.getState().activeNovelId===novel?.id)update(section,node.id,patch);};
   const setBlockVisible=(key:DetailBlockKey,visible:boolean)=>{
     const state=useKachamak.getState();if(state.activeNovelId!==novel?.id)return;
-    const current=node.hiddenDetailBlocks??[];
+    const current=node.hiddenDetailBlocks??defaultHidden;
     update(section,node.id,{hiddenDetailBlocks:visible?current.filter(item=>item!==key):[...new Set([...current,key])]});
   };
   useEffect(()=>{setAliases((node.aliases??[]).join('\n'));setAliasDirty(false);setPreview(null);},[node.id]);
   useEffect(()=>{if(!aliasDirty)setAliases((node.aliases??[]).join('\n'));},[node.aliases,aliasDirty]);
-  const outgoing=useMemo(()=>mode==='details'&&!node.hiddenDetailBlocks?.includes('codex')&&novel&&node.links?.length?groupLinkedNotes(novel,node.links):[],[mode,novel,node.links,node.hiddenDetailBlocks]);
+  const showCodex=mode==='details'&&!hidden.includes('codex');
+  const outgoing=useMemo(()=>showCodex&&novel&&node.links?.length?groupLinkedNotes(novel,node.links):[],[showCodex,novel,node.links]);
   const relatives=useMemo(()=>mode==='details'&&section==='codex'&&novel?noteRelationships(novel,node.id):[],[mode,section,novel,node.id]);
   const incoming=useMemo(()=>mode==='mentions'?index.filter(n=>n.node.id!==node.id).map(n=>referenceTo(n,node,deferred)).filter(n=>n!==null):[],[mode,index,node,deferred]);
   const mentionGroups=TABS.flatMap(tab=>{const entries=incoming.filter(ref=>ref.source.section===tab.key);return entries.length?[{...tab,entries}]:[];});

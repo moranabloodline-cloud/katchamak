@@ -14,6 +14,8 @@ const tick=year=>dateToMinute(GREGORIAN,{year,month:0,day:1,hour:0,minute:0});
 const note=(id,title,event,children=[])=>({id,title,kind:'doc',content:'<p>Keep prose</p>',synopsis:'<p>Keep synopsis</p>',notes:'<p>Keep notes</p>',status:'',label:'',children,event,createdAt:1,updatedAt:1});
 const a=newNovel('Book A',''),b=newNovel('Book B','');
 a.sections.timeline=[note('period','A period',{type:'period',start:tick(1900),end:tick(2000),precision:'year'},[note('event','A event',{type:'event',start:tick(1950),precision:'year'}),note('other','A other',{type:'event',start:tick(1970),precision:'year'})])];
+const oldDetails={image:'data:image/png;base64,aW1hZ2U=',aliases:['Period alias'],links:['link']};
+Object.assign(a.sections.timeline[0],oldDetails);
 a.sections.codex=[note('link','Codex link')];a.timeline={...a.timeline,display:'axis',groups:[{id:'group',name:'Storyline',color:'#58a6ff'}]};
 b.sections.timeline=[note('period','B period',{type:'period',start:tick(1900),end:tick(2100),precision:'year'})];b.timeline={...b.timeline,calendar:calendarPreset('uniform'),display:'axis'};
 const untouchedB=JSON.stringify(b),box=document.body.appendChild(document.createElement('div')),root=createRoot(box);
@@ -39,10 +41,26 @@ await click(tab('Details'));assert.equal(field('Event title').value,'A period');
 await change('Event title','Draft period title');
 const toggleMenu=async el=>React.act(async()=>el.dispatchEvent(new dom.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})));
 const menuItem=label=>[...document.querySelectorAll('[role="menuitem"]')].find(el=>el.textContent===label);
+const optionalBlocks=['Image','Aliases','Codex'];
+const visibleExtras=()=>optionalBlocks.filter(label=>field(label+' block'));
+assert.deepEqual(visibleExtras(),[],'Legacy periods start with only their Timeline editor');
+assert.equal(a.sections.timeline[0].hiddenDetailBlocks,undefined,'Opening Details does not rewrite the note');
+for(const [index,label] of optionalBlocks.entries()){
+  await toggleMenu(field('Add block'));await click(menuItem(label));
+  assert.deepEqual(visibleExtras(),optionalBlocks.slice(0,index+1),'Add only the chosen block');
+}
+assert.equal(field('Image block').querySelector('img').getAttribute('src'),oldDetails.image);
+assert.equal(field('Aliases').value,oldDetails.aliases[0]);
+assert.match(field('Codex block').textContent,/Codex link/);
+for(const label of optionalBlocks){
+  await toggleMenu(field(label+' block options'));await click(menuItem('Hide block'));
+}
+assert.deepEqual(visibleExtras(),[]);
+for(const [key,value] of Object.entries(oldDetails))assert.deepEqual(a.sections.timeline[0][key],value);
 const periodDates=structuredClone(a.sections.timeline[0].event);
 await toggleMenu(field('Timeline block options'));await click(menuItem('Hide block'));
 assert.ok(field('Timeline block').hidden);
-assert.deepEqual(a.sections.timeline[0].hiddenDetailBlocks,['timeline']);
+assert.deepEqual(a.sections.timeline[0].hiddenDetailBlocks,['image','aliases','codex','timeline']);
 assert.equal(a.sections.timeline[0].title,'A period');
 assert.deepEqual(a.sections.timeline[0].event,periodDates);
 await toggleMenu(field('Add block'));await click(menuItem('Timeline'));
@@ -138,6 +156,7 @@ assert.equal(tab('Info').getAttribute('aria-selected'),'true','Selecting an exis
 const beforeNew=JSON.stringify(qa.sections.timeline[0].children[1]);
 await option('Add event');
 const addedEvent=qa.sections.timeline[0].children.at(-1);
+assert.deepEqual(visibleExtras(),[],'New nested events use the same defaults as existing notes');
 assert.equal(addedEvent.timelineKind,'event');assert.equal(addedEvent.event,undefined);
 assert.equal(tab('Details').getAttribute('aria-selected'),'true','Explicit Add event opens the existing dates inspector');
 assert.equal(field('Event title').value,'New Event');

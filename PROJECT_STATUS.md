@@ -1,3 +1,5 @@
+> **2026-11-20 — Details u Timeline-u.** Image, Aliases i Codex su početno skriveni na novim i postojećim Timeline beleškama. „Add block“ uključuje odabrani blok za jednu belešku. Ranije sačuvan izbor ima prednost.
+
 > **2026-11-20 — Alati iznad Timeline prikaza.** Timeline, Calendar i Cards imaju zajedničku traku za kalendar knjige, novu vremensku liniju, filter raspona, grupe i prikaz. Filter obuhvata oba izabrana dana i prati promenu prikaza unutar knjige.
 
 > **2026-11-20 — Natpis i ikonice u zaglavlju.** Natpis Kachamak prilagođava se širini levog panela do 26 px. Save i Settings koriste boje i veličinu ikonica tabova. Sa avatarom su centrirani iznad desnog panela.
@@ -525,6 +527,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Provereni su podrazumevani blokovi za stari period i novi događaj, pojedinačno vraćanje slike, aliasa i Codex veza, kao i čuvanje izbora posle osvežavanja u Chrome-u na probnoj knjizi.
 
 - **20.11.2026.** Na dve probne knjige provereni su filter datuma, promena prikaza i dodavanje vremenske linije. U Chrome-u je proverena traka u sva tri prikaza, otvaranje kalendara i grupa i unos prvog događaja.
 
