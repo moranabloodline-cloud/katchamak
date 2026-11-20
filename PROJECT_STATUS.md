@@ -1,3 +1,5 @@
+> **2026-11-20 — Komande zaglavlja i manje kartice.** Save, Focus, Format, Trash, Settings i My account čine jednu grupu ikonica uz desnu ivicu. Sve komande su dostupne i kada je panel zatvoren. Standardna Timeline kartica sa slikom na širokom ekranu meri 682 × 144 px, a kartice sa samim tekstom zauzimaju manje visine.
+
 > **2026-11-20 — Timeline traka i kartice.** Strelica desno skriva i vraća četiri gornja alata. Izbor se čuva po knjizi. Komande iz donjeg menija raspoređene su u Timeline, Range i View. Standardne kartice na širokom ekranu imaju približno 800 × 180 px i prilagođavaju se na telefonu.
 
 > **2026-11-20 — Izbor grane u Timeline-u.** Dugme Timeline bira postojeću belešku iz levog stabla. View pamti koja donja dugmad knjiga prikazuje. Kontrole Groups su uklonjene, a događaji iz ranije skrivenih grupa dostupni su u sva tri prikaza.
@@ -531,6 +533,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Na probnoj knjizi u Chrome-u provereno je svih šest ikonica zaglavlja, njihov redosled, jednake dimenzije i poravnanje pri promeni širine desnog panela. Provereni su i kartica sa učitanim banerom, mobilni raspored, Compact i ponovno otvaranje sačuvane knjige.
 
 - **20.11.2026.** U Chrome-u je učitan probni baner kroz editor događaja. Kartica je izmerena na 802 × 180 px na širokom ekranu i 330 × 128 px u prozoru širine 390 px. Provereni su Compact, sva tri prikaza, skrivanje trake, čuvanje i ponovno učitavanje. Ciljani testovi proveravaju i izolaciju izbora po knjizi.
 

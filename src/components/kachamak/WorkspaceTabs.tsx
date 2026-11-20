@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Plus, FolderOpen, EyeOff, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote, Trash2 } from 'lucide-react';
-import {PageFormatMenu} from './PageFormatMenu';
+import { Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
 import { useKachamak } from '@/lib/kachamak/store';
 import { type Novel, type TabKey } from '@/lib/kachamak/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -45,13 +44,14 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
   </ContextMenu>;
 }
 
-export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
-  const active=useKachamak(s=>s.activeTab), setTab=useKachamak(s=>s.setTab), closeTab=useKachamak(s=>s.closeTab);
+export function useOpenWorkspaceTab(novel: Novel | undefined) {
+  const setTab=useKachamak(s=>s.setTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
   const specialView=view==='timeline'||view==='family';
   const lastNoteView=useRef(specialView?'write':view);
   useEffect(()=>{if(!specialView)lastNoteView.current=view;},[view,specialView]);
-  const openTab=(key:TabKey)=>{
+  return (key:TabKey)=>{
+    if(!novel)return;
     if(key==='family'){
       const state=useKachamak.getState(), roots=novel.sections.family;
       const tree=state.selectedNodeId && findNode(roots,state.selectedNodeId);
@@ -64,6 +64,10 @@ export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
     setTab(key);
     if(nextView==='continuous'&&key!=='trash')useKachamak.setState({selectedNodeId:null});
   };
+}
+
+export function WorkspaceTabs({novel,openTab}:{novel:Novel;openTab:(key:TabKey)=>void}) {
+  const active=useKachamak(s=>s.activeTab), view=useKachamak(s=>s.view), closeTab=useKachamak(s=>s.closeTab);
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const [pendingDelete,setPendingDelete]=useState<{key:TabKey;label:string;projectId:string}|null>(null);
   const [pendingClone,setPendingClone]=useState<typeof pendingDelete>(null);
@@ -93,11 +97,6 @@ export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
         {hiddenTabs.map(tab=><button type="button" key={tab.key} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-white/10" onClick={()=>{openTab(tab.key);setOpen(false);}}><FolderOpen className="h-3.5 w-3.5 shrink-0"/>Show <span style={{color:tab.color || undefined}}>{tab.label}</span></button>)}
       </div>}
     </PopoverContent></Popover>
-    <div className="workspace-ribbon-grid ml-auto border-l border-white/10 pl-2">
-      <PageFormatMenu disabled={active==='trash'}/>
-      <button type="button" disabled={active==='trash'} onMouseDown={event=>event.preventDefault()} onClick={onFocus} aria-label="Focus" title="Focus" className="workspace-ribbon-tile disabled:opacity-40"><EyeOff aria-hidden="true" className="text-sky-300"/>Focus</button>
-      <button type="button" onClick={()=>openTab('trash')} aria-current={active==='trash'?'page':undefined} title="Trash" className="workspace-ribbon-tile"><Trash2 aria-hidden="true" className="text-rose-300"/>Trash</button>
-    </div>
   </nav>
     {pendingClone?.projectId===novel.id && <CloneWorkspaceTabDialog sourceId={novel.id} tab={pendingClone} onClose={()=>setPendingClone(null)}/>}
     <AlertDialog open={!!pendingDelete} onOpenChange={value=>{if(!value)setPendingDelete(null);}}><AlertDialogContent className="border-white/15 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete {pendingDelete?.label} tab?</AlertDialogTitle><AlertDialogDescription>This removes only the tab from your workspace. All notes and folders stay saved in your project. {pendingDelete?.key.startsWith('note:')?'Reopen it from the note menu using Open as tab.':'Restore it from the + menu using Show '+(pendingDelete?.label??'this tab')+'.'}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 text-white hover:bg-red-500" onClick={()=>{if(pendingDelete&&useKachamak.getState().activeNovelId===pendingDelete.projectId)closeTab(pendingDelete.key);setPendingDelete(null);}}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>

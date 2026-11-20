@@ -26,9 +26,10 @@ assert.deepEqual(continuousNotes(roots(),'all',act).map(n=>n.id),[act,one,two]);
 assert.deepEqual(continuousNotes(roots(),'all','missing'),[]);
 assert.equal(findNode(roots(),act).children.length,2,'View filtering must not alter the manuscript');
 const container=document.createElement('div');document.body.append(container);const root=createRoot(container);
-const {WorkspaceTabs}=await import('../src/components/kachamak/WorkspaceTabs.tsx');
+const {WorkspaceTabs,useOpenWorkspaceTab}=await import('../src/components/kachamak/WorkspaceTabs.tsx');
 useKachamak.setState({view:'continuous'});
-const render=()=>React.createElement(React.Fragment,null,React.createElement(WorkspaceTabs,{novel:novel()}),React.createElement(ContinuousWriteArea,{section:'binder'}));
+function Tabs(){const book=novel();return React.createElement(WorkspaceTabs,{novel:book,openTab:useOpenWorkspaceTab(book)});}
+const render=()=>React.createElement(React.Fragment,null,React.createElement(Tabs),React.createElement(ContinuousWriteArea,{section:'binder'}));
 await React.act(async()=>root.render(render()));
 const ids=()=>[...container.querySelectorAll('[data-continuous-note]')].map(e=>e.dataset.continuousNote);
 assert.deepEqual(ids(),[act,one,two],'Selected act includes its own content and descendants only');

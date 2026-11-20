@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
-import { ChevronLeft, Save, Settings,Minimize2,LoaderCircle } from "lucide-react";
+import { ChevronLeft, EyeOff, LoaderCircle, Minimize2, Save, Settings, Trash2 } from "lucide-react";
 import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
 import { WorkspaceBrand } from "./WorkspaceBrand";
 import { activeWritingEditor } from "./WorkspaceNavigation";
-import { WorkspaceTabs } from "./WorkspaceTabs";
+import { PageFormatMenu } from "./PageFormatMenu";
+import { useOpenWorkspaceTab, WorkspaceTabs } from "./WorkspaceTabs";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
@@ -74,6 +75,7 @@ export function Workspace() {
   };
 
   const novel = novels.find((n) => n.id === activeNovelId);
+  const openTab = useOpenWorkspaceTab(novel);
   const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
   useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
@@ -93,15 +95,15 @@ export function Workspace() {
     }} className="flex h-screen flex-col bg-[#0d0d0d] text-foreground">
       {focusMode&&<button type="button" aria-label="Exit focus" title="Exit focus (Esc)" onMouseDown={event=>event.preventDefault()} onClick={()=>setFocusMode(false)} className="fixed right-4 top-4 z-40 flex items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 text-xs text-muted-foreground opacity-30 shadow transition-opacity hover:opacity-100 focus:opacity-100"><Minimize2 className="h-4 w-4"/>Exit focus · Esc</button>}
       {/* top bar — ONE strip, identical on every tab: home + search over the left
-          panel, then the section tabs (all in one row), then scope/save/account/
-          settings over the right panel. Together with the strip below it (panel
+          panel, then the section tabs (all in one row), then the shared actions
+          aligned with the right edge. Together with the strip below it (panel
           headers + editor toolbar) the top of the app has TWO tracks. The vertical
           dividers line up with the panel edges below and run to the very top
           (the +1 covers the 1px resizer column so the lines are never bent) */}
       <header className="flex shrink-0 flex-wrap items-stretch border-b border-white/10 xl:h-16 xl:flex-nowrap">
         {/* Static program branding above the navigation row. */}
         <div
-          className={`@container flex shrink-0 items-center gap-1 sm:gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[50%] border-r border-white/10 bg-black/20 ${leftPanelOpen?"px-1 sm:pl-3":"px-0"}`}
+          className={`@container flex shrink-0 items-center gap-1 sm:gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[min(50%,calc(100%_-_11.5rem))] border-r border-white/10 bg-black/20 ${leftPanelOpen?"px-1 sm:pl-3":"px-0"}`}
           style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
         >
           <WorkspaceBrand compact={!leftPanelOpen} />
@@ -109,46 +111,32 @@ export function Workspace() {
         </div>
 
         {/* tabs start at the left edge of the workspace, always in a single line */}
-        <WorkspaceTabs novel={novel} onFocus={enterFocus} />
+        <WorkspaceTabs novel={novel} openTab={openTab} />
 
-        {/* right panel zone: folder-level dropdown, save, account, settings */}
-        <div
-          className="ml-auto flex shrink-0 items-center justify-center gap-[clamp(0.5rem,1.5vw,1.5rem)] max-xl:max-w-[50%] border-l border-white/10 bg-black/20"
-          style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
-        >
-          {rightPanelOpen && (
-            <>
-              <button
-                type="button"
-                aria-label="Save"
-                title={savePhase==='preparing'?'Preparing link review…':savePhase==='saving'?'Saving to your account…':'Save'}
-                aria-busy={savePhase!=='idle'}
-                onClick={requestLinkReview}
-                className="grid size-10 shrink-0 place-items-center rounded-md text-[#56c8b5] transition-colors hover:bg-white/10"
-              >
-                {savePhase==='idle'?<Save className="size-6 fill-current/10" strokeWidth={1.7}/>:<LoaderCircle className="size-6 animate-spin" strokeWidth={1.7}/>}
-              </button>
-              <button
-                type="button"
-                aria-label="My account"
-                title="My account"
-                onClick={() => setAccountOpen(true)}
-                className="group grid size-10 shrink-0 place-items-center rounded-full"
-              >
-                <span className="grid size-8 place-items-center overflow-hidden rounded-full border border-[#ecb66b]/60 bg-[#18202c] text-xs font-bold text-[#ecb66b] transition-colors group-hover:border-[#ecb66b]">
-                  {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : initials}
-                </span>
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            aria-label="Settings"
-            title="Settings"
-            onClick={() => setSettingsOpen(true)}
-            className={`grid h-10 shrink-0 place-items-center rounded-md text-[#b49de9] transition-colors hover:bg-white/10 ${rightPanelOpen ? 'w-10' : 'w-full'}`}
-          >
-            <Settings className="size-6 fill-current/10" strokeWidth={1.7} />
+        <div role="group" aria-label="Workspace actions"
+          className="workspace-actions ml-auto shrink-0 border-l border-white/10 bg-black/20 max-xl:max-w-[max(50%,11.5rem)]"
+          style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 216 }}>
+          <button type="button" aria-label="Save" aria-busy={savePhase!=='idle'}
+            title={savePhase==='preparing'?'Preparing link review…':savePhase==='saving'?'Saving to your account…':'Save'}
+            onClick={requestLinkReview} className="workspace-action text-[#56c8b5]">
+            {savePhase==='idle'?<Save aria-hidden="true"/>:<LoaderCircle aria-hidden="true" className="animate-spin"/>}
+          </button>
+          <button type="button" aria-label="Focus" title="Focus" disabled={activeTab==='trash'}
+            onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
+            <EyeOff aria-hidden="true"/>
+          </button>
+          <PageFormatMenu disabled={activeTab==='trash'}/>
+          <button type="button" aria-label="Trash" title="Trash" aria-current={activeTab==='trash'?'page':undefined}
+            onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
+            <Trash2 aria-hidden="true"/>
+          </button>
+          <button type="button" aria-label="Settings" title="Settings" onClick={()=>setSettingsOpen(true)} className="workspace-action text-[#b49de9]">
+            <Settings aria-hidden="true"/>
+          </button>
+          <button type="button" aria-label="My account" title="My account" onClick={()=>setAccountOpen(true)} className="workspace-action group">
+            <span aria-hidden="true" className="grid place-items-center overflow-hidden rounded-full border border-[#ecb66b]/60 bg-[#18202c] text-[10px] font-bold leading-none text-[#ecb66b] group-hover:border-[#ecb66b]">
+              {photo ? <img src={photo} alt="" className="size-full object-cover" /> : initials}
+            </span>
           </button>
         </div>
       </header>

@@ -52,6 +52,11 @@ const migrated=useKachamak.persist.getOptions().migrate({novels:oldProject,edito
 assert.deepEqual(migrated.novels,oldProject);assert.equal(migrated.editorFont,'Georgia');assert.deepEqual(migrated.pageFormat,DEFAULT_PAGE_FORMAT);
 assert.equal(validEditorAppearance({font:'Georgia',size:18,spacing:'2.0',page:{...DEFAULT_PAGE_FORMAT,indent:99}}),false);
 await React.act(async()=>root.render(React.createElement(Workspace)));
+const headerActions=()=>[...document.querySelectorAll('header [aria-label="Workspace actions"] button')];
+const expectedActions=['Save','Focus','Format','Trash','Settings','My account'];
+assert.deepEqual(headerActions().map(button=>button.getAttribute('aria-label')),expectedActions);
+assert.ok(headerActions().every(button=>button.title));
+assert.ok(headerActions().slice(0,-1).every(button=>!button.textContent.trim()));
 const noteEditor=document.querySelector('[aria-label="Note content"]');
 const prefs={left:useKachamak.getState().leftPanelOpen,right:useKachamak.getState().rightPanelOpen};
 await React.act(async()=>document.querySelector('button[aria-label="Focus"]').click());
@@ -63,5 +68,15 @@ await React.act(async()=>document.dispatchEvent(new dom.KeyboardEvent('keydown',
 assert.equal(document.querySelector('[data-workspace]').dataset.focusMode,'false');
 assert.deepEqual({left:useKachamak.getState().leftPanelOpen,right:useKachamak.getState().rightPanelOpen},prefs,'Focus restores the original panel preferences');
 assert.equal(document.querySelector('[aria-label="Note content"]'),noteEditor);
+await React.act(async()=>actions.toggleRightPanel());
+assert.deepEqual(headerActions().map(button=>button.getAttribute('aria-label')),expectedActions);
+await React.act(async()=>actions.setView('list'));
+await React.act(async()=>document.querySelector('header [title="Timeline"]').click());
+await React.act(async()=>document.querySelector('header [aria-label="Trash"]').click());
+assert.equal(useKachamak.getState().activeTab,'trash');
+assert.equal(useKachamak.getState().view,'list','Trash retains the previous writing view after Timeline');
+assert.ok(headerActions().filter(b=>['Format','Focus'].includes(b.getAttribute('aria-label'))).every(b=>b.disabled));
+await React.act(async()=>document.querySelector('header [title="Binder"]').click());
+assert.equal(node().content,contentBeforePage);
 await React.act(async()=>root.unmount());
 console.log('Page Format passed: exact selection boundaries, semantic markup, Undo, unchanged defaults/manuscript, page variables, safe migration and Focus editor/panel preservation.');
