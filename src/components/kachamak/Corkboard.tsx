@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { findNode, stripHtml } from "@/lib/kachamak/utils";
-import { iconByName } from "@/lib/kachamak/icons";
+import { iconForNote } from "@/lib/kachamak/icons";
 
 /* ---------- classic Scrivener index card: icon + title + synopsis ---------- */
 
@@ -29,7 +29,7 @@ function IndexCard({
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const selected = selectedNodeId === node.id;
-  const Icon = iconByName(node.icon);
+  const Icon = iconForNote(node);
 
   const open = () => {
     select(node.id);

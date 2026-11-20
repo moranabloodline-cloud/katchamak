@@ -8,6 +8,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, RotateCcw, Trash2, FileText }
 import { useKachamak } from "@/lib/kachamak/store";
 import type { SectionKey } from "@/lib/kachamak/types";
 import { formatDate } from "@/lib/kachamak/utils";
+import { iconForNote } from "@/lib/kachamak/icons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -109,12 +110,13 @@ export function TrashView() {
           />
 
           <div className="mt-4 space-y-2">
-            {items.map((t) => (
-              <div
+            {items.map((t) => {
+              const Icon = iconForNote(t.node) ?? FileText;
+              return <div
                 key={t.id}
                 className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
               >
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" style={{color:t.node.color || undefined}} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium" style={{color:t.node.color || undefined}}>{t.node.title}</p>
                   <p className="text-xs text-muted-foreground">
@@ -139,8 +141,8 @@ export function TrashView() {
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
-              </div>
-            ))}
+              </div>;
+            })}
           </div>
 
           {novel.trash.length === 0 && (

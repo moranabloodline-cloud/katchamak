@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { findNode, locateNode, nodeWords, ownWords } from "@/lib/kachamak/utils";
-import { iconByName } from "@/lib/kachamak/icons";
+import { iconForNote } from "@/lib/kachamak/icons";
 
 function flatten(nodes: NoteNode[], out: NoteNode[] = []): NoteNode[] {
   for (const n of nodes) {
@@ -95,7 +95,7 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
           <tbody>
             {all.map((n) => {
               const parent = n.children.length > 0;
-              const Icon = iconByName(n.icon) ?? FileText;
+              const Icon = iconForNote(n) ?? FileText;
               const dropHere = drop && drop.id === n.id ? drop.mode : null;
               const dropLine =
                 dropHere === "before"

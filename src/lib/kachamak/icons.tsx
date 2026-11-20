@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, CSSProperties } from "react";
-import { DEFAULT_NOTE_ICON } from "./types";
+import { DEFAULT_NOTE_ICON, type NoteNode } from "./types";
 import {
   createLucideIcon,
   FlaskConical,
@@ -300,6 +300,15 @@ const ICON_MAP: Record<string, IconCmp> = Object.fromEntries(
 export function iconByName(key: string | undefined): IconCmp | null {
   if (!key) return null;
   return ICON_MAP[key] ?? null;
+}
+
+/** An unset icon inherits File. Timeline items have their own contextual symbols. */
+export function noteIconKey(note: Pick<NoteNode, "icon" | "event" | "timelineKind">) {
+  return note.icon || (note.event || note.timelineKind ? undefined : DEFAULT_NOTE_ICON);
+}
+
+export function iconForNote(note: NoteNode): IconCmp | null {
+  return iconByName(noteIconKey(note));
 }
 
 /* the note colour palette (icon tint in the tree + the document dot) */

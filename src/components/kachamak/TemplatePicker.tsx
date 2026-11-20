@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { iconByName } from '@/lib/kachamak/icons';
+import { iconForNote } from '@/lib/kachamak/icons';
 import type { NoteNode } from '@/lib/kachamak/types';
 
 export function TemplatePicker({ templates, onChoose, onClose }: {
@@ -32,7 +32,7 @@ export function TemplatePicker({ templates, onChoose, onClose }: {
         className="rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-amber-500" />
       <div className="max-h-[min(50vh,24rem)] overflow-y-auto kachamak-scroll">
         {matches.map(({ note, path }) => {
-          const Icon = iconByName(note.icon) ?? FileText;
+          const Icon = iconForNote(note) ?? FileText;
           return <button key={note.id} type="button" onClick={() => onChoose(note.id)}
             className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent">
             <Icon aria-hidden="true" className="h-4 w-4 shrink-0" style={{ color: note.color || undefined }} />

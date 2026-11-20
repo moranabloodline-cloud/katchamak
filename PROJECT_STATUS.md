@@ -1,3 +1,5 @@
+> **2026-11-20 — Ikone postojećih beležaka.** Beleške bez izabrane ikone prikazuju File i kada se otvore iz stare knjige ili rezervne kopije. Ručni izbor uvek ima prednost.
+
 > **2026-11-20 — Ikona nove beleške.** Nova beleška dobija ikonu File iz biblioteke. Ikona može da se promeni klikom u stablu.
 
 > **2026-11-20 — Prored označenog teksta.** Meni Line spacing u editoru nudi četiri vrednosti i prilagođeni prored. Razmak pre ili posle može se ukloniti za cele pasuse koji su obuhvaćeni izborom.
@@ -583,6 +585,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — File za starije beleške.** Stablo, izbor ikona, pretraga, kartice, liste i izbor povezanih beležaka čitaju isti podrazumevani simbol. Zadržani su sačuvani ključevi ikona i posebni simboli događaja i perioda. Prikaz ne zahteva upis u rukopis, rezervnu kopiju ili nacrt.
 
 - **2026-11-20 — Podrazumevana ikona File.** Ikona se upisuje pri kreiranju obične beleške na vrhu stabla, unutar druge beleške ili iz novog Markdown fajla. Kada šablon ima izabranu ikonu, nova beleška preuzima tu ikonu.
 

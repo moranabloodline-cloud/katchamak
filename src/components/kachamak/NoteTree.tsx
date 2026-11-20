@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
-  FileText,
   Folder,
   FolderOpen,
   Landmark,
@@ -23,7 +22,7 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
 import { findNode, locateNode } from "@/lib/kachamak/utils";
 import {ColourPalette} from "./PresetColourPicker";
-import { NOTE_ICONS, iconByName } from "@/lib/kachamak/icons";
+import { NOTE_ICONS, iconForNote, noteIconKey } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +67,7 @@ const kindIcon = (n: NoteNode, open: boolean) => {
 
 /* the note's own icon (user-chosen) tinted with its colour */
 const rowIcon = (n: NoteNode, open: boolean) => {
-  const Cmp = iconByName(n.icon);
+  const Cmp = iconForNote(n);
   if (Cmp) {
     return <Cmp className="h-3.5 w-3.5" style={{ color: n.color || "#a1a1aa" }} />;
   }
@@ -139,6 +138,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
   };
   const renaming = renamingNodeId === node.id;
   const selected = selectedNodeId === node.id;
+  const selectedIcon = noteIconKey(node);
   const open = !node.collapsed || !!revealed?.has(node.id);
   const setCollapsed = (collapsed: boolean) => {
     if (collapsed && revealed?.has(node.id)) onDismissReveal?.();
@@ -216,7 +216,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
           }`}
         >
           <span className="shrink-0" style={{ paddingLeft: `${d * 14}px` }} />
-          <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {rowIcon(n, true)}
           <span className="min-w-0 truncate" style={{color:n.color || undefined}}>{n.title}</span>
         </button>
         {n.children.map((c) => renderDest(c, d + 1, sec))}
@@ -343,14 +343,14 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                     setPickerOpen(false);
                   }}
                   className={`flex h-8 min-w-0 items-center justify-center rounded-md transition-colors hover:bg-white/10 ${
-                    node.icon === key ? "bg-white/15" : ""
+                    selectedIcon === key ? "bg-white/15" : ""
                   }`}
                 >
                   <Cmp
                     className="h-4 w-4"
                     style={{
                       color:
-                        node.icon === key && node.color
+                        selectedIcon === key && node.color
                           ? node.color
                           : "#a1a1aa",
                     }}

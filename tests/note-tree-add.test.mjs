@@ -36,8 +36,19 @@ let novel=useKachamak.getState().novels[0], parent=findNode(novel.sections.binde
 assert.deepEqual(novel.sections.binder.map(n=>n.id),[act1,act2],'Row menu must not append to the section root when an act is selected');
 assert.deepEqual(parent.children.map(n=>n.id),[chapter1,chapter2,added],'New note follows Chapter 2 inside the selected Act 1');
 assert.equal(parent.collapsed,false,'Parent expands to show its newly appended note');
-const {NOTE_ICONS} = await import('../src/lib/kachamak/icons.tsx');
+const {NOTE_ICONS, iconForNote, noteIconKey} = await import('../src/lib/kachamak/icons.tsx');
 const fileIcon = NOTE_ICONS.find(icon=>icon.label==='File').key;
+const inherited = {kind:'doc', children:[]};
+for (const note of [inherited, {...inherited, icon:''}, {...inherited, kind:'scene'}, {...inherited, children:[inherited]}]) {
+  assert.equal(iconForNote(note), NOTE_ICONS.find(icon=>icon.label==='File').Cmp);
+}
+assert.ok(!Object.hasOwn(inherited,'icon'),'Opening an existing note leaves its saved fields intact');
+for (const icon of ['file','folder','star',fileIcon,'future-key']) {
+  assert.equal(noteIconKey({...inherited,icon}),icon,'An existing choice takes precedence');
+}
+assert.equal(iconForNote({...inherited,icon:'file'}),NOTE_ICONS.find(icon=>icon.label==='Note').Cmp);
+assert.equal(noteIconKey({...inherited,timelineKind:'period'}),undefined);
+assert.equal(noteIconKey({...inherited,event:{type:'event',start:0,precision:'day'}}),undefined);
 assert.equal(findNode(novel.sections.binder,added).icon,fileIcon);
 assert.ok(container.querySelector(`[data-note-id="${added}"] [aria-label="Change icon"] svg.lucide-file`),'The tree shows the plain File icon immediately');
 assert.equal(findNode(novel.sections.binder,added).content,'','New note starts empty');

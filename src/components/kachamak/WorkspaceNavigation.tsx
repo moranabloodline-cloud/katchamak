@@ -8,7 +8,7 @@ import {TABS} from '@/lib/kachamak/types';
 import {openProjectNote,returnToPreviousNote,useNoteTrail} from '@/lib/kachamak/note-navigation';
 import {findNodeInNovel} from '@/lib/kachamak/utils';
 import {indexNotes,searchNotes} from '@/lib/kachamak/knowledge';
-import {iconByName} from '@/lib/kachamak/icons';
+import {iconByName,noteIconKey} from '@/lib/kachamak/icons';
 
 function NoteBackButton() {
   const active=useKachamak(s=>s.activeNovelId),novels=useKachamak(s=>s.novels);
@@ -45,7 +45,7 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
       .map(p=>({id:p.id, title:p.title, group:'Homepage', page:true, icon:'', color:undefined})) : [];
     if(pages.length>=20)return pages.slice(0,20);
     const notes=searchNotes(indexNotes(novel),q).slice(0,20-pages.length).map(({node,section})=>({id:node.id, title:node.title,
-      group:TABS.find(t=>t.key===section)?.label ?? section, page:false, icon:node.icon, color:node.color}));
+      group:TABS.find(t=>t.key===section)?.label ?? section, page:false, icon:noteIconKey(node), color:node.color}));
     return [...pages,...notes];
   }, [novel,q,includeHomePages]);
   const expanded=open && !!q.trim();

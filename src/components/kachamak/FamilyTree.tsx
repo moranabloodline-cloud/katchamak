@@ -6,7 +6,7 @@ import {familyCard,familyTreeView} from '@/lib/kachamak/family-tree';
 import {customNameLimit,kinshipGroups,kinshipName,relationshipName,type KinshipKind} from '@/lib/kachamak/kinship';
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
-import {iconByName} from '@/lib/kachamak/icons';
+import {iconForNote} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
@@ -145,7 +145,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
           </g>)}
         </svg>
         {people.map(person=>{
-          const {x,y}=positions.get(person.id)!,Icon=iconByName(person.icon)??UserRound;
+          const {x,y}=positions.get(person.id)!,Icon=iconForNote(person)??UserRound;
           return <button type="button" key={person.id} aria-label={'Preview '+person.title} title={person.title} onClick={()=>setPreview(person.id)}
             className="absolute flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left shadow-sm hover:border-amber-400/60 focus-visible:outline-amber-400"
             style={{left:x,top:y,width:w,height:h}}>
