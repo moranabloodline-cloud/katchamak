@@ -1,3 +1,5 @@
+> **2026-11-20 — Lepljenje u stilu beleške.** Nalepljeni naslovi prate lokalni nivo i veličinu teksta. Editor čuva pasuse, prazne redove, naglašavanja, liste i linkove. Izričit razmak pasusa ima prednost nad kopiranim razmakom.
+
 > **2026-11-20 — Format pojedinačne beleške.** Page settings čuva tipografiju i izgled otvorene strane. Traka editora formatira označeni tekst, a prored važi za pasuse koje selekcija zahvata.
 
 > **2026-11-20 — Visina Timeline kartica.** Standardna kartica u boji visoka je najmanje 108 px i ima ikonicu od 36 px uz naslov i datum. Gornji natpis sa imenom roditeljske beleške je uklonjen.
@@ -545,6 +547,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Lepljenje teksta.** U dva podešavanja probne beleške provereni su H3 iz izvora sa veličinom od 15 cm, običan tekst, prored, prazni redovi, razmak pasusa, Undo/Redo i ponovno učitavanje. Izmena deluje pri lepljenju i ne zahteva migraciju.
 
 - **2026-11-20 — Podešavanja strane i selekcije.** Write, Split i Continuous koriste podešavanja svake beleške. Starije beleške nasleđuju prethodni izgled. Promena izgleda strane čuva HTML rukopisa. U Chrome-u su na dve probne beleške provereni izbor strane, formatiranje selekcije, Undo/Redo i ponovno otvaranje posle čuvanja.
 

@@ -135,6 +135,7 @@ export function RichEditor({
         onPaste={event => {
           event.preventDefault();
           const content = preparePastedContent(event.clipboardData.getData('text/html'), event.clipboardData.getData('text/plain'));
+          if(!content)return;
           if(ref.current)history.current.before(ref.current);
           pasting.current=true;
           try{document.execCommand('insertHTML', false, content);handleInput();}
