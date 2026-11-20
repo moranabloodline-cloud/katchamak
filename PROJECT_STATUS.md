@@ -1,3 +1,5 @@
+> **2026-11-20 — Redovi i kolone na početnoj strani.** Svaki red ima jednu do šest jednakih kolona. Elementi se slažu po visini unutar kolone, prate njenu širinu i mogu da se prevuku između redova. Podržani su naslovi, istaknute poruke, liste linkova, razdelnici, YouTube video i uža širina za čitanje.
+
 > **2026-11-20 — Prevlačenje na početnoj strani.** Na otključanoj strani korisnik može mišem da premesti ceo blok. Oznaka pokazuje mesto umetanja, a zaključavanje zadržava raspored i aktivira veze.
 
 > **2026-11-20 — Početna strana knjige.** Kućica ispred Undo otvara prazno platno za kartice, banere i tekst. Svaki blok prima sliku i odredište. Zaključavanje sklanja alate za uređivanje i aktivira linkove.
@@ -551,6 +553,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Raspored početne strane.** U Chrome-u su preko editora provereni nezavisni redovi sa dve i tri jednake kolone, više elemenata u koloni, prevlačenje između redova, slika, linkovi, otvaranje video plejera, zaključavanje, čuvanje i ponovno učitavanje. Na 400 px kolone prelaze u jednu. Smanjivanje ili uklanjanje reda čuva sadržaj njegovih kolona. Store v44 zadržava raspored prethodnih početnih strana.
 
 - **2026-11-20 — Slaganje blokova mišem.** U Chrome-u su na probnoj knjizi provereni pomeranje banera na vrh, četiri kartice u redu, prelaz iz drugog reda, spuštanje na prazno mesto i otkazivanje prevlačenja. Položaji blokova pri istoj širini bili su jednaki pre zaključavanja, posle zaključavanja i posle ponovnog učitavanja. Dodatno je proverena jedna kolona na širini od 400 px. Izmena koristi već sačuvani redosled blokova u knjizi.
 

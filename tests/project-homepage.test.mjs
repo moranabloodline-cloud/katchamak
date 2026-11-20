@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {newNovel} from '../src/lib/kachamak/seed.ts';
 import {useKachamak} from '../src/lib/kachamak/store.ts';
 import {isReadableProject} from '../src/lib/kachamak/project-validation.ts';
-import {EMPTY_HOMEPAGE, validHomepage} from '../src/lib/kachamak/homepage.ts';
+import {changeHomepage,EMPTY_HOMEPAGE,validHomepage,youtubeVideoId} from '../src/lib/kachamak/homepage.ts';
 import {openProjectNote,returnToPreviousNote} from '../src/lib/kachamak/note-navigation.ts';
 
 const first=newNovel('First book','Tester'),second=newNovel('Second book','Tester');
@@ -78,4 +78,34 @@ for(const blocks of [[card,card],[{...card,image:'broken'}],[{...card,target:{ki
   assert.equal(validHomepage({locked:false,blocks}),false);
   assert.equal(isReadableProject({...current(),homepage:{locked:true,blocks}}),false);
 }
+// Grid membership and reading order survive edits to the row itself.
+let grid={locked:false,blocks:[]};
+const apply=action=>{const next=changeHomepage(grid,action);assert.ok(next);assert.ok(validHomepage(next));grid=next;};
+const row={...card,layout:'row',columns:3,target:undefined,id:'row'};
+apply({type:'width',width:'reading'});
+apply(add(row));
+for(const [id,column] of [['right',2],['left',0],['middle',1],['left-2',0]]){
+  apply(add({...card,id,cell:{rowId:'row',column}}));
+}
+apply({type:'place',id:'right',targetId:'middle',side:'before'});
+assert.deepEqual(grid.blocks.find(b=>b.id==='right').cell,{rowId:'row',column:1});
+apply({type:'into',id:'middle',cell:{rowId:'row',column:2}});
+apply({type:'move',id:'left-2',offset:-1});
+assert.equal(changeHomepage(grid,{type:'into',id:'row',cell:{rowId:'row',column:0}}),null);
+assert.equal(changeHomepage(grid,add({...card,cell:{rowId:'missing',column:0}})),null);
+apply({type:'edit',original:row,block:{...row,columns:2}});
+assert.deepEqual(grid.blocks.filter(b=>b.cell?.column===1).map(b=>b.id),['right','middle']);
+const shortRow=grid.blocks.find(b=>b.id==='row');
+assert.equal(changeHomepage(grid,{type:'edit',original:row,block:{...row,columns:4}}),null);
+assert.ok(validHomepage(JSON.parse(JSON.stringify(grid))));
+apply({type:'lock',locked:true});
+assert.equal(changeHomepage(grid,{type:'into',id:'middle',cell:{rowId:'row',column:0}}),null);
+apply({type:'lock',locked:false});
+apply({type:'remove',original:shortRow});
+assert.deepEqual(grid.blocks.map(b=>b.id),['left-2','left','right','middle']);
+assert.ok(grid.blocks.every(b=>!b.cell));
+for(const url of ['https://www.youtube.com/watch?v=M7lc1UVf-VE','https://youtu.be/M7lc1UVf-VE','https://www.youtube-nocookie.com/embed/M7lc1UVf-VE'])assert.equal(youtubeVideoId(url),'M7lc1UVf-VE');
+assert.equal(youtubeVideoId('https://example.com/watch?v=M7lc1UVf-VE'),null);
+assert.equal(validHomepage({locked:false,blocks:[{...row,columns:0}]}),false);
+assert.equal(validHomepage({locked:false,blocks:[{...card,layout:'links',links:[{id:'one',label:'Missing',target:{kind:'note'}}]}]}),false);
 console.log('Homepage edits, project isolation, lock, order, navigation, backup and validation passed.');

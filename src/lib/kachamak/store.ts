@@ -920,7 +920,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 43,
+      version: 44,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -933,6 +933,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<44){ /* Existing homepage blocks remain in their original order at the top level. */ }
         if(version<43){ /* The optional homepage starts empty without rewriting existing books. */ }
         if(version<42){ /* Notes without page settings inherit the saved library appearance. */ }
         if(version<41){ /* An unset toolsHidden preference keeps the Timeline toolbar visible. */ }
