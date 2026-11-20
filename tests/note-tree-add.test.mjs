@@ -96,5 +96,63 @@ const binderEvent=await addEventFromOptions();
 const binder=useKachamak.getState().novels[0].sections.binder;
 assert.deepEqual(findNode(binder,act1).children.map(n=>n.id),[chapter1,chapter2,added,scoped,binderEvent]);
 assert.equal(findNode(binder,act2).children.length,0);
+// Create from Template uses notes from the active book and the chosen insertion point.
+await React.act(async()=>{
+  actions.select(chapter2);
+  root.render(React.createElement(NoteTree,{section:'binder'}));
+});
+const dialog=()=>document.querySelector('[role="dialog"]');
+const pickButton=(name,path)=>[...dialog().querySelectorAll('button')].find(b=>
+  b.textContent===name+path);
+const openPicker=parent=>createFromTree(parent,'Create from Template');
+await openPicker(null);
+assert.match(dialog().textContent,/Add a note to the Templates tab/);
+await React.act(async()=>dialog().querySelector('[data-slot="dialog-close"]').click());
+const fields={content:'<h2>Character brief</h2><p><strong>Goal</strong></p>',
+  synopsis:'A synopsis',notes:'Private notes',aliases:['Alias'],links:[codex],
+  bodyFontSize:14,color:'#12aabb',icon:'user',hiddenDetailBlocks:['image']};
+let templateId;
+await React.act(async()=>{
+  for (const name of ['Novel','Series']) {
+    const folder=actions.addNode('templates',null,'doc',name);
+    const id=actions.addNode('templates',folder,'doc','Character');
+    if (name==='Series') {
+      templateId=id;
+      actions.updateNode('templates',id,fields);
+      actions.addNode('templates',id,'doc','Nested template');
+    }
+  }
+  const hidden=actions.addNode('templates',null,'doc','Hidden folder');
+  actions.addNode('templates',hidden,'doc','Hidden template');
+  actions.updateNode('templates',hidden,{hidden:true});
+  actions.select(chapter2);
+});
+const templates=useKachamak.getState().novels[0].sections.templates;
+const original=structuredClone(templates);
+await openPicker(null);
+assert.ok(pickButton('Character','Novel'));
+assert.ok(pickButton('Character','Series'));
+assert.ok(!dialog().textContent.includes('Hidden template'));
+await React.act(async()=>pickButton('Character','Series').click());
+const copyId=useKachamak.getState().selectedNodeId;
+const copy=useKachamak.getState().novels[0].sections.binder.find(n=>n.id===copyId);
+assert.ok(copy && copy.id!==templateId);
+assert.equal(copy.title,'Character');
+assert.deepEqual(copy.children,[]);
+for (const [key,value] of Object.entries(fields)) assert.deepEqual(copy[key],value,key);
+assert.notEqual(copy.aliases,findNode(templates,templateId).aliases);
+await React.act(async()=>actions.updateNode('binder',copyId,{content:'<p>Edited copy</p>'}));
+await openPicker(chapter2);
+await React.act(async()=>pickButton('Character','Series').click());
+const second=findNode(binder,chapter2).children.at(-1);
+assert.notEqual(second.id,copyId);
+assert.equal(second.content,fields.content);
+assert.deepEqual(templates,original);
+await openPicker(null);
+await React.act(async()=>actions.createNovel('Another synthetic book','Tester'));
+assert.equal(dialog(),null);
+assert.equal(actions.addNode('binder',null,{templateId}),null);
+await openPicker(null);
+assert.match(dialog().textContent,/Add a note to the Templates tab/);
 await React.act(async()=>root.unmount());dom.close();
 console.log('Tree creation menus passed: append after the selected act’s last chapter, nested notes, expansion, blank content, root fallback and section isolation.');

@@ -1,3 +1,5 @@
+> **2026-11-20 — Create from Template.** Iz menija levog stabla korisnik bira šablon tekuće knjige po nazivu i putanji. Nova beleška dobija svoj ID i sadržaj izabranog šablona na odabranom mestu.
+
 > **2026-11-20 — Čišćenje starog Timeline prikaza.** Test dodavanja događaja sada koristi meni aktivnog Timeline prikaza i proverava odredišni folder u Codexu i Binderu. Uklonjeni su nekorišćeni OutlineView, četiri importa i tri pretplate u Dashboard-u i privatna funkcija mapNodes.
 
 > **2026-11-20 — Istovremeno kloniranje istog taba.** Kada dva prozora kloniraju isti sačuvani tab u isto stanje odredišnog foldera, oba prepoznaju jedan upis. Ponovni pokušaj i ponovno učitavanje zadržavaju iste četiri kopije i njihove interne veze. Namerno kloniranje posle uspešnog čuvanja dodaje novu grupu.
@@ -505,6 +507,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Create from Template dodaje jednu belešku u koren taba ili pod izabranu belešku. Test menija pokriva praznu listu, skrivene šablone, promenu knjige i nezavisnost kopije. U Chrome-u na dve probne knjige provereni su pretraga istoimenih šablona, izmena kopije, čuvanje, ponovno učitavanje i otkazivanje.
 
 - **2026-11-20 — Pokriće stvarnog Timeline prikaza.** Sedam ciljanih testova i TypeScript provera prošli su posle uklanjanja tri potvrđena ostatka koda. U Chrome-u je sintetička knjiga sa sačuvanim režimom outline otvorila vremensku osu. Događaj dodat u izabrani period ostao je u njemu nakon čuvanja i ponovnog učitavanja. Druga knjiga je ostala identična.
 

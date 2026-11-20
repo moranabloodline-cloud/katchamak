@@ -140,7 +140,7 @@ interface KachamakState {
   addNode: (
     section: SectionKey,
     parentId: string | null,
-    kind?: NoteNode["kind"],
+    kind?: NoteNode["kind"] | { templateId: string },
     title?: string,
     visibleRootBlocks?: DetailBlockKey[]
   ) => string | null;
@@ -294,18 +294,16 @@ function preserveCodexLinks(novel: Novel) {
   for(const {node} of flattenNotes(novel)) node.linkChoices=resolveChoices(node);
 }
 
-function makeNode(kind: NoteNode["kind"], title: string): NoteNode {
+function makeNode(kind: NoteNode["kind"], title: string, template?: NoteNode): NoteNode {
   const now = Date.now();
+  const fields = template
+    ? structuredClone({ ...template, children: [], hidden: false, collapsed: false })
+    : { bodyFontSize: 8, synopsis: "", content: "", notes: "", status: "", label: "" };
   return {
+    ...fields,
     id: uid(),
     title,
     kind,
-    bodyFontSize: 8,
-    synopsis: "",
-    content: "",
-    notes: "",
-    status: "",
-    label: "",
     createdAt: now,
     updatedAt: now,
     children: [],
@@ -619,9 +617,11 @@ export const useKachamak = create<KachamakState>()(
 
         /* free hierarchy — every new note is the same thing; the user names it
            (inline rename opens right away), picks its icon and its colour */
-        const n = makeNode(kind ?? "doc", title ?? "Untitled");
+        const template = typeof kind === "object" ? findNode(novel.sections.templates, kind.templateId) : null;
+        if (typeof kind === "object" && !template) return null;
+        const n = makeNode(typeof kind === "string" ? kind : "doc", template?.title ?? title ?? "Untitled", template ?? undefined);
         if (parentId === null) {
-          n.hiddenDetailBlocks = DETAIL_BLOCKS.map(block => block.key).filter(key => !visibleRootBlocks.includes(key));
+          if (!template) n.hiddenDetailBlocks = DETAIL_BLOCKS.map(block => block.key).filter(key => !visibleRootBlocks.includes(key));
           created = n;
           roots.push(n);
         } else {

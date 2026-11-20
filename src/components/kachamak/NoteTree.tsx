@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { familyDeletionImpact } from "@/lib/kachamak/family-tree";
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
+import { TemplatePicker } from "./TemplatePicker";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
@@ -96,6 +97,7 @@ interface TreeDnd {
 }
 
 interface TreeRowProps {
+  onTemplate: (parentId: string) => void;
   node: NoteNode;
   section: SectionKey;
   depth: number;
@@ -105,7 +107,7 @@ interface TreeRowProps {
   onDismissReveal?: () => void;
 }
 
-function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissReveal }: TreeRowProps) {
+function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissReveal, onTemplate }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const selectNode = useKachamak((s) => s.select);
   const select=(id:string|null)=>{selectNode(id);if(section==="timeline" || section==="family")useKachamak.getState().setView(section);};
@@ -407,6 +409,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
               <DropdownMenuItem onSelect={() => addNode(section, node.id, "doc")}>
                 Create note
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onTemplate(node.id)}>Create from Template</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               {section==="timeline"&&<><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</DropdownMenuItem><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</DropdownMenuItem><DropdownMenuSeparator/></>}
               <DropdownMenuItem onSelect={() => setRenamingNode(node.id)}>
@@ -490,7 +493,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
       {open && hasChildren && (
         <div role="group">
           {node.children.map((c) => (
-            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} dnd={dnd} revealed={revealed} onDismissReveal={onDismissReveal} />
+            <TreeRow key={c.id} node={c} section={section} depth={depth + 1} novelTitle={novelTitle} dnd={dnd} revealed={revealed} onDismissReveal={onDismissReveal} onTemplate={onTemplate} />
           ))}
         </div>
       )}
@@ -580,6 +583,11 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
   const leftZoom = useKachamak((s) => s.leftZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
+  const [templateTarget, setTemplateTarget] = useState<{ bookId: string; parentId: string | null } | null>(null);
+  useEffect(() => { setTemplateTarget(null); }, [activeNovelId, section, rootId]);
+  const openTemplates = (parentId: string | null) => {
+    if (activeNovelId) setTemplateTarget({ bookId: activeNovelId, parentId });
+  };
   const treeRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!reveal) return;
@@ -742,7 +750,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         onDrop={handleDropRoot}
       >
         {visibleRoots.map((r) => (
-          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} dnd={treeDnd} revealed={revealed} onDismissReveal={onDismissReveal} />
+          <TreeRow key={r.id} node={r} section={section} depth={0} novelTitle={novel?.title ?? "note"} dnd={treeDnd} revealed={revealed} onDismissReveal={onDismissReveal} onTemplate={openTemplates} />
         ))}
         {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
@@ -756,6 +764,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         <ContextMenuItem onSelect={() => addNode(section,rootId??null,'doc')}>
           {rootId?'Create note':'Create top-level note'}
         </ContextMenuItem>
+        <ContextMenuItem onSelect={() => openTemplates(rootId ?? null)}>Create from Template</ContextMenuItem>
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,false):setAllNodesCollapsed(section,false)}>Expand all</ContextMenuItem>
         <ContextMenuItem onSelect={() => { onDismissReveal?.(); if (rootId) useKachamak.getState().setSubtreeCollapsed(section,rootId,true); else setAllNodesCollapsed(section,true); }}>Collapse all</ContextMenuItem>
@@ -765,6 +774,15 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         </>}
       </ContextMenuContent>
       </ContextMenu>
+      {novel && templateTarget?.bookId === novel.id && <TemplatePicker templates={novel.sections.templates}
+        onClose={() => setTemplateTarget(null)} onChoose={templateId => {
+          const state = useKachamak.getState();
+          if (state.activeNovelId !== templateTarget.bookId) return;
+          const id = addNode(section, templateTarget.parentId, { templateId });
+          setTemplateTarget(null);
+          if (!id) return;
+          if (!['write', 'split', 'continuous'].includes(state.view)) state.setView('write');
+        }} />}
     </div>
   );
 }
