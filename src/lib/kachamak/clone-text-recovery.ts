@@ -5,10 +5,11 @@ const textFields = new Set(['content', 'synopsis', 'notes', 'linkChoices', 'upda
 
 // Only active note text can differ. Keep the complete hierarchy, IDs, trash,
 // attachments and unknown metadata in the comparison.
-export function cloneLayout(book: Novel) {
+export function cloneLayout(book: Novel, compareCreationTimes = true) {
   const notes = new Set(flattenNotes(book).map(row => row.node));
   return JSON.stringify(book, function (key, value) {
     if ((this === book && key === 'updatedAt') || (notes.has(this) && textFields.has(key))) return undefined;
+    if (!compareCreationTimes && key === 'createdAt' && notes.has(this)) return undefined;
     return value;
   });
 }

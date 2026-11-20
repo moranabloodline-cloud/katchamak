@@ -1,5 +1,6 @@
+import { v5 as namedUuid } from 'uuid';
 import { TABS, type NoteNode, type Novel, type SectionKey, type TabKey } from './types';
-import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, uid } from './utils';
+import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, forEachNode, uid } from './utils';
 import { workspaceTabs } from './workspace-tabs';
 import { removeUnavailableNoteLinks } from './link-review';
 import { noteLinkInstructions, noteLinkTitle } from './note-links';
@@ -46,7 +47,7 @@ function remapHtml(html: string, copies: ReadonlyMap<string, CopyTarget>, unwrap
   return template.innerHTML;
 }
 
-export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination: Novel, destinationTab: TabKey) {
+export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination: Novel, destinationTab: TabKey, sharedBatch = false) {
   if (source.id === destination.id || destination.archived) throw new Error('Choose a different active project.');
   const from = tabLocation(source, sourceTab);
   const to = tabLocation(destination, destinationTab);
@@ -57,6 +58,26 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
   const parentId = to.node?.id;
   const siblings = to.node?.children ?? destinationRoots;
   const sortThis = siblings.find(node => node.title === 'Sort This' && !node.hidden);
+  // Two clean windows copying the same source into the same inbox state create
+  // identical IDs. After a successful copy the inbox contains new root IDs.
+  const batch = sharedBatch ? namedUuid(new TextEncoder().encode(JSON.stringify([
+    'kachamak/clone-tab/v1', source.id, sourceTab, destination.id, destinationTab,
+    roots, destination.updatedAt, sortThis?.id, sortThis?.children.map(node => node.id),
+  ])), namedUuid.URL) : undefined;
+  const occupied = new Set<string>();
+  if (batch) {
+    const reserve = (node: NoteNode) => occupied.add(node.id);
+    Object.values(destination.sections).forEach(nodes => forEachNode(nodes, reserve));
+    forEachNode((destination.trash ?? []).map(item => item.node), reserve);
+  }
+  function newId(name: string) {
+    if (!batch) return uid();
+    let id = namedUuid(name, batch);
+    // A previous copy can have left the inbox and still be restorable.
+    while (occupied.has(id)) id = namedUuid(id, batch);
+    occupied.add(id);
+    return id;
+  }
   const path = parentId ? ancestorIds(destinationRoots, parentId) : [];
   const wrapperDepth = parentId ? path.length + 1 : 0;
   const ancestors = new Set(path);
@@ -70,7 +91,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
   const mapping = new Map<string, CopyTarget>();
   function indexCopies(nodes: NoteNode[], parentPath: string) {
     for (const node of nodes) {
-      mapping.set(node.id, { id: uid(), title: node.title, path: parentPath });
+      mapping.set(node.id, { id: newId('note:' + node.id), title: node.title, path: parentPath });
       indexCopies(node.children, parentPath + ' / ' + node.title);
     }
   }
@@ -103,7 +124,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
   const copies = roots.map(node => copy(node, wrapperDepth + 1));
   const inbox: NoteNode = sortThis
     ? {...sortThis, collapsed: false, updatedAt: now, children: [...sortThis.children, ...copies]}
-    : {id: uid(), title: 'Sort This', kind: 'doc', icon: 'folder', content: '', synopsis: '', notes: '', status: '', label: '', children: copies, createdAt: now, updatedAt: now};
+    : {id: newId('inbox'), title: 'Sort This', kind: 'doc', icon: 'folder', content: '', synopsis: '', notes: '', status: '', label: '', children: copies, createdAt: now, updatedAt: now};
   const nextSiblings = sortThis ? siblings.map(node => node === sortThis ? inbox : node) : [...siblings, inbox];
   const insert = (nodes: NoteNode[]): NoteNode[] => nodes.map(node => {
     if (node.id === parentId) return {...node, collapsed: false, updatedAt: now, children: nextSiblings};

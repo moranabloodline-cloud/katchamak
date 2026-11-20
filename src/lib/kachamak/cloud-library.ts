@@ -85,9 +85,10 @@ async function checkClone(draft: LocalDraft, source: Snapshot, remote: Confirmed
   const book = remote.snapshot.novels.find(n => n.id === destinationId);
   if (!book || !copy || remote.revision < draft.revision) return {committed:false, copy:undefined};
   if (remote.revision === draft.revision) return {committed:false, copy};
-  const currentLayout = cloneLayout(book);
-  if (currentLayout === cloneLayout(copy)) return {committed:true, copy:undefined};
-  if (layoutHash && await fingerprint(currentLayout) === layoutHash)
+  // Copies from concurrent windows share IDs but record their actual creation
+  // times. Keep the timestamps and prose of the already committed batch.
+  if (cloneLayout(book, false) === cloneLayout(copy, false)) return {committed:true, copy:undefined};
+  if (layoutHash && await fingerprint(cloneLayout(book)) === layoutHash)
     return {committed:false, copy:withExistingTexts(copy, book)};
   // Earlier drafts have only the exact pre-clone fingerprint.
   return {committed:false, copy:await fingerprint(JSON.stringify(book)) === baseHash ? copy : undefined};
@@ -128,7 +129,12 @@ export async function refreshLocalDrafts() {
 }
 async function removeAcknowledgedDraft(draft: LocalDraft | null, value: string) {
   if (!draft || draft.snapshot !== projectPayload(value)) return;
-  try { await localWrites; const removed = await draftStorage.remove(draft.owner, draft.id, draft.generation); if (removed && activeDraft?.generation === draft.generation) activeDraft = null; }
+  try {
+    await localWrites;
+    await draftStorage.remove(draft.owner, draft.id, draft.generation);
+    // Another window may have already removed this confirmed generation.
+    if (activeDraft?.generation === draft.generation) activeDraft = null;
+  }
   catch (error) { if (useLocalRecovery.getState().owner === draft.owner) recoveryStorageError(error); }
 }
 class LibraryConflictError extends Error {}
@@ -278,9 +284,9 @@ export function saveWorkspaceClone(source: Novel, sourceTab: TabKey, destination
     if (!prior.retryClone) throw new Error('The destination changed. Review the previous clone in My Account → Storage.');
     return {count: null, saving: recoverLocalDraft(prior)};
   }
-  const result = cloneWorkspaceTab(source, sourceTab, destination, destinationTab);
   // A scoped retry is safe only when this clone accounts for all unsaved project data.
   const clean = projectPayload(snapshot()) === projectPayload(saved);
+  const result = cloneWorkspaceTab(source, sourceTab, destination, destinationTab, clean);
   useKachamak.setState(s => ({novels: s.novels.map(n => n.id === destination.id ? result.novel : n)}));
   void checkpointLocalDraft(clean ? {key, base: destination} : undefined);
   return {count: result.count, saving: flushWebLibrary()};

@@ -10,7 +10,7 @@ globalThis.indexedDB = indexedDB;
 const bundle = await Bun.build({entrypoints: ['tests/fixtures/local-recovery-window.ts'], target: 'browser'});
 assert.ok(bundle.success);
 const code = await bundle.outputs[0].text();
-let windowId = 0, owner, remote, failure;
+let windowId = 0, owner, remote, failure, holdPost;
 async function openWindow() {
   const module = await import('data:text/javascript;base64,' + Buffer.from(code + '\n// window ' + ++windowId).toString('base64'));
   await module.initializeWebLibrary();
@@ -30,11 +30,12 @@ globalThis.fetch = async (path, init = {}) => {
   if (path === '/api/account') return Response.json({id:owner,email:owner+'@synthetic.invalid'});
   assert.equal(new Headers(init.headers).get('X-Katchamak-Account'), owner);
   if (path === '/api/library' && init.method === 'POST') {
-    if (failure === 'before') throw new TypeError('Synthetic disconnect');
+    const interrupt = holdPost ? await holdPost() : failure;
+    if (interrupt === 'before') throw new TypeError('Synthetic disconnect');
     const body = JSON.parse(init.body);
     if (body.revision !== remote.revision) return Response.json({conflict:true},{status:409});
     remote = {revision:remote.revision+1, snapshot:body.snapshot};
-    if (failure === 'after') throw new TypeError('Synthetic disconnect');
+    if (interrupt === 'after') throw new TypeError('Synthetic disconnect');
     return Response.json({revision:remote.revision});
   }
   return Response.json(remote);
@@ -75,6 +76,57 @@ for (const failureAt of ['before','after']) {
     assert.deepEqual(await w.draftStorage.list(owner),[]);
     assert.equal(remote.revision,2,'Exactly one successful commit of the clone');
   }
+}
+// Both writers prepare their copies before either POST gets to the server.
+for (const fault of ['before','after']) for (const recovery of ['retry','reload']) {
+  reset('same-clone-'+fault+'-'+recovery);
+  if (recovery === 'retry') {
+    const inbox = note('inbox','Existing folder');
+    inbox.title = 'Sort This';
+    inbox.children.push(note('previous','Previous copy'));
+    remote.snapshot.novels[1].sections.research.push(inbox);
+  }
+  const first = await openWindow(), second = await openWindow();
+  const waiting = Promise.withResolvers(), releaseFirst = Promise.withResolvers(), releaseSecond = Promise.withResolvers();
+  holdPost = () => { waiting.resolve(); return releaseFirst.promise; };
+  const firstSave = assert.rejects(clone(first),/disconnect|network|reach/i);
+  await waiting.promise;
+  const both = Promise.withResolvers();
+  holdPost = () => { both.resolve(); return releaseSecond.promise; };
+  const secondSave = clone(second);
+  await both.promise;
+  holdPost = null;
+  assert.equal(remote.revision,1);
+  releaseFirst.resolve(fault);
+  await firstSave;
+  releaseSecond.resolve(null);
+  await secondSave;
+  const committed = structuredClone(remote);
+  // Another window can already have cleared the first writer's receipt.
+  if (fault === 'after' && recovery === 'retry') await openWindow();
+  if (recovery === 'retry') await first.flushWebLibrary();
+  const reopened = await openWindow();
+  assert.deepEqual(books(reopened),committed.snapshot.novels);
+  assert.deepEqual(books(reopened)[0],source);
+  const rows = books(reopened)[1].sections.research, inbox = rows[1], parent = inbox.children.at(-1);
+  assert.equal(rows.length,2);
+  assert.deepEqual(rows[0],destination.sections.research[0]);
+  assert.equal(inbox.title,'Sort This');
+  assert.equal(inbox.children.length,recovery==='retry'?2:1);
+  if (recovery==='retry') assert.equal(inbox.children[0].content,'Previous copy');
+  assert.equal(parent.children.length,1);
+  assert.notEqual(parent.children[0].id,rows[0].id);
+  assert.equal(parent.content,'<p><a href="#note/'+parent.children[0].id+'">Čitaj dalje</a></p>');
+  assert.equal(parent.children[0].content,source.sections.prompts[0].children[0].content);
+  assert.deepEqual(await reopened.draftStorage.list(owner),[]);
+  assert.deepEqual(remote,committed);
+  assert.equal(remote.revision,2);
+  // A later, intentional clone gets a new batch and links within that batch.
+  await clone(recovery === 'retry' ? first : reopened);
+  const repeated = remote.snapshot.novels[1].sections.research[1].children.at(-1);
+  assert.notEqual(repeated.id,parent.id);
+  assert.notEqual(repeated.children[0].id,parent.children[0].id);
+  assert.equal(repeated.content,'<p><a href="#note/'+repeated.children[0].id+'">Čitaj dalje</a></p>');
 }
 reset('concurrent');
 let w = await openWindow();

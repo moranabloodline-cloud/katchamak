@@ -134,5 +134,18 @@ assert.equal(anchor(newLinked.notes).title,'Postscript · Research / Archive / S
 assert.deepEqual([original,destination],initialBooks);
 assert.deepEqual(saved.novels[0],JSON.parse(JSON.stringify(initialBooks[0])));
 assert.equal(archive.content,destination.sections.research[0].content);
+// Identical-looking operations from different tabs or versions are distinct.
+const batch = (book, tab, dest) => cloneWorkspaceTab(book,tab,dest,'prompts',true).novel.sections.prompts[0];
+const shared = batch(source,'binder',target);
+assert.notEqual(batch(source,`note:${folder}`,target).id,shared.id);
+const editedSource = structuredClone(source);
+editedSource.sections.binder[0].content += '<p>New text</p>';
+assert.notEqual(batch(editedSource,'binder',target).id,shared.id);
+// Legacy/imported books may retain old timestamps and the previous batch in Trash.
+const restorable = {...target,trash:[{id:'deleted',node:shared,section:'prompts',parentId:null,originalIndex:0,deletedAt:1}]};
+const replacement = batch(source,'binder',restorable);
+assert.notEqual(replacement.id,shared.id);
+assert.notEqual(replacement.children[0].id,shared.children[0].id);
+assert.notEqual(replacement.children[0].children[0].id,shared.children[0].children[0].id);
 console.log('Tab cloning passed: hierarchy, fresh IDs and internal links, reusable Sort This, folder destinations, project isolation and cloud validation.');
 console.log('Workspace tabs passed: defaults, section/Timeline/folder moves, unchanged manuscript/navigation, close/reopen, rename, project isolation, roundtrip, validation and migration.');
