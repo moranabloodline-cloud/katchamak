@@ -48,7 +48,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "templates", label: "Templates" },
   { key: "prompts", label: "Prompts" },
   { key: "timeline", label: "Timeline" },
-  { key: "family", label: "Family Tree" },
+  { key: "family", label: "Relationships" },
   { key: "trash", label: "Trash" },
 ];
 

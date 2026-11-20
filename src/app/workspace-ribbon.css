@@ -12,8 +12,8 @@
 .workspace-ribbon-grid {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 4.875rem;
-  grid-template-rows: 3rem 1rem;
+  grid-auto-columns: 5.625rem;
+  grid-template-rows: 3rem;
   gap: 2px;
   flex: none;
 }
@@ -43,21 +43,11 @@
   stroke-width: 1.7;
   fill: color-mix(in srgb, currentColor 13%, transparent);
 }
-.workspace-ribbon-caption {
-  grid-row: 2;
-  overflow: hidden;
-  white-space: nowrap;
-  text-align: center;
-  color: var(--muted-foreground);
-  font: 500 10px/15px system-ui, sans-serif;
-  letter-spacing: .03em;
-  border-top: 1px solid var(--border);
-}
 @media (max-width: 1279px) {
   .workspace-ribbon {
     order: 3;
     flex: 0 0 100%;
-    height: 4.75rem;
+    height: 3.75rem;
     border-top: 1px solid var(--border);
   }
 }

@@ -16,16 +16,16 @@ import {cloneableWorkspaceTabs} from '@/lib/kachamak/clone-workspace-tab';
 import {CloneWorkspaceTabDialog} from './CloneWorkspaceTabDialog';
 
 const tabStyles = {
-  binder: { icon: BookOpen, color: '#ecb66b', group: 'Book' },
-  codex: { icon: LibraryBig, color: '#56c8b5', group: 'Book' },
-  timeline: { icon: CalendarRange, color: '#6db8eb', group: 'Story views' },
-  family: { icon: Network, color: '#a8cd7c', group: 'Story views' },
-  planning: { icon: NotebookPen, color: '#eba67f', group: 'Writing tools' },
-  research: { icon: Telescope, color: '#85b7e8', group: 'Writing tools' },
-  templates: { icon: PanelsTopLeft, color: '#b49de9', group: 'Writing tools' },
-  prompts: { icon: MessageSquareQuote, color: '#df91ad', group: 'Writing tools' },
+  binder: { icon: BookOpen, color: '#ecb66b' },
+  codex: { icon: LibraryBig, color: '#56c8b5' },
+  timeline: { icon: CalendarRange, color: '#6db8eb' },
+  family: { icon: Network, color: '#a8cd7c' },
+  planning: { icon: NotebookPen, color: '#eba67f' },
+  research: { icon: Telescope, color: '#85b7e8' },
+  templates: { icon: PanelsTopLeft, color: '#b49de9' },
+  prompts: { icon: MessageSquareQuote, color: '#df91ad' },
 };
-const folderStyle = { icon: FolderOpen, color: '#dcb272', group: 'Folders' };
+const folderStyle = { icon: FolderOpen, color: '#dcb272' };
 function tabStyle(key: TabKey) {
   return Object.hasOwn(tabStyles, key) ? tabStyles[key as keyof typeof tabStyles] : folderStyle;
 }
@@ -75,14 +75,6 @@ export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
     if(location)useKachamak.setState(location);
   },[novel,active,view]);
   const tabs=workspaceTabs(novel), hiddenTabs=workspaceTabs(novel,true);
-  // Caption adjacent tabs together so the book's saved drag order stays intact.
-  const groups: { name: string; start: number; count: number }[] = [];
-  tabs.forEach((tab, index) => {
-    const name = tabStyle(tab.key).group;
-    const last = groups.at(-1);
-    if (last?.name === name) last.count++;
-    else groups.push({ name, start: index + 1, count: 1 });
-  });
   const cloneable = new Set(cloneableWorkspaceTabs(novel).map(tab => tab.key));
   const tabLabel=(id:unknown)=>tabs.find(tab=>tab.key===id)?.label??'tab';
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}),useSensor(KeyboardSensor,{coordinateGetter:sortableKeyboardCoordinates,keyboardCodes:{start:['Space'],cancel:['Escape'],end:['Space']}}));
@@ -93,9 +85,8 @@ export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
         {tabs.map(tab=><SortableWorkspaceTab key={tab.key} tab={tab} active={active===tab.key} onOpen={()=>openTab(tab.key)} onHide={()=>useKachamak.getState().hideTab(novel.id,tab.key)} onDelete={()=>setPendingDelete({...tab,projectId:novel.id})} onClone={cloneable.has(tab.key)?()=>setPendingClone({...tab,projectId:novel.id}):undefined}/>)}
       </SortableContext>
     </DndContext>
-    {groups.map(group=><span key={group.start} className="workspace-ribbon-caption mx-1" style={{gridColumn: `${group.start} / span ${group.count}`}}>{group.name}</span>)}
     </div>
-    <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button aria-label="Open workspace tab" title="Open workspace tab" className="mb-4 shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10"><Plus className="h-4 w-4"/></button></PopoverTrigger><PopoverContent align="start" className="w-72 border-white/15 bg-[#1b1b1b] p-3">
+    <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button aria-label="Open workspace tab" title="Open workspace tab" className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10"><Plus className="h-4 w-4"/></button></PopoverTrigger><PopoverContent align="start" className="w-72 border-white/15 bg-[#1b1b1b] p-3">
       <p className="mb-2 text-sm font-medium">Your workspace</p>
       <form className="flex gap-2" onSubmit={e=>{e.preventDefault();if(!name.trim())return;const state=useKachamak.getState();const id=state.addNode('binder',null,'doc',name.trim());if(id){state.updateNode('binder',id,{icon:'folder'});state.openNoteTab(id);state.select(id);state.setRenamingNode(null);}setName('');setOpen(false);}}><input aria-label="New folder tab name" placeholder="Research, World, Marketing…" value={name} onChange={e=>setName(e.target.value)} className="min-w-0 flex-1 rounded border border-white/15 bg-black/20 px-2 py-1.5 text-xs"/><button className="rounded bg-amber-400 px-2 text-xs text-black">Create</button></form>
       {hiddenTabs.length>0&&<div aria-label="Hidden tabs" className="mt-3 max-h-60 overflow-y-auto border-t border-white/10 pt-2">
@@ -106,7 +97,6 @@ export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
       <PageFormatMenu disabled={active==='trash'}/>
       <button type="button" disabled={active==='trash'} onMouseDown={event=>event.preventDefault()} onClick={onFocus} aria-label="Focus" title="Focus" className="workspace-ribbon-tile disabled:opacity-40"><EyeOff aria-hidden="true" className="text-sky-300"/>Focus</button>
       <button type="button" onClick={()=>openTab('trash')} aria-current={active==='trash'?'page':undefined} title="Trash" className="workspace-ribbon-tile"><Trash2 aria-hidden="true" className="text-rose-300"/>Trash</button>
-      <span className="workspace-ribbon-caption" style={{gridColumn: '1 / span 3'}}>Workspace</span>
     </div>
   </nav>
     {pendingClone?.projectId===novel.id && <CloneWorkspaceTabDialog sourceId={novel.id} tab={pendingClone} onClose={()=>setPendingClone(null)}/>}

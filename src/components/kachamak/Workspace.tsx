@@ -98,7 +98,7 @@ export function Workspace() {
           headers + editor toolbar) the top of the app has TWO tracks. The vertical
           dividers line up with the panel edges below and run to the very top
           (the +1 covers the 1px resizer column so the lines are never bent) */}
-      <header className="flex shrink-0 flex-wrap items-stretch border-b border-white/10 xl:h-20 xl:flex-nowrap">
+      <header className="flex shrink-0 flex-wrap items-stretch border-b border-white/10 xl:h-16 xl:flex-nowrap">
         {/* Static program branding above the navigation row. */}
         <div
           className={`flex shrink-0 items-center gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[50%] border-r border-white/10 bg-black/20 ${leftPanelOpen?"pl-3 pr-1":"px-0"}`}
