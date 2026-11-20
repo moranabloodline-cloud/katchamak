@@ -70,7 +70,21 @@ const {normalizeNovelSections}=await import('../src/lib/kachamak/store.ts');norm
 
 assert.equal(eventType({start:0,precision:'day'}),'event');assert.equal(eventType({start:0,end:20,precision:'time'}),'period','Legacy ranges remain periods without changing saved data');
 assert.ok(validEvent({type:'event',start:0,precision:'day'}));assert.ok(!validEvent({type:'event',start:0,end:1,precision:'day'}));assert.ok(validEvent({type:'period',start:0,end:1,precision:'time'}));assert.ok(!validEvent({type:'period',start:0,end:0,precision:'time'}));assert.ok(!validEvent({type:'period',start:0,precision:'time'}));assert.ok(!validEvent({type:'other',start:0,precision:'time'}));
-assert.equal(eventDuration({type:'period',start:0,end:227,precision:'time'},g),'3h 47m');
+assert.equal(eventDuration({type:'period',start:0,end:227,precision:'time'},g),'3 hours, 47 minutes');
+const duration=(calendar,from,to,precision='day',endPrecision=precision)=>eventDuration({
+  type:'period',start:dateToMinute(calendar,from),end:dateToMinute(calendar,to),precision,endPrecision,
+},calendar);
+assert.equal(duration(g,date(500,0,14),date(500,0,15,23,59)),'1 day');
+assert.equal(duration(g,date(1-14492),date(1-4492,0,1,23,59)),'10,000 years');
+assert.equal(duration(g,date(0,11,31),date(1,0,1,23,59)),'1 day');
+assert.equal(duration(g,date(2024,1,29),date(2025,1,28,23,59)),'1 year');
+assert.equal(duration(g,date(2024,0,31,23,50),date(2024,2,1,0,5),'time'),'1 month, 15 minutes');
+assert.equal(duration(g,date(2000),date(2010,11,31,23,59),'year'),'10 years');
+assert.equal(duration(g,date(2000,11),date(2001,0,31,23,59),'month'),'1 month');
+assert.equal(duration(custom,date(2,1,18,27,39),date(2,2,1,0,0),'time'),'1 minute');
+assert.equal(duration(custom,date(3,0,30),date(3,2,1)),'1 month, 1 day');
+assert.equal(duration(g,date(500,0,14),date(500,0,14,23,59)),'');
+assert.equal(eventDuration({type:'event',start:0,precision:'year'},g),'');
 const {timelineCalendarWeeks}=await import('../src/lib/kachamak/timeline-calendar.ts');
 const monthCenter=dateToMinute(g,date(2026,9,14));
 const long={node:note('era',undefined),event:{type:'period',start:dateToMinute(g,date(2026,8,20)),end:dateToMinute(g,date(2026,10,4)),precision:'day'}};

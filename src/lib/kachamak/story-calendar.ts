@@ -31,12 +31,48 @@ export interface StoryCalendar {
 export interface StoryDate { year: number; month: number; day: number; hour: number; minute: number }
 export interface StoryEvent { start: number; end?: number; groupId?: string; precision: DatePrecision; endPrecision?: DatePrecision; banner?: string; type?: 'event' | 'period'; cardColor?: string; cardOpacity?: number; cardDetail?: 'title' | 'dates' | 'synopsis'; cardStyle?: 'image' | 'color' }
 export const eventType=(event:StoryEvent):'event'|'period'=>event.type??(event.end!==undefined&&event.end>event.start?'period':'event');
-export function eventDuration(event:StoryEvent,c:StoryCalendar) {
-  if(eventType(event)!=='period'||event.end===undefined)return '';
-  const start=minuteToDate(c,event.start),end=minuteToDate(c,event.end),years=end.year-start.year;
-  if(years>0&&start.month===end.month&&start.day===end.day&&start.hour===end.hour&&start.minute===end.minute)return years+' '+(years===1?'year':'years');
-  const total=event.end-event.start,day=c.hoursPerDay*c.minutesPerHour,days=Math.floor(total/day),hours=Math.floor(total%day/c.minutesPerHour),minutes=total%c.minutesPerHour;
-  return [days?days+'d':'',hours?hours+'h':'',minutes?minutes+'m':''].filter(Boolean).join(' ');
+const durationNumber = new Intl.NumberFormat('en-US');
+
+export function eventDuration(event:StoryEvent, c:StoryCalendar) {
+  if (eventType(event) !== 'period' || event.end === undefined) return '';
+  const start = minuteToDate(c, event.start), end = minuteToDate(c, event.end);
+  const endPrecision = event.endPrecision ?? event.precision;
+  const parts: string[] = [];
+  function add(value:number, unit:string) {
+    if (value > 0) parts.push(`${durationNumber.format(value)} ${unit}${value === 1 ? '' : 's'}`);
+  }
+
+  // Describe the interval between the displayed dates. Coarse end dates are
+  // stored at the last minute of their day, month or year for chart coverage.
+  if (event.precision === 'year' || endPrecision === 'year') {
+    add(end.year - start.year, 'year');
+  } else {
+    const monthsPerYear = c.months.length;
+    let months = (end.year - start.year) * monthsPerYear + end.month - start.month;
+    let days = 0, minutes = 0;
+    if (event.precision !== 'month' && endPrecision !== 'month') {
+      if (event.precision === 'time' && endPrecision === 'time') {
+        minutes = (end.hour - start.hour) * c.minutesPerHour + end.minute - start.minute;
+      }
+      const anniversaryDay = Math.min(start.day, monthDays(c, end.year, end.month));
+      days = end.day - anniversaryDay;
+      const borrowDay = minutes < 0 ? 1 : 0;
+      if (borrowDay) minutes += minutesPerDay(c);
+      days -= borrowDay;
+      if (days < 0) {
+        months--;
+        const previousMonth = (end.month + monthsPerYear - 1) % monthsPerYear;
+        const previousLength = monthDays(c, end.month === 0 ? end.year - 1 : end.year, previousMonth);
+        days = previousLength - Math.min(start.day, previousLength) + end.day - borrowDay;
+      }
+    }
+    add(Math.floor(months / monthsPerYear), 'year');
+    add(months % monthsPerYear, 'month');
+    add(days, 'day');
+    add(Math.floor(minutes / c.minutesPerHour), 'hour');
+    add(minutes % c.minutesPerHour, 'minute');
+  }
+  return parts.join(', ');
 }
 export interface TimelineGroup { id: string; name: string; color: string }
 export type TimelineDisplay = 'axis' | 'calendar' | 'chronicle';

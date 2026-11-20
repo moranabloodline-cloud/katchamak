@@ -1,3 +1,5 @@
+> **2026-11-20 — Datumi na Timeline karticama.** Uz marker se vidi početni datum. Kartica prikazuje raspon prema formatu knjige i trajanje u kalendarskim jedinicama, npr. „1 day“ ili „10,000 years“.
+
 > **2026-11-20 — Boja ručnog linka u tekstu.** Ručni link prati boju ciljne beleške i kada je njegov tekst ranije sačuvan sa drugom bojom. Promena boje ne zahteva izmenu rukopisa.
 
 > **2026-11-20 — Danger Zone na dnu podešavanja.** Desno su redom Meta, Backups & Export i Danger Zone. Na telefonu se Danger Zone prikazuje posle korice.
@@ -539,6 +541,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Timeline Cards.** Uklonjen je natpis tipa uz marker. Prikaz trajanja uvažava preciznost datuma, prestupne godine i dužine meseci, dana i sati iz kalendara knjige. Na probnim podacima provereni su oba označena primera, korisnički format i običan događaj. Prošli su testovi kalendara i Timeline panela, TypeScript i build.
 
 - **2026-11-20 — Ručni linkovi.** Novi link čuva referencu bez upisivanja trenutne boje. Prikaz podržava formatirane stare linkove i posebne znakove u ID-u uvezene beleške. Na probnoj knjizi provereni su Ctrl+K, promena boje kroz paletu, spoljni link i snimanje sa ponovnim učitavanjem istog HTML-a. Prošli su testovi linkova i editora, TypeScript i build.
 

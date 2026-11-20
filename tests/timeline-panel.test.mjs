@@ -93,6 +93,9 @@ const event=a.sections.timeline[0].children[0];assert.equal(event.event.groupId,
 await React.act(async()=>useKachamak.getState().updateNode('timeline','event',{event:{...event.event,cardColor:'#123456',groupId:''},links:[]}));
 await click(button('Apply dates'));assert.equal(event.event.cardColor,'#123456');assert.equal(event.event.groupId,'');assert.deepEqual(event.links,[]);
 for(const mode of ['Timeline','Calendar','Cards']){const list=field('Timeline display');await click([...list.querySelectorAll('[role="tab"]')].find(el=>el.textContent===mode));assert.equal(inspector().querySelectorAll('[role="tab"]').length,4);assert.equal(field('Event title').value,'A event');}
+const cardRail=box.querySelector('article time');
+assert.ok(cardRail,'Cards show the start date beside the marker');
+assert.equal(cardRail.parentElement.textContent,cardRail.textContent,'The date rail has no additional type label');
 await click(tab('Info'));assert.ok(document.querySelector('[aria-label="Resize Synopsis and Notes"]'));assert.match(document.body.textContent,/Keep synopsis/);
 await click(tab('Details'));assert.match(document.body.textContent,/Created/);await click(tab('Mentions'));
 assert.equal(JSON.stringify(b),untouchedB,'All edits stay in one book');
