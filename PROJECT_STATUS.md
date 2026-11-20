@@ -1,3 +1,5 @@
+> **2026-11-20 — Velika stabla beležaka.** Otvaranje taba sa mnogo vidljivih beležaka priprema odredišta za premeštanje i izbor ikonica tek pri otvaranju odgovarajuće komande.
+
 > **2026-11-20 — Centrirani naslovi beležaka.** U editoru, karticama i pregledu naslovi beležaka su centrirani. Stablo i liste zadržavaju levo poravnanje radi lakšeg praćenja hijerarhije.
 
 > **2026-11-20 — Stablo početnih stranica.** Homepage ima svoje stablo sa stranicama i podstranicama. Svaka koristi isti editor blokova i ima zasebnu bravu. Kartice i liste linkova mogu da otvore drugu stranicu knjige. Stara početna strana je koren stabla.
@@ -569,6 +571,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Provera potpuno raširenog stabla.** U lokalnom pregledaču sa 30 otvorenih grana i 1.500 probnih beležaka pretraga je pronašla poslednju belešku. Otvaranje njenog taba i celog stabla trajalo je oko četiri sekunde u razvojnoj verziji. Posle preimenovanja, čuvanja i ponovnog učitavanja provereni su ID-jevi, naslovi i tekst svih 1.500 beležaka. Zasebno je provereno premeštanje sa potomstvom, povratak na vrh i izbor boje.
 
 - **2026-11-20 — Poravnanje naslova.** U pregledaču su na probnoj knjizi provereni Write, oba panela u Split, Continuous, Grid, pregled povezane beleške, Relationships, kartice vremenske linije i Homepage. Provereni su preimenovanje dugačkog naslova, boja beleške i zasebno poravnanje teksta. Zaglavlje Homepage-a je pri širinama ekrana od 320 do 1600 px zadržalo visinu od 40 px i dostupne komande.
 

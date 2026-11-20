@@ -186,7 +186,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
     subtreeIds.add(n.id);
     n.children.forEach(collectIds);
   };
-  collectIds(node);
+  if (moveOpen) collectIds(node);
 
   const pickDestination = (destSection: SectionKey, destParentId: string | null) => {
     const label =
@@ -332,7 +332,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
               Icon
             </p>
             <div className="grid grid-cols-8 gap-1 sm:grid-cols-12">
-              {NOTE_ICONS.map(({ key, label, Cmp }) => (
+              {pickerOpen && NOTE_ICONS.map(({ key, label, Cmp }) => (
                 <button
                   key={key}
                   type="button"
@@ -426,7 +426,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                 Move
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={!novel || locateNode(novel.sections[section],node.id)?.parentId == null}
+                disabled={!menuOpen || !novel || locateNode(novel.sections[section],node.id)?.parentId == null}
                 onSelect={() => {
                   moveNodeTo(section,node.id,section,null);
                   const state=useKachamak.getState();
@@ -533,7 +533,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             Pick a destination — the note goes to the end of the chosen spot.
           </p>
           <div className="max-h-72 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-1.5">
-            {SECTION_LABELS.map((t) => {
+            {moveOpen && SECTION_LABELS.map((t) => {
               const sec = t.key as SectionKey;
               const roots = novel?.sections[sec] ?? [];
               return (
