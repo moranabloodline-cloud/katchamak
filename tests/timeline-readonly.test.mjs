@@ -198,5 +198,42 @@ await switchBook(cursorOther,distant.id);
 await openOptions();
 assert.ok(button('September 1987 CE'),'On entry with all events filtered, use the existing dates for the initial view');
 assert.equal(JSON.stringify([cursorBook.sections,cursorOther.sections]),cursorNotesBefore,'Browsing and filtering do not alter dates or prose');
+// The shared toolbar filters all three views and creates timelines in this book only.
+await React.act(async()=>useKachamak.setState({novels:[filterBook,otherBook]}));
+await switchBook(filterBook,land.id);
+await React.act(async()=>useKachamak.getState().setTimeline({hiddenGroups:[],display:'axis'}));
+const toolbar=()=>box.querySelector('nav[aria-label="Timeline tools"]');
+const chooseView=async label=>{
+  await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,0));});
+  await click('View');
+  const choice=[...document.querySelectorAll('[aria-label="Choose timeline view"] button')].find(el=>el.textContent===label);
+  assert.ok(choice,label);
+  await React.act(async()=>choice.click());
+  assert.equal(box.querySelector('[aria-label="Timeline display"] [aria-selected="true"]').textContent,label);
+};
+const setRangeDay=async(label,day)=>{
+  const field=document.querySelector('[aria-label="'+label+' day"]');
+  await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(field,String(day));field.dispatchEvent(new dom.Event('input',{bubbles:true}));});
+};
+await click('Range');await setRangeDay('From',10);await click('Apply range');
+assert.match(document.querySelector('[role="alert"]').textContent,/end date/);
+await setRangeDay('From',9);await click('Apply range');
+for(const label of ['Calendar','Cards','Timeline']){
+  await chooseView(label);
+  assert.ok(toolbar().textContent.includes('Gregorian'));
+  assert.ok(box.textContent.includes(land.title),label+' includes the last day');
+  assert.ok(!box.textContent.includes(sea.title),label+' filters the earlier event');
+}
+assert.equal(JSON.stringify(filterBook.sections),sectionsBefore);
+await click('Range');await click('Clear range');assert.ok(box.textContent.includes(sea.title));
+await click('Range');await setRangeDay('From',9);await click('Apply range');
+await switchBook(otherBook,sea.id);assert.ok(box.textContent.includes(sea.title),'The other book starts with its full range');
+await switchBook(filterBook,land.id);
+const rootsBefore=filterBook.sections.timeline.length, otherBefore=JSON.stringify(otherBook.sections);
+await click('Create timeline');
+const created=useKachamak.getState().novels.find(n=>n.id===filterBook.id).sections.timeline;
+assert.equal(created.length,rootsBefore+1);
+assert.equal(created.at(-1).timelineKind,'period');assert.equal(useKachamak.getState().renamingNodeId,created.at(-1).id);
+assert.equal(JSON.stringify(otherBook.sections),otherBefore);
 await React.act(async()=>root.unmount());dom.close();
 console.log('Timeline read-only passed: hierarchy, exact/clipped range geometry, boundary dates, containment validation, broad calendar precision, rounded scales, no drag mutations, viewport-only pan, rejected invalid form, calendar/view context, card details, persistent group filter status and stable calendar dates.');

@@ -14,6 +14,7 @@ import {TimelineAxis} from './TimelineAxis';
 import {TimelineGroups} from './TimelineGroups';
 import {TimelineCalendar} from './TimelineCalendar';
 import {TimelineCards} from './TimelineCards';
+import {TimelineToolbar,timelineDisplays,type DisplayRange} from './TimelineToolbar';
 import {timelineDefaultStart,timelineScope,timelineLevelIds} from '@/lib/kachamak/timeline-tree';
 import {addTimelineNote,finishTimelineAdd,usesTimelineDialog,useTimelineAddRequest} from '@/lib/kachamak/timeline-actions';
 import {importTimeline} from '@/lib/kachamak/timeline-import';
@@ -25,6 +26,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const [editing,setEditing]=useState<{id?:string;start:number}|null>(null);
   const [jump,setJump]=useState<StoryDate|null>(null),[jumpError,setJumpError]=useState('');
   const [includeNested,setIncludeNested]=useState(false),[optionsOpen,setOptionsOpen]=useState(false);
+  const [range,setRange]=useState<DisplayRange|null>(null);
   const runOption=(action:()=>void)=>{setOptionsOpen(false);action();};
   const importFile=useRef<HTMLInputElement>(null),[importing,setImporting]=useState(false);
   // Editing a card selects its note for the inspector without drilling into it.
@@ -52,16 +54,21 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const all=timelineRows(novel,section,scopeId,true),hidden=prefs?.hiddenGroups??[];
   const level=section==='timeline'&&(mode==='axis'||mode==='chronicle')&&!includeNested?timelineLevelIds(novel.sections.timeline,scopeId):null;
   const inScope=all.filter(r=>(!level||level.has(r.node.id))&&(mode==='axis'||r.node.id!==scopeId));
-  const rows=inScope.filter(r=>!hidden.includes(groupFor(r.event,groups)));
+  const inRange=range?inScope.filter(({event})=>event.start<=range.end&&(event.end??event.start)>=range.start):inScope;
+  const rows=inRange.filter(r=>!hidden.includes(groupFor(r.event,groups)));
   const day=minutesPerDay(calendar),fit=fittedRange(rows,day,1);
+  const defaultViewport=range?boundedViewport(range.start+(range.end-range.start)/2,range.end-range.start+1):fit;
   // Hide/show changes rows for the calendar, not the month the user is viewing.
-  const viewportRows=mode==='calendar'?inScope:rows;
-  const scopeKey=novel.id+':'+section+':'+mode+':'+(scopeId??'all')+':'+(mode==='calendar'?JSON.stringify(calendar)+':':'')+viewportRows.map(r=>r.node.id+','+r.event.start+','+r.event.end).join(';');
+  const viewportRows=mode==='calendar'?inRange:rows;
+  const scopeKey=novel.id+':'+section+':'+mode+':'+(scopeId??'all')+':'+(range?range.start+','+range.end:'all')+':'+(mode==='calendar'?JSON.stringify(calendar)+':':'')+viewportRows.map(r=>r.node.id+','+r.event.start+','+r.event.end).join(';');
   const local=viewport?.key===scopeKey?viewport:null;
   const firstDated=(items:EventRow[])=>items.find(row=>eventType(row.event)==='event')??items[0];
   const firstEvent=firstDated(rows);
-  const calendarStart=mode==='calendar'?(firstEvent??firstDated(inScope))?.event.start:undefined;
-  const center=local?.center??(mode==='calendar'?calendarStart??fit.center:scopeId||section==="timeline"?fit.center:prefs?.center??fit.center),span=local?.span??(scopeId||section==="timeline"?fit.span:prefs?.span??fit.span);
+  const calendarStart=mode==='calendar'?(firstEvent??firstDated(inRange))?.event.start:undefined;
+  const scoped=!!scopeId||section==='timeline'||!!range;
+  const calendarCenter=range?Math.max(range.start,calendarStart??range.start):calendarStart??fit.center;
+  const center=local?.center??(mode==='calendar'?calendarCenter:scoped?defaultViewport.center:prefs?.center??fit.center);
+  const span=local?.span??(scoped?defaultViewport.span:prefs?.span??fit.span);
   const date=minuteToDate(calendar,center);
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
@@ -76,12 +83,19 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const navigate=(id:string|null)=>{setViewSelection(null);state.select(id);};
   const trail:NoteNode[]=[];let trailId=scopeId;while(trailId){const node=findNode(novel.sections[section],trailId);if(!node)break;trail.unshift(node);trailId=locateNode(novel.sections[section],trailId)?.parentId??undefined;}
   return <div className="flex h-full min-w-0 flex-col bg-background">
+    <TimelineToolbar calendar={calendar} mode={mode} range={range}
+      initialRange={{start:inScope[0]?.event.start??center,end:inScope.reduce((last,r)=>Math.max(last,r.event.end??r.event.start),inScope[0]?.event.start??center)}}
+      onCalendar={()=>setSettings(true)} onGroups={()=>setGroupsOpen(true)} onRange={setRange} onView={display=>state.setTimeline({display})}
+      onCreate={()=>{
+        const id=state.addNode(section,rootId??null,'doc','New Timeline',['timeline']);
+        if(id){state.updateNode(section,id,{timelineKind:'period'});setRange(null);setViewSelection(null);}
+      }}/>
     {mode==='axis'&&<TimelineAxis calendar={calendar} rows={rows} groups={groups} center={center} span={span} compact={prefs?.compact??false} onOpen={edit} selectedId={state.selectedNodeId??undefined} onPan={changeCenter} onZoom={changeViewport}/>}
     {mode==='calendar'&&<TimelineCalendar selectedId={state.selectedNodeId??undefined} rows={rows} calendar={calendar} groups={groups} center={center} compact={prefs?.compact??false} onOpen={edit} onAdd={start=>setEditing({start})}/>}
     {mode==='chronicle'&&<TimelineCards calendar={calendar} rows={rows} groups={groups} compact={prefs?.compact??false} synopsis={prefs?.detail!=='titles'} selectedId={state.selectedNodeId??undefined} onEdit={edit} onAdd={()=>setEditing({start:scopeId?findNode(novel.sections[section],scopeId)?.event?.start??center:firstEvent?.event.start??center})}/>}
-    {all.length>0&&!rows.length&&<div className="p-5 text-center text-xs text-muted-foreground">{hidden.length>0?<><p>No notes match these filters.</p><button className={`${timeButton} mt-2`} onClick={()=>setHiddenGroups([])}>Show all groups</button></>:<p>No dated notes in this period yet.</p>}</div>}
-    {!all.length&&mode!=='chronicle' &&<div className="shrink-0 border-t border-white/10 p-4 text-center"><p className="text-sm">Place your story in time</p><p className="mt-1 text-xs text-muted-foreground">Add a dated event or assign dates to an existing note. Choose a note in the tree and set its dates in the right panel.</p>{selected&&<button className={`${timeButton} mt-3`} onClick={()=>setEditing({id:selected.node.id,start:center})}>Date “<span style={{color:selected.node.color || undefined}}>{selected.node.title}</span>”</button>}</div>}
-    <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border bg-background px-3 py-2"><div role="tablist" aria-label="Timeline display" className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">{([['axis','Timeline'],['calendar','Calendar'],['chronicle','Cards']] as const).map(([key,label])=><button key={key} role="tab" aria-selected={mode===key} className={`${timeButton} ${mode===key?'border-amber-500/60 bg-amber-500/15 text-amber-300':''}`} onClick={()=>state.setTimeline({display:key})}>{label}</button>)}</div>
+    {all.length>0&&!rows.length&&<div className="p-5 text-center text-xs text-muted-foreground">{range&&!inRange.length?<><p>No dated notes in this range.</p><button className={`${timeButton} mt-2`} onClick={()=>setRange(null)}>Clear range</button></>:hidden.length>0?<><p>No notes match these filters.</p><button className={`${timeButton} mt-2`} onClick={()=>setHiddenGroups([])}>Show all groups</button></>:<p>No dated notes in this period yet.</p>}</div>}
+    {!all.length&&mode!=='chronicle' &&<div className="shrink-0 border-t border-white/10 p-4 text-center"><button className={timeButton} onClick={()=>setEditing({start:scopeId?timelineDefaultStart(novel.sections[section],scopeId):center})}><Plus className="size-3.5"/>Add Event</button>{selected&&<button className={`${timeButton} ml-2`} onClick={()=>setEditing({id:selected.node.id,start:center})}>Date “<span style={{color:selected.node.color || undefined}}>{selected.node.title}</span>”</button>}</div>}
+    <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border bg-background px-3 py-2"><div role="tablist" aria-label="Timeline display" className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">{timelineDisplays.map(([key,label])=><button key={key} role="tab" aria-selected={mode===key} className={`${timeButton} ${mode===key?'border-amber-500/60 bg-amber-500/15 text-amber-300':''}`} onClick={()=>state.setTimeline({display:key})}>{label}</button>)}</div>
       <Popover open={optionsOpen} onOpenChange={setOptionsOpen}>
         <PopoverTrigger asChild><button type="button" className={timeButton} aria-label="Timeline options" title={hiddenGroupCount ? hiddenGroupCount + (hiddenGroupCount===1?' group':' groups') + ' hidden' : 'Timeline options'}><Ellipsis className="h-4 w-4"/>{hiddenGroupCount>0&&<span aria-label="Hidden groups" className="text-amber-500">{hiddenGroupCount}</span>}</button></PopoverTrigger>
         <PopoverContent side="top" className="max-h-[70vh] w-[min(28rem,calc(100vw-1.5rem))] space-y-2 overflow-auto p-3" aria-label="Timeline controls">

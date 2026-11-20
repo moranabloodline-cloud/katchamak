@@ -1,3 +1,5 @@
+> **2026-11-20 — Alati iznad Timeline prikaza.** Timeline, Calendar i Cards imaju zajedničku traku za kalendar knjige, novu vremensku liniju, filter raspona, grupe i prikaz. Filter obuhvata oba izabrana dana i prati promenu prikaza unutar knjige.
+
 > **2026-11-20 — Natpis i ikonice u zaglavlju.** Natpis Kachamak prilagođava se širini levog panela do 26 px. Save i Settings koriste boje i veličinu ikonica tabova. Sa avatarom su centrirani iznad desnog panela.
 
 > **2026-11-20 — Proporcije gornje trake.** Otvoreni paneli prikazuju ikonice Save i Settings od 36 px, znak Kachamaka od 48 px na širokom i 40 px na užem ekranu i natpis od 18 px.
@@ -523,6 +525,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** Na dve probne knjige provereni su filter datuma, promena prikaza i dodavanje vremenske linije. U Chrome-u je proverena traka u sva tri prikaza, otvaranje kalendara i grupa i unos prvog događaja.
 
 - **20.11.2026.** Na probnoj knjizi u Chrome-u provereni su boje i razmaci gornjih akcija, ceo natpis na širinama 2157, 760 i 320 px i prikaz sa sklopljenim panelima.
 
