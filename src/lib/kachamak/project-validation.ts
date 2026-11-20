@@ -3,7 +3,7 @@ import { INSPECTOR_TABS, SECTION_KEYS } from './types';
 import { validNovelMetadata, validCoverImage } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
-import { validNoteFontSize, validNotePageSettings } from './page-format';
+import { validNoteFontSize, validNotePageSettings, validTabPageSettings } from './page-format';
 import { validHomepage } from './homepage';
 import { validDocumentTarget } from './document-target';
 import {validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -48,6 +48,9 @@ export function isReadableProject(value: unknown): boolean {
     validFamilyRelationships(t.familyRelationships) && isTree([t.node])
   ))) return false;
   if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
+  if(n.tabFormats!==undefined && (!n.tabFormats || typeof n.tabFormats!=='object' || Array.isArray(n.tabFormats) ||
+    !Object.entries(n.tabFormats).every(([tab,settings])=>
+      (tab==='homepage' || SECTION_KEYS.includes(tab as SectionKey) || (tab.startsWith('note:') && tab.length>5)) && validTabPageSettings(settings))))return false;
   if(!validHomepage(n.homepage))return false;
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && (!Array.isArray(n.hiddenInspectorTabs) ||

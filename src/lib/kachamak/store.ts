@@ -20,7 +20,7 @@ import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
 import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
-import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,type PageFormat} from './page-format';
+import {DEFAULT_PAGE_FORMAT,NEW_NOTE_FONT_SIZE,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -72,6 +72,7 @@ interface KachamakState {
   editorSpacing: string;
   editorSpellCheck: boolean;
   pageFormat: PageFormat;
+  setTabFormat: (projectId:string,tab:FormatTab,patch:TabPageSettings) => void;
   setPageFormat: (patch:Partial<PageFormat>) => void;
   setEditorSpellCheck: (enabled:boolean) => void;
   setEditorFont: (f: string) => void;
@@ -300,7 +301,7 @@ function makeNode(kind: NoteNode["kind"], title: string, template?: NoteNode): N
   const now = Date.now();
   const fields = template
     ? structuredClone({ ...template, children: [], hidden: false, collapsed: false })
-    : { bodyFontSize: 8, synopsis: "", content: "", notes: "", status: "", label: "" };
+    : { bodyFontSize: NEW_NOTE_FONT_SIZE, synopsis: "", content: "", notes: "", status: "", label: "" };
   return {
     ...fields,
     id: uid(),
@@ -339,6 +340,16 @@ export const useKachamak = create<KachamakState>()(
       editorSize: 16,
       editorSpacing: "1.5",
       pageFormat: {...DEFAULT_PAGE_FORMAT},
+      setTabFormat: (projectId,tab,patch) => set(state=>{
+        if(state.activeNovelId!==projectId || (state.view==='homepage'?'homepage':state.activeTab)!==tab || !validTabPageSettings(patch))return state;
+        return {novels:state.novels.map(novel=>{
+          if(novel.id!==projectId)return novel;
+          const prior=novel.tabFormats?.[tab];
+          const settings={...prior,...patch};
+          if(patch.page)settings.page={...prior?.page,...patch.page};
+          return touch({...novel,tabFormats:{...novel.tabFormats,[tab]:settings}});
+        })};
+      }),
       setPageFormat: patch => set(state=>{const next={...DEFAULT_PAGE_FORMAT,...state.pageFormat,...patch};return validPageFormat(next)?{pageFormat:next}:{};}),
       editorSpellCheck: true,
       setEditorSpellCheck: (enabled) => set({editorSpellCheck:enabled}),
@@ -920,7 +931,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 46,
+      version: 47,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -933,6 +944,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<47){ /* Optional tab defaults leave existing notes and their formatting intact. */ }
         if(version<46){ /* Homepage artwork without a frame or cutout renders its original image. */ }
         if(version<45){ /* Standalone images reuse the existing homepage block and raster fields. */ }
         if(version<44){ /* Existing homepage blocks remain in their original order at the top level. */ }

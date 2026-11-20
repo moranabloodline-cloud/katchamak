@@ -138,6 +138,7 @@ export interface Novel {
   labels: { id: string; name: string; color: string }[];
   openNoteTabs?: string[];
   tabOrder?: TabKey[];
+  tabFormats?: Partial<Record<import('./page-format').FormatTab,import('./page-format').TabPageSettings>>;
   hiddenSections?: SectionKey[];
   hiddenTabs?: TabKey[];
   hiddenInspectorTabs?: InspectorTabKey[];

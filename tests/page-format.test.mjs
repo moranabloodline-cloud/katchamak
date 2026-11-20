@@ -102,5 +102,27 @@ assert.equal(useKachamak.getState().view,'list','Trash retains the previous writ
 assert.ok(headerActions().filter(b=>['Format','Focus'].includes(b.getAttribute('aria-label'))).every(b=>b.disabled));
 await React.act(async()=>document.querySelector('header [title="Binder"]').click());
 assert.equal(node().content,contentBeforePage);
+// The same selected note stays open when switching tabs. Only its presentation changes.
+const projectId=useKachamak.getState().activeNovelId;
+await React.act(async()=>{
+  actions.setView('write');actions.select(id);
+  actions.setTabFormat(projectId,'binder',{size:20,page:{indent:2}});
+  actions.setTabFormat(projectId,'binder',{spacing:'2.0',page:{width:72}});
+});
+const surface=()=>document.querySelector('[data-document-page]');
+assert.equal(surface().style.getPropertyValue('--page-indent'),'2em');
+assert.equal(surface().style.getPropertyValue('--page-width'),'72rem');
+assert.equal(surface().dataset.sceneDivider,'asterisks','Untouched options retain the legacy note setting');
+assert.equal(node().bodyFontSize,12);
+assert.equal(node().content,contentBeforePage);
+await React.act(async()=>actions.setTab('codex'));
+assert.equal(surface().style.getPropertyValue('--page-width'),'36rem');
+await React.act(async()=>actions.setTabFormat(projectId,'binder',{size:24}));
+const formats=useKachamak.getState().novels[0].tabFormats;
+assert.equal(formats.binder.size,20,'A delayed change cannot write to a former tab');
+const backup=structuredClone(useKachamak.getState().novels[0]);
+assert.ok(validCloudLibrary({novels:[backup],collections:[]}));
+backup.tabFormats.binder.page.indent=99;
+assert.equal(validCloudLibrary({novels:[backup],collections:[]}),false);
 await React.act(async()=>root.unmount());
 console.log('Page Format passed: exact selection boundaries, semantic markup, Undo, unchanged defaults/manuscript, page variables, safe migration and Focus editor/panel preservation.');

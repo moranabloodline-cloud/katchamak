@@ -5,12 +5,12 @@ import { flushSync } from "react-dom";
 import { ChevronLeft, EyeOff, LoaderCircle, Minimize2, Save, Settings, Trash2 } from "lucide-react";
 import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
 import { useKachamak } from "@/lib/kachamak/store";
-import type { SectionKey } from "@/lib/kachamak/types";
+import { TABS, type SectionKey } from "@/lib/kachamak/types";
 import { WorkspaceBrand } from "./WorkspaceBrand";
 import { activeWritingEditor } from "./WorkspaceNavigation";
 import { PageFormatMenu } from "./PageFormatMenu";
 import { useOpenWorkspaceTab, WorkspaceTabs } from "./WorkspaceTabs";
-import { findNode,findNodeInNovel } from "@/lib/kachamak/utils";
+import { findNodeInNovel } from "@/lib/kachamak/utils";
 import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { NotesSection } from "./NotesSection";
@@ -78,15 +78,11 @@ export function Workspace() {
   const novel = novels.find((n) => n.id === activeNovelId);
   const pageView = useKachamak(s=>s.view);
   const trashOpen = activeTab==='trash' && pageView!=='homepage';
-  const pageId = useKachamak(s=>s.view==='split'?(s.activePane==='a'?s.paneAId:s.paneBId):s.selectedNodeId);
 
   const openTab = useOpenWorkspaceTab(novel);
   const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
-  const pageNote = novel&&pageId&&activeTab!=='trash'&&['write','split','continuous'].includes(pageView)
-    ? findNodeInNovel(novel,pageId) : null;
-  const inContinuousScope = pageNote && pageNote.section===(folder?.section??activeTab)
-    && (!folder || !!findNode([folder.node],pageNote.node.id));
-  const visiblePage = pageView==='continuous'&&!inContinuousScope ? null : pageNote;
+  const formatTab = pageView==='homepage'?'homepage':activeTab;
+  const formatLabel = formatTab==='homepage'?'Homepage':folder?.node.title??TABS.find(tab=>tab.key===activeTab)?.label??'Untitled tab';
   useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
 
@@ -135,7 +131,7 @@ export function Workspace() {
             onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
             <EyeOff aria-hidden="true"/>
           </button>
-          <PageFormatMenu key={visiblePage?.node.id??'empty'} note={visiblePage}/>
+          <PageFormatMenu key={novel.id+':'+formatTab} projectId={novel.id} tab={formatTab==='trash'?null:formatTab} label={formatLabel}/>
           <button type="button" aria-label="Trash" title="Trash" aria-current={trashOpen?'page':undefined}
             onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
             <Trash2 aria-hidden="true"/>

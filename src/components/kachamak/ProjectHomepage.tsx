@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, LockKeyhole, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
@@ -44,6 +44,7 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
 
 export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
   const page=novel.homepage??EMPTY_HOMEPAGE;
+  const style=novel.tabFormats?.homepage;
   const notes=useMemo(()=>flattenNotes(novel),[novel]);
   const byId=useMemo(()=>new Map(notes.map(({node})=>[node.id,node])),[notes]);
   const change=useKachamak(s=>s.changeHomepage);
@@ -140,7 +141,11 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
       </Button>
     </header>
     {message&&<p role="status" className="px-5 pt-3 text-sm text-amber-300">{message}</p>}
-    <div className={'mx-auto w-full p-4 @[640px]:p-8 '+(page.width==='reading'?'max-w-3xl':'max-w-[100rem]')}>
+    <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
+      style={{fontFamily:style?.font,
+      '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
+      '--home-leading':style?.spacing,'--home-align':style?.page?.align} as CSSProperties}
+      className={'mx-auto w-full p-4 @[640px]:p-8 '+(page.width==='reading'?'max-w-3xl':'max-w-[100rem]')}>
       {!page.locked&&!page.blocks.length&&<button type="button" className="flex min-h-36 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:border-amber-500/50 hover:text-foreground" onClick={()=>edit()}><Plus className="size-4"/>Add your first block</button>}
       <div {...(page.locked?{}:drag.gridEvents)} className="grid grid-cols-1 items-start gap-4 @[530px]:grid-cols-2 @[1040px]:grid-cols-4">
         {roots.map((block,index)=>renderBlock(block,index,roots.length))}

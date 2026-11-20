@@ -1,3 +1,5 @@
+> **2026-11-20 — Format svakog taba zasebno.** Format čuva podrazumevani izgled za izabrani tab u toj knjizi. Na Homepage-u menja tipografiju blokova. U beleškama traka editora i dalje menja označeni tekst. Stara podešavanja beleške važe dok korisnik ne izabere drugu vrednost za tu opciju na tabu.
+
 > **2026-11-20 — Homepage u glavnoj navigaciji.** Homepage je prvi tab projekta. Otvara sačuvanu početnu stranu i ostaje na prvom mestu kada se ostali tabovi premeste. Traka za uređivanje teksta počinje komandom Undo.
 
 > **2026-11-20 — Pozadina širokih logotipa.** Početna strana prepoznaje jednobojnu podlogu i kada natpis dodiruje ivice banera. Duge i kratke ivice učestvuju srazmerno svojoj dužini. U editoru Reprocess logo ponavlja obradu iz sačuvanog originala.
@@ -561,6 +563,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Format po tabu.** Na dve probne knjige provereni su odvojeni formati, beleška otvorena kao tab, Homepage, Write, Split i Continuous, lokalno formatiranje selekcije i ponovno učitavanje sačuvane knjige.
 
 - **2026-11-20 — Homepage ispred Bindera.** U pregledaču su na probnoj knjizi provereni aktivni tab, povratak u belešku, Timeline, Relationships i Trash, kao i zaključana kartica i njena veza posle osvežavanja stare adrese početne strane.
 

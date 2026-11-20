@@ -343,7 +343,7 @@ export function RulerRow({node}:{node?:NoteNode|null}={}) {
 /* One note surface, used by Write and both Split panes. Format supplies page
    defaults; explicit inline styles in the manuscript remain local overrides. */
 export function EditorPage({ node, section, continuous=false }: { node: NoteNode; section: SectionKey; continuous?:boolean }) {
-  const {page,font,size,spacing}=useNoteAppearance(node);
+  const {page,font,size,spacing,explicitSpacing}=useNoteAppearance(node);
   const updateNode = useKachamak((s) => s.updateNode);
 
   return (
@@ -351,7 +351,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
       <div className="px-6 py-6">
         {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
             zoomu (100% je u koordinatama zoomovanog elementa) */}
-        <PageSurface page={page} spacing={node.pageSettings?.spacing}>
+        <PageSurface page={page} spacing={explicitSpacing}>
           <input
             value={node.title}
             onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
