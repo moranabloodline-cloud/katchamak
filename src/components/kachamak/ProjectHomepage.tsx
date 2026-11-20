@@ -1,10 +1,10 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, LockKeyhole, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, LockKeyhole, ListTree, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
-import {EMPTY_HOMEPAGE, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
+import {HOME_ROOT, homepageEntry, homepageRows, type HomeChange, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
 import {flattenNotes} from '@/lib/kachamak/note-links';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -17,10 +17,10 @@ import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import {useOpenWorkspaceTab} from './WorkspaceTabs';
 
-function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>) {
+function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>, pages:Map<string,string>) {
   const target=block.target;
   const note=target?.kind==='note' ? notes.get(target.id) : undefined;
-  const destination=target?.kind==='tab' ? TABS.find(t=>t.key===target.tab)?.label :
+  const destination=target?.kind==='page' ? (pages.get(target.id) ?? 'Unavailable page') : target?.kind==='tab' ? TABS.find(t=>t.key===target.tab)?.label :
     target?.kind==='web' ? new URL(target.url).hostname : note?.title;
   return {
     title:block.title || destination,
@@ -42,14 +42,20 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
   </>;
 }
 
-export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
-  const page=novel.homepage??EMPTY_HOMEPAGE;
+export function ProjectHomepage({novel,pageId=HOME_ROOT,onBack,onShowPages}:{novel:Novel;pageId?:string;onBack:()=>void;onShowPages?:()=>void}) {
+  const page=homepageEntry(novel,pageId) ?? homepageEntry(novel,HOME_ROOT)!;
+  const pages=useMemo(()=>homepageRows(novel),[novel]);
+  const titles=useMemo(()=>new Map(pages.map(p=>[p.id,p.title])),[pages]);
+  const openPage=useKachamak(s=>s.openHomePage);
+  const goBack=()=>{if(page.id===HOME_ROOT)onBack();else openPage(novel.id,page.parentId??HOME_ROOT);};
+  const backLabel=page.id===HOME_ROOT?'Back to workspace':'Back to '+titles.get(page.parentId??HOME_ROOT);
   const style=novel.tabFormats?.homepage;
   const notes=useMemo(()=>flattenNotes(novel),[novel]);
   const byId=useMemo(()=>new Map(notes.map(({node})=>[node.id,node])),[notes]);
-  const change=useKachamak(s=>s.changeHomepage);
+  const updatePage=useKachamak(s=>s.changeHomepage);
+  const change=(action:HomeChange)=>updatePage(novel.id,action,page.id);
   const openTab=useOpenWorkspaceTab(novel);
-  const drag=useHomepageDrag(page.locked,(id,p)=>change(novel.id,p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
+  const drag=useHomepageDrag(page.locked,(id,p)=>change(p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
@@ -61,11 +67,13 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
   useEffect(()=>{if(page.locked){setEditor(null);setArtwork(null);}else setPreviewId(null);setMessage('');},[page.locked]);
   const edit=(original?:HomeBlock,cell?:HomeCell)=>{captureOpener();setMessage('');setEditor({original,cell:original?.cell??cell});};
   const preview=page.blocks.find(block=>block.id===previewId);
-  const details=preview&&blockDisplay(preview,byId);
-  const describe=(target:HomeTarget)=>target.kind==='note'?(byId.get(target.id)?.title||'Unavailable note'):target.kind==='web'?new URL(target.url).hostname:(TABS.find(t=>t.key===target.tab)?.label??target.tab);
+  const details=preview&&blockDisplay(preview,byId,titles);
+  const describe=(target:HomeTarget)=>target.kind==='page'?(titles.get(target.id)??'Unavailable page'):target.kind==='note'?(byId.get(target.id)?.title||'Unavailable note'):target.kind==='web'?new URL(target.url).hostname:(TABS.find(t=>t.key===target.tab)?.label??target.tab);
   const openTarget=(target:HomeTarget)=>{
     setMessage('');
-    if(target?.kind==='note'){
+    if(target.kind==='page'){
+      if(!openPage(novel.id,target.id))setMessage('This page is no longer in this book. Unlock the page to choose another destination.');
+    } else if(target.kind==='note'){
       if(!openProjectNote(target.id))setMessage('This note is no longer in this book. Unlock the page to choose another destination.');
     } else if(target?.kind==='tab'){
       openTab(target.tab);
@@ -82,7 +90,7 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
   for(const b of roots)if(b.layout==='row')lanes.set(b.id,Array.from({length:b.columns!},()=>[]));
   for(const b of page.blocks)if(b.cell)lanes.get(b.cell.rowId)?.[b.cell.column]?.push(b);
   function renderBlock(block:HomeBlock,index:number,count:number):React.ReactNode {
-    const display=blockDisplay(block,byId);
+    const display=blockDisplay(block,byId,titles);
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
     const editButton={type:'button' as const,draggable:!page.locked,onDragStart:(e:React.DragEvent<HTMLButtonElement>)=>drag.start(e,block.id,row),onDragEnd:drag.finish,
@@ -108,7 +116,7 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
           })}
         </div>
       </div>:emptyImage&&!page.locked?(
-        <HomeImagePlaceholder onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change(novel.id,{type:'edit',original:block,block:{...block,image}})}/>
+        <HomeImagePlaceholder onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
       ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
         page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
           <button {...editButton} aria-label={page.locked?name:'Edit '+name} title={page.locked?undefined:editButton.title} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
@@ -124,19 +132,20 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
         ? `inset-x-0 h-1 ${hint.side==='before'?'-top-2':'-bottom-2'}` : `inset-y-0 w-1 ${hint.side==='before'?'-left-2':'-right-2'}`}`}/>}
       {!page.locked&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
         {emptyImage&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
-        <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change(novel.id,{type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
-        <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change(novel.id,{type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
-        <Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm(row?'Remove this row and keep its elements on the homepage?':'Remove this block from the homepage?'))change(novel.id,{type:'remove',original:block});}}><Trash2/></Button>
+        <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change({type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
+        <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change({type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
+        <Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm(row?'Remove this row and keep its elements on the homepage?':'Remove this block from the homepage?'))change({type:'remove',original:block});}}><Trash2/></Button>
       </div>}
     </article>;
   }
   return <section aria-label="Project homepage" className="@container flex min-h-0 flex-1 flex-col overflow-auto">
-    <header className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border bg-background px-4 py-2">
-      <Button size="icon" variant="ghost" title="Back to workspace" aria-label="Back to workspace" onClick={onBack}><ArrowLeft/></Button>
-      <h1 className="mr-auto text-lg font-semibold">Homepage</h1>
-      {!page.locked&&<label title="Page width" className="relative grid size-8 shrink-0 place-items-center rounded focus-within:outline @[520px]:block @[520px]:size-auto"><Columns3 aria-hidden="true" className="size-4 @[520px]:hidden"/><select aria-label="Page width" className="absolute inset-0 w-full cursor-pointer rounded border border-border bg-background px-2 py-1 text-sm opacity-0 @[520px]:static @[520px]:opacity-100" value={page.width??'wide'} onChange={e=>change(novel.id,{type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide page</option><option value="reading">Reading width</option></select></label>}
+    <header className="sticky top-0 z-10 flex h-10 shrink-0 items-center gap-1.5 border-b border-white/10 bg-background px-2">
+      <Button size="icon" variant="ghost" className="size-8" title={backLabel} aria-label={backLabel} onClick={goBack}><ArrowLeft/></Button>
+      {onShowPages&&<Button size="icon" variant="ghost" className="size-8 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
+      <h1 className="mr-auto min-w-0 truncate text-base font-semibold" title={page.title}>{page.title}</h1>
+      {!page.locked&&<label title="Page width" className="relative grid size-8 shrink-0 place-items-center rounded focus-within:outline @[520px]:block @[520px]:size-auto"><Columns3 aria-hidden="true" className="size-4 @[520px]:hidden"/><select aria-label="Page width" className="absolute inset-0 w-full cursor-pointer rounded border border-border bg-background px-2 py-1 text-sm opacity-0 @[520px]:static @[520px]:opacity-100" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide page</option><option value="reading">Reading width</option></select></label>}
       {!page.locked&&page.blocks.length>0&&<Button size="sm" variant="outline" aria-label="Add block" title="Add block" onClick={()=>edit()}><Plus/><span className="hidden @[520px]:inline">Add block</span></Button>}
-      <Button size="sm" variant="ghost" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change(novel.id,{type:'lock',locked:!page.locked})}>
+      <Button size="sm" variant="ghost" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change({type:'lock',locked:!page.locked})}>
         {page.locked?<UnlockKeyhole/>:<LockKeyhole/>}<span className="hidden @[360px]:inline">{page.locked?'Unlock page':'Lock page'}</span>
       </Button>
     </header>
@@ -152,8 +161,8 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
       </div>
     </div>
     {!page.locked&&artwork&&<HomeArtworkEditor src={artwork.src} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
-      onSave={options=>change(novel.id,{type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
-    {!page.locked&&editor&&<HomeBlockEditor original={editor.original} cell={editor.cell} notes={notes} onClose={closeEditor} onSave={block=>change(novel.id,editor.original?{type:'edit',original:editor.original,block}:{type:'add',block})}/>}
+      onSave={options=>change({type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
+    {!page.locked&&editor&&<HomeBlockEditor original={editor.original} cell={editor.cell} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block})}/>}
     {page.locked&&preview&&details&&<Dialog open onOpenChange={open=>{if(!open){setPreviewId(null);restoreFocus();}}}>
       <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>{details.title||'Block preview'}</DialogTitle></DialogHeader>

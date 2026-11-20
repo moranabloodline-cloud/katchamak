@@ -7,7 +7,7 @@ import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
 import {readHomepageImage} from '@/lib/kachamak/project-settings';
-import {isWebsite, youtubeVideoId, type HomeBlock, type HomeCell, type HomeLayout, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
+import {isWebsite, youtubeVideoId, type HomeBlock, type HomeCell, type HomeLayout, type homepageRows, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
 import {HomeArtwork} from './HomeArtwork';
 import {HomeArtworkEditor} from './HomeArtworkEditor';
 import {HomeDestinationFields,homeSelectClass} from './HomeDestinationFields';
@@ -27,8 +27,8 @@ const layouts = [
 ] as const;
 
 
-export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
-  original?:HomeBlock; cell?:HomeCell; notes:ReturnType<typeof flattenNotes>;
+export function HomeBlockEditor({original,cell,notes,pages,onSave,onClose}:{
+  original?:HomeBlock; cell?:HomeCell; notes:ReturnType<typeof flattenNotes>; pages:ReturnType<typeof homepageRows>;
   onSave:(block:HomeBlock)=>boolean; onClose:()=>void;
 }) {
   const [draft,setDraft]=useState<HomeBlock>(()=>original??{id:crypto.randomUUID(),layout:'card',width:'standard',title:'',text:'',cell});
@@ -42,7 +42,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
   const chooseLayout=(layout:HomeLayout)=>patch({layout,width:layout==='card'?'standard':layout==='text'?'wide':'full',columns:draft.columns??2});
   const links=draft.links??[];
   const updateLink=(id:string,value:Partial<HomeLink>)=>patch({links:links.map(l=>l.id===id?{...l,...value}:l)});
-  const validDestination=(target:HomeTarget)=>target.kind==='note'?notes.some(n=>n.node.id===target.id):target.kind==='web'?isWebsite(target.url):true;
+  const validDestination=(target:HomeTarget)=>target.kind==='page'?pages.some(p=>p.id===target.id):target.kind==='note'?notes.some(n=>n.node.id===target.id):target.kind==='web'?isWebsite(target.url):true;
   const loadImage=async(file:File)=>{
     const version=++upload.current;setBusy(true);setError('');
     try {
@@ -56,7 +56,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
     if(video&&!youtubeVideoId(draft.videoUrl)){setError('Enter a YouTube video address.');return;}
     if(list&&links.some(l=>!validDestination(l.target))){setError('Choose a valid destination for every link.');return;}
     const target=hasDestination?draft.target:undefined;
-    if(target&&!validDestination(target)){setError('Choose a note or enter a full website address.');return;}
+    if(target&&!validDestination(target)){setError('Choose a valid link destination.');return;}
     if(draft.layout!=='image'&&!row&&!divider&&!video&&!draft.title.trim()&&!draft.text.trim()&&!draft.image&&!target&&!(list&&links.length)){setError('Add text, an image or a destination.');return;}
     const block:HomeBlock={...draft,title:draft.title.trim(),target,columns:row?draft.columns:undefined,
       links:list?links:undefined,videoUrl:video?draft.videoUrl?.trim():undefined};
@@ -81,12 +81,12 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
           {draft.image&&<Button type="button" variant="ghost" onClick={()=>{upload.current++;setBusy(false);patch({image:undefined,imageFrame:undefined,imageCutout:undefined});}}>Remove image</Button>}
         </div>}
         {!row&&!draft.cell&&<Label className="grid gap-2">Width<select className={homeSelectClass} value={draft.width} onChange={e=>patch({width:e.target.value as HomeBlock['width']})}><option value="standard">Standard</option><option value="wide">Wide</option><option value="full">Full row</option></select></Label>}
-        {hasDestination&&<HomeDestinationFields notes={notes} target={draft.target} onChange={target=>patch({target})} optional/>}
+        {hasDestination&&<HomeDestinationFields notes={notes} pages={pages} target={draft.target} onChange={target=>patch({target})} optional/>}
         {video&&<Label className="grid gap-2">YouTube address<Input type="url" required placeholder="https://www.youtube.com/watch?v=…" value={draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></Label>}
         {list&&<div className="grid gap-3">{links.map((link,i)=><fieldset key={link.id} className="grid gap-3 rounded-md border border-border p-3">
           <legend className="px-1 text-sm">Link {i+1}</legend>
           <Label className="grid gap-2">Link label<Input value={link.label} onChange={e=>updateLink(link.id,{label:e.target.value})}/></Label>
-          <HomeDestinationFields notes={notes} target={link.target} onChange={target=>{if(target)updateLink(link.id,{target});}}/>
+          <HomeDestinationFields notes={notes} pages={pages} target={link.target} onChange={target=>{if(target)updateLink(link.id,{target});}}/>
           <Button type="button" variant="ghost" className="justify-self-end" onClick={()=>patch({links:links.filter(l=>l.id!==link.id)})}><Trash2/>Remove link</Button>
         </fieldset>)}<Button type="button" variant="outline" onClick={()=>patch({links:[...links,{id:crypto.randomUUID(),label:'',target:{kind:'note',id:''}}]})}><Plus/>Add link</Button></div>}
         {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}

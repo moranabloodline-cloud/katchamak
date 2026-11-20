@@ -153,4 +153,34 @@ assert.deepEqual(drawnSize,[1800,180]);
 assert.equal(closedBitmaps,2);
 delete globalThis.document;
 delete globalThis.createImageBitmap;
-console.log('Homepage edits, project isolation, lock, order, navigation, backup and validation passed.');
+// A pre-tree page stays at its original address and keeps its own locked canvas.
+store().openNovel(first.id);
+const oldRoot=structuredClone(current().homepage);
+assert.ok(store().createHomePage(first.id,'home','Atlas'));
+const atlas=store().activeHomePageId;
+assert.ok(store().createHomePage(first.id,atlas,'Port'));
+const port=store().activeHomePageId;
+assert.ok(store().createHomePage(first.id,null,'Index'));
+assert.ok(store().openHomePage(first.id,atlas));
+assert.ok(store().changeHomepage(first.id,add({...card,target:{kind:'page',id:port}}),atlas));
+assert.ok(store().changeHomepage(first.id,{type:'lock',locked:true},atlas));
+assert.ok(store().changeHomepage(first.id,add({...card,title:'Deep water'}),port));
+assert.equal(store().changeHomepage(first.id,add(map),atlas),false);
+assert.equal(store().renameHomePage(first.id,port,'Harbour'),true);
+assert.deepEqual(current().homepage,oldRoot);
+assert.equal(current().homePages.find(p=>p.id===atlas).blocks[0].target.id,port);
+assert.equal(current().homePages.find(p=>p.id===port).locked,false);
+assert.ok(isReadableProject(JSON.parse(JSON.stringify(current()))));
+for(const homePages of [[{...current().homePages[0],parentId:'missing'}],
+  current().homePages.map(p=>p.id===atlas?{...p,parentId:port}:p),
+  [...current().homePages,current().homePages[0]], [{...current().homePages[0],id:'home'}]]) {
+  assert.equal(isReadableProject({...current(),homePages}),false);
+}
+assert.ok(store().openHomePage(first.id,port));
+assert.equal(store().openHomePage(first.id,'missing'),false);
+assert.equal(store().changeHomepage(first.id,add(map),'missing'),false);
+assert.equal(store().createHomePage(second.id,null,'Wrong project'),false);
+store().openNovel(second.id);
+assert.equal(store().activeHomePageId,'home');
+assert.equal(store().novels[1].homePages,undefined);
+console.log('Homepage tree, edits, project isolation, locks, order, navigation, backup and validation passed.');

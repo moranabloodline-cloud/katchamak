@@ -1,5 +1,6 @@
 'use client';
 import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
+import {HOME_ROOT, homepageEntry} from './homepage';
 import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections, exportNovelJson } from './store';
 import { validCloudLibrary } from './cloud-write-validation.mjs';
@@ -17,7 +18,7 @@ import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery
 import { cloneWorkspaceTab } from './clone-workspace-tab';
 import { cloneLayout, withExistingTexts } from './clone-text-recovery';
 
-type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'>;
+type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'> & {activeHomePageId?: string};
 type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
 export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, conflict: false }));
 let revision = 0, saved = '', applying = false, subscribed = false;
@@ -35,7 +36,8 @@ const snapshot = () => {
   const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
   const {selectedCollection, expanded} = useLibraryPreferences.getState();
   const {editorFont:font,editorSize:size,editorSpacing:spacing,pageFormat:page,editorSpellCheck:spellCheck}=useKachamak.getState();
-  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, editorAppearance:{font,size,spacing,page,spellCheck}, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane}, location: {selectedCollection, expanded}});
+  const homeId=useKachamak.getState().activeHomePageId;
+  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, editorAppearance:{font,size,spacing,page,spellCheck}, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane, ...(view==='homepage' && homeId!==HOME_ROOT ? {activeHomePageId:homeId} : {})}, location: {selectedCollection, expanded}});
   snapshotDirty=false;
   return cachedSnapshot;
 };
@@ -172,6 +174,8 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
     navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
+    const homeId = 'activeHomePageId' in saved ? saved.activeHomePageId : undefined;
+    navigation.activeHomePageId = novel && typeof homeId === 'string' && homepageEntry(novel,homeId) ? homeId : HOME_ROOT;
     navigation.selectedNodeId = note(saved.selectedNodeId);
     if(preferredView==='timeline'&&(!navigation.selectedNodeId||novel&&findNodeInNovel(novel,navigation.selectedNodeId)?.section==='timeline')&&navigation.activeTab!=='trash')navigation.activeTab='timeline';
     navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);
@@ -233,7 +237,7 @@ export async function initializeWebLibrary() {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
-      const fields=['novels','view','activeNovelId','activeTab','selectedNodeId','paneAId','paneBId','activePane','editorFont','editorSize','editorSpacing','pageFormat','editorSpellCheck'] as const;
+      const fields=['novels','view','activeNovelId','activeHomePageId','activeTab','selectedNodeId','paneAId','paneBId','activePane','editorFont','editorSize','editorSpacing','pageFormat','editorSpellCheck'] as const;
       useKachamak.subscribe((state,before)=>{if(fields.some(field=>state[field]!==before[field]))changed();});
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
       useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});

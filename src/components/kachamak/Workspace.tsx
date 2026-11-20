@@ -14,7 +14,7 @@ import { findNodeInNovel } from "@/lib/kachamak/utils";
 import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { NotesSection } from "./NotesSection";
-import { ProjectHomepage } from "./ProjectHomepage";
+
 import { TrashView } from "./TrashView";
 import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
 import { AccountDialog } from "./AccountDialog";
@@ -150,10 +150,8 @@ export function Workspace() {
       {/* body — every tab is the same note system; only Trash is different */}
       {trashOpen ? (
         <TrashView key={activeNovelId} />
-      ) : activeTab === "trash" ? (
-        <ProjectHomepage key={novel.id} novel={novel} onBack={()=>openTab("trash")} />
       ) : (
-        <NotesSection section={folder?.section ?? (activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} revealSearch={searchShortcut}/>
+        <NotesSection section={folder?.section ?? (activeTab==="trash" || activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} revealSearch={searchShortcut}/>
       )}
 
       <AutoLinkReview />

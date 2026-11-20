@@ -9,6 +9,8 @@ import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
 import {ProjectHomepage} from './ProjectHomepage';
+import {HomepageTree} from './HomepageTree';
+import {HOME_ROOT, homepageEntry} from '@/lib/kachamak/homepage';
 import {ContinuousWriteArea} from './ContinuousWriteArea';
 import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
@@ -322,6 +324,12 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
     setCompactFamily(true);
   };
   const selectedSection = hit?.section ?? section;
+  const homeSelection = useKachamak(s=>s.activeHomePageId);
+  const homeId = view==='homepage' && novel && homepageEntry(novel,homeSelection) ? homeSelection : HOME_ROOT;
+  const [collapsedPages,setCollapsedPages]=useState<Set<string>>(new Set());
+  const [mobilePages,setMobilePages]=useState(false);
+  useEffect(()=>{setCollapsedPages(new Set());setMobilePages(false);},[activeNovelId]);
+  useEffect(()=>{if(view!=='homepage')setMobilePages(false);},[view]);
 
   const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
   const target=view!=='continuous'&&selected?.documentTarget?.amount?selected.documentTarget:null;
@@ -329,18 +337,19 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
 
   return (
     <div className="flex min-h-0 flex-1">
-      {leftPanelOpen || revealSearch ? (
+      {leftPanelOpen || revealSearch || mobilePages ? (
         <>
           <aside
             data-workspace-chrome
-            data-search-shortcut={revealSearch || undefined}
+            data-search-shortcut={revealSearch || mobilePages || undefined}
             ref={leftPanelRef}
             style={{ width: leftPanelWidth }}
-            className="hidden shrink-0 flex-col bg-black/20 md:flex"
+            className={'hidden shrink-0 flex-col bg-black/20 md:flex '+(mobilePages?'max-md:bottom-0 max-md:max-h-[80dvh] max-md:top-auto max-md:border max-md:border-border max-md:shadow-xl':'')}
           >
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
-              <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />
+              {view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
+                <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />}
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
                 Collapse skroz desno u istom redu — po Nikoli */}
@@ -349,14 +358,14 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
               <span className="ml-auto" />
               <button
                 type="button"
-                onClick={() => setAllNodesCollapsed(section, false)}
+                onClick={() => view==='homepage'?setCollapsedPages(new Set()):setAllNodesCollapsed(section, false)}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 Expand
               </button>
               <button
                 type="button"
-                onClick={() => { setTreeReveal(undefined); setAllNodesCollapsed(section, true); }}
+                onClick={() => { if(view==='homepage'){setCollapsedPages(new Set([HOME_ROOT,...(novel?.homePages??[]).map(p=>p.id)]));return;} setTreeReveal(undefined); setAllNodesCollapsed(section, true); }}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 Collapse
@@ -387,7 +396,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
       )}
 
       <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
-        {view==='homepage' && novel ? <ProjectHomepage key={novel.id} novel={novel} onBack={()=>setView(previousView.current)} /> : <>
+        {view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} onBack={()=>setView(previousView.current)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
         {view!=="timeline"&&view!=="family"&&<EditorToolbar node={selected} />}

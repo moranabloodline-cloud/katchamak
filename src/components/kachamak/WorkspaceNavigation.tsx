@@ -1,9 +1,10 @@
 "use client";
 import {useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
-import {ArrowLeft,FileText,Search} from 'lucide-react';
+import {ArrowLeft,FileText,House,Search} from 'lucide-react';
+import {homepageRows} from '@/lib/kachamak/homepage';
 import {useKachamak} from '@/lib/kachamak/store';
-import {TABS,type NoteNode,type SectionKey} from '@/lib/kachamak/types';
+import {TABS} from '@/lib/kachamak/types';
 import {openProjectNote,returnToPreviousNote,useNoteTrail} from '@/lib/kachamak/note-navigation';
 import {findNodeInNovel} from '@/lib/kachamak/utils';
 import {indexNotes,searchNotes} from '@/lib/kachamak/knowledge';
@@ -24,7 +25,7 @@ export function activeWritingEditor() {
   return document.querySelector<HTMLElement>(`${scope} .kachamak-editor[contenteditable="true"]`);
 }
 
-function ProjectSearch() {
+function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const [q, setQ] = useState("");
@@ -37,7 +38,16 @@ function ProjectSearch() {
   const origin=useRef<HTMLElement|null>(null);
   const caret=useRef<Range|null>(null);
   const [highlight,setHighlight]=useState(0);
-  const results = useMemo(() => novel && q.trim() ? searchNotes(indexNotes(novel),q).slice(0,20) : [], [novel,q]);
+  const results = useMemo(() => {
+    const query=q.trim().toLocaleLowerCase();
+    if(!novel || !query)return [];
+    const pages=includeHomePages ? homepageRows(novel).filter(p=>p.title.toLocaleLowerCase().includes(query))
+      .map(p=>({id:p.id, title:p.title, group:'Homepage', page:true, icon:'', color:undefined})) : [];
+    if(pages.length>=20)return pages.slice(0,20);
+    const notes=searchNotes(indexNotes(novel),q).slice(0,20-pages.length).map(({node,section})=>({id:node.id, title:node.title,
+      group:TABS.find(t=>t.key===section)?.label ?? section, page:false, icon:node.icon, color:node.color}));
+    return [...pages,...notes];
+  }, [novel,q,includeHomePages]);
   const expanded=open && !!q.trim();
   const activeIndex=Math.min(highlight,results.length-1);
   const activeId=expanded && activeIndex>=0 ? `${listId}-${activeIndex}` : undefined;
@@ -70,10 +80,10 @@ function ProjectSearch() {
     }
   };
 
-  const go = (r: { node: NoteNode; section: SectionKey }, keyboard=false) => {
+  const go = (r: typeof results[number], keyboard=false) => {
     flushSync(()=>{
       const view=useKachamak.getState().view;
-      const opened=openProjectNote(r.node.id);
+      const opened=r.page && novel ? useKachamak.getState().openHomePage(novel.id,r.id) : openProjectNote(r.id);
       if(keyboard && opened && useKachamak.getState().view==='timeline'){
         useKachamak.getState().setView(view==='split' ? 'split' : 'write');
       }
@@ -120,10 +130,10 @@ function ProjectSearch() {
       {expanded && (
         <div id={listId} role="listbox" aria-label="Search results" className="absolute inset-x-0 top-11 z-50 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
           {results.map((r, i) => {
-            const Icon = iconByName(r.node.icon);
+            const Icon = r.page ? House : iconByName(r.icon);
             return (
               <button
-                key={r.node.id}
+                key={(r.page?'home:':'note:')+r.id}
                 id={`${listId}-${i}`}
                 role="option"
                 tabIndex={-1}
@@ -137,14 +147,14 @@ function ProjectSearch() {
                 {Icon ? (
                   <Icon
                     className="h-3.5 w-3.5 shrink-0"
-                    style={{ color: r.node.color || "#a1a1aa" }}
+                    style={{ color: r.color || (r.page ? "#fcd34d" : "#a1a1aa") }}
                   />
                 ) : (
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" style={{ color: r.node.color || undefined }} />
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" style={{ color: r.color || undefined }} />
                 )}
-                <span className="min-w-0 flex-1 truncate" style={{ color: r.node.color || undefined }}>{r.node.title}</span>
+                <span className="min-w-0 flex-1 truncate" style={{ color: r.color || undefined }}>{r.title}</span>
                 <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {TABS.find((t) => t.key === r.section)?.label ?? r.section}
+                  {r.group}
                 </span>
               </button>
             );
@@ -158,6 +168,6 @@ function ProjectSearch() {
   );
 }
 
-export function WorkspaceNavigation() {
-  return <div className="flex min-w-0 flex-1 items-center gap-1.5"><ProjectSearch/><NoteBackButton/></div>;
+export function WorkspaceNavigation({includeHomePages=false}:{includeHomePages?:boolean}={}) {
+  return <div className="flex min-w-0 flex-1 items-center gap-1.5"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
 }

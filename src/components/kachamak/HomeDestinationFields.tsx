@@ -2,22 +2,27 @@ import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {SECTION_KEYS,TABS,type SectionKey} from '@/lib/kachamak/types';
 import type {flattenNotes} from '@/lib/kachamak/note-links';
-import type {HomeTarget} from '@/lib/kachamak/homepage';
+import type {HomeTarget, homepageRows} from '@/lib/kachamak/homepage';
 
 export const homeSelectClass='h-9 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm';
 
-export function HomeDestinationFields({notes,target,onChange,optional=false}:{
+export function HomeDestinationFields({notes,pages,target,onChange,optional=false}:{
+  pages:ReturnType<typeof homepageRows>;
   notes:ReturnType<typeof flattenNotes>;target?:HomeTarget;onChange:(next?:HomeTarget)=>void;optional?:boolean;
 }){
   return <>
     <Label className="grid gap-2">Link to<select className={homeSelectClass} value={target?.kind??'none'} onChange={e=>{
       switch(e.target.value){
         case 'note':onChange({kind:'note',id:''});break;
+        case 'page':onChange({kind:'page',id:''});break;
         case 'tab':onChange({kind:'tab',tab:'binder'});break;
         case 'web':onChange({kind:'web',url:''});break;
         default:onChange(undefined);
       }
-    }}>{optional&&<option value="none">No destination</option>}<option value="note">Book note</option><option value="tab">Workspace tab</option><option value="web">Website</option></select></Label>
+    }}>{optional&&<option value="none">No destination</option>}<option value="page">Homepage</option><option value="note">Book note</option><option value="tab">Workspace tab</option><option value="web">Website</option></select></Label>
+    {target?.kind==='page'&&<Label className="grid gap-2">Page<select className={homeSelectClass} required value={target.id} onChange={e=>onChange({kind:'page',id:e.target.value})}>
+      <option value="">Choose a page</option>{pages.map(page=><option key={page.id} value={page.id}>{page.path}</option>)}
+    </select></Label>}
     {target?.kind==='note'&&<Label className="grid gap-2">Book note<select className={homeSelectClass} required value={target.id} onChange={e=>onChange({kind:'note',id:e.target.value})}><option value="">Choose a note</option>
       {SECTION_KEYS.map(section=>{
         const entries=notes.filter(entry=>entry.section===section);

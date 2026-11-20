@@ -1,4 +1,4 @@
-import { SECTION_KEYS, type SectionKey } from './types';
+import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import { validCoverImage } from './project-settings';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video'] as const;
@@ -7,6 +7,7 @@ export type HomeCell = {rowId:string; column:number};
 export type HomeLink = {id:string; label:string; target:HomeTarget};
 export type HomeTarget =
   | { kind: 'note'; id: string }
+  | { kind: 'page'; id: string }
   | { kind: 'tab'; tab: SectionKey }
   | { kind: 'web'; url: string };
 
@@ -42,6 +43,67 @@ export interface HomeBlock {
 }
 export interface Homepage { locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
+export const HOME_ROOT = 'home';
+export interface HomePageEntry extends Homepage {
+  id: string;
+  title: string;
+  parentId: string | null;
+}
+
+// Keep the original canvas at the same storage location, including for old backups.
+export function homepageEntry(novel: Novel, id: string): HomePageEntry | undefined {
+  if (id === HOME_ROOT) return {...(novel.homepage ?? EMPTY_HOMEPAGE), id, title:'Homepage', parentId:null};
+  return novel.homePages?.find(page => page.id === id);
+}
+
+export function homepageRows(novel: Novel) {
+  const children = new Map<string | null, HomePageEntry[]>();
+  children.set(null, [homepageEntry(novel, HOME_ROOT)!]);
+  for (const page of novel.homePages ?? []) {
+    const siblings = children.get(page.parentId) ?? [];
+    siblings.push(page);
+    children.set(page.parentId, siblings);
+  }
+  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean}[] = [];
+  const pending = children.get(null)!.map(page => ({page, path:page.title, depth:0})).reverse();
+  const visited = new Set<string>();
+  while (pending.length) {
+    const {page, path, depth} = pending.pop()!;
+    if (visited.has(page.id)) continue;
+    visited.add(page.id);
+    const nested = children.get(page.id) ?? [];
+    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0});
+    for (let i = nested.length - 1; i >= 0; i--) {
+      const child = nested[i];
+      pending.push({page:child, path:path+' / '+child.title, depth:depth+1});
+    }
+  }
+  return rows;
+}
+
+export function validHomePages(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  const parents = new Map<string, string | null>([[HOME_ROOT, null]]);
+  for (const page of value) {
+    if (!page || typeof page.id !== 'string' || !page.id || parents.has(page.id) ||
+        typeof page.title !== 'string' || !page.title.trim() ||
+        !(page.parentId === null || typeof page.parentId === 'string') || !validHomepage(page)) return false;
+    parents.set(page.id, page.parentId);
+  }
+  const resolved = new Set<string>([HOME_ROOT]);
+  for (const id of parents.keys()) {
+    const path = new Set<string>();
+    let cursor: string | null = id;
+    while (cursor !== null && !resolved.has(cursor)) {
+      if (!parents.has(cursor) || path.has(cursor)) return false;
+      path.add(cursor);
+      cursor = parents.get(cursor)!;
+    }
+    for (const visited of path) resolved.add(visited);
+  }
+  return true;
+}
 
 export function isWebsite(value: unknown): value is string {
   if (typeof value !== 'string') return false;
@@ -77,6 +139,7 @@ function validTarget(value: HomeTarget | undefined) {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object') return false;
   switch (value.kind) {
+    case 'page':
     case 'note': return typeof value.id === 'string' && !!value.id;
     case 'tab': return SECTION_KEYS.includes(value.tab);
     case 'web': return isWebsite(value.url);

@@ -1,3 +1,5 @@
+> **2026-11-20 — Stablo početnih stranica.** Homepage ima svoje stablo sa stranicama i podstranicama. Svaka koristi isti editor blokova i ima zasebnu bravu. Kartice i liste linkova mogu da otvore drugu stranicu knjige. Stara početna strana je koren stabla.
+
 > **2026-11-20 — Lepljenje naslova i pasusa.** U editoru nalepljeni H3 koristi veličinu naslova i prored aktivnog taba. Pri lepljenju usred ručno formatiranog teksta čuvaju se stil okolnih reči, odvojeni pasusi, prazni pasusi i prelomi reda.
 
 > **2026-11-20 — Format svakog taba zasebno.** Format čuva podrazumevani izgled za izabrani tab u toj knjizi. Na Homepage-u menja tipografiju blokova. U beleškama traka editora i dalje menja označeni tekst. Stara podešavanja beleške važe dok korisnik ne izabere drugu vrednost za tu opciju na tabu.
@@ -565,6 +567,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Homepage stablo i navigacija.** Store v48 zadržava postojeći korenski raspored i podržava imenovane stranice sa stabilnim ID-jevima. Provereni su kreiranje dve dubine i posebne glavne strane, zaključavanje, otvaranje iz kartice posle preimenovanja i osvežavanja, veza do beleške i izbor stranice na telefonu. Zaglavlje platna i red pretrage u probnoj knjizi izmereni su na 40 px.
 
 - **2026-11-20 — Copy/paste u Templates.** U probnoj knjizi provereni su Ctrl+C i Ctrl+V, lepljenje preko selekcije i između reči, izgled H3 pri promeni veličine i proreda taba, prazni pasusi, ručni prelom reda, Undo/Redo i čuvanje posle ponovnog otvaranja.
 

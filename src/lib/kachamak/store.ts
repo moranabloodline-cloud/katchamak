@@ -25,7 +25,7 @@ import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspace
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
-import { changeHomepage, EMPTY_HOMEPAGE, type HomeChange } from './homepage';
+import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
 
@@ -131,7 +131,12 @@ interface KachamakState {
   select: (id: string | null) => void;
   setRenamingNode: (id: string | null) => void;
   renameNovel: (title: string) => void;
-  changeHomepage: (projectId:string,action:HomeChange) => boolean;
+  activeHomePageId: string;
+  openHomePage: (projectId: string, pageId: string) => boolean;
+  createHomePage: (projectId: string, parentId: string | null, title: string) => boolean;
+  renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
+
+  changeHomepage: (projectId:string,action:HomeChange,pageId?:string) => boolean;
   updateNovelSettings: (id:string,patch:NovelSettingsPatch) => boolean;
   setDefaultAuthor: (a: string) => void;
 
@@ -320,6 +325,7 @@ export const useKachamak = create<KachamakState>()(
     (set, get) => ({
       novels: [],
       activeNovelId: null,
+      activeHomePageId: HOME_ROOT,
       activeTab: "binder",
       selectedNodeId: null,
       renamingNodeId: null,
@@ -464,6 +470,7 @@ export const useKachamak = create<KachamakState>()(
         set((s) => ({
           novels: [...s.novels, n],
           activeNovelId: n.id,
+          activeHomePageId: HOME_ROOT,
           activeTab: "binder",
           selectedNodeId: null,
           paneAId: null,
@@ -491,6 +498,7 @@ export const useKachamak = create<KachamakState>()(
           set((s) => ({
             novels: [...s.novels, n as Novel],
             activeNovelId: n.id,
+            activeHomePageId: HOME_ROOT,
             activeTab: "binder",
             selectedNodeId: null,
             paneAId: null,
@@ -512,6 +520,7 @@ export const useKachamak = create<KachamakState>()(
       openNovel: (id) =>
         set({
           activeNovelId: id,
+          activeHomePageId: HOME_ROOT,
           activeTab: "binder",
           selectedNodeId: null,
           paneAId: null,
@@ -607,12 +616,36 @@ export const useKachamak = create<KachamakState>()(
 
       setRenamingNode: (id) => set({ renamingNodeId: id }),
 
-      changeHomepage: (projectId,action) => {
-        const state=get(), novel=state.novels.find(n=>n.id===projectId);
-        if(!novel||state.activeNovelId!==projectId)return false;
-        const homepage=changeHomepage(novel.homepage??EMPTY_HOMEPAGE,action);
-        if(!homepage)return false;
-        set({novels:state.novels.map(n=>n===novel?touch({...novel,homepage}):n)});
+      openHomePage: (projectId, pageId) => {
+        const state = get(), novel = state.novels.find(n => n.id === projectId);
+        if (state.activeNovelId !== projectId || !novel || !homepageEntry(novel, pageId)) return false;
+        set({activeHomePageId: pageId, view: 'homepage'});
+        return true;
+      },
+      createHomePage: (projectId, parentId, title) => {
+        const state = get(), novel = state.novels.find(n => n.id === projectId);
+        if (state.activeNovelId !== projectId || !novel || !title.trim() || (parentId !== null && !homepageEntry(novel, parentId))) return false;
+        const page = {...EMPTY_HOMEPAGE, id: uid(), title: title.trim(), parentId};
+        set({novels: state.novels.map(n => n === novel ? touch({...n, homePages: [...(n.homePages ?? []), page]}) : n),
+          activeHomePageId: page.id, view:'homepage'});
+        return true;
+      },
+      renameHomePage: (projectId, pageId, title) => {
+        const state = get(), novel = state.novels.find(n => n.id === projectId);
+        if (state.activeNovelId !== projectId || !title.trim() || !novel?.homePages?.some(p => p.id === pageId)) return false;
+        set({novels: state.novels.map(n => n === novel ? touch({...n, homePages: n.homePages!.map(p => p.id === pageId ? {...p, title: title.trim()} : p)}) : n)});
+        return true;
+      },
+
+      changeHomepage: (projectId, action, pageId = HOME_ROOT) => {
+        const state = get(), novel = state.novels.find(n => n.id === projectId);
+        if (!novel || state.activeNovelId !== projectId) return false;
+        const current = pageId === HOME_ROOT ? novel.homepage ?? EMPTY_HOMEPAGE : novel.homePages?.find(p => p.id === pageId);
+        const next = current && changeHomepage(current, action);
+        if (!next) return false;
+        const updated = pageId === HOME_ROOT ? {...novel, homepage: next} :
+          {...novel, homePages: novel.homePages!.map(p => p.id === pageId ? {...p, ...next} : p)};
+        set({novels: state.novels.map(n => n === novel ? touch(updated) : n)});
         return true;
       },
 
@@ -931,7 +964,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 47,
+      version: 48,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -944,6 +977,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<48) s.activeHomePageId=HOME_ROOT;
         if(version<47){ /* Optional tab defaults leave existing notes and their formatting intact. */ }
         if(version<46){ /* Homepage artwork without a frame or cutout renders its original image. */ }
         if(version<45){ /* Standalone images reuse the existing homepage block and raster fields. */ }

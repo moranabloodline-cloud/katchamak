@@ -113,6 +113,7 @@ export interface TrashItem {
 
 export interface Novel {
   homepage?: import('./homepage').Homepage;
+  homePages?: import('./homepage').HomePageEntry[];
   familyRelationships?: FamilyRelationship[];
   demo?: { key: string; version: number; edition?: number; source?: boolean; timelineRootId?: string };
   id: string;

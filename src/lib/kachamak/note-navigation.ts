@@ -6,13 +6,13 @@ import type {TabKey, TreeScope, ViewMode} from './types';
 type Location = {
   activeTab: TabKey; selectedNodeId: string | null;
   paneAId: string | null; paneBId: string | null;
-  activePane: 'a' | 'b'; view: ViewMode; treeScope: TreeScope;
+  activePane: 'a' | 'b'; view: ViewMode; treeScope: TreeScope; activeHomePageId?: string;
 };
 // A short reading trail belongs to this open session, never to a manuscript or backup.
 export const useNoteTrail=create<{projectId:string|null;entries:Location[]}>(()=>({projectId:null,entries:[]}));
 export function captureNoteLocation():Location {
   const {activeTab,selectedNodeId,paneAId,paneBId,activePane,view,treeScope}=useKachamak.getState();
-  return {activeTab,selectedNodeId,paneAId,paneBId,activePane,view,treeScope};
+  return {activeTab,selectedNodeId,paneAId,paneBId,activePane,view,treeScope,...(view==='homepage'?{activeHomePageId:useKachamak.getState().activeHomePageId}:{})};
 }
 export function openProjectNote(id:string,beside=false) {
   const state=useKachamak.getState(),novel=state.novels.find(n=>n.id===state.activeNovelId);
