@@ -20,42 +20,6 @@ async function asset(url, integrity) {
   return bytes;
 }
 
-function solidBackdrop(pixels,width,height) {
-  const channels=[[],[],[]];
-  let transparent=0;
-  function sample(x,y) {
-    const i=(y*width+x)*4;
-    if (pixels[i+3]<32) {transparent++;return;}
-    for (let c=0;c<3;c++) channels[c].push(pixels[i+c]);
-  }
-  for(let s=0;s<64;s++){
-    const x=Math.round(s*(width-1)/63), y=Math.round(s*(height-1)/63);
-    sample(x,0);sample(x,height-1);sample(0,y);sample(width-1,y);
-  }
-  if(transparent>240)throw Error('The image already has a transparent background.');
-  const count=channels[0].length;
-  const color=channels.map(values=>[...values].sort((a,b)=>a-b)[count>>1]);
-  let matching=0;
-  for(let i=0;i<count;i++) {
-    if(channels.every((channel,c)=>Math.abs(channel[i]-color[c])<=15))matching++;
-  }
-  return matching>=count*.94?color:null;
-}
-
-function removeSolid(pixels,color) {
-  let visible=0;
-  for(let i=0;i<pixels.length;i+=4){
-    const d=Math.max(Math.abs(color[0]-pixels[i]),Math.abs(color[1]-pixels[i+1]),Math.abs(color[2]-pixels[i+2]));
-    const alpha=Math.max(0,Math.min(1,(d-10)/35));
-    if(alpha>0 && alpha<1){
-      for(let c=0;c<3;c++)pixels[i+c]=color[c]+(pixels[i+c]-color[c])/alpha;
-    }
-    pixels[i+3]*=alpha;
-    if(pixels[i+3]>32)visible++;
-  }
-  if(!visible)throw Error('No foreground was found in this image.');
-}
-
 async function subjectMask(canvas) {
   self.postMessage({status:'Loading photo tools (15 MB on first use)…'});
   importScripts('ort-wasm-1.17.3.min.js');
@@ -92,18 +56,26 @@ async function subjectMask(canvas) {
   } finally {URL.revokeObjectURL(wasmUrl);}
 }
 
-self.onmessage=async({data:src})=>{
+self.onmessage=async({data})=>{
   try {
+    const src=typeof data==='string'?data:data.src;
+    const logoMode=data.mode==='logo';
     const original=await createImageBitmap(await (await fetch(src)).blob());
     const canvas=new OffscreenCanvas(original.width,original.height);
     const ctx=canvas.getContext('2d',{willReadFrequently:true});
     ctx.drawImage(original,0,0);original.close();
     const image=ctx.getImageData(0,0,canvas.width,canvas.height);
-    const bg=solidBackdrop(image.data,canvas.width,canvas.height);
-    if(bg){
-      removeSolid(image.data,bg);
+    const {removeGraphicMatte}=await import('./logo-matte.js');
+    const result=removeGraphicMatte(image.data,canvas.width,canvas.height,logoMode);
+    if(result==='transparent'){
+      if(typeof data==='string')throw Error('The original image already has a transparent background.');
+      self.postMessage({useOriginal:true});
+      return;
+    }
+    if(result==='removed'){
       ctx.putImageData(image,0,0);
     }else{
+      if(logoMode)throw Error('A uniform logo background could not be identified. The current preview is unchanged.');
       const mask=await subjectMask(canvas);
       ctx.globalCompositeOperation='destination-in';
       ctx.drawImage(mask,0,0,canvas.width,canvas.height);

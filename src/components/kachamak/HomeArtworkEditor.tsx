@@ -17,6 +17,7 @@ export function HomeArtworkEditor({src,block,onClose,onSave}:{
 }){
   const [natural,setNatural]=useState(0),[frame,setFrame]=useState(block.imageFrame);
   const [cutout,setCutout]=useState(block.imageCutout);
+  const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState(''),[error,setError]=useState('');
   const worker=useRef<Worker|null>(null);
   const canvas=useRef<HTMLDivElement>(null);
@@ -54,11 +55,11 @@ export function HomeArtworkEditor({src,block,onClose,onSave}:{
     setFrame({...g.frame,x:horizontal>1?clamp(g.frame.x-dx/horizontal,0,1):g.frame.x,
       y:vertical>1?clamp(g.frame.y-dy/vertical,0,1):g.frame.y});
   }
-  function removeBackground(){
+  function removeBackground(mode:'auto'|'logo'='auto'){
     if(worker.current)return;
-    setError('');
+    setError('');setNotice('');
     try{
-      const job=new Worker('/image-tools/cutout-worker.js');
+      const job=new Worker('/image-tools/cutout-worker.js?v=2');
       worker.current=job;
       setBusy('Removing background…');
       const finish=()=>{job.terminate();worker.current=null;setBusy('');};
@@ -68,10 +69,11 @@ export function HomeArtworkEditor({src,block,onClose,onSave}:{
         if(data.status){setBusy(data.status);return;}
         finish();
         if(data.error){setError(data.error);return;}
+        if(data.useOriginal){setCutout(undefined);setNotice('The original image already has a transparent background.');return;}
         try{setCutout(encodeHomepageCutout(data.bitmap));}
         catch(e){setError(e instanceof Error?e.message:'Could not prepare the image.');}
       };
-      job.postMessage(src);
+      job.postMessage({src,mode});
     }catch{worker.current?.terminate();worker.current=null;setBusy('');setError('Image processing is unavailable in this browser.');}
   }
   const confirm=()=>{
@@ -110,8 +112,9 @@ export function HomeArtworkEditor({src,block,onClose,onSave}:{
         <Button type="button" size="sm" variant="outline" aria-pressed={current.fade} onClick={()=>update({fade:!current.fade})}><Blend/>{current.fade?'Remove bottom fade':'Add bottom fade'}</Button>
         <Button type="button" size="sm" variant="outline" disabled={!!busy||!natural} onClick={()=>{if(cutout){setCutout(undefined);setError('');}else removeBackground();}}>
           {cutout?<Undo2/>:<Focus/>}{cutout?'Restore background':'Remove background'}</Button>
+        {cutout&&<Button type="button" size="sm" variant="outline" disabled={!!busy} onClick={()=>removeBackground('logo')}>Reprocess logo</Button>}
       </div>
-      {busy&&<p role="status" className="text-sm text-muted-foreground">{busy}</p>}
+      {(busy||notice)&&<p role="status" className="text-sm text-muted-foreground">{busy||notice}</p>}
       {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" disabled={!!busy||!natural} onClick={confirm}>Apply</Button></div>
     </DialogContent>

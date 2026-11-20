@@ -1,3 +1,5 @@
+> **2026-11-20 — Pozadina širokih logotipa.** Početna strana prepoznaje jednobojnu podlogu i kada natpis dodiruje ivice banera. Duge i kratke ivice učestvuju srazmerno svojoj dužini. U editoru Reprocess logo ponavlja obradu iz sačuvanog originala.
+
 > **2026-11-20 — Kadriranje i uklanjanje pozadine.** Na otključanoj početnoj strani dugme Reposition image otvara kadar sa ručicama, zumom i donjim prelivom. Remove background obrađuje sliku na uređaju. Original je sačuvan i pozadina se može vratiti.
 
 > **2026-11-20 — Slike na početnoj strani.** Baner prati širinu bloka i visinu slike. Novoučitane PNG i WebP slike zadržavaju providnost. Blok Image omogućava da se mesto za sliku prvo postavi u red ili kolonu, a slika doda klikom. Za providnost ranije učitane slike sa tamnom JPEG pozadinom potreban je izvorni fajl.
@@ -557,6 +559,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Ispravka uklanjanja pozadine logotipa.** Na JPEG isečku iz referentnog snimka ponovljeni su gubitak sitnog naslova i ostatak podloge. U pregledaču su provereni odvojena slova, tekstura, providnost, ponovna obrada iz originala, odustajanje i ponovno učitavanje sačuvane strane.
 
 - **2026-11-20 — Obrada slike na početnoj strani.** Jednobojne podloge uklanjaju se lokalno prema boji ivice. Za složenije podloge radnik u pregledaču koristi U²-Netp. Sačuvani kadar i izdvojeni motiv provereni su posle zaključavanja i osvežavanja na probnoj knjizi.
 
