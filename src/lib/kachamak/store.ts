@@ -14,7 +14,7 @@ import type {
   ViewMode,
 } from "./types";
 import {novelSettingsPatch,validCoverImage,type NovelSettingsPatch} from "./project-settings";
-import { SECTION_KEYS } from "./types";
+import { DEFAULT_NOTE_ICON, SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
 import { toast } from 'sonner';
@@ -309,6 +309,7 @@ function makeNode(kind: NoteNode["kind"], title: string, template?: NoteNode): N
     : { synopsis: "", content: "", notes: "", status: "", label: "" };
   return {
     ...fields,
+    ...(kind === "doc" ? { icon: template?.icon || DEFAULT_NOTE_ICON } : {}),
     id: uid(),
     title,
     kind,

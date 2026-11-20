@@ -55,6 +55,7 @@ export const TABS: { key: TabKey; label: string }[] = [
 /* legacy kinds kept only for old data — new notes are always "doc" and the user
    decides the name, icon and colour themselves (free hierarchy) */
 export type NodeKind = "act" | "chapter" | "scene" | "folder" | "doc";
+export const DEFAULT_NOTE_ICON = "file-generic";
 
 export interface DocumentTarget {
   amount:number;

@@ -36,6 +36,10 @@ let novel=useKachamak.getState().novels[0], parent=findNode(novel.sections.binde
 assert.deepEqual(novel.sections.binder.map(n=>n.id),[act1,act2],'Row menu must not append to the section root when an act is selected');
 assert.deepEqual(parent.children.map(n=>n.id),[chapter1,chapter2,added],'New note follows Chapter 2 inside the selected Act 1');
 assert.equal(parent.collapsed,false,'Parent expands to show its newly appended note');
+const {NOTE_ICONS} = await import('../src/lib/kachamak/icons.tsx');
+const fileIcon = NOTE_ICONS.find(icon=>icon.label==='File').key;
+assert.equal(findNode(novel.sections.binder,added).icon,fileIcon);
+assert.ok(container.querySelector(`[data-note-id="${added}"] [aria-label="Change icon"] svg.lucide-file`),'The tree shows the plain File icon immediately');
 assert.equal(findNode(novel.sections.binder,added).content,'','New note starts empty');
 assert.equal(findNode(novel.sections.binder,added).bodyFontSize,undefined,'New notes inherit the current note typography');
 assert.equal(findNode(novel.sections.binder,added).hiddenDetailBlocks,undefined,'Children keep the existing Details layout');
@@ -49,6 +53,7 @@ const top=await createFromTree(null,'Create top-level note');
 const topNote=findNode(useKachamak.getState().novels[0].sections.binder,top);
 assert.deepEqual(topNote.hiddenDetailBlocks,['image','aliases','codex','timeline']);
 assert.equal(topNote.bodyFontSize,undefined);
+assert.equal(topNote.icon,fileIcon);
 assert.equal(topNote.content,'');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder.map(n=>n.id),[act1,act2,top],'No selected item appends at section root');
 // A selection from another section must not capture the new note.
@@ -86,6 +91,7 @@ const codexEvent=await addEventFromOptions();
 const codexChildren=findNode(useKachamak.getState().novels[0].sections.codex,codex).children;
 assert.deepEqual(codexChildren.map(n=>n.id),[codexEvent]);
 assert.equal(codexChildren[0].timelineKind,'event');
+assert.equal(codexChildren[0].icon,undefined,'Add event uses the Timeline event symbol');
 await React.act(async()=>{
   actions.select(act2);
   root.render(React.createElement(TimelineView,{section:'binder',rootId:act1}));

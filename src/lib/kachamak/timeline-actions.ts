@@ -18,7 +18,7 @@ export function addTimelineNote(section:SectionKey,parentId:string|null,kind:'ev
   const state=useKachamak.getState();
   const id=state.addNode(section,parentId,'doc',kind==='period'?'New Time Period':'New Event',['timeline']);
   if(id&&state.activeNovelId){
-    state.updateNode(section,id,{timelineKind:kind});state.setView('timeline');
+    state.updateNode(section,id,{timelineKind:kind,icon:undefined});state.setView('timeline');
     if(!state.rightPanelOpen && !usesTimelineDialog())state.toggleRightPanel();
     useTimelineAddRequest.setState({novelId:state.activeNovelId,section,noteId:id},true);
   }

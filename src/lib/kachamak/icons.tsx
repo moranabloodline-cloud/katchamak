@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType, CSSProperties } from "react";
+import { DEFAULT_NOTE_ICON } from "./types";
 import {
   createLucideIcon,
   FlaskConical,
@@ -185,7 +186,7 @@ export function MaterialFolder({
 export const NOTE_ICONS: { key: string; label: string; Cmp: IconCmp }[] = [
   { key: "folder", label: "Folder", Cmp: MaterialFolder },
   { key: "file", label: "Note", Cmp: FileText },
-  { key: "file-generic", label: "File", Cmp: File },
+  { key: DEFAULT_NOTE_ICON, label: "File", Cmp: File },
   { key: "folder-open", label: "Open folder", Cmp: FolderOpen },
   { key: "folder-outline", label: "Folder outline", Cmp: Folder },
   { key: "book", label: "Book", Cmp: Book },

@@ -10,7 +10,7 @@ import { useKachamak, exportNovelJson, isUsableBackup, normalizeNovelSections } 
 import { useCollections, type Collection } from './collections-store';
 import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
-import { SECTION_KEYS, type Novel, type NoteNode } from './types';
+import { DEFAULT_NOTE_ICON, SECTION_KEYS, type Novel, type NoteNode } from './types';
 import { registerFolderStorage } from './session-storage';
 import { directory, readText, writeText, copyFolder, archiveFolder, folderName, type DiskFolder } from './folder-files';
 
@@ -80,7 +80,7 @@ async function loadProject(loc: Location): Promise<Novel> {
   catch (error) { if ((error as Error).name !== 'NotFoundError') throw error; }
   for (const file of notes) if (!known.has(file.path)) {
     const id = noteId(), now = Date.now();
-    novel.sections.binder.push({ id, title: file.path.split('/').pop()!.replace(/\.md$/i, ''), kind: 'doc', synopsis: '', notes: '', content: DOMPurify.sanitize(await marked.parse(file.text)), status: '', label: '', createdAt: now, updatedAt: now, children: [] });
+    novel.sections.binder.push({ id, title: file.path.split('/').pop()!.replace(/\.md$/i, ''), kind: 'doc', icon: DEFAULT_NOTE_ICON, synopsis: '', notes: '', content: DOMPurify.sanitize(await marked.parse(file.text)), status: '', label: '', createdAt: now, updatedAt: now, children: [] });
     expected.set(loc.id + ':' + file.path, file.text);
     // Record external notes so they are archived after the canonical Markdown copy is saved.
   }

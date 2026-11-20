@@ -1,3 +1,5 @@
+> **2026-11-20 — Ikona nove beleške.** Nova beleška dobija ikonu File iz biblioteke. Ikona može da se promeni klikom u stablu.
+
 > **2026-11-20 — Prored označenog teksta.** Meni Line spacing u editoru nudi četiri vrednosti i prilagođeni prored. Razmak pre ili posle može se ukloniti za cele pasuse koji su obuhvaćeni izborom.
 
 > **2026-11-20 — Tipografija beležaka.** Osnovni tekst je Tahoma 9 pt. Naslov beleške i nivoi H1–H6 rastu srazmerno veličini teksta iz podešavanja taba. Linkovi ka beleškama imaju tanku tačkastu liniju.
@@ -581,6 +583,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Podrazumevana ikona File.** Ikona se upisuje pri kreiranju obične beleške na vrhu stabla, unutar druge beleške ili iz novog Markdown fajla. Kada šablon ima izabranu ikonu, nova beleška preuzima tu ikonu.
 
 - **2026-11-20 — Lokalni prored.** Prored prati granice označenog teksta i pri prelamanju reda. U istom pasusu mogu da postoje različiti proredi. Meni prikazuje zajedničku vrednost izbora i nudi 1,0×, 1,15×, 1,5×, 2,0× i prilagođenu vrednost. Svaka izmena je jedan korak Undo. Podešavanja taba i raspored susednih pasusa čuvaju se nezavisno.
 
