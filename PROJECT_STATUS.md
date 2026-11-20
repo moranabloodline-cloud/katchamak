@@ -1,3 +1,5 @@
+> **2026-11-20 — Prevlačenje na početnoj strani.** Na otključanoj strani korisnik može mišem da premesti ceo blok. Oznaka pokazuje mesto umetanja, a zaključavanje zadržava raspored i aktivira veze.
+
 > **2026-11-20 — Početna strana knjige.** Kućica ispred Undo otvara prazno platno za kartice, banere i tekst. Svaki blok prima sliku i odredište. Zaključavanje sklanja alate za uređivanje i aktivira linkove.
 
 > **2026-11-20 — Lepljenje u stilu beleške.** Nalepljeni naslovi prate lokalni nivo i veličinu teksta. Editor čuva pasuse, prazne redove, naglašavanja, liste i linkove. Izričit razmak pasusa ima prednost nad kopiranim razmakom.
@@ -549,6 +551,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Slaganje blokova mišem.** U Chrome-u su na probnoj knjizi provereni pomeranje banera na vrh, četiri kartice u redu, prelaz iz drugog reda, spuštanje na prazno mesto i otkazivanje prevlačenja. Položaji blokova pri istoj širini bili su jednaki pre zaključavanja, posle zaključavanja i posle ponovnog učitavanja. Dodatno je proverena jedna kolona na širini od 400 px. Izmena koristi već sačuvani redosled blokova u knjizi.
 
 - **2026-11-20 — Homepage.** Raspored i stanje brave čuvaju se po knjizi. U Chrome-u su na dve probne knjige provereni upload, promena rasporeda, veze do beleške i taba, adresa spoljnog linka, pregled bloka, zaključavanje, čuvanje i ponovno učitavanje. Na širini od 400 px blokovi se slažu u jednu kolonu. Store v43 prihvata postojeće knjige bez upisivanja prazne strane.
 

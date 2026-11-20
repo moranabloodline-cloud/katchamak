@@ -49,12 +49,15 @@ export function validHomepage(value: unknown): boolean {
     && new Set(page.blocks.map(block => block.id)).size === page.blocks.length;
 }
 
+export type HomePlacement = { targetId: string; side: 'before' | 'after' };
+
 export type HomeChange =
   | { type: 'lock'; locked: boolean }
   | { type: 'add'; block: HomeBlock }
   | { type: 'edit'; original: HomeBlock; block: HomeBlock }
   | { type: 'remove'; original: HomeBlock }
-  | { type: 'move'; id: string; offset: -1 | 1 };
+  | { type: 'move'; id: string; offset: -1 | 1 }
+  | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
   if (action.type === 'lock') return { ...page, locked: action.locked };
@@ -63,13 +66,22 @@ export function changeHomepage(page: Homepage, action: HomeChange): Homepage | n
     if (!validBlock(action.block) || page.blocks.some(b => b.id === action.block.id)) return null;
     return { ...page, blocks: [...page.blocks, action.block] };
   }
-  const index = page.blocks.findIndex(b => b.id === (action.type === 'move' ? action.id : action.original.id));
+  const id = 'original' in action ? action.original.id : action.id;
+  const index = page.blocks.findIndex(b => b.id === id);
   if (index < 0) return null;
   const blocks = [...page.blocks];
-  if (action.type === 'move') {
-    const to = index + action.offset;
-    if (to < 0 || to >= blocks.length) return null;
-    [blocks[index], blocks[to]] = [blocks[to], blocks[index]];
+  if (action.type === 'move' || action.type === 'place') {
+    const [moving] = blocks.splice(index, 1);
+    let to: number;
+    if (action.type === 'place') {
+      const anchor = blocks.findIndex(block => block.id === action.targetId);
+      if (anchor < 0) return null;
+      to = action.side === 'after' ? anchor + 1 : anchor;
+    } else {
+      to = index + action.offset;
+    }
+    if (to === index || to < 0 || to > blocks.length) return null;
+    blocks.splice(to, 0, moving);
   } else {
     // A remote refresh can replace a block while its editor is open.
     if (JSON.stringify(blocks[index]) !== JSON.stringify(action.original)) return null;
