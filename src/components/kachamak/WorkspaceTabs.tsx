@@ -47,7 +47,7 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
 export function useOpenWorkspaceTab(novel: Novel | undefined) {
   const setTab=useKachamak(s=>s.setTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
-  const specialView=view==='timeline'||view==='family';
+  const specialView=view==='timeline'||view==='family'||view==='homepage';
   const lastNoteView=useRef(specialView?'write':view);
   useEffect(()=>{if(!specialView)lastNoteView.current=view;},[view,specialView]);
   return (key:TabKey)=>{

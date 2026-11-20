@@ -25,6 +25,7 @@ import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspace
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
+import { changeHomepage, EMPTY_HOMEPAGE, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
 
@@ -129,6 +130,7 @@ interface KachamakState {
   select: (id: string | null) => void;
   setRenamingNode: (id: string | null) => void;
   renameNovel: (title: string) => void;
+  changeHomepage: (projectId:string,action:HomeChange) => boolean;
   updateNovelSettings: (id:string,patch:NovelSettingsPatch) => boolean;
   setDefaultAuthor: (a: string) => void;
 
@@ -520,6 +522,7 @@ export const useKachamak = create<KachamakState>()(
       openNoteTab: (id) => {
         const novel=get().novels.find(n=>n.id===get().activeNovelId);
         if(!novel || !findNodeInNovel(novel,id)) return;
+        if(get().view==='homepage')get().select(id);
         set(s=>({novels:s.novels.map(n=>n.id===novel.id?touch({...revealWorkspaceTab(n,`note:${id}`),openNoteTabs:[...new Set([...(n.openNoteTabs||[]),id])]}):n),activeTab:`note:${id}`,renamingNodeId:null}));
       },
       moveWorkspaceTab: (projectId,from,to)=>set(s=>{
@@ -585,12 +588,22 @@ export const useKachamak = create<KachamakState>()(
          editor zadržava svoju notu (po Nikoli, kao u Scriveneru) */
       select: (id) =>
         set((s) => ({
+          ...(s.view==='homepage' && id ? {view:'write' as const} : {}),
           selectedNodeId: id,
           paneAId: s.activePane === "a" ? id : s.paneAId,
           paneBId: s.activePane === "b" ? id : s.paneBId,
         })),
 
       setRenamingNode: (id) => set({ renamingNodeId: id }),
+
+      changeHomepage: (projectId,action) => {
+        const state=get(), novel=state.novels.find(n=>n.id===projectId);
+        if(!novel||state.activeNovelId!==projectId)return false;
+        const homepage=changeHomepage(novel.homepage??EMPTY_HOMEPAGE,action);
+        if(!homepage)return false;
+        set({novels:state.novels.map(n=>n===novel?touch({...novel,homepage}):n)});
+        return true;
+      },
 
       updateNovelSettings: (id,patch) => {
         const novel=get().novels.find(n=>n.id===id);if(!novel)return false;
@@ -636,6 +649,7 @@ export const useKachamak = create<KachamakState>()(
           parent.collapsed = false;
         }
         set((s) => ({
+          ...(s.view==='homepage' ? {view:'write' as const} : {}),
           selectedNodeId: created?.id ?? null,
           renamingNodeId: created?.id ?? null,
           paneAId: s.activePane === "a" ? (created?.id ?? s.paneAId) : s.paneAId,
@@ -906,7 +920,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 42,
+      version: 43,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -919,6 +933,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<43){ /* The optional homepage starts empty without rewriting existing books. */ }
         if(version<42){ /* Notes without page settings inherit the saved library appearance. */ }
         if(version<41){ /* An unset toolsHidden preference keeps the Timeline toolbar visible. */ }
         if(version<40){ /* Books without button preferences show all three Timeline views. */ }

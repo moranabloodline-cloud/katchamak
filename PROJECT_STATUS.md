@@ -1,3 +1,5 @@
+> **2026-11-20 — Početna strana knjige.** Kućica ispred Undo otvara prazno platno za kartice, banere i tekst. Svaki blok prima sliku i odredište. Zaključavanje sklanja alate za uređivanje i aktivira linkove.
+
 > **2026-11-20 — Lepljenje u stilu beleške.** Nalepljeni naslovi prate lokalni nivo i veličinu teksta. Editor čuva pasuse, prazne redove, naglašavanja, liste i linkove. Izričit razmak pasusa ima prednost nad kopiranim razmakom.
 
 > **2026-11-20 — Format pojedinačne beleške.** Page settings čuva tipografiju i izgled otvorene strane. Traka editora formatira označeni tekst, a prored važi za pasuse koje selekcija zahvata.
@@ -547,6 +549,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Homepage.** Raspored i stanje brave čuvaju se po knjizi. U Chrome-u su na dve probne knjige provereni upload, promena rasporeda, veze do beleške i taba, adresa spoljnog linka, pregled bloka, zaključavanje, čuvanje i ponovno učitavanje. Na širini od 400 px blokovi se slažu u jednu kolonu. Store v43 prihvata postojeće knjige bez upisivanja prazne strane.
 
 - **2026-11-20 — Lepljenje teksta.** U dva podešavanja probne beleške provereni su H3 iz izvora sa veličinom od 15 cm, običan tekst, prored, prazni redovi, razmak pasusa, Undo/Redo i ponovno učitavanje. Izmena deluje pri lepljenju i ne zahteva migraciju.
 

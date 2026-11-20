@@ -161,7 +161,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
   const preferredView = route?.view ?? data.snapshot.view;
-  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline','family'].includes(preferredView ?? '') ? { view: preferredView! } : {};
+  const restoredView = !useWebLibrary.getState().ready && ['write','split','corkboard','list','continuous','timeline','family','homepage'].includes(preferredView ?? '') ? { view: preferredView! } : {};
   if(data.snapshot.editorAppearance!==undefined&&!validEditorAppearance(data.snapshot.editorAppearance))throw new Error('The saved page format could not be read.');
   const appearance=data.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;
   const restoredAppearance=keepAppearance?{}:{editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page},editorSpellCheck:appearance.spellCheck??true};

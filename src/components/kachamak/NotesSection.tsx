@@ -8,6 +8,7 @@ import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
+import {ProjectHomepage} from './ProjectHomepage';
 import {ContinuousWriteArea} from './ContinuousWriteArea';
 import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
@@ -278,6 +279,8 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
   const view = storedView==='family' && section!=='family' ? 'write' : storedView;
+  const previousView=useRef<ViewMode>('write');
+  useEffect(()=>{if(view!=='homepage')previousView.current=view;},[view]);
   const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);
   useEffect(()=>setCompactFamily(false),[activeNovelId,section,selectedNodeId]);
@@ -384,6 +387,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
       )}
 
       <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
+        {view==='homepage' && novel ? <ProjectHomepage key={novel.id} novel={novel} onBack={()=>setView(previousView.current)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
         {view!=="timeline"&&view!=="family"&&<EditorToolbar node={selected} />}
@@ -445,9 +449,10 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
             ))}
           </div>
         </div>
+        </>}
       </main>
 
-      {rightPanelOpen ? (
+      {view==='homepage' ? null : rightPanelOpen ? (
         <>
           <Resizer
             side="right"

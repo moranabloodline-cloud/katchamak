@@ -112,6 +112,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
+  homepage?: import('./homepage').Homepage;
   familyRelationships?: FamilyRelationship[];
   demo?: { key: string; version: number; edition?: number; source?: boolean; timelineRootId?: string };
   id: string;
@@ -150,7 +151,7 @@ export type FamilyRelationship = {
   to: string;
 } & ({kind:Exclude<KinshipKind,'custom'>} | {kind:'custom';label:string;mutual?:boolean});
 
-export type ViewMode = "split" | "write" | "corkboard" | "list" | "continuous" | "timeline" | "family";
+export type ViewMode = "split" | "write" | "corkboard" | "list" | "continuous" | "timeline" | "family" | "homepage";
 
 /* the top-bar dropdown: which level of the tree the panel shows */
 export type TreeScope = "all" | "folders" | "top";

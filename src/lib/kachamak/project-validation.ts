@@ -4,6 +4,7 @@ import { validNovelMetadata, validCoverImage } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validNoteFontSize, validNotePageSettings } from './page-format';
+import { validHomepage } from './homepage';
 import { validDocumentTarget } from './document-target';
 import {validFamilyMembers,validFamilyRelationships} from './family-tree';
 import { validEvent, validTimelineExtra } from './story-calendar';
@@ -47,6 +48,7 @@ export function isReadableProject(value: unknown): boolean {
     validFamilyRelationships(t.familyRelationships) && isTree([t.node])
   ))) return false;
   if (n.openNoteTabs !== undefined && (!Array.isArray(n.openNoteTabs) || !n.openNoteTabs.every(id => typeof id === 'string'))) return false;
+  if(!validHomepage(n.homepage))return false;
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && (!Array.isArray(n.hiddenInspectorTabs) ||
       n.hiddenInspectorTabs.length > INSPECTOR_TABS.length || new Set(n.hiddenInspectorTabs).size !== n.hiddenInspectorTabs.length ||

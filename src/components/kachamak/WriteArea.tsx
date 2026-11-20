@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Highlighter,
+  House,
   Italic,
   IndentDecrease,
   IndentIncrease,
@@ -145,6 +146,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
 
   return (
     <div data-editor-toolbar className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
+      <ToolBtn title="Homepage" onClick={()=>useKachamak.getState().setView('homepage')}><House className="h-4 w-4" /></ToolBtn>
       <ToolBtn title="Undo (Ctrl+Z)" onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'undo')}><Undo2 className="h-4 w-4" /></ToolBtn>
       <ToolBtn title="Redo (Ctrl+Y)" onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'redo')}><Redo2 className="h-4 w-4" /></ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
