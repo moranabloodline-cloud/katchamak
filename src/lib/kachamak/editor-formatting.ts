@@ -97,7 +97,7 @@ export function applyEditorQuote(range:Range|null) {
 // styled run keeps both neighbouring pieces with their original attributes.
 function splitInlineAt(marker:Comment,editor:HTMLElement){
   let inline=marker.parentElement;
-  while(inline&&inline!==editor&&inline.matches('a,b,strong,i,em,u,s,strike,span,font,small,big,sub,sup,mark,code')){
+  while(inline&&inline!==editor&&!inline.hasAttribute('data-editor-spacing-flow')&&inline.matches('a,b,strong,i,em,u,s,strike,span,font,small,big,sub,sup,mark,code')){
     const remainder=inline.cloneNode(false) as HTMLElement;
     remainder.removeAttribute('id');
     while(marker.nextSibling)remainder.append(marker.nextSibling);
@@ -133,11 +133,18 @@ export function clearEditorFormatting(range:Range|null) {
         if(texts.some(text=>span.contains(text)))span.replaceWith(...span.childNodes);
       }
     }
+    for(const run of editor.querySelectorAll<HTMLElement>('span[data-editor-spacing-run]')){
+      if(texts.some(text=>run.contains(text))){
+        run.dataset.editorSpacingRun='';
+        run.style.removeProperty('line-height');
+      }
+    }
     for(const link of links)link.replaceWith(...Array.from(link.childNodes));
     if(!collapsed)selected=current();
     const selection=window.getSelection();selection?.removeAllRanges();selection?.addRange(selected);
     document.execCommand('removeFormat',false);
     for(const block of selectedBlocks){
+      for(const wrapper of Array.from(block.querySelectorAll('[data-editor-spacing-run],[data-editor-spacing-flow]')).reverse())wrapper.replaceWith(...wrapper.childNodes);
       block.removeAttribute('style');block.removeAttribute('data-editor-line-height');
       if(/^H[1-6]$/.test(block.tagName)){const paragraph=document.createElement('p');paragraph.append(...Array.from(block.childNodes));block.replaceWith(paragraph);}
     }

@@ -48,16 +48,45 @@ for(const family of PAGE_FONTS){
   await React.act(async()=>assert.equal(applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'),true));
   assert.equal(editor.innerHTML,original,'Font formatting has one reversible history entry');
 }
-// A real paragraph owns leading, including a partial selection that ends
-// exactly at the start of the following paragraph.
+// Even when the range ends at offset zero in the next paragraph, only
+// the marked characters acquire a leading override.
 const paragraphs=editor.querySelectorAll('p'), across=document.createRange();
 across.setStart(paragraphs[0].firstChild,2);across.setEnd(paragraphs[1].firstChild,0);
 await React.act(async()=>assert.ok(applyEditorTypography(across,'lineHeight','1.0')));
-assert.equal(paragraphs[0].style.lineHeight,'1');assert.equal(paragraphs[1].style.lineHeight,'');
-assert.equal(editor.querySelector('span[style*="line-height"]'),null);
+assert.equal(paragraphs[0].style.lineHeight,'');assert.equal(paragraphs[1].outerHTML,'<p>Second paragraph.</p>');
+assert.equal([...paragraphs[0].querySelectorAll('[data-editor-spacing-run="1"]')].map(n=>n.textContent).join(''),'pha beta gamma.');
+assert.equal(paragraphs[0].querySelector('[data-editor-spacing-run=""]').textContent,'Al');
+assert.equal(dom.getSelection().toString(),'pha beta gamma.');
 assert.equal(editor.textContent,'Alpha beta gamma.Second paragraph.');
 await React.act(async()=>applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'));
 assert.equal(editor.innerHTML,original);
+const {applySelectionSpacing,selectedSpacing}=await import('../src/lib/kachamak/editor-spacing.ts');
+const first=editor.querySelector('p'), second=first.nextElementSibling;
+const partial=document.createRange();partial.setStart(first.firstChild,2);partial.setEnd(second.firstChild,3);
+assert.equal(selectedSpacing(partial).wholeParagraphs,false);
+assert.equal(applySelectionSpacing(partial,{remove:'after'}),false);
+assert.equal(applySelectionSpacing(partial,{leading:NaN}),false);
+const entire=document.createRange();entire.selectNodeContents(second);
+await React.act(async()=>assert.ok(applySelectionSpacing(entire,{remove:'before'})));
+assert.equal(second.style.marginBlockStart,'0px');assert.equal(first.outerHTML,'<p>Alpha <b>beta</b> gamma.</p>');
+await React.act(async()=>applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'));
+assert.equal(editor.innerHTML,original);
+
+const fixture=document.createElement('div');
+fixture.contentEditable='true';fixture.setAttribute('contenteditable','true');
+fixture.className='kachamak-editor';document.body.append(fixture);
+fixture.innerHTML='<p><a href="#note/t">Left <b>linked text</b></a> tail</p><p><br></p><p>End</p>';
+const link=fixture.querySelector('b').firstChild,tail=fixture.lastElementChild.firstChild;
+const several=document.createRange();several.setStart(link,3);several.setEnd(tail,1);
+assert.ok(applySelectionSpacing(several,{leading:1.25}));
+assert.equal(fixture.querySelector('a').textContent,'Left linked text');
+assert.equal(fixture.querySelectorAll('a').length,1);
+assert.equal(fixture.children[1].style.lineHeight,'1.25');
+assert.equal(fixture.lastElementChild.querySelector('[data-editor-spacing-run="1.25"]').textContent,'E');
+assert.equal(fixture.lastElementChild.querySelector('[data-editor-spacing-run=""]').textContent,'nd');
+const repeat=dom.getSelection().getRangeAt(0).cloneRange();assert.ok(applySelectionSpacing(repeat,{leading:2}));
+assert.equal(fixture.querySelector('[data-editor-spacing-run] [data-editor-spacing-run]'),null);
+assert.equal(fixture.textContent,'Left linked text tailEnd');fixture.remove();
 assert.ok(PAGE_FONTS.includes('Tahoma'));
 const contentBeforePage=node().content;
 await React.act(async()=>{actions.setEditorFont('Georgia');actions.setEditorSize(18);actions.setEditorSpacing('2.0');actions.setPageFormat({indent:1.5,paragraphGap:0.5,width:60,align:'justify',divider:'dots',layout:'stacked',colorizeAnnotations:false});});

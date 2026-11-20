@@ -26,18 +26,19 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
-import {editorForRange,paragraphSelector,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
+import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
 import {activeWritingEditor} from './WorkspaceNavigation';
 import {PageSurface,useNoteAppearance} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
-import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel,LINE_SPACINGS,pageVariables} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel,pageVariables} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
+import {LineSpacingMenu} from './LineSpacingMenu';
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 
 const FONTS = PAGE_FONTS;
-const SPACINGS = LINE_SPACINGS;
+
 
 /* Text Style (tačka 8, spec §8): dropdown ISpred font kontrola,
    podrazumevano „Normal“. formatBlock radi nad blokom u kome je kursor/
@@ -90,9 +91,9 @@ function ToolBtn({
 export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const setSpellCheck=useKachamak(state=>state.setEditorSpellCheck);
-  const {font,size,spacing}=useNoteAppearance(node);
+  const {font,size}=useNoteAppearance(node);
   const [hasSelection,setHasSelection]=useState(false);
-  const [selectedTypography,setSelectedTypography]=useState<{font:string;size:number;spacing:string}|null>(null);
+  const [selectedTypography,setSelectedTypography]=useState<{font:string;size:number}|null>(null);
 
   /* Tekući blok selekcije se osvežava na svaku promenu selekcije, da dropdown
      uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
@@ -120,7 +121,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   useEffect(() => {
     const sync = () => {
       const focused=document.activeElement;
-      if(focused?.closest('[data-editor-toolbar]')&&editorForRange(savedRange.current)?.dataset.noteId===node?.id)return;
+      if(focused?.closest('[data-editor-toolbar],[data-editor-toolbar-popup]')&&editorForRange(savedRange.current)?.dataset.noteId===node?.id)return;
       if(focused?.matches('input,textarea,select')){savedRange.current=null;setHasSelection(false);setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');return;}
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
       const editor=editorForRange(range);
@@ -131,9 +132,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
         if(element){
           setQuoteActive(!!element.closest('blockquote'));
           const css=getComputedStyle(element),pixels=parseFloat(css.fontSize);
-          const paragraph=element.closest(paragraphSelector)??element;
-          const blockCss=getComputedStyle(paragraph),line=parseFloat(blockCss.lineHeight)/parseFloat(blockCss.fontSize);
-          setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Number(pixels.toFixed(3)):size,spacing:Number.isFinite(line)?line.toFixed(2).replace(/0$/,''):spacing});
+          setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Number(pixels.toFixed(3)):size});
         }
       }
       else {savedRange.current=null;setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');}
@@ -141,7 +140,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
     sync();
     document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
     return()=>{document.removeEventListener('selectionchange',sync);document.removeEventListener('focusin',sync);document.removeEventListener('input',sync);};
-  },[node?.id,font,size,spacing]);
+  },[node?.id,font,size]);
 
   return (
     <div data-editor-toolbar className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
@@ -169,7 +168,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
       <select
         aria-label="Font"
         value={selectedTypography?.font??font}
-        onChange={(e) => {if(applyEditorTypography(marked(),'fontFamily',e.target.value))setSelectedTypography(old=>({...old??{font,size,spacing},font:e.target.value}));}}
+        onChange={(e) => {if(applyEditorTypography(marked(),'fontFamily',e.target.value))setSelectedTypography(old=>({...old??{font,size},font:e.target.value}));}}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
       >
         {[...new Set([selectedTypography?.font??font,...FONTS])].map((f) => (
@@ -184,7 +183,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
         onChange={(e) => {
           const next = Number(e.target.value);
           if (applyEditorTypography(marked(),'fontSize',next+'px')) {
-            setSelectedTypography(old=>({...old??{font,size,spacing},size:next}));
+            setSelectedTypography(old=>({...old??{font,size},size:next}));
           }
         }}
         className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
@@ -195,18 +194,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
           </option>
         ))}
       </select>
-      <select
-        aria-label="Line spacing"
-        value={selectedTypography?.spacing??spacing}
-        onChange={(e) => {if(applyEditorTypography(marked(),'lineHeight',e.target.value))setSelectedTypography(old=>({...old??{font,size,spacing},spacing:e.target.value}));}}
-        className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
-      >
-        {[...new Set([selectedTypography?.spacing??spacing,...SPACINGS])].map((s) => (
-          <option key={s} value={s}>
-            {s}×
-          </option>
-        ))}
-      </select>
+      <LineSpacingMenu key={node?.id} disabled={!hasSelection} selection={marked} validate={editableRange}/>
       <span className="mx-1 h-5 w-px bg-white/10" />
       <ToolBtn title="Decrease indent" onClick={()=>applyEditorIndent(marked(),'outdent')}><IndentDecrease className="h-4 w-4"/></ToolBtn>
       <ToolBtn title="Increase indent" onClick={()=>applyEditorIndent(marked(),'indent')}><IndentIncrease className="h-4 w-4"/></ToolBtn>

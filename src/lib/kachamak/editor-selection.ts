@@ -1,3 +1,11 @@
+export function editorForRange(range:Range|null):HTMLElement|null {
+  if(!range)return null;
+  const element=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer as Element:range.commonAncestorContainer.parentElement;
+  const editor=element?.closest<HTMLElement>('.kachamak-editor')??null;
+  return editor?.isConnected?editor:null;
+}
+export const paragraphSelector='p,div,li,h1,h2,h3,h4,h5,h6,blockquote,pre,td,th';
+
 /** Trim only a native double-click word selection; never edit the document. */
 export function trimWordSelection(editor:HTMLElement|null) {
   const selection=window.getSelection();

@@ -1,3 +1,5 @@
+> **2026-11-20 — Prored označenog teksta.** Meni Line spacing u editoru nudi četiri vrednosti i prilagođeni prored. Razmak pre ili posle može se ukloniti za cele pasuse koji su obuhvaćeni izborom.
+
 > **2026-11-20 — Tipografija beležaka.** Osnovni tekst je Tahoma 9 pt. Naslov beleške i nivoi H1–H6 rastu srazmerno veličini teksta iz podešavanja taba. Linkovi ka beleškama imaju tanku tačkastu liniju.
 
 > **2026-11-20 — Osvežavanje pre ponovnog čuvanja.** Ako se stranica osveži posle prekida slanja, original se otvara sa poslednjim potvrđenim rasporedom. Lokalni nacrt iz istog profila pregledača može da se oporavi kroz My Account → Storage → Recover as copies.
@@ -579,6 +581,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Lokalni prored.** Prored prati granice označenog teksta i pri prelamanju reda. U istom pasusu mogu da postoje različiti proredi. Meni prikazuje zajedničku vrednost izbora i nudi 1,0×, 1,15×, 1,5×, 2,0× i prilagođenu vrednost. Svaka izmena je jedan korak Undo. Podešavanja taba i raspored susednih pasusa čuvaju se nezavisno.
 
 - **2026-11-20 — Odnos naslova i teksta u beleškama.** Uz osnovu od 9 pt (12 CSS px), naslov beleške ima 22 pt, a H1–H6 redom 18, 16, 14, 12, 11 i 10 pt. Skala obuhvata pisanje, podeljeni i neprekidni prikaz. Formatiranje označenog teksta ostaje lokalno. Postojeći sadržaj i ručno zadate vrednosti taba se čuvaju. Povezana imena koriste boju povezane beleške i tačkasto podvlačenje od jednog piksela.
 
