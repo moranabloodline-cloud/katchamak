@@ -101,7 +101,7 @@ export function Workspace() {
       <header className="flex shrink-0 flex-wrap items-stretch border-b border-white/10 xl:h-16 xl:flex-nowrap">
         {/* Static program branding above the navigation row. */}
         <div
-          className={`flex shrink-0 items-center gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[50%] border-r border-white/10 bg-black/20 ${leftPanelOpen?"pl-3 pr-1":"px-0"}`}
+          className={`@container flex shrink-0 items-center gap-1 sm:gap-1.5 overflow-hidden max-xl:h-10 max-xl:max-w-[50%] border-r border-white/10 bg-black/20 ${leftPanelOpen?"px-1 sm:pl-3":"px-0"}`}
           style={{ width: leftPanelOpen ? leftPanelWidth + 1 : 28 }}
         >
           <WorkspaceBrand compact={!leftPanelOpen} />
@@ -113,53 +113,43 @@ export function Workspace() {
 
         {/* right panel zone: folder-level dropdown, save, account, settings */}
         <div
-          className={`ml-auto flex shrink-0 items-center gap-2 max-xl:max-w-[50%] border-l border-white/10 bg-black/20 ${rightPanelOpen ? "justify-end px-3" : "justify-center"}`}
+          className="ml-auto flex shrink-0 items-center justify-center gap-[clamp(0.5rem,1.5vw,1.5rem)] max-xl:max-w-[50%] border-l border-white/10 bg-black/20"
           style={{ width: rightPanelOpen ? rightPanelWidth + 1 : 28 }}
         >
-          {rightPanelOpen ? (
+          {rightPanelOpen && (
             <>
-
-
               <button
                 type="button"
                 aria-label="Save"
                 title={savePhase==='preparing'?'Preparing link review…':savePhase==='saving'?'Saving to your account…':'Save'}
                 aria-busy={savePhase!=='idle'}
                 onClick={requestLinkReview}
-                className="grid size-10 shrink-0 place-items-center rounded-md text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
+                className="grid size-10 shrink-0 place-items-center rounded-md text-[#56c8b5] transition-colors hover:bg-white/10"
               >
-                {savePhase==='idle'?<Save className="size-9" strokeWidth={1.75}/>:<LoaderCircle className="size-9 animate-spin" strokeWidth={1.75}/>}
+                {savePhase==='idle'?<Save className="size-6 fill-current/10" strokeWidth={1.7}/>:<LoaderCircle className="size-6 animate-spin" strokeWidth={1.7}/>}
               </button>
               <button
                 type="button"
                 aria-label="My account"
                 title="My account"
                 onClick={() => setAccountOpen(true)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#18202c] text-xs font-bold text-stone-200 transition-colors hover:border-white/50"
+                className="group grid size-10 shrink-0 place-items-center rounded-full"
               >
-                {photo ? <img src={photo} alt="" className="h-full w-full rounded-full object-cover" /> : initials}
-              </button>
-              <button
-                type="button"
-                aria-label="Settings"
-                title="Settings"
-                onClick={() => setSettingsOpen(true)}
-                className="grid size-10 shrink-0 place-items-center rounded-md text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <Settings className="size-9" strokeWidth={1.75} />
+                <span className="grid size-8 place-items-center overflow-hidden rounded-full border border-[#ecb66b]/60 bg-[#18202c] text-xs font-bold text-[#ecb66b] transition-colors group-hover:border-[#ecb66b]">
+                  {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : initials}
+                </span>
               </button>
             </>
-          ) : (
-            <button
-              type="button"
-              aria-label="Settings"
-              title="Settings"
-              onClick={() => setSettingsOpen(true)}
-              className="rounded-md py-1 text-stone-200 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              <Settings className="size-[26px]" strokeWidth={1.75} />
-            </button>
           )}
+          <button
+            type="button"
+            aria-label="Settings"
+            title="Settings"
+            onClick={() => setSettingsOpen(true)}
+            className={`grid h-10 shrink-0 place-items-center rounded-md text-[#b49de9] transition-colors hover:bg-white/10 ${rightPanelOpen ? 'w-10' : 'w-full'}`}
+          >
+            <Settings className="size-6 fill-current/10" strokeWidth={1.7} />
+          </button>
         </div>
       </header>
 
