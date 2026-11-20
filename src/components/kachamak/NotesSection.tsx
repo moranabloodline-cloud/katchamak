@@ -281,8 +281,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
   const view = storedView==='family' && section!=='family' ? 'write' : storedView;
-  const previousView=useRef<ViewMode>(section==='timeline'||section==='family'?section:'write');
-  useEffect(()=>{if(view!=='homepage')previousView.current=view;},[view]);
+
   const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);
   useEffect(()=>setCompactFamily(false),[activeNovelId,section,selectedNodeId]);
@@ -396,7 +395,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
       )}
 
       <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
-        {view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} onBack={()=>setView(previousView.current)} /> : <>
+        {view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
         {view!=="timeline"&&view!=="family"&&<EditorToolbar node={selected} />}

@@ -1,3 +1,5 @@
+> **2026-11-20 — Katanac početne stranice.** Katanac u gornjem desnom uglu platna otključava i zaključava stranicu. Uklonjeni su strelica za povratak i ponovljeni naziv stranice iznad blokova.
+
 > **2026-11-20 — Velika stabla beležaka.** Otvaranje taba sa mnogo vidljivih beležaka priprema odredišta za premeštanje i izbor ikonica tek pri otvaranju odgovarajuće komande.
 
 > **2026-11-20 — Centrirani naslovi beležaka.** U editoru, karticama i pregledu naslovi beležaka su centrirani. Stablo i liste zadržavaju levo poravnanje radi lakšeg praćenja hijerarhije.
@@ -571,6 +573,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Komande na početnoj stranici.** Provereni su katanac na računaru i telefonu, položaj pri skrolovanju, promena širine, dijalog za dodavanje bloka, stanje posle osvežavanja i navigacija preko kartice i stabla podstranica.
 
 - **2026-11-20 — Provera potpuno raširenog stabla.** U lokalnom pregledaču sa 30 otvorenih grana i 1.500 probnih beležaka pretraga je pronašla poslednju belešku. Otvaranje njenog taba i celog stabla trajalo je oko četiri sekunde u razvojnoj verziji. Posle preimenovanja, čuvanja i ponovnog učitavanja provereni su ID-jevi, naslovi i tekst svih 1.500 beležaka. Zasebno je provereno premeštanje sa potomstvom, povratak na vrh i izbor boje.
 

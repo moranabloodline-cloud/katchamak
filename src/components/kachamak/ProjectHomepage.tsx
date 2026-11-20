@@ -42,13 +42,12 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
   </>;
 }
 
-export function ProjectHomepage({novel,pageId=HOME_ROOT,onBack,onShowPages}:{novel:Novel;pageId?:string;onBack:()=>void;onShowPages?:()=>void}) {
+export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Novel;pageId?:string;onShowPages?:()=>void}) {
   const page=homepageEntry(novel,pageId) ?? homepageEntry(novel,HOME_ROOT)!;
   const pages=useMemo(()=>homepageRows(novel),[novel]);
   const titles=useMemo(()=>new Map(pages.map(p=>[p.id,p.title])),[pages]);
   const openPage=useKachamak(s=>s.openHomePage);
-  const goBack=()=>{if(page.id===HOME_ROOT)onBack();else openPage(novel.id,page.parentId??HOME_ROOT);};
-  const backLabel=page.id===HOME_ROOT?'Back to workspace':'Back to '+titles.get(page.parentId??HOME_ROOT);
+
   const style=novel.tabFormats?.homepage;
   const notes=useMemo(()=>flattenNotes(novel),[novel]);
   const byId=useMemo(()=>new Map(notes.map(({node})=>[node.id,node])),[notes]);
@@ -138,27 +137,23 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onBack,onShowPages}:{nov
       </div>}
     </article>;
   }
-  return <section aria-label="Project homepage" className="@container flex min-h-0 flex-1 flex-col overflow-auto">
-    <header className="sticky top-0 z-10 grid h-10 shrink-0 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-1.5 border-b border-white/10 bg-background px-2">
-      <div className="flex items-center gap-1">
-        <Button size="icon" variant="ghost" className="size-8" title={backLabel} aria-label={backLabel} onClick={goBack}><ArrowLeft/></Button>
-        {onShowPages&&<Button size="icon" variant="ghost" className="size-8 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
-      </div>
-      <h1 className="min-w-0 truncate text-center text-base font-semibold" title={page.title}>{page.title}</h1>
-      <div className="flex items-center justify-end gap-1.5">
+  return <section aria-label="Project homepage" aria-description={page.title} className="@container flex min-h-0 flex-1 flex-col overflow-auto">
+    <div className={'pointer-events-none sticky top-0 z-10 flex h-8 shrink-0 items-center justify-end gap-1.5 px-1.5'+(page.locked?' -mb-8':'')}>
+      {onShowPages&&<Button size="icon" variant="ghost" className="pointer-events-auto mr-auto size-7 bg-background/90 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
+      <div className="pointer-events-auto flex items-center gap-1.5 rounded-md bg-background/90">
         {!page.locked&&<label title="Page width" className="relative grid size-8 shrink-0 place-items-center rounded focus-within:outline @[520px]:block @[520px]:size-auto"><Columns3 aria-hidden="true" className="size-4 @[520px]:hidden"/><select aria-label="Page width" className="absolute inset-0 w-full cursor-pointer rounded border border-border bg-background px-2 py-1 text-sm opacity-0 @[520px]:static @[520px]:opacity-100" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide page</option><option value="reading">Reading width</option></select></label>}
         {!page.locked&&page.blocks.length>0&&<Button size="sm" variant="outline" aria-label="Add block" title="Add block" onClick={()=>edit()}><Plus/><span className="hidden @[520px]:inline">Add block</span></Button>}
-        <Button size="sm" variant="ghost" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change({type:'lock',locked:!page.locked})}>
-          {page.locked?<UnlockKeyhole/>:<LockKeyhole/>}<span className="hidden @[360px]:inline">{page.locked?'Unlock page':'Lock page'}</span>
+        <Button size="icon" variant="ghost" className="size-7 text-muted-foreground hover:text-foreground" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change({type:'lock',locked:!page.locked})}>
+          {page.locked?<UnlockKeyhole aria-hidden="true" className="size-3.5"/>:<LockKeyhole aria-hidden="true" className="size-3.5"/>}
         </Button>
       </div>
-    </header>
+    </div>
     {message&&<p role="status" className="px-5 pt-3 text-sm text-amber-300">{message}</p>}
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
       style={{fontFamily:style?.font,
       '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
       '--home-leading':style?.spacing,'--home-align':style?.page?.align} as CSSProperties}
-      className={'mx-auto w-full p-4 @[640px]:p-8 '+(page.width==='reading'?'max-w-3xl':'max-w-[100rem]')}>
+      className={'mx-auto w-full p-4 @[640px]:p-8 '+(page.locked?'pt-8 ':'')+(page.width==='reading'?'max-w-3xl':'max-w-[100rem]')}>
       {!page.locked&&!page.blocks.length&&<button type="button" className="flex min-h-36 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:border-amber-500/50 hover:text-foreground" onClick={()=>edit()}><Plus className="size-4"/>Add your first block</button>}
       <div {...(page.locked?{}:drag.gridEvents)} className="grid grid-cols-1 items-start gap-4 @[530px]:grid-cols-2 @[1040px]:grid-cols-4">
         {roots.map((block,index)=>renderBlock(block,index,roots.length))}
