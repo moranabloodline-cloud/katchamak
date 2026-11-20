@@ -1,3 +1,5 @@
+> **2026-11-20 — Boja ručnog linka u tekstu.** Ručni link prati boju ciljne beleške i kada je njegov tekst ranije sačuvan sa drugom bojom. Promena boje ne zahteva izmenu rukopisa.
+
 > **2026-11-20 — Danger Zone na dnu podešavanja.** Desno su redom Meta, Backups & Export i Danger Zone. Na telefonu se Danger Zone prikazuje posle korice.
 
 > **2026-11-20 — Raspored podešavanja knjige.** Korica je levo, a Meta, Danger Zone i Backups & Export desno. Na uskom ekranu prvi je formular za knjigu.
@@ -537,6 +539,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Ručni linkovi.** Novi link čuva referencu bez upisivanja trenutne boje. Prikaz podržava formatirane stare linkove i posebne znakove u ID-u uvezene beleške. Na probnoj knjizi provereni su Ctrl+K, promena boje kroz paletu, spoljni link i snimanje sa ponovnim učitavanjem istog HTML-a. Prošli su testovi linkova i editora, TypeScript i build.
 
 - **2026-11-20 — Settings.** Komande za arhiviranje i brisanje nalaze se u poslednjem odeljku. Proveren raspored na probnoj knjizi pri 1440 i 390 px, test podešavanja, TypeScript i produkcijski build.
 

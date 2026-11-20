@@ -161,8 +161,12 @@ export function noteLinkTitle(title: string, path: string) {
 /** Display-only rules keep old anchors in sync without rewriting prose/history. */
 export function noteAnchorStyles(novel:Novel|undefined,scope:string,colorize=true) {
   if(!novel||!/^[a-zA-Z0-9_-]+$/.test(scope))return '';
-  return flattenNotes(novel).filter(({node})=>/^[a-zA-Z0-9_-]+$/.test(node.id)).map(({node})=>{
-    const selector=`[data-note-link-scope="${scope}"] a[href="#note/${node.id}"]`;
-    return `${selector},${selector} *{color:${colorize?noteLinkColor(node.color):'inherit'}!important;}`;
+  return flattenNotes(novel).map(({node})=>{
+    // Imported note IDs may contain punctuation. Escape it for a CSS string literal.
+    const id=node.id.replace(/[^a-zA-Z0-9_-]/gu,ch=>'\\'+ch.codePointAt(0)!.toString(16)+' ');
+    const selector=`[data-note-link-scope="${scope}"] a[href="#note/${id}"]`;
+    const color=colorize?noteLinkColor(node.color):'inherit';
+    // Rich text may carry its own text fill, even inside a correctly coloured anchor.
+    return `${selector},${selector} *{color:${color}!important;-webkit-text-fill-color:${color}!important;text-decoration-color:${color}!important;}`;
   }).join('\n');
 }

@@ -27,11 +27,31 @@ assert.equal(editor.querySelector('a').dataset.katchamakNote,created.id);assert.
 assert.ok(editor.querySelector('a').textContent.endsWith('\u00a0'),'Selected trailing space is protected from Chromium trimming');
 assert.equal(editor.querySelectorAll('p').length,3);assert.ok(editor.querySelectorAll('p')[1].querySelector('br'),'Blank paragraph survives');
 assert.ok(findNodeInNovel(novel,source).node.content.includes(created.id),'Inserted link is immediately persisted');
+const anchor=editor.querySelector('a'), savedHtml=findNodeInNovel(novel,source).node.content;
+assert.equal(anchor.style.color,'','Manual linking saves the target without baking its colour into the text');
+const linkRule=()=>Array.from(box.querySelector('style').sheet.cssRules).find(rule=>anchor.matches(rule.selectorText)).style;
+for(const [color,rgb] of [['#f0883e','rgb(240, 136, 62)'],['#3fb950','rgb(63, 185, 80)']]){
+  await React.act(async()=>actions.updateNode('codex',created.id,{color}));
+  assert.equal(linkRule().getPropertyValue('color'),rgb);
+  assert.equal(linkRule().getPropertyValue('-webkit-text-fill-color'),rgb);
+  assert.equal(findNodeInNovel(useKachamak.getState().novels[0],source).node.content,savedHtml);
+}
 await React.act(async()=>editor.querySelector('a').dispatchEvent(new dom.MouseEvent('click',{bubbles:true,cancelable:true})));
 assert.ok(document.querySelector('[role="dialog"]'));assert.equal(useKachamak.getState().selectedNodeId,source,'Preview keeps the manuscript open');
 const beside=[...document.querySelectorAll('button')].find(b=>b.textContent==='Open beside');assert.ok(beside);
 await React.act(async()=>beside.click());
 assert.equal(useKachamak.getState().paneAId,source);assert.equal(useKachamak.getState().paneBId,created.id);
 await React.act(async()=>returnToPreviousNote());assert.equal(useKachamak.getState().selectedNodeId,source);assert.equal(useKachamak.getState().view,'write');
+// Previously imported IDs and rich text with a saved foreground must resolve without editing the manuscript.
+const importedId='old:person.č';
+const legacyHtml='<p><a href="#note/'+importedId+'" style="color:orange"><strong style="-webkit-text-fill-color:orange">Vale</strong></a></p>';
+await React.act(async()=>{
+  actions.updateNode('codex',created.id,{id:importedId,color:'#39c5cf'});
+  actions.updateNode('binder',source,{content:legacyHtml});
+});
+const legacyText=editor.querySelector('a strong');
+const legacyRule=Array.from(box.querySelector('style').sheet.cssRules).find(rule=>legacyText.matches(rule.selectorText));
+assert.equal(legacyRule.style.getPropertyValue('-webkit-text-fill-color'),'rgb(57, 197, 207)');
+assert.equal(findNodeInNovel(useKachamak.getState().novels[0],source).node.content,legacyHtml);
 await React.act(async()=>root.unmount());
 console.log('Note-link dialog passed: selected name, ordinary blank Codex note, immediate source save, bold and blank lines, click preview, Open beside and return to manuscript.');
