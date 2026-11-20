@@ -116,7 +116,7 @@ export function TrashView() {
               >
                 <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{t.node.title}</p>
+                  <p className="truncate text-sm font-medium" style={{color:t.node.color || undefined}}>{t.node.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {SECTION_NAMES[t.section]} · deleted {formatDate(t.deletedAt)}
                   </p>

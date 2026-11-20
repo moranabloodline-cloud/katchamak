@@ -1,3 +1,5 @@
+> **2026-11-20 — Boja naslova beleške.** Naslov stabla u Relationships koristi boju iste beleške kao u levom panelu. Imena članova stabla prikazuju sopstvene boje. Prikazi Timeline-a, pregledi, tabovi beleški i liste za izbor takođe čitaju boju iz beleške.
+
 > **2026-11-20 — Širina gornjih tabova.** Svi vidljivi tabovi dobijaju jednaku širinu prema najdužem prikazanom nazivu.
 
 > **2026-11-20 — Ikonice iznad desnog panela.** Save i Settings imaju 22 px, a avatar naloga 36 px.
@@ -517,6 +519,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **20.11.2026.** U Chrome-u na sintetičkom stablu provereni su promena i uklanjanje boje iz levog panela, nezavisna boja lika na grafu i u pregledu, čuvanje i ponovno učitavanje.
 
 - **20.11.2026.** Provereno u Chrome-u na probnoj knjizi da dodavanje, preimenovanje, skrivanje i vraćanje najdužeg taba odmah menja širinu ostalih. Na uskom ekranu provereni su listanje i promena redosleda.
 

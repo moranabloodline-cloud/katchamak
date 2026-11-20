@@ -10,7 +10,7 @@ import type { TabKey } from '@/lib/kachamak/types';
 
 export function CloneWorkspaceTabDialog({sourceId, tab, onClose}: {
   sourceId: string;
-  tab: { key: TabKey; label: string };
+  tab: { key: TabKey; label: string; color?: string };
   onClose: () => void;
 }) {
   const novels = useKachamak(s => s.novels);
@@ -51,7 +51,7 @@ export function CloneWorkspaceTabDialog({sourceId, tab, onClose}: {
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Clone to project</DialogTitle>
-        <DialogDescription>Copy notes from {tab.label} into Sort This in the destination tab.</DialogDescription>
+        <DialogDescription>Copy notes from <span style={{color:tab.color || undefined}}>{tab.label}</span> into Sort This in the destination tab.</DialogDescription>
       </DialogHeader>
       <form className="space-y-4" onSubmit={event => { event.preventDefault(); submit(); }}>
         <label className="block space-y-1 text-sm">
@@ -65,7 +65,7 @@ export function CloneWorkspaceTabDialog({sourceId, tab, onClose}: {
           <span>Destination tab</span>
           <select className={field} value={tabKey} disabled={!destination} onChange={event => { setTabKey(event.target.value as TabKey); setError(''); }}>
             <option value="">Choose a tab</option>
-            {tabs.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
+            {tabs.map(item => <option key={item.key} style={{color:item.color || undefined}} value={item.key}>{item.label}</option>)}
           </select>
         </label>
         {!projects.length && <p className="text-sm text-muted-foreground">Create another project to copy this tab.</p>}

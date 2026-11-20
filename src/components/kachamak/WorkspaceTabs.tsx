@@ -31,10 +31,10 @@ function tabStyle(key: TabKey) {
 }
 
 const horizontalOnly:Modifier=({transform})=>({...transform,y:0});
-function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{key:TabKey;label:string};active:boolean;onOpen:()=>void;onHide:()=>void;onDelete:()=>void;onClone?:()=>void}) {
+function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{key:TabKey;label:string;color?:string};active:boolean;onOpen:()=>void;onHide:()=>void;onDelete:()=>void;onClone?:()=>void}) {
   const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:tab.key});
   const {icon: Icon, color} = tabStyle(tab.key);
-  const button=<button ref={setNodeRef} {...attributes} {...listeners} type="button" onClick={onOpen} aria-current={active?'page':undefined} title={tab.label} style={{transform:CSS.Transform.toString(transform),transition,position:'relative',zIndex:isDragging?10:undefined}} className={`workspace-ribbon-tile cursor-grab touch-none select-none active:cursor-grabbing ${isDragging?'bg-background shadow-lg ring-1 ring-amber-400/40':''}`}><Icon aria-hidden="true" style={{color}}/><span className="max-w-full truncate">{tab.label}</span></button>;
+  const button=<button ref={setNodeRef} {...attributes} {...listeners} type="button" onClick={onOpen} aria-current={active?'page':undefined} title={tab.label} style={{transform:CSS.Transform.toString(transform),transition,position:'relative',zIndex:isDragging?10:undefined}} className={`workspace-ribbon-tile cursor-grab touch-none select-none active:cursor-grabbing ${isDragging?'bg-background shadow-lg ring-1 ring-amber-400/40':''}`}><Icon aria-hidden="true" style={{color}}/><span className="max-w-full truncate" style={{color:tab.color || undefined}}>{tab.label}</span></button>;
   const canDelete = !['binder','codex','timeline'].includes(tab.key);
   return <ContextMenu modal={false}><ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
     <ContextMenuContent aria-label={`${tab.label} tab actions`} className="min-w-36 border-white/15 bg-[#1b1b1b]">
@@ -90,7 +90,7 @@ export function WorkspaceTabs({novel,onFocus}:{novel:Novel;onFocus?:()=>void}) {
       <p className="mb-2 text-sm font-medium">Your workspace</p>
       <form className="flex gap-2" onSubmit={e=>{e.preventDefault();if(!name.trim())return;const state=useKachamak.getState();const id=state.addNode('binder',null,'doc',name.trim());if(id){state.updateNode('binder',id,{icon:'folder'});state.openNoteTab(id);state.select(id);state.setRenamingNode(null);}setName('');setOpen(false);}}><input aria-label="New folder tab name" placeholder="Research, World, Marketing…" value={name} onChange={e=>setName(e.target.value)} className="min-w-0 flex-1 rounded border border-white/15 bg-black/20 px-2 py-1.5 text-xs"/><button className="rounded bg-amber-400 px-2 text-xs text-black">Create</button></form>
       {hiddenTabs.length>0&&<div aria-label="Hidden tabs" className="mt-3 max-h-60 overflow-y-auto border-t border-white/10 pt-2">
-        {hiddenTabs.map(tab=><button type="button" key={tab.key} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-white/10" onClick={()=>{openTab(tab.key);setOpen(false);}}><FolderOpen className="h-3.5 w-3.5 shrink-0"/>Show {tab.label}</button>)}
+        {hiddenTabs.map(tab=><button type="button" key={tab.key} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-white/10" onClick={()=>{openTab(tab.key);setOpen(false);}}><FolderOpen className="h-3.5 w-3.5 shrink-0"/>Show <span style={{color:tab.color || undefined}}>{tab.label}</span></button>)}
       </div>}
     </PopoverContent></Popover>
     <div className="workspace-ribbon-grid ml-auto border-l border-white/10 pl-2">

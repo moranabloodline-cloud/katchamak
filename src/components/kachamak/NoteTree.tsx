@@ -217,7 +217,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
         >
           <span className="shrink-0" style={{ paddingLeft: `${d * 14}px` }} />
           <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <span className="min-w-0 truncate">{n.title}</span>
+          <span className="min-w-0 truncate" style={{color:n.color || undefined}}>{n.title}</span>
         </button>
         {n.children.map((c) => renderDest(c, d + 1, sec))}
       </div>
@@ -503,7 +503,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             if (rowRef.current?.isConnected) { e.preventDefault(); rowRef.current.focus(); }
           }}>
             <AlertDialogHeader>
-              <AlertDialogTitle>Move “{node.title}” to Trash?</AlertDialogTitle>
+              <AlertDialogTitle>Move “<span style={{color:node.color || undefined}}>{node.title}</span>” to Trash?</AlertDialogTitle>
               <AlertDialogDescription>
                 {hasChildren ? 'This includes all nested family trees. ' : ''}
                 {impact.exclusive.size
@@ -527,7 +527,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Move “{node.title}”</DialogTitle>
+            <DialogTitle>Move “<span style={{color:node.color || undefined}}>{node.title}</span>”</DialogTitle>
           </DialogHeader>
           <p className="-mt-1 text-xs text-muted-foreground">
             Pick a destination — the note goes to the end of the chosen spot.
@@ -769,7 +769,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         <ContextMenuItem onSelect={() => { onDismissReveal?.(); if (rootId) useKachamak.getState().setSubtreeCollapsed(section,rootId,true); else setAllNodesCollapsed(section,true); }}>Collapse all</ContextMenuItem>
         {hiddenNotes.length > 0 && <>
           <ContextMenuSeparator className="bg-white/10" />
-          {hiddenNotes.map(hn=><ContextMenuItem key={hn.id} onSelect={()=>updateNode(section,hn.id,{hidden:false})}><Eye className="mr-2 h-3.5 w-3.5"/>Show {hn.title}</ContextMenuItem>)}
+          {hiddenNotes.map(hn=><ContextMenuItem key={hn.id} onSelect={()=>updateNode(section,hn.id,{hidden:false})}><Eye className="mr-2 h-3.5 w-3.5"/>Show <span style={{color:hn.color || undefined}}>{hn.title}</span></ContextMenuItem>)}
         </>}
       </ContextMenuContent>
       </ContextMenu>

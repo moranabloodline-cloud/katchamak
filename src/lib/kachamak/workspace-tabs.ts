@@ -4,9 +4,9 @@ import {findNodeInNovel} from './utils';
 export function validWorkspaceTabOrder(value:unknown):value is TabKey[]|undefined {
   return value===undefined||Array.isArray(value)&&value.length<=10000&&new Set(value).size===value.length&&value.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)));
 }
-function availableTabs(novel:Novel) {
+function availableTabs(novel:Novel): {key:TabKey;label:string;color?:string}[] {
   return [...TABS.filter(tab=>tab.key!=='trash'&&tab.key!=='timeline'&&tab.key!=='family'),...(novel.openNoteTabs??[]).flatMap(id=>{
-    const hit=findNodeInNovel(novel,id);return hit?[{key:`note:${id}` as TabKey,label:hit.node.title}]:[];
+    const hit=findNodeInNovel(novel,id);return hit?[{key:`note:${id}` as TabKey,label:hit.node.title,color:hit.node.color}]:[];
   }),...TABS.filter(tab=>tab.key==='timeline'||tab.key==='family')];
 }
 function rememberedOrder(novel:Novel,tabs=availableTabs(novel)) {

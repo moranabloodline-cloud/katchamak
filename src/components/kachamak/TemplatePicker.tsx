@@ -36,7 +36,7 @@ export function TemplatePicker({ templates, onChoose, onClose }: {
           return <button key={note.id} type="button" onClick={() => onChoose(note.id)}
             className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent">
             <Icon aria-hidden="true" className="h-4 w-4 shrink-0" style={{ color: note.color || undefined }} />
-            <span className="min-w-0"><span className="block break-words">{note.title || 'Untitled'}</span>
+            <span className="min-w-0"><span className="block break-words" style={{color:note.color || undefined}}>{note.title || 'Untitled'}</span>
               {path && <span className="block break-words text-xs text-muted-foreground">{path}</span>}
             </span>
           </button>;

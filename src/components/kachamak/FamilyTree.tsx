@@ -40,12 +40,12 @@ function RelationshipPicker({value,onChange}:{value:KinshipKind;onChange:(value:
 
 export function FamilyTreeEditor({novel,tree}:{novel:Novel;tree:NoteNode}){
   const {people,edges,reasons}=useMemo(()=>familyTreeView(novel,tree),[novel,tree]);
-  const names=new Map(people.map(p=>[p.id,p.title]));
+  const peopleById=new Map(people.map(p=>[p.id,p]));
   const [adding,setAdding]=useState(false);
   const [from,setFrom]=useState(''),[to,setTo]=useState('');
   const [kind,setKind]=useState<FamilyRelationship['kind']>('parent'),[error,setError]=useState('');
   const [label,setLabel]=useState(''),[mutual,setMutual]=useState(false);
-  const validPair=names.has(from)&&names.has(to)&&from!==to;
+  const validPair=peopleById.has(from)&&peopleById.has(to)&&from!==to;
   const canSave=validPair && (kind!=='custom'||!!label.trim());
   const save=(edge:FamilyRelationship,remove=false)=>{
     const message=useKachamak.getState().changeFamilyRelationship(novel.id,tree.id,edge,remove);
@@ -61,8 +61,8 @@ export function FamilyTreeEditor({novel,tree}:{novel:Novel;tree:NoteNode}){
       <h3 className="font-semibold">People</h3><CodexNotePicker section="family" node={tree} field="familyMembers"/>
     </div>
     {(tree.familyMembers??[]).map(id=><div key={id} className="flex items-center justify-between gap-2 py-1">
-      <span className="truncate">{names.get(id)??'Unavailable Codex note'}</span>
-      <button type="button" aria-label={'Remove '+(names.get(id)??'note')+' from this tree'} title="Remove from this tree" onClick={()=>removePerson(id)} className="rounded p-1 text-muted-foreground hover:bg-accent"><X className="size-3.5"/></button></div>)}
+      <span className="truncate" style={{color:peopleById.get(id)?.color || undefined}}>{peopleById.get(id)?.title??'Unavailable Codex note'}</span>
+      <button type="button" aria-label={'Remove '+(peopleById.get(id)?.title??'note')+' from this tree'} title="Remove from this tree" onClick={()=>removePerson(id)} className="rounded p-1 text-muted-foreground hover:bg-accent"><X className="size-3.5"/></button></div>)}
     </section>
     <section><div className="mb-2 flex items-center gap-1 border-b border-border pb-1">
       <h3 className="font-semibold">Relationships</h3>
@@ -70,15 +70,15 @@ export function FamilyTreeEditor({novel,tree}:{novel:Novel;tree:NoteNode}){
     </div>
     <p className="mb-2 text-xs text-muted-foreground">Shared across this book’s family trees.</p>
     {edges.map(edge=><div key={JSON.stringify(edge)} className="flex items-center gap-2 border-b border-border/50 py-2 text-xs">
-      <span className="min-w-0 flex-1 break-words">{names.get(edge.from)} <span className="text-muted-foreground">is the {edge.kind==='custom'?edge.label:relationshipName(edge).toLowerCase()} of</span> {names.get(edge.to)}
+      <span className="min-w-0 flex-1 break-words"><span style={{color:peopleById.get(edge.from)?.color || undefined}}>{peopleById.get(edge.from)?.title}</span> <span className="text-muted-foreground">is the {edge.kind==='custom'?edge.label:relationshipName(edge).toLowerCase()} of</span> <span style={{color:peopleById.get(edge.to)?.color || undefined}}>{peopleById.get(edge.to)?.title}</span>
         {reasons.has(edge) && <small className="mt-0.5 block text-muted-foreground">Inferred · {reasons.get(edge)}</small>}</span>
-      {!reasons.has(edge) && <button type="button" aria-label={'Remove relationship between '+names.get(edge.from)+' and '+names.get(edge.to)} title="Remove shared relationship" className="rounded p-1 text-muted-foreground hover:bg-accent" onClick={()=>{if(window.confirm('Remove this relationship from all family trees in this book?'))save(edge,true);}}><X className="size-3.5"/></button>}</div>)}
+      {!reasons.has(edge) && <button type="button" aria-label={'Remove relationship between '+peopleById.get(edge.from)?.title+' and '+peopleById.get(edge.to)?.title} title="Remove shared relationship" className="rounded p-1 text-muted-foreground hover:bg-accent" onClick={()=>{if(window.confirm('Remove this relationship from all family trees in this book?'))save(edge,true);}}><X className="size-3.5"/></button>}</div>)}
     {adding && <form className="mt-3 space-y-2" onSubmit={e=>{e.preventDefault();if(canSave)save(kind==='custom'?{kind,from,to,label:label.trim(),mutual}:{kind,from,to});}}>
-      <select aria-label="First person" className={field} value={from} onChange={e=>{setFrom(e.target.value);setError('');}}>{people.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select>
+      <select aria-label="First person" className={field} value={from} style={{color:peopleById.get(from)?.color || undefined}} onChange={e=>{setFrom(e.target.value);setError('');}}>{people.map(p=><option key={p.id} style={{color:p.color || "var(--foreground)"}} value={p.id}>{p.title}</option>)}</select>
       <RelationshipPicker value={kind} onChange={(selected,name)=>{setKind(selected);if(name)setLabel(name.slice(0,customNameLimit));setError('');}}/>
       {kind==='custom' && <div className="space-y-2"><input aria-label="Relationship name" placeholder="Relationship name" required maxLength={customNameLimit} value={label} onChange={e=>setLabel(e.target.value)} className={field}/>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mutual} onChange={e=>setMutual(e.target.checked)}/>Same role in both directions</label></div>}
-      <select aria-label="Second person" className={field} value={to} onChange={e=>{setTo(e.target.value);setError('');}}>{people.map(p=><option key={p.id} value={p.id} disabled={p.id===from}>{p.title}</option>)}</select>
+      <select aria-label="Second person" className={field} value={to} style={{color:peopleById.get(to)?.color || undefined}} onChange={e=>{setTo(e.target.value);setError('');}}>{people.map(p=><option key={p.id} style={{color:p.color || "var(--foreground)"}} value={p.id} disabled={p.id===from}>{p.title}</option>)}</select>
       <div className="flex gap-2"><button type="submit" disabled={!canSave} className={action+' disabled:opacity-40'}>Add relationship</button><button type="button" className="px-1 text-xs text-muted-foreground" onClick={()=>{setAdding(false);setError('');}}>Cancel</button></div>
     </form>}
     {error && <p role="alert" className="mt-2 text-xs text-amber-400">{error}</p>}
@@ -125,7 +125,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const rightOpen=useKachamak(s=>s.rightPanelOpen);
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">
     <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
-      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold"><Network className="size-4 shrink-0 text-muted-foreground"/><span className="truncate">{tree?.title||'Family Tree'}</span></h2>
+      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold"><Network className="size-4 shrink-0 text-muted-foreground"/><span className="truncate" style={{color:tree?.color || undefined}}>{tree?.title||'Family Tree'}</span></h2>
       {tree && <button type="button" onClick={onEdit} className={action+(rightOpen && !novel.hiddenInspectorTabs?.includes('family')?' lg:hidden':'')}>Edit tree</button>}
     </header>
     {people.length===0 ? <div className="m-auto max-w-sm px-5 py-12 text-center">
@@ -150,7 +150,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
             className="absolute flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left shadow-sm hover:border-amber-400/60 focus-visible:outline-amber-400"
             style={{left:x,top:y,width:w,height:h}}>
             {person.image?<img src={person.image} alt="" className="size-9 shrink-0 rounded-full object-cover"/>:<span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted" style={{color:person.color||undefined}}><Icon className="size-4"/></span>}
-            <span className="line-clamp-2 break-words text-sm font-semibold leading-tight">{person.title}</span>
+            <span className="line-clamp-2 break-words text-sm font-semibold leading-tight" style={{color:person.color || undefined}}>{person.title}</span>
           </button>;
         })}
       </div>
