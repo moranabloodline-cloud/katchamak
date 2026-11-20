@@ -4,7 +4,7 @@ import DOMPurify from "dompurify";
 import { useKachamak } from "@/lib/kachamak/store";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { toast } from "sonner";
-import { preparePastedContent } from "@/lib/kachamak/paste-content";
+import { insertHeadingFragment, preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useId, useRef, useState } from "react";
 import {noteAnchorStyles} from '@/lib/kachamak/note-links';
 import { LinkHighlights } from './LinkHighlights';
@@ -138,7 +138,15 @@ export function RichEditor({
           if(!content)return;
           if(ref.current)history.current.before(ref.current);
           pasting.current=true;
-          try{document.execCommand('insertHTML', false, content);handleInput();}
+          try{
+            const editor=ref.current;
+            if(editor && insertHeadingFragment(editor,content)){
+              editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertFromPaste'}));
+            }else{
+              document.execCommand('insertHTML',false,content);
+              handleInput();
+            }
+          }
           finally{pasting.current=false;}
         }}
         onInput={handleInput}

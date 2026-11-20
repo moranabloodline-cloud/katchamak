@@ -39,6 +39,66 @@ function plainTextContent(text:string):string {
   return lines.length===1?escaped[0]:escaped.map(line=>'<p>'+(line||'<br>')+'</p>').join('');
 }
 
+// Native insertHTML can merge the last paragraph into the style at the caret
+// and write the current pixel size into the manuscript. Insert heading-bearing
+// fragments as blocks so their typography can continue to follow the tab.
+export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
+  if(!/<h[1-6](?:\s|>)/i.test(html))return false;
+  const doc=editor.ownerDocument,selection=doc.getSelection();
+  if(!selection?.rangeCount)return false;
+  const range=selection.getRangeAt(0);
+  if(!editor.contains(range.commonAncestorContainer))return false;
+
+  const scopeOf=(node:Node)=>{
+    const element=node.nodeType===1?node as Element:node.parentElement;
+    const scope=element?.closest('li,td,th,blockquote');
+    return scope&&editor.contains(scope)?scope:editor;
+  };
+  const scope=scopeOf(range.startContainer);
+  if(scope!==scopeOf(range.endContainer))return false;
+  const template=doc.createElement('template');
+  template.innerHTML=html;
+  const content=template.content;
+  // Clipboard HTML often ends with a newline after the final block.
+  const last=Array.from(content.childNodes).findLast(node=>node.nodeType===1 || node.textContent?.trim());
+  if(!last)return false;
+
+  const replacement=range.cloneRange();
+  const parts=doc.createDocumentFragment();
+  // Split at the block boundary, keeping the surrounding text and its original
+  // inline marks on either side. Ignore an empty paragraph's caret placeholder.
+  const edge=(node:Node,offset:number,before:boolean)=>{
+    if(node===scope)return;
+    let block=node;
+    const length=node.nodeType===3?node.textContent!.length:node.childNodes.length;
+    let keep=before?offset>0:offset<length;
+    while(block.parentNode!==scope && block.parentNode){
+      keep ||= !!(before?block.previousSibling:block.nextSibling);
+      block=block.parentNode;
+    }
+    const part=doc.createRange();
+    part.selectNode(block);
+    if(before){part.setEnd(node,offset);replacement.setStartBefore(block);}
+    else{part.setStart(node,offset);replacement.setEndAfter(block);}
+    const placeholder=block.nodeType===1 && (block as Element).innerHTML==='<br>';
+    if(keep && !placeholder)parts.append(part.cloneContents());
+  };
+  edge(range.startContainer,range.startOffset,true);
+  parts.append(content);
+  edge(range.endContainer,range.endOffset,false);
+  replacement.deleteContents();
+  replacement.insertNode(parts);
+  // Keep subsequent typing in the last pasted paragraph.
+  if(last.nodeType===1 && (last as Element).matches('br,hr')){
+    range.setStartAfter(last);range.collapse(true);
+  }else{
+    range.selectNodeContents(last);
+    range.collapse(last.nodeType===1 && (last as Element).innerHTML==='<br>');
+  }
+  selection.removeAllRanges();selection.addRange(range);
+  return true;
+}
+
 export function preparePastedContent(html: string, text: string): string {
   if (!html) return plainTextContent(text);
   const doc = new DOMParser().parseFromString(html,'text/html');

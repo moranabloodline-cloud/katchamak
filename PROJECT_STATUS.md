@@ -1,3 +1,5 @@
+> **2026-11-20 — Lepljenje naslova i pasusa.** U editoru nalepljeni H3 koristi veličinu naslova i prored aktivnog taba. Pri lepljenju usred ručno formatiranog teksta čuvaju se stil okolnih reči, odvojeni pasusi, prazni pasusi i prelomi reda.
+
 > **2026-11-20 — Format svakog taba zasebno.** Format čuva podrazumevani izgled za izabrani tab u toj knjizi. Na Homepage-u menja tipografiju blokova. U beleškama traka editora i dalje menja označeni tekst. Stara podešavanja beleške važe dok korisnik ne izabere drugu vrednost za tu opciju na tabu.
 
 > **2026-11-20 — Homepage u glavnoj navigaciji.** Homepage je prvi tab projekta. Otvara sačuvanu početnu stranu i ostaje na prvom mestu kada se ostali tabovi premeste. Traka za uređivanje teksta počinje komandom Undo.
@@ -563,6 +565,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Copy/paste u Templates.** U probnoj knjizi provereni su Ctrl+C i Ctrl+V, lepljenje preko selekcije i između reči, izgled H3 pri promeni veličine i proreda taba, prazni pasusi, ručni prelom reda, Undo/Redo i čuvanje posle ponovnog otvaranja.
 
 - **2026-11-20 — Format po tabu.** Na dve probne knjige provereni su odvojeni formati, beleška otvorena kao tab, Homepage, Write, Split i Continuous, lokalno formatiranje selekcije i ponovno učitavanje sačuvane knjige.
 
