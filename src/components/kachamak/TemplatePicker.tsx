@@ -26,7 +26,7 @@ export function TemplatePicker({ templates, onChoose, onClose }: {
   visit(templates, '');
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent aria-describedby={undefined} className="gap-3 sm:max-w-md">
-      <DialogHeader><DialogTitle>Create from Template</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>Insert Template</DialogTitle></DialogHeader>
       <input aria-label="Search templates" placeholder="Search templates" value={query}
         onChange={event => setQuery(event.target.value)}
         className="rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-amber-500" />

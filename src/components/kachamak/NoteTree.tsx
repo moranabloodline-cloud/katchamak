@@ -409,7 +409,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
               <DropdownMenuItem onSelect={() => addNode(section, node.id, "doc")}>
                 Create note
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onTemplate(node.id)}>Create from Template</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onTemplate(node.id)}>Insert Template</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               {section==="timeline"&&<><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</DropdownMenuItem><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</DropdownMenuItem><DropdownMenuSeparator/></>}
               <DropdownMenuItem onSelect={() => setRenamingNode(node.id)}>
@@ -764,7 +764,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         <ContextMenuItem onSelect={() => addNode(section,rootId??null,'doc')}>
           {rootId?'Create note':'Create top-level note'}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => openTemplates(rootId ?? null)}>Create from Template</ContextMenuItem>
+        <ContextMenuItem onSelect={() => openTemplates(rootId ?? null)}>Insert Template</ContextMenuItem>
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,false):setAllNodesCollapsed(section,false)}>Expand all</ContextMenuItem>
         <ContextMenuItem onSelect={() => { onDismissReveal?.(); if (rootId) useKachamak.getState().setSubtreeCollapsed(section,rootId,true); else setAllNodesCollapsed(section,true); }}>Collapse all</ContextMenuItem>

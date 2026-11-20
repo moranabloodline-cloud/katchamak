@@ -96,7 +96,7 @@ const binderEvent=await addEventFromOptions();
 const binder=useKachamak.getState().novels[0].sections.binder;
 assert.deepEqual(findNode(binder,act1).children.map(n=>n.id),[chapter1,chapter2,added,scoped,binderEvent]);
 assert.equal(findNode(binder,act2).children.length,0);
-// Create from Template uses notes from the active book and the chosen insertion point.
+// Insert Template uses notes from the active book and the chosen insertion point.
 await React.act(async()=>{
   actions.select(chapter2);
   root.render(React.createElement(NoteTree,{section:'binder'}));
@@ -104,7 +104,7 @@ await React.act(async()=>{
 const dialog=()=>document.querySelector('[role="dialog"]');
 const pickButton=(name,path)=>[...dialog().querySelectorAll('button')].find(b=>
   b.textContent===name+path);
-const openPicker=parent=>createFromTree(parent,'Create from Template');
+const openPicker=parent=>createFromTree(parent,'Insert Template');
 await openPicker(null);
 assert.match(dialog().textContent,/Add a note to the Templates tab/);
 await React.act(async()=>dialog().querySelector('[data-slot="dialog-close"]').click());
