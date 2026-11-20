@@ -1,3 +1,5 @@
+> **2026-11-20 — Osvežavanje pre ponovnog čuvanja.** Ako se stranica osveži posle prekida slanja, original se otvara sa poslednjim potvrđenim rasporedom. Lokalni nacrt iz istog profila pregledača može da se oporavi kroz My Account → Storage → Recover as copies.
+
 > **2026-11-20 — Čuvanje na sporoj vezi.** Pregledač sada obnavlja rok za čuvanje i učitavanje biblioteke svaki put kad prenese još podataka. Ranije je prekidao i aktivan prenos posle 30 sekundi.
 
 > **2026-11-20 — Katanac početne stranice.** Katanac u gornjem desnom uglu platna otključava i zaključava stranicu. Uklonjeni su strelica za povratak i ponovljeni naziv stranice iznad blokova.
@@ -575,6 +577,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Provera Homepage-a posle osvežavanja bez veze.** U istom probnom albumu iz prethodnog testa premeštene su četiri od 48 kartica. Prenos je prekinut posle 320 KiB od 6,42 MB, pa je Chrome osvežen bez veze pre klika na Retry save. Posle ponovnog povezivanja original je prikazao prethodno potvrđen raspored. Oporavak lokalnog nacrta napravio je kopije obe knjige probne biblioteke. Posle novog učitavanja oporavljenog albuma potvrđeni su svi ID-jevi kartica, redosled, redovi i kolone i SHA-256 svake slike. U oporavljenom albumu svaka kartica i slika pojavila se jednom.
 
 - **2026-11-20 — Prekidi pri čuvanju Homepage-a.** U izolovanoj probnoj knjizi sa 48 različitih PNG slika u šest redova i četiri kolone prekid je izazvan nakon 320 KiB od 6,42 MB. Ponovno slanje na 112 KiB/s završilo se za 56 sekundi. U drugom pokušaju veza je prekinuta pošto je server sačuvao premeštene kartice, pre isporuke potvrde pregledaču. Ponovni pokušaj prepoznao je istu reviziju. Posle oba osvežavanja upoređeni su identiteti i položaji svih kartica i sadržaj svake slike. Nije bilo duplikata.
 
