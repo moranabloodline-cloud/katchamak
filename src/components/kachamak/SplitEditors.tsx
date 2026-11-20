@@ -133,6 +133,7 @@ export function SplitEditors({ section }: { section: SectionKey }) {
       <div
         ref={p === "a" ? paneARef : paneBRef}
         onPointerDown={() => setActivePane(p)}
+        onFocusCapture={() => {if(useKachamak.getState().activePane!==p)setActivePane(p);}}
         data-pane={p}
         className={`relative flex h-full min-w-0 flex-col ${
           p === "a" ? "shrink-0" : "flex-1"
@@ -148,7 +149,7 @@ export function SplitEditors({ section }: { section: SectionKey }) {
         {/* zoom POVŠINE: lenjir + strana se uvećavaju zajedno, svaka površina
             odvojeno; širine panela i razdelnik ostaju u pravim pikselima */}
         <div className="flex min-h-0 flex-1 flex-col" style={{ zoom }}>
-          <RulerRow />
+          <RulerRow node={hit?.node} />
           {hit ? (
             <EditorPage key={hit.node.id} node={hit.node} section={hit.section} />
           ) : (

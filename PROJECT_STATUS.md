@@ -1,3 +1,5 @@
+> **2026-11-20 — Format pojedinačne beleške.** Page settings čuva tipografiju i izgled otvorene strane. Traka editora formatira označeni tekst, a prored važi za pasuse koje selekcija zahvata.
+
 > **2026-11-20 — Visina Timeline kartica.** Standardna kartica u boji visoka je najmanje 108 px i ima ikonicu od 36 px uz naslov i datum. Gornji natpis sa imenom roditeljske beleške je uklonjen.
 
 > **2026-11-20 — Datumi na Timeline karticama.** Uz marker se vidi početni datum. Kartica prikazuje raspon prema formatu knjige i trajanje u kalendarskim jedinicama, npr. „1 day“ ili „10,000 years“.
@@ -543,6 +545,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Podešavanja strane i selekcije.** Write, Split i Continuous koriste podešavanja svake beleške. Starije beleške nasleđuju prethodni izgled. Promena izgleda strane čuva HTML rukopisa. U Chrome-u su na dve probne beleške provereni izbor strane, formatiranje selekcije, Undo/Redo i ponovno otvaranje posle čuvanja.
 
 - **2026-11-20 — Timeline Cards.** Minimalna visina kartice prati tri visine ikonice. U Chrome-u proveren raspored na probnim podacima za kartice u boji, sa slikom i u kompaktnom režimu, na širokom i uskom ekranu. Prošli su test Timeline panela, TypeScript i build.
 

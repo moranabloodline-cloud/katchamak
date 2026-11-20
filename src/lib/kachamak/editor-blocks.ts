@@ -1,10 +1,12 @@
-import {PAGE_FONTS,NOTE_FONT_SIZES} from './page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES,LINE_SPACINGS} from './page-format';
 export function editorForRange(range:Range|null):HTMLElement|null {
   if(!range)return null;
   const element=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer as Element:range.commonAncestorContainer.parentElement;
   const editor=element?.closest<HTMLElement>('.kachamak-editor')??null;
   return editor?.isConnected?editor:null;
 }
+export const paragraphSelector='p,div,li,h1,h2,h3,h4,h5,h6,blockquote,pre,td,th';
+
 export function selectionBlock(range:Range|null):string {
   const editor=editorForRange(range);if(!editor||!range)return 'normal';
   const node=range.startContainer.nodeType===1?range.startContainer as Element:range.startContainer.parentElement;
@@ -55,7 +57,7 @@ export function applyEditorTypography(range:Range|null,property:'fontFamily'|'fo
   if(!editor||!range||range.collapsed||editor.getAttribute('contenteditable')!=='true')return false;
   if(property==='fontFamily'&&!PAGE_FONTS.includes(value))return false;
   if(property==='fontSize'&&!NOTE_FONT_SIZES.some(size=>value===`${size}px`))return false;
-  if(property==='lineHeight'&&!['1.0','1.15','1.5','2.0'].includes(value))return false;
+  if(property==='lineHeight'&&!LINE_SPACINGS.includes(value))return false;
   const leaves:{node:Text;start:number;end:number}[]=[];
   const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);
   let node:Node|null;
@@ -63,6 +65,30 @@ export function applyEditorTypography(range:Range|null,property:'fontFamily'|'fo
     if(!range.intersectsNode(node)||node.parentElement?.closest('[contenteditable="false"]'))continue;
     const text=node as Text,start=range.startContainer===text?range.startOffset:0,end=range.endContainer===text?range.endOffset:text.length;
     if(end>start)leaves.push({node:text,start,end});
+  }
+  if(property==='lineHeight'){
+    const paragraphs=new Set(leaves.map(({node})=>node.parentElement?.closest<HTMLElement>(paragraphSelector)));
+    // Empty paragraphs between the selected lines also need the new leading.
+    for(const blank of editor.querySelectorAll<HTMLElement>(paragraphSelector)){
+      if(!blank.textContent&&!blank.querySelector(paragraphSelector)&&range.intersectsNode(blank)
+        &&!blank.contains(range.endContainer))paragraphs.add(blank);
+    }
+    paragraphs.delete(editor);
+    if(![...paragraphs].some(Boolean))return false;
+    editor.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,inputType:'formatBlock'}));
+    for(const block of paragraphs){
+      if(!block)continue;
+      block.dataset.editorLineHeight='true';
+      block.style.setProperty('line-height',value,'important');
+      // Older toolbar versions stored line height on individual words.
+      for(const inline of block.querySelectorAll<HTMLElement>('[style]')){
+        if(!inline.matches(paragraphSelector)&&inline.closest(paragraphSelector)===block)inline.style.removeProperty('line-height');
+      }
+    }
+    const selection=window.getSelection();
+    editor.focus();selection?.removeAllRanges();selection?.addRange(range);
+    editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));
+    return true;
   }
   if(!leaves.length)return false;
   editor.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,inputType:'formatFontName'}));

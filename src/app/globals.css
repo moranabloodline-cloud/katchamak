@@ -312,9 +312,12 @@ html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 [data-page-ruler][data-page-layout="stacked"] { max-width: calc(min(var(--page-width, 48rem), 100%) - 3rem - 2px); }
 [data-document-page] .kachamak-editor { text-align: var(--page-align, left); }
 [data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"],
-[data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"] * { color: inherit !important; }
+[data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"] * { color: inherit !important; -webkit-text-fill-color: inherit !important; text-decoration-color: currentColor !important; }
+[data-document-page][data-page-leading] .kachamak-editor :is(p,div,h1,h2,h3,h4,h5,h6,blockquote,li,td,th,pre):not([data-editor-line-height]) { line-height: var(--page-leading) !important; }
+.kachamak-editor li[data-editor-line-height] > :is(ul,ol) { line-height: var(--page-leading); }
+[data-document-page][data-page-leading] .kachamak-editor :is(span,font,a,b,i,strong,em,u,s):not([data-editor-typography]) { line-height: inherit !important; }
 [data-document-page] .kachamak-editor :is(p,div) { text-indent: var(--page-indent,0em); }
-[data-document-page][data-page-spacing="custom"] .kachamak-editor :is(p,div) { margin-block: 0 var(--page-gap,0em) !important; }
+[data-document-page][data-page-spacing="custom"] .kachamak-editor :is(p,div):not(li *, :has(> p, > div, > ul, > ol)) { margin-block: 0 var(--page-gap,0em) !important; }
 [data-document-page] .kachamak-editor li, [data-document-page] .kachamak-editor li :is(p,div) { margin-block: 0 !important; text-indent: 0; }
 [data-document-page][data-page-chicago="true"] .kachamak-editor > :is(p,div):first-child,
 [data-document-page][data-page-chicago="true"] .kachamak-editor > :is(h1,h2,h3,h4,h5,h6,hr,blockquote,ul,ol) + :is(p,div) { text-indent: 0; }

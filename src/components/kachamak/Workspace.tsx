@@ -10,7 +10,7 @@ import { WorkspaceBrand } from "./WorkspaceBrand";
 import { activeWritingEditor } from "./WorkspaceNavigation";
 import { PageFormatMenu } from "./PageFormatMenu";
 import { useOpenWorkspaceTab, WorkspaceTabs } from "./WorkspaceTabs";
-import { findNodeInNovel } from "@/lib/kachamak/utils";
+import { findNode,findNodeInNovel } from "@/lib/kachamak/utils";
 import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { NotesSection } from "./NotesSection";
@@ -75,8 +75,16 @@ export function Workspace() {
   };
 
   const novel = novels.find((n) => n.id === activeNovelId);
+  const pageView = useKachamak(s=>s.view);
+  const pageId = useKachamak(s=>s.view==='split'?(s.activePane==='a'?s.paneAId:s.paneBId):s.selectedNodeId);
+
   const openTab = useOpenWorkspaceTab(novel);
   const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
+  const pageNote = novel&&pageId&&activeTab!=='trash'&&['write','split','continuous'].includes(pageView)
+    ? findNodeInNovel(novel,pageId) : null;
+  const inContinuousScope = pageNote && pageNote.section===(folder?.section??activeTab)
+    && (!folder || !!findNode([folder.node],pageNote.node.id));
+  const visiblePage = pageView==='continuous'&&!inContinuousScope ? null : pageNote;
   useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
 
@@ -125,7 +133,7 @@ export function Workspace() {
             onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
             <EyeOff aria-hidden="true"/>
           </button>
-          <PageFormatMenu disabled={activeTab==='trash'}/>
+          <PageFormatMenu key={visiblePage?.node.id??'empty'} note={visiblePage}/>
           <button type="button" aria-label="Trash" title="Trash" aria-current={activeTab==='trash'?'page':undefined}
             onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
             <Trash2 aria-hidden="true"/>

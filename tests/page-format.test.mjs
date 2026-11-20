@@ -40,6 +40,16 @@ for(const family of PAGE_FONTS){
   await React.act(async()=>assert.equal(applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'),true));
   assert.equal(editor.innerHTML,original,'Font formatting has one reversible history entry');
 }
+// A real paragraph owns leading, including a partial selection that ends
+// exactly at the start of the following paragraph.
+const paragraphs=editor.querySelectorAll('p'), across=document.createRange();
+across.setStart(paragraphs[0].firstChild,2);across.setEnd(paragraphs[1].firstChild,0);
+await React.act(async()=>assert.ok(applyEditorTypography(across,'lineHeight','1.0')));
+assert.equal(paragraphs[0].style.lineHeight,'1');assert.equal(paragraphs[1].style.lineHeight,'');
+assert.equal(editor.querySelector('span[style*="line-height"]'),null);
+assert.equal(editor.textContent,'Alpha beta gamma.Second paragraph.');
+await React.act(async()=>applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'));
+assert.equal(editor.innerHTML,original);
 assert.equal(PAGE_FONTS.length,12);
 const contentBeforePage=node().content;
 await React.act(async()=>{actions.setEditorFont('Georgia');actions.setEditorSize(18);actions.setEditorSpacing('2.0');actions.setPageFormat({indent:1.5,paragraphGap:0.5,width:60,align:'justify',divider:'dots',layout:'stacked',colorizeAnnotations:false});});
@@ -47,6 +57,20 @@ assert.equal(node().content,contentBeforePage);assert.equal(editor.innerHTML,con
 assert.equal(document.querySelector('[data-document-page]').dataset.pageLayout,'stacked');
 assert.equal(document.querySelector('[data-document-page]').style.getPropertyValue('--page-width'),'60rem');
 assert.equal(document.querySelector('[data-document-page]').style.getPropertyValue('--page-indent'),'1.5em');
+const localPage={...DEFAULT_PAGE_FORMAT,width:36,align:'justify',divider:'asterisks',chicago:false};
+await React.act(async()=>actions.updateNode('binder',id,{pageSettings:{font:'Calibri',spacing:'1.15',page:localPage},bodyFontSize:12}));
+assert.equal(editor.closest('[style*="font-size"]').style.lineHeight,'1.15');
+assert.equal(editor.closest('[style*="font-size"]').style.fontSize,'12px');
+assert.equal(editor.closest('[data-document-page]').style.getPropertyValue('--page-width'),'36rem');
+assert.equal(node().content,contentBeforePage);
+assert.equal(useKachamak.getState().pageFormat.width,60);
+const {validCloudLibrary}=await import('../src/lib/kachamak/cloud-write-validation.mjs');
+const restored=JSON.parse(JSON.stringify({novels:useKachamak.getState().novels,collections:[]}));
+assert.ok(validCloudLibrary(restored));
+const loaded=findNodeInNovel(restored.novels[0],id).node;
+assert.deepEqual(loaded.pageSettings,node().pageSettings);
+loaded.pageSettings.spacing='0';assert.equal(validCloudLibrary(restored),false);
+delete loaded.pageSettings;assert.ok(validCloudLibrary(restored),'Older pages remain readable');
 const oldProject=structuredClone(useKachamak.getState().novels);
 const migrated=useKachamak.persist.getOptions().migrate({novels:oldProject,editorFont:'Georgia',editorSize:18},25);
 assert.deepEqual(migrated.novels,oldProject);assert.equal(migrated.editorFont,'Georgia');assert.deepEqual(migrated.pageFormat,DEFAULT_PAGE_FORMAT);

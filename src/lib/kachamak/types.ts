@@ -72,6 +72,7 @@ export interface NoteNode {
   kind: NodeKind;
   synopsis: string;
   content: string; // rich text (HTML)
+  pageSettings?: import('./page-format').NotePageSettings;
   bodyFontSize?: number; // px; older notes inherit the page format
   notes: string;
   status: string; // "" = none

@@ -20,7 +20,7 @@ import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
 import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
-import {DEFAULT_PAGE_FORMAT,validNoteFontSize,validPageFormat,type PageFormat} from './page-format';
+import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,type PageFormat} from './page-format';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -656,7 +656,7 @@ export const useKachamak = create<KachamakState>()(
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
         if (!validCoverImage(patch.image)||!validDocumentTarget(patch.documentTarget)) return;
-        if (!validNoteFontSize(patch.bodyFontSize) || !validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
+        if (!validNotePageSettings(patch.pageSettings) || !validNoteFontSize(patch.bodyFontSize) || !validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (!validHiddenDetailBlocks(patch.collapsedDetailBlocks)||!validDetailBlockOrder(patch.detailBlockOrder)) return;
         if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
         if(section==='codex' && (patch.title!==undefined || patch.aliases!==undefined)) preserveCodexLinks(novel);
@@ -906,7 +906,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 41,
+      version: 42,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -919,6 +919,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<42){ /* Notes without page settings inherit the saved library appearance. */ }
         if(version<41){ /* An unset toolsHidden preference keeps the Timeline toolbar visible. */ }
         if(version<40){ /* Books without button preferences show all three Timeline views. */ }
         if(version<39){ /* Earlier notes keep their page font size and saved Details layout. */ }

@@ -20,7 +20,7 @@ function selectedText(editor:HTMLElement,range:Range) {
 }
 
 /** Markers move with the content, so splitting quotes keeps the exact selection. */
-function format(range:Range|null,action:(editor:HTMLElement,current:()=>Range,start:Comment)=>void) {
+function format(range:Range|null,action:(editor:HTMLElement,current:()=>Range,start:Comment,end:Comment)=>void) {
   const editor=editorForRange(range);
   if(!editor||!range||editor.getAttribute('contenteditable')!=='true')return false;
   const before=editor.innerHTML,selection=window.getSelection(),working=range.cloneRange(),collapsed=range.collapsed;
@@ -36,7 +36,7 @@ function format(range:Range|null,action:(editor:HTMLElement,current:()=>Range,st
   const tail=working.cloneRange();tail.collapse(false);tail.insertNode(end);
   const head=working.cloneRange();head.collapse(true);head.insertNode(start);
   const current=()=>{const selected=document.createRange();selected.setStartAfter(start);selected.setEndBefore(end);return selected;};
-  try {action(editor,current,start);}
+  try {action(editor,current,start,end);}
   finally {
     let restored=start.isConnected&&end.isConnected?current():document.createRange();
     start.remove();end.remove();editor.normalize();
@@ -93,9 +93,25 @@ export function applyEditorQuote(range:Range|null) {
   });
 }
 
+// Split inline wrappers at the selection edges so clearing part of a link or
+// styled run keeps both neighbouring pieces with their original attributes.
+function splitInlineAt(marker:Comment,editor:HTMLElement){
+  let inline=marker.parentElement;
+  while(inline&&inline!==editor&&inline.matches('a,b,strong,i,em,u,s,strike,span,font,small,big,sub,sup,mark,code')){
+    const remainder=inline.cloneNode(false) as HTMLElement;
+    remainder.removeAttribute('id');
+    while(marker.nextSibling)remainder.append(marker.nextSibling);
+    inline.after(marker);
+    if(remainder.hasChildNodes())marker.after(remainder);
+    if(!inline.hasChildNodes())inline.remove();
+    inline=marker.parentElement;
+  }
+}
+
 export function clearEditorFormatting(range:Range|null) {
   const collapsed=range?.collapsed??false;
-  return format(range,(editor,current,start)=>{
+  return format(range,(editor,current,start,end)=>{
+    if(!collapsed){splitInlineAt(end,editor);splitInlineAt(start,editor);}
     let selected=current();
     if(collapsed){
       const block=start.parentElement?.closest<HTMLElement>(blocks);
@@ -103,21 +119,28 @@ export function clearEditorFormatting(range:Range|null) {
     }
     const texts=selectedText(editor,selected);
     const selectedBlocks=Array.from(editor.querySelectorAll<HTMLElement>(blocks)).filter(block=>
-      !block.querySelector(blocks)&&texts.some(text=>block.contains(text))
+      !block.querySelector(blocks)&&texts.some(text=>block.contains(text))&&
+      (collapsed||texts.filter(text=>block.contains(text)).map(text=>text.data).join('')===block.textContent)
     );
     // removeFormat deliberately preserves anchors in Chromium. Unwrap only
     // links touched by the selection (or the caret's own link), including dead
     // note IDs and pasted website links; keep their text and unrelated links.
+    const wholeParagraphs=selectedBlocks.length>0&&texts.every(text=>selectedBlocks.some(block=>block.contains(text)));
     const caretLink=start.parentElement?.closest('a');
     const links=collapsed?(caretLink&&editor.contains(caretLink)?[caretLink]:[]):Array.from(editor.querySelectorAll('a')).filter(link=>texts.some(text=>link.contains(text)));
+    if(!collapsed){
+      for(const span of Array.from(editor.querySelectorAll('span[data-editor-typography]')).reverse()){
+        if(texts.some(text=>span.contains(text)))span.replaceWith(...span.childNodes);
+      }
+    }
     for(const link of links)link.replaceWith(...Array.from(link.childNodes));
     if(!collapsed)selected=current();
     const selection=window.getSelection();selection?.removeAllRanges();selection?.addRange(selected);
     document.execCommand('removeFormat',false);
     for(const block of selectedBlocks){
-      block.removeAttribute('style');
+      block.removeAttribute('style');block.removeAttribute('data-editor-line-height');
       if(/^H[1-6]$/.test(block.tagName)){const paragraph=document.createElement('p');paragraph.append(...Array.from(block.childNodes));block.replaceWith(paragraph);}
     }
-    unquote(editor,current,start);
+    if(collapsed||wholeParagraphs)unquote(editor,current,start);
   });
 }

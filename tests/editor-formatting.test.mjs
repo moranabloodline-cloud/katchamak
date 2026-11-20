@@ -48,7 +48,7 @@ await React.act(async()=>applyEditorHistory(current(),'undo'));assert.equal(edit
 const linked='<p>Before <a href="#note/missing" title="Missing note"><b>Data Ocean</b></a> and <a href="#note/keep">Keep link</a>.</p>';
 editor=await render(linked);select(editor.querySelector('b').firstChild,2,6);
 await React.act(async()=>clearEditorFormatting(current()));
-assert.equal(editor.querySelector('a[href="#note/missing"]'),null,'A partial selection can remove a broken link');
+assert.deepEqual([...editor.querySelectorAll('a[href="#note/missing"]')].map(a=>a.textContent),['Da','cean'],'Clearing part of a link preserves both unselected ends');
 assert.ok(editor.querySelector('a[href="#note/keep"]'),'Other links in the paragraph stay intact');
 assert.equal(editor.textContent,'Before Data Ocean and Keep link.');
 await React.act(async()=>applyEditorHistory(current(),'undo'));assert.equal(editor.innerHTML,linked,'One Undo restores the original link and formatting');

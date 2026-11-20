@@ -3,7 +3,7 @@ import { INSPECTOR_TABS, SECTION_KEYS } from './types';
 import { validNovelMetadata, validCoverImage } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
-import { validNoteFontSize } from './page-format';
+import { validNoteFontSize, validNotePageSettings } from './page-format';
 import { validDocumentTarget } from './document-target';
 import {validFamilyMembers,validFamilyRelationships} from './family-tree';
 import { validEvent, validTimelineExtra } from './story-calendar';
@@ -30,7 +30,7 @@ export function isReadableProject(value: unknown): boolean {
       (node.ignoreAutoLinking === undefined || typeof node.ignoreAutoLinking === 'boolean') &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
       validFamilyMembers(node.familyMembers) && validCoverImage(node.image) && validDocumentTarget(node.documentTarget) &&
-      validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
+      validNotePageSettings(node.pageSettings) && validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
       (node.timelineKind === undefined || (node.timelineKind==="event"||node.timelineKind==="period")) &&

@@ -119,7 +119,7 @@ export function RichEditor({
             applyEditorHistory(selection?.rangeCount?selection.getRangeAt(0):null,key==='y'||event.shiftKey?'redo':'undo');return;
           }
           if((event.ctrlKey||event.metaKey)&&event.altKey&&!event.shiftKey&&/^[0-6]$/.test(event.key)){
-            event.preventDefault();const selection=window.getSelection();applyBlockStyle(selection?.rangeCount?selection.getRangeAt(0):null,event.key==='0'?'normal':'h'+event.key);return;
+            event.preventDefault();const selection=window.getSelection();if(selection?.rangeCount&&!selection.isCollapsed)applyBlockStyle(selection.getRangeAt(0),event.key==='0'?'normal':'h'+event.key);return;
           }
           if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.dispatchEvent(new Event('katchamak-link')); }
         }}
