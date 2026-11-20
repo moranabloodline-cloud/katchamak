@@ -169,5 +169,5 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
 }
 
 export function WorkspaceNavigation({includeHomePages=false}:{includeHomePages?:boolean}={}) {
-  return <div className="flex min-w-0 flex-1 items-center gap-1.5"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
+  return <div className="flex h-10 min-w-0 shrink-0 items-center gap-1.5 border-b border-white/10 pl-3 pr-2"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
 }

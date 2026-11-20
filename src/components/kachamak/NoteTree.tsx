@@ -712,9 +712,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
     <div className="flex h-full flex-col">
       {/* traka 2 (levo) — border-b se nastavlja preko editor toolbar-a i Info/
           Details/Mentions reda: jedna linija od leve do desne ivice ekrana */}
-      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-white/10 pl-3 pr-2">
-        <WorkspaceNavigation />
-      </div>
+      <WorkspaceNavigation />
 
       <ContextMenu>
       <ContextMenuTrigger asChild>

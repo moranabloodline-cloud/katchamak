@@ -121,7 +121,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   useEffect(() => {
     const sync = () => {
       const focused=document.activeElement;
-      if(focused?.closest('[data-editor-toolbar],[data-editor-toolbar-popup]')&&editorForRange(savedRange.current)?.dataset.noteId===node?.id)return;
+      if(node && focused?.closest('[data-editor-toolbar],[data-editor-toolbar-popup]')&&editorForRange(savedRange.current)?.dataset.noteId===node?.id)return;
       if(focused?.matches('input,textarea,select')){savedRange.current=null;setHasSelection(false);setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');return;}
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
       const editor=editorForRange(range);
@@ -143,11 +143,11 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   },[node?.id,font,size]);
 
   return (
-    <div data-editor-toolbar className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
-      <ToolBtn title="Undo (Ctrl+Z)" onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'undo')}><Undo2 className="h-4 w-4" /></ToolBtn>
-      <ToolBtn title="Redo (Ctrl+Y)" onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'redo')}><Redo2 className="h-4 w-4" /></ToolBtn>
+    <div data-editor-toolbar role="toolbar" aria-label="Text formatting" className="col-start-1 row-start-1 flex h-10 min-w-0 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
+      <ToolBtn title="Undo (Ctrl+Z)" disabled={!node} onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'undo')}><Undo2 className="h-4 w-4" /></ToolBtn>
+      <ToolBtn title="Redo (Ctrl+Y)" disabled={!node} onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'redo')}><Redo2 className="h-4 w-4" /></ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
-      <fieldset aria-label="Format selected text" title={hasSelection?undefined:'Select text to format it'} disabled={!hasSelection} className="contents [&>*]:shrink-0 disabled:[&>button]:opacity-50 disabled:[&>select]:opacity-50">
+      <fieldset aria-label="Format selected text" title={hasSelection?undefined:'Select text to format it'} disabled={!node || !hasSelection} className="contents [&>*]:shrink-0 disabled:[&>button]:opacity-50 disabled:[&>select]:opacity-50">
       <select
         aria-label="Text style"
         title="Text style"
@@ -253,7 +253,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
       </ToolBtn>
       <ToolBtn
         title="Link"
-        disabled={!selectedTypography}
+        disabled={!node || !selectedTypography}
         onClick={() => {
           const range=ownedRange(savedRange.current),editor=editorForRange(range);
           if(!range||!editor)return;

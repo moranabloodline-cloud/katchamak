@@ -118,6 +118,15 @@ const expectedActions=['Save','Focus','Format','Trash','Settings','My account'];
 assert.deepEqual(headerActions().map(button=>button.getAttribute('aria-label')),expectedActions);
 assert.ok(headerActions().every(button=>button.title));
 assert.ok(headerActions().slice(0,-1).every(button=>!button.textContent.trim()));
+const toolbar=document.querySelector('[data-editor-toolbar]');
+for(const label of ['Timeline','Relationships','Homepage','Trash','Binder']){
+  await React.act(async()=>document.querySelector('header button[title="'+label+'"]').click());
+  assert.equal(document.querySelectorAll('[data-editor-toolbar]').length,1);
+  assert.equal(document.querySelector('[data-editor-toolbar]'),toolbar,label+' keeps the same toolbar');
+  assert.ok(document.querySelector('[data-project-search]') && document.querySelector('[aria-label="Note inspector"]'));
+  if(label!=='Binder')assert.ok(toolbar.querySelector('[aria-label="Format selected text"]').disabled);
+}
+await React.act(async()=>actions.select(id));
 const noteEditor=document.querySelector('[aria-label="Note content"]');
 const prefs={left:useKachamak.getState().leftPanelOpen,right:useKachamak.getState().rightPanelOpen};
 await React.act(async()=>document.querySelector('button[aria-label="Focus"]').click());

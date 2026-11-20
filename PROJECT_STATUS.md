@@ -1,3 +1,5 @@
+> **2026-11-21 — Stalne trake radnog prostora.** Svaki tab koristi isti gornji red za navigaciju i isti drugi red za pretragu, formatiranje teksta i inspektor. Komande modula nalaze se u radnoj površini ispod njih.
+
 > **2026-11-20 — Ikone postojećih beležaka.** Beleške bez izabrane ikone prikazuju File i kada se otvore iz stare knjige ili rezervne kopije. Ručni izbor uvek ima prednost.
 
 > **2026-11-20 — Ikona nove beleške.** Nova beleška dobija ikonu File iz biblioteke. Ikona može da se promeni klikom u stablu.
@@ -585,6 +587,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Poravnanje traka na svim tabovima.** Timeline, Relationships, Homepage i Trash dele raspored sa Binderom. Homepage zadržava punu širinu platna. Provereno u Chromeu na 11 tabova i prikaza, pri širinama prozora od 390, 850 i 1550 px, sa promenjenim i sklopljenim panelima.
 
 - **2026-11-20 — File za starije beleške.** Stablo, izbor ikona, pretraga, kartice, liste i izbor povezanih beležaka čitaju isti podrazumevani simbol. Zadržani su sačuvani ključevi ikona i posebni simboli događaja i perioda. Prikaz ne zahteva upis u rukopis, rezervnu kopiju ili nacrt.
 

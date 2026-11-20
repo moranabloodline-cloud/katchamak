@@ -45,11 +45,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const dialogTitle=dialog?.action==='rename'?'Rename page':dialog?.id?'New subpage':'New page';
   let hiddenBelow=Infinity;
   return <div className="flex h-full flex-col">
-    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-white/10 pl-3 pr-1">
-      <WorkspaceNavigation includeHomePages/>
-      <Button size="icon" variant="ghost" className="size-7" aria-label="New page" title="New page" onClick={()=>show('create',null)}><Plus/></Button>
-      <Button size="icon" variant="ghost" className="size-7 md:hidden" aria-label="Close page tree" onClick={onDismiss}><X/></Button>
-    </div>
+    <WorkspaceNavigation includeHomePages/>
     <nav aria-label="Homepage pages" className="min-h-0 flex-1 overflow-auto p-1">
       {rows.map(row=>{
         if(row.depth>hiddenBelow)return null;
@@ -64,6 +60,10 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
           <button type="button" title={row.path} aria-current={active?'page':undefined} onClick={()=>choose(row.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left text-sm">
             <Icon className="size-3.5 shrink-0 text-amber-300"/><span className="truncate">{row.title}</span>
           </button>
+          {row.id===HOME_ROOT && <>
+            <Button size="icon" variant="ghost" className="size-7 shrink-0" aria-label="New page" title="New page" onClick={()=>show('create',null)}><Plus/></Button>
+            <Button size="icon" variant="ghost" className="size-7 shrink-0 md:hidden" aria-label="Close page tree" onClick={onDismiss}><X/></Button>
+          </>}
           <DropdownMenu><DropdownMenuTrigger asChild>
             <button type="button" aria-label={'Page options: '+row.title} className="grid size-7 shrink-0 place-items-center rounded text-muted-foreground hover:bg-white/10 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0 data-[state=open]:opacity-100"><MoreVertical className="size-4"/></button>
           </DropdownMenuTrigger><DropdownMenuContent align="start">

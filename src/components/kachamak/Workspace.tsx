@@ -15,7 +15,6 @@ import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { NotesSection } from "./NotesSection";
 
-import { TrashView } from "./TrashView";
 import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
 import { AccountDialog } from "./AccountDialog";
 
@@ -39,7 +38,7 @@ export function Workspace() {
       if(!(event.ctrlKey||event.metaKey))return;
       if(event.key.toLowerCase()==='s'){event.preventDefault();requestLinkReview();}
       if(event.shiftKey && !event.altKey && event.key.toLowerCase()==='f' && !event.defaultPrevented
-        && useKachamak.getState().activeTab!=='trash' && !document.querySelector('[role="dialog"],[role="alertdialog"]')){
+        && !document.querySelector('[role="dialog"],[role="alertdialog"]')){
         event.preventDefault();
         flushSync(()=>setSearchShortcut(true));
         const search=document.querySelector<HTMLInputElement>('[data-project-search]');
@@ -147,12 +146,8 @@ export function Workspace() {
         </div>
       </header>
 
-      {/* body — every tab is the same note system; only Trash is different */}
-      {trashOpen ? (
-        <TrashView key={activeNovelId} />
-      ) : (
-        <NotesSection section={folder?.section ?? (activeTab==="trash" || activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)} rootId={folder?.node.id} revealSearch={searchShortcut}/>
-      )}
+      <NotesSection section={folder?.section ?? (activeTab==="trash" || activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)}
+        rootId={folder?.node.id} revealSearch={searchShortcut} trash={trashOpen}/>
 
       <AutoLinkReview />
       <NoteLinkDialog />

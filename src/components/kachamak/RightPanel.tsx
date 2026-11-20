@@ -81,6 +81,8 @@ export function RightPanel({
   onHide,
   timelineSettings,
   familySettings,
+  headerOnly = false,
+  emptyInfo,
 }: {
   novel: Novel;
   node: NoteNode | null;
@@ -88,6 +90,8 @@ export function RightPanel({
   onHide?: () => void;
   timelineSettings?: ReactNode;
   familySettings?: ReactNode;
+  headerOnly?: boolean;
+  emptyInfo?: ReactNode;
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const {font,size,spacing}=useNoteAppearance(node);
@@ -140,7 +144,7 @@ export function RightPanel({
       <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
         <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
           {visibleTabs.map(t=><ContextMenu key={t.key}>
-            <ContextMenuTrigger asChild><TabsTrigger value={t.key} className={tabCls}>{t.label}</TabsTrigger></ContextMenuTrigger>
+            <ContextMenuTrigger asChild><TabsTrigger value={t.key} disabled={headerOnly} className={tabCls}>{t.label}</TabsTrigger></ContextMenuTrigger>
             <ContextMenuContent aria-label={t.label+' tab actions'}>
               <ContextMenuItem onSelect={()=>hideTab(t.key)}>Hide tab</ContextMenuItem>
             </ContextMenuContent>
@@ -176,7 +180,7 @@ export function RightPanel({
 
       {/* zoom desnog panela (Ctrl + skrol) — samo sadržina; red tabova (traka 2)
           i NoteMetaBar na dnu ostaju istih visina, linije ostaju poravnate */}
-      <div
+      {!headerOnly && <div
         className="min-h-0 flex-1 overflow-y-auto kachamak-scroll p-3"
         style={{ zoom: rightZoom }}
       >
@@ -249,11 +253,11 @@ export function RightPanel({
         <TabsContent value="mentions" className="mt-0">
           <NoteConnections node={node} section={section} mode="mentions" />
         </TabsContent>
-        </> : activeTab && activeTab!=='family' && <TabsContent value={activeTab} className="mt-0 text-xs text-muted-foreground">Select a note to see its {activeTab==='info'?'synopsis and notes':activeTab}.</TabsContent>}
+        </> : activeTab && activeTab!=='family' && <TabsContent value={activeTab} className="mt-0 text-xs text-muted-foreground">{activeTab==='info' && emptyInfo ? emptyInfo : <>Select a note to see its {activeTab==='info'?'synopsis and notes':activeTab}.</>}</TabsContent>}
         <TabsContent value="family" forceMount={familySettings?true:undefined} hidden={activeTab!=='family'} className="mt-0 data-[state=inactive]:hidden">
           {familySettings ?? <p className="text-xs text-muted-foreground">Select a Family Tree note to edit its members and relationships.</p>}
         </TabsContent>
-      </div>
+      </div>}
     </Tabs>
   );
 }

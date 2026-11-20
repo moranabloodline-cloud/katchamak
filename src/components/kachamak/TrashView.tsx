@@ -4,9 +4,9 @@ import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, ChevronLeft, ChevronRight, RotateCcw, Trash2, FileText } from "lucide-react";
+import { AlertTriangle, RotateCcw, Trash2, FileText } from "lucide-react";
 import { useKachamak } from "@/lib/kachamak/store";
-import type { SectionKey } from "@/lib/kachamak/types";
+import type { Novel, SectionKey } from "@/lib/kachamak/types";
 import { formatDate } from "@/lib/kachamak/utils";
 import { iconForNote } from "@/lib/kachamak/icons";
 import {
@@ -32,49 +32,11 @@ const SECTION_NAMES: Record<SectionKey, string> = {
   family: "Family Tree",
 };
 
-export function TrashView() {
-  const novels = useKachamak((s) => s.novels);
-  const activeNovelId = useKachamak((s) => s.activeNovelId);
-  const restoreFromTrash = useKachamak((s) => s.restoreFromTrash);
-  const deleteForever = useKachamak((s) => s.deleteForever);
-  const emptyTrash = useKachamak((s) => s.emptyTrash);
-  const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
-  const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
-  const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
-  const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
-  const novel = novels.find((n) => n.id === activeNovelId);
-  const [filter, setFilter] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<{ projectId: string; id: string; title: string } | null>(null);
-  const [pendingEmpty, setPendingEmpty] = useState<{ projectId: string; ids: Set<string> } | null>(null);
-
-  if (!novel) return null;
-
-  const items = novel.trash.filter((t) =>
-    t.node.title.toLowerCase().includes(filter.toLowerCase())
-  );
-
+export function TrashSections({novel}: {novel: Novel}) {
   return (
-    <div className="flex min-h-0 flex-1">
-      {/* reopen left panel — full-height rail with the vertical line */}
-      {!leftPanelOpen && (
-        <div className="hidden w-7 shrink-0 flex-col items-center border-r border-white/10 bg-black/20 pt-2 md:flex">
-          <button
-            type="button"
-            aria-label="Show panel"
-            title="Show panel"
-            onClick={toggleLeftPanel}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {leftPanelOpen && (
-      <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/20 md:block">
-        <div className="flex items-center gap-1.5 px-1.5 pt-2.5 pb-2">
-          <WorkspaceNavigation />
-        </div>
+    <div className="flex h-full flex-col">
+      <WorkspaceNavigation />
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="space-y-1 px-2 pb-3">
           {(Object.keys(SECTION_NAMES) as SectionKey[]).map((k) => {
             const count = novel.trash.filter((t) => t.section === k).length;
@@ -90,10 +52,46 @@ export function TrashView() {
             );
           })}
         </div>
-      </aside>
-      )}
+      </div>
+    </div>
+  );
+}
 
-      <main className="min-w-0 flex-1 overflow-y-auto kachamak-scroll">
+export function TrashInfo() {
+  return (
+    <div>
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">About restoring</h4>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Restoring a note keeps its text, formatting, synopsis, status and metadata. If
+        its original parent folder was also deleted, the note returns to the top of its
+        section.
+      </p>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        Deleted items never expire — they stay here until you remove them.
+      </p>
+    </div>
+  );
+}
+
+export function TrashView() {
+  const novels = useKachamak((s) => s.novels);
+  const activeNovelId = useKachamak((s) => s.activeNovelId);
+  const restoreFromTrash = useKachamak((s) => s.restoreFromTrash);
+  const deleteForever = useKachamak((s) => s.deleteForever);
+  const emptyTrash = useKachamak((s) => s.emptyTrash);
+  const novel = novels.find((n) => n.id === activeNovelId);
+  const [filter, setFilter] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ projectId: string; id: string; title: string } | null>(null);
+  const [pendingEmpty, setPendingEmpty] = useState<{ projectId: string; ids: Set<string> } | null>(null);
+
+  if (!novel) return null;
+
+  const items = novel.trash.filter((t) =>
+    t.node.title.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
         <div className="mx-auto max-w-2xl p-8">
           <h2 className="text-2xl font-bold">Trash</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -201,7 +199,6 @@ export function TrashView() {
             </AlertDialog>
           </div>
         </div>
-      </main>
 
       <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
         <AlertDialogContent className="bg-[#1b1b1b] border-white/10">
@@ -216,44 +213,6 @@ export function TrashView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {rightPanelOpen ? (
-      <aside className="hidden w-72 shrink-0 border-l border-white/10 bg-black/20 p-4 lg:block">
-        <div className="flex items-center justify-between gap-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            About restoring
-          </h4>
-          <button
-            type="button"
-            aria-label="Hide panel"
-            title="Hide panel"
-            onClick={toggleRightPanel}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Restoring a note keeps its text, formatting, synopsis, status and metadata. If
-          its original parent folder was also deleted, the note returns to the top of its
-          section.
-        </p>
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Deleted items never expire — they stay here until you remove them.
-        </p>
-      </aside>
-      ) : (
-        <div className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 pt-2 lg:flex">
-          <button
-            type="button"
-            aria-label="Show panel"
-            title="Show panel"
-            onClick={toggleRightPanel}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {FamilyTreeGraph,FamilyTreeEditor} from './FamilyTree';
 import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
+import { TrashInfo, TrashSections, TrashView } from "./TrashView";
 import { CtrlZoom } from "./CtrlZoom";
 import { useWebLibrary } from "@/lib/kachamak/cloud-library";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
@@ -92,7 +93,7 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
       }}
       onPointerUp={() => setDragging(false)}
       onPointerCancel={() => setDragging(false)}
-      className={`relative hidden w-px shrink-0 cursor-col-resize bg-white/10 after:absolute after:inset-y-0 after:-left-1.5 after:-right-1.5 after:content-[''] after:hover:bg-orange-500/10 md:block ${
+      className={`relative col-start-2 row-start-1 hidden w-px shrink-0 cursor-col-resize bg-white/10 after:absolute after:inset-y-0 after:-left-1.5 after:-right-1.5 after:content-[''] after:hover:bg-orange-500/10 ${side==="left"?"md:block":"lg:block"} ${
         dragging ? "bg-orange-500/70" : "hover:bg-orange-500/40"
       }`}
     />
@@ -274,13 +275,13 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   );
 }
 
-export function NotesSection({ section, rootId, revealSearch }: { section: SectionKey; rootId?: string; revealSearch?: boolean }) {
+export function NotesSection({ section, rootId, revealSearch, trash = false }: { section: SectionKey; rootId?: string; revealSearch?: boolean; trash?: boolean }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
-  const view = storedView==='family' && section!=='family' ? 'write' : storedView;
+  const view = trash ? 'trash' : storedView==='family' && section!=='family' ? 'write' : storedView;
 
   const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);
@@ -313,7 +314,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
      matičnu sekciju note (selectedSection), ne u tekući tab. */
   const hit =
     selectedNodeId && novel ? findNodeInNovel(novel, selectedNodeId) : null;
-  const selected = ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
+  const selected = view==='homepage' || view==='trash' ? null : ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
   const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
@@ -335,7 +336,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
   const targetCount=target?documentTargetProgress(selected?.content??'',target).count:0;
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="relative flex min-h-0 flex-1">
       {leftPanelOpen || revealSearch || mobilePages ? (
         <>
           <aside
@@ -347,12 +348,12 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
           >
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
-              {view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
+              {view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
                 <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />}
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
                 Collapse skroz desno u istom redu — po Nikoli */}
-            <div className="flex h-10 shrink-0 items-center gap-1.5 border-t border-amber-500/25 px-2">
+            {!trash && <div className="flex h-10 shrink-0 items-center gap-1.5 border-t border-amber-500/25 px-2">
               <SaveInfoButton />
               <span className="ml-auto" />
               <button
@@ -369,7 +370,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
               >
                 Collapse
               </button>
-            </div>
+            </div>}
           </aside>
           <Resizer
             side="left"
@@ -394,11 +395,12 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
         </div>
       )}
 
-      <main ref={mainRef} tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
-        {view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
+      {/* Homepage spans the editor and inspector columns below the shared toolbar. */}
+      <div className={view==='homepage' ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
+      <main ref={mainRef} tabIndex={-1} className={view==='homepage' ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
+        <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
+        {trash ? <TrashView key={activeNovelId}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
-        {/* One fixed formatting toolbar for every note view, including Continuous, Grid and List. */}
-        {view!=="timeline"&&view!=="family"&&<EditorToolbar node={selected} />}
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
           {view==='family' && novel && <FamilyTreeGraph key={treeScopeKey+':'+selected?.id} novel={novel} tree={selected}
@@ -460,7 +462,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
         </>}
       </main>
 
-      {view==='homepage' ? null : rightPanelOpen ? (
+      {rightPanelOpen ? (
         <>
           <Resizer
             side="right"
@@ -470,12 +472,13 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
             data-workspace-chrome
             ref={rightPanelRef}
             style={{ width: rightPanelWidth }}
-            className={compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "hidden shrink-0 flex-col bg-black/20 lg:flex"}
+            className={view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
           >
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {novel && <div className="min-h-0 flex-1">
               <RightPanel key={familySettings?`${novel.id}:family:${editFamily}`:novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings}
+                headerOnly={view==='homepage'} emptyInfo={trash ? <TrashInfo/> : undefined}
                 onHide={()=>{
                   setCompactFamily(false);
                   if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();
@@ -488,13 +491,13 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
                   : undefined}
               />
             </div>}
-            {selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>}
+            {view!=='homepage' && !trash && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
           </aside>
         </>
       ) : (
         // zatvoreni desni panel — uska traka; h-10 red održava donju liniju
         // trake 2 kontinuiranom i kad je panel sakriven
-        <div data-workspace-chrome className="hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 lg:flex">
+        <div data-workspace-chrome className="col-start-3 row-start-1 hidden w-7 shrink-0 flex-col items-center border-l border-white/10 bg-black/20 lg:flex">
           <div className="flex h-10 w-full shrink-0 items-center justify-center border-b border-white/10">
             <button
               type="button"
@@ -508,6 +511,7 @@ export function NotesSection({ section, rootId, revealSearch }: { section: Secti
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
