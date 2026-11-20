@@ -1,3 +1,5 @@
+> **2026-11-20 — Danger Zone na dnu podešavanja.** Desno su redom Meta, Backups & Export i Danger Zone. Na telefonu se Danger Zone prikazuje posle korice.
+
 > **2026-11-20 — Raspored podešavanja knjige.** Korica je levo, a Meta, Danger Zone i Backups & Export desno. Na uskom ekranu prvi je formular za knjigu.
 
 > **2026-11-20 — Komande zaglavlja i manje kartice.** Save, Focus, Format, Trash, Settings i My account čine jednu grupu ikonica uz desnu ivicu. Sve komande su dostupne i kada je panel zatvoren. Standardna Timeline kartica sa slikom na širokom ekranu meri 682 × 144 px, a kartice sa samim tekstom zauzimaju manje visine.
@@ -535,6 +537,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Settings.** Komande za arhiviranje i brisanje nalaze se u poslednjem odeljku. Proveren raspored na probnoj knjizi pri 1440 i 390 px, test podešavanja, TypeScript i produkcijski build.
 
 - **2026-11-20 — Settings.** Zamenjene su kolone prozora. Raspored je proveren u Chrome-u na probnoj knjizi pri širini 1440 i 390 px. Prošli su ciljani testovi podešavanja, TypeScript i produkcijski build.
 
