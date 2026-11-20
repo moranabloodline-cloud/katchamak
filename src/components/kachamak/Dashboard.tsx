@@ -2,8 +2,8 @@
 
 /** Project dialogs reuse the existing manuscript actions; the library owns navigation. */
 import { createWebCollection, createWebProject, importWebProject, flushWebLibrary } from "@/lib/kachamak/cloud-library";
-import { useEffect, useRef, useState } from "react";
-import { exportNovelJson, projectsSavedLocally, saveProjectsLocally, useKachamak } from "@/lib/kachamak/store";
+import { useRef, useState } from "react";
+import { useKachamak } from "@/lib/kachamak/store";
 import type { Novel } from "@/lib/kachamak/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -17,12 +17,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export function Dashboard() {
   const novels = useKachamak((s) => s.novels);
   const openNovel = useKachamak((s) => s.openNovel);
-  const createNovel = useKachamak((s) => s.createNovel);
-  const importNovel = useKachamak((s) => s.importNovel);
   const deleteNovel = useKachamak((s) => s.deleteNovel);
   const defaultAuthor = useKachamak((s) => s.defaultAuthor);
   const collections = useCollections((s) => s.collections);
-  const addCollection = useCollections((s) => s.addCollection);
   const renameCollection = useCollections((s) => s.renameCollection);
   const removeCollection = useCollections((s) => s.removeCollection);
   const setMembership = useCollections((s) => s.setMembership);

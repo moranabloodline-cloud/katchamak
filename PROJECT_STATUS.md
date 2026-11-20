@@ -1,3 +1,5 @@
+> **2026-11-20 — Čišćenje starog Timeline prikaza.** Test dodavanja događaja sada koristi meni aktivnog Timeline prikaza i proverava odredišni folder u Codexu i Binderu. Uklonjeni su nekorišćeni OutlineView, četiri importa i tri pretplate u Dashboard-u i privatna funkcija mapNodes.
+
 > **2026-11-20 — Istovremeno kloniranje istog taba.** Kada dva prozora kloniraju isti sačuvani tab u isto stanje odredišnog foldera, oba prepoznaju jedan upis. Ponovni pokušaj i ponovno učitavanje zadržavaju iste četiri kopije i njihove interne veze. Namerno kloniranje posle uspešnog čuvanja dodaje novu grupu.
 
 > **2026-11-19 — Clone to project u dva prozora.** Kada jedan prozor izgubi vezu pri kloniranju, drugi može da sačuva tekst postojeće beleške u odredišnoj knjizi. Ponovni pokušaj koristi prvobitne kopije i sačuvani tekst. Četiri provere u dva Chrome prozora na dve probne knjige potvrdile su iste rezultate posle osvežavanja, neizmenjenu izvornu knjigu i tačno jedan upis kopija i jedan upis teksta.
@@ -503,6 +505,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Pokriće stvarnog Timeline prikaza.** Sedam ciljanih testova i TypeScript provera prošli su posle uklanjanja tri potvrđena ostatka koda. U Chrome-u je sintetička knjiga sa sačuvanim režimom outline otvorila vremensku osu. Događaj dodat u izabrani period ostao je u njemu nakon čuvanja i ponovnog učitavanja. Druga knjiga je ostala identična.
 
 - **2026-11-20 — Dva istovremena Clone to project zahteva.** Dva Chrome prozora poslala su zahteve pre prvog upisa u dve probne knjige. Prekid pre upisa i gubitak odgovora posle upisa provereni su uz Retry save i osvežavanje. U sva četiri slučaja potvrđeni su jedan serverski upis, očuvana postojeća beleška u Sort This, četiri kopirane beleške sa ispravnim vezama i identičan izvor. Ctrl+klik otvorio je odgovarajuću kopiju posle osvežavanja. Regresioni testovi pokrivaju i naknadno namerno kloniranje i stare kopije u korpi.
 

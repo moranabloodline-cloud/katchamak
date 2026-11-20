@@ -7,6 +7,7 @@ for (const key of ['window','document','Document','DocumentFragment','DOMRect','
 globalThis.requestAnimationFrame=callback=>setTimeout(callback,0);
 globalThis.cancelAnimationFrame=clearTimeout;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+dom.matchMedia=()=>({matches:false});
 const React = await import('react');
 const {createRoot} = await import('react-dom/client');
 const {useKachamak} = await import('../src/lib/kachamak/store.ts');
@@ -61,16 +62,39 @@ const scoped=await createFromTree(null);
 assert.ok(findNode(findNode(useKachamak.getState().novels[0].sections.binder,act1).children,scoped));
 assert.equal(findNode(useKachamak.getState().novels[0].sections.binder,act2).children.length,0);
 // Timeline reads and writes the active section, and a folder tab stays scoped.
-const {OutlineView:TimelineView}=await import('../src/components/kachamak/OutlineView.tsx');
-await React.act(async()=>actions.updateNode('codex',codex,{title:'Codex timeline target'}));
-await React.act(async()=>root.render(React.createElement(TimelineView,{section:'codex'})));
+const {TimelineView}=await import('../src/components/kachamak/TimelineView.tsx');
+const event={type:'event',start:0,precision:'day'};
+await React.act(async()=>{
+  actions.updateNode('codex',codex,{title:'Codex timeline target',event});
+  actions.updateNode('binder',chapter1,{event});
+  actions.updateNode('binder',act2,{event});
+  actions.select(null);
+  root.render(React.createElement(TimelineView,{section:'codex'}));
+});
 assert.ok(container.textContent.includes('Codex timeline target'));
-assert.ok(!container.textContent.includes('Act 1 — The Fall'));
-const addTimeline=container.querySelector('button[aria-label="Add note to Codex timeline target"]');
-await React.act(async()=>addTimeline.click());
-assert.equal(findNode(useKachamak.getState().novels[0].sections.codex,codex).children.length,1);
-await React.act(async()=>root.render(React.createElement(TimelineView,{section:'binder',rootId:act1})));
+assert.ok(!container.textContent.includes('Chapter 1'));
+async function addEventFromOptions() {
+  await React.act(async()=>container.querySelector('button[aria-label="Timeline options"]').click());
+  const menu=document.querySelector('[aria-label="Timeline controls"]');
+  const add=[...menu.querySelectorAll('button')].find(button=>button.textContent==='Add event');
+  assert.ok(add,'Timeline options offers Add event');
+  await React.act(async()=>add.click());
+  return useKachamak.getState().selectedNodeId;
+}
+await React.act(async()=>actions.select(codex));
+const codexEvent=await addEventFromOptions();
+const codexChildren=findNode(useKachamak.getState().novels[0].sections.codex,codex).children;
+assert.deepEqual(codexChildren.map(n=>n.id),[codexEvent]);
+assert.equal(codexChildren[0].timelineKind,'event');
+await React.act(async()=>{
+  actions.select(act2);
+  root.render(React.createElement(TimelineView,{section:'binder',rootId:act1}));
+});
 assert.ok(!container.textContent.includes('Act 2'));
 assert.ok(container.textContent.includes('Chapter 1'));
+const binderEvent=await addEventFromOptions();
+const binder=useKachamak.getState().novels[0].sections.binder;
+assert.deepEqual(findNode(binder,act1).children.map(n=>n.id),[chapter1,chapter2,added,scoped,binderEvent]);
+assert.equal(findNode(binder,act2).children.length,0);
 await React.act(async()=>root.unmount());dom.close();
 console.log('Tree creation menus passed: append after the selected act’s last chapter, nested notes, expansion, blank content, root fallback and section isolation.');

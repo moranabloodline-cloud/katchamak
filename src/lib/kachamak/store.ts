@@ -256,10 +256,6 @@ export function normalizeNovelSections(n: LegacyNovel): void {
 
 /* ---------- immutable helpers ---------- */
 
-function mapNodes(nodes: NoteNode[], fn: (n: NoteNode) => NoteNode): NoteNode[] {
-  return nodes.map((n) => ({ ...fn(n), children: mapNodes(n.children, fn) }));
-}
-
 function removeFromNodes(
   nodes: NoteNode[],
   id: string
