@@ -1,3 +1,5 @@
+> **2026-11-20 — Visina Timeline kartica.** Standardna kartica u boji visoka je najmanje 108 px i ima ikonicu od 36 px uz naslov i datum. Gornji natpis sa imenom roditeljske beleške je uklonjen.
+
 > **2026-11-20 — Datumi na Timeline karticama.** Uz marker se vidi početni datum. Kartica prikazuje raspon prema formatu knjige i trajanje u kalendarskim jedinicama, npr. „1 day“ ili „10,000 years“.
 
 > **2026-11-20 — Boja ručnog linka u tekstu.** Ručni link prati boju ciljne beleške i kada je njegov tekst ranije sačuvan sa drugom bojom. Promena boje ne zahteva izmenu rukopisa.
@@ -541,6 +543,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Timeline Cards.** Minimalna visina kartice prati tri visine ikonice. U Chrome-u proveren raspored na probnim podacima za kartice u boji, sa slikom i u kompaktnom režimu, na širokom i uskom ekranu. Prošli su test Timeline panela, TypeScript i build.
 
 - **2026-11-20 — Timeline Cards.** Uklonjen je natpis tipa uz marker. Prikaz trajanja uvažava preciznost datuma, prestupne godine i dužine meseci, dana i sati iz kalendara knjige. Na probnim podacima provereni su oba označena primera, korisnički format i običan događaj. Prošli su testovi kalendara i Timeline panela, TypeScript i build.
 
