@@ -35,7 +35,7 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
   return <>
     {image&&<HomeArtwork src={image} frame={block.imageFrame}/>}
     {(caption||block.text||!image)&&<span className={`flex w-full flex-col gap-2 break-words p-5 ${banner?'@[640px]:p-8':''}`}>
-      {caption&&<span className={`font-semibold leading-tight ${banner?'text-3xl @[640px]:text-4xl':block.layout==='text'?'text-xl':'text-lg'}`}>{caption}</span>}
+      {caption&&<span className={`font-semibold leading-tight ${!block.title && (block.target?.kind==='note'||block.target?.kind==='page')?'text-center':''} ${banner?'text-3xl @[640px]:text-4xl':block.layout==='text'?'text-xl':'text-lg'}`}>{caption}</span>}
       {block.text&&<span className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{block.text}</span>}
       {!caption&&!block.text&&!image&&<span>Unavailable note</span>}
     </span>}
@@ -139,15 +139,19 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onBack,onShowPages}:{nov
     </article>;
   }
   return <section aria-label="Project homepage" className="@container flex min-h-0 flex-1 flex-col overflow-auto">
-    <header className="sticky top-0 z-10 flex h-10 shrink-0 items-center gap-1.5 border-b border-white/10 bg-background px-2">
-      <Button size="icon" variant="ghost" className="size-8" title={backLabel} aria-label={backLabel} onClick={goBack}><ArrowLeft/></Button>
-      {onShowPages&&<Button size="icon" variant="ghost" className="size-8 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
-      <h1 className="mr-auto min-w-0 truncate text-base font-semibold" title={page.title}>{page.title}</h1>
-      {!page.locked&&<label title="Page width" className="relative grid size-8 shrink-0 place-items-center rounded focus-within:outline @[520px]:block @[520px]:size-auto"><Columns3 aria-hidden="true" className="size-4 @[520px]:hidden"/><select aria-label="Page width" className="absolute inset-0 w-full cursor-pointer rounded border border-border bg-background px-2 py-1 text-sm opacity-0 @[520px]:static @[520px]:opacity-100" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide page</option><option value="reading">Reading width</option></select></label>}
-      {!page.locked&&page.blocks.length>0&&<Button size="sm" variant="outline" aria-label="Add block" title="Add block" onClick={()=>edit()}><Plus/><span className="hidden @[520px]:inline">Add block</span></Button>}
-      <Button size="sm" variant="ghost" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change({type:'lock',locked:!page.locked})}>
-        {page.locked?<UnlockKeyhole/>:<LockKeyhole/>}<span className="hidden @[360px]:inline">{page.locked?'Unlock page':'Lock page'}</span>
-      </Button>
+    <header className="sticky top-0 z-10 grid h-10 shrink-0 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-1.5 border-b border-white/10 bg-background px-2">
+      <div className="flex items-center gap-1">
+        <Button size="icon" variant="ghost" className="size-8" title={backLabel} aria-label={backLabel} onClick={goBack}><ArrowLeft/></Button>
+        {onShowPages&&<Button size="icon" variant="ghost" className="size-8 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
+      </div>
+      <h1 className="min-w-0 truncate text-center text-base font-semibold" title={page.title}>{page.title}</h1>
+      <div className="flex items-center justify-end gap-1.5">
+        {!page.locked&&<label title="Page width" className="relative grid size-8 shrink-0 place-items-center rounded focus-within:outline @[520px]:block @[520px]:size-auto"><Columns3 aria-hidden="true" className="size-4 @[520px]:hidden"/><select aria-label="Page width" className="absolute inset-0 w-full cursor-pointer rounded border border-border bg-background px-2 py-1 text-sm opacity-0 @[520px]:static @[520px]:opacity-100" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide page</option><option value="reading">Reading width</option></select></label>}
+        {!page.locked&&page.blocks.length>0&&<Button size="sm" variant="outline" aria-label="Add block" title="Add block" onClick={()=>edit()}><Plus/><span className="hidden @[520px]:inline">Add block</span></Button>}
+        <Button size="sm" variant="ghost" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change({type:'lock',locked:!page.locked})}>
+          {page.locked?<UnlockKeyhole/>:<LockKeyhole/>}<span className="hidden @[360px]:inline">{page.locked?'Unlock page':'Lock page'}</span>
+        </Button>
+      </div>
     </header>
     {message&&<p role="status" className="px-5 pt-3 text-sm text-amber-300">{message}</p>}
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}

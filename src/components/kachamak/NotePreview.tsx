@@ -8,7 +8,7 @@ import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@
 export function NotePreview({noteId,onClose}:{noteId:string|null;onClose:()=>void}) {
   const novel=useKachamak(s=>s.novels.find(n=>n.id===s.activeNovelId));
   const entry=novel&&noteId?indexNotes(novel).find(n=>n.node.id===noteId):null;
-  return <Dialog open={!!noteId} onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="max-h-[80vh] overflow-auto border-white/15 bg-background text-foreground"><DialogHeader><DialogTitle style={{color:entry?.node.color || undefined}}>{entry?.node.title||'Unavailable note'}</DialogTitle><DialogDescription className="sr-only">Preview a linked note while keeping your current text open.</DialogDescription></DialogHeader>{entry?<>
+  return <Dialog open={!!noteId} onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="max-h-[80vh] overflow-auto border-white/15 bg-background text-foreground"><DialogHeader><DialogTitle className="min-w-0 px-4 text-center [overflow-wrap:anywhere]" style={{color:entry?.node.color || undefined}}>{entry?.node.title||'Unavailable note'}</DialogTitle><DialogDescription className="sr-only">Preview a linked note while keeping your current text open.</DialogDescription></DialogHeader>{entry?<>
     <p className="text-xs text-muted-foreground">{entry.path}</p>
     {!!entry.node.aliases?.length&&<p className="text-xs text-muted-foreground">Also known as: {entry.node.aliases.join(' · ')}</p>}
     {!!entry.node.synopsis&&<p className="whitespace-pre-wrap text-sm font-medium">{stripHtml(entry.node.synopsis)}</p>}

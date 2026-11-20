@@ -1,3 +1,5 @@
+> **2026-11-20 — Centrirani naslovi beležaka.** U editoru, karticama i pregledu naslovi beležaka su centrirani. Stablo i liste zadržavaju levo poravnanje radi lakšeg praćenja hijerarhije.
+
 > **2026-11-20 — Stablo početnih stranica.** Homepage ima svoje stablo sa stranicama i podstranicama. Svaka koristi isti editor blokova i ima zasebnu bravu. Kartice i liste linkova mogu da otvore drugu stranicu knjige. Stara početna strana je koren stabla.
 
 > **2026-11-20 — Lepljenje naslova i pasusa.** U editoru nalepljeni H3 koristi veličinu naslova i prored aktivnog taba. Pri lepljenju usred ručno formatiranog teksta čuvaju se stil okolnih reči, odvojeni pasusi, prazni pasusi i prelomi reda.
@@ -567,6 +569,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Poravnanje naslova.** U pregledaču su na probnoj knjizi provereni Write, oba panela u Split, Continuous, Grid, pregled povezane beleške, Relationships, kartice vremenske linije i Homepage. Provereni su preimenovanje dugačkog naslova, boja beleške i zasebno poravnanje teksta. Zaglavlje Homepage-a je pri širinama ekrana od 320 do 1600 px zadržalo visinu od 40 px i dostupne komande.
 
 - **2026-11-20 — Homepage stablo i navigacija.** Store v48 zadržava postojeći korenski raspored i podržava imenovane stranice sa stabilnim ID-jevima. Provereni su kreiranje dve dubine i posebne glavne strane, zaključavanje, otvaranje iz kartice posle preimenovanja i osvežavanja, veza do beleške i izbor stranice na telefonu. Zaglavlje platna i red pretrage u probnoj knjizi izmereni su na 40 px.
 

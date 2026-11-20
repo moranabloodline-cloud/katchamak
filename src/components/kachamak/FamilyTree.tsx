@@ -124,9 +124,9 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const {width:w,height:h}=familyCard;
   const rightOpen=useKachamak(s=>s.rightPanelOpen);
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">
-    <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
-      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold"><Network className="size-4 shrink-0 text-muted-foreground"/><span className="truncate" style={{color:tree?.color || undefined}}>{tree?.title||'Family Tree'}</span></h2>
-      {tree && <button type="button" onClick={onEdit} className={action+(rightOpen && !novel.hiddenInspectorTabs?.includes('family')?' lg:hidden':'')}>Edit tree</button>}
+    <header className="grid shrink-0 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-border px-5 py-3">
+      <h2 className="relative col-start-2 min-w-0 px-6 text-center text-lg font-semibold"><Network aria-hidden="true" className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/><span className="block truncate" title={tree?.title} style={{color:tree?.color || undefined}}>{tree?.title||'Family Tree'}</span></h2>
+      {tree && <button type="button" onClick={onEdit} className={action+' col-start-3 justify-self-end whitespace-nowrap'+(rightOpen && !novel.hiddenInspectorTabs?.includes('family')?' lg:hidden':'')}>Edit tree</button>}
     </header>
     {people.length===0 ? <div className="m-auto max-w-sm px-5 py-12 text-center">
       <Network aria-hidden="true" className="mx-auto mb-4 size-8 text-amber-400/70"/>
@@ -150,7 +150,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
             className="absolute flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left shadow-sm hover:border-amber-400/60 focus-visible:outline-amber-400"
             style={{left:x,top:y,width:w,height:h}}>
             {person.image?<img src={person.image} alt="" className="size-9 shrink-0 rounded-full object-cover"/>:<span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted" style={{color:person.color||undefined}}><Icon className="size-4"/></span>}
-            <span className="line-clamp-2 break-words text-sm font-semibold leading-tight" style={{color:person.color || undefined}}>{person.title}</span>
+            <span className="line-clamp-2 min-w-0 flex-1 break-words text-center text-sm font-semibold leading-tight" style={{color:person.color || undefined}}>{person.title}</span>
           </button>;
         })}
       </div>

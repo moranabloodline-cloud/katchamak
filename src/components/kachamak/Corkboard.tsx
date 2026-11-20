@@ -85,13 +85,13 @@ function IndexCard({
       style={{ borderTopColor: node.color || undefined }}
     >
       {/* title line — icon + title, thin rule under it, like the original card */}
-      <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
+      <div className="grid grid-cols-[0.875rem_minmax(0,1fr)_0.875rem] items-center gap-1.5 border-b border-border px-3 py-2">
         {Icon ? (
           <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: node.color || "var(--muted-foreground)" }} />
         ) : (
           <FileText className="h-3.5 w-3.5 shrink-0" style={{color:node.color||"var(--muted-foreground)"}} />
         )}
-        <span className="truncate text-[13px] font-semibold leading-tight" style={{color:node.color || undefined}}>{node.title}</span>
+        <span title={node.title} className="line-clamp-2 text-center text-[13px] [overflow-wrap:anywhere] font-semibold leading-tight" style={{color:node.color || undefined}}>{node.title}</span>
       </div>
       <p className="flex-1 overflow-hidden px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
         {stripHtml(node.synopsis) || (
