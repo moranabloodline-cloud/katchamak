@@ -30,7 +30,7 @@ import {editorForRange,paragraphSelector,selectionBlock,applyBlockStyle,applyEdi
 import {activeWritingEditor} from './WorkspaceNavigation';
 import {PageSurface,useNoteAppearance} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
-import {PAGE_FONTS,NOTE_FONT_SIZES,LINE_SPACINGS,pageVariables} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel,LINE_SPACINGS,pageVariables} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import { useKachamak } from "@/lib/kachamak/store";
@@ -133,7 +133,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
           const css=getComputedStyle(element),pixels=parseFloat(css.fontSize);
           const paragraph=element.closest(paragraphSelector)??element;
           const blockCss=getComputedStyle(paragraph),line=parseFloat(blockCss.lineHeight)/parseFloat(blockCss.fontSize);
-          setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Math.round(pixels):size,spacing:Number.isFinite(line)?line.toFixed(2).replace(/0$/,''):spacing});
+          setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Number(pixels.toFixed(3)):size,spacing:Number.isFinite(line)?line.toFixed(2).replace(/0$/,''):spacing});
         }
       }
       else {savedRange.current=null;setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');}
@@ -191,7 +191,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
       >
         {[...new Set([selectedTypography?.size??size,...NOTE_FONT_SIZES])].sort((a,b)=>a-b).map((s) => (
           <option key={s} value={s}>
-            {s}
+            {noteSizeLabel(s)}
           </option>
         ))}
       </select>
@@ -343,7 +343,7 @@ export function RulerRow({node}:{node?:NoteNode|null}={}) {
 /* One note surface, used by Write and both Split panes. Format supplies page
    defaults; explicit inline styles in the manuscript remain local overrides. */
 export function EditorPage({ node, section, continuous=false }: { node: NoteNode; section: SectionKey; continuous?:boolean }) {
-  const {page,font,size,spacing,explicitSpacing}=useNoteAppearance(node);
+  const appearance=useNoteAppearance(node);
   const updateNode = useKachamak((s) => s.updateNode);
 
   return (
@@ -351,25 +351,19 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
       <div className="px-6 py-6">
         {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
             zoomu (100% je u koordinatama zoomovanog elementa) */}
-        <PageSurface page={page} spacing={explicitSpacing}>
+        <PageSurface appearance={appearance}>
           <input
             value={node.title}
             onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
             aria-label="Title"
             title={node.title}
             style={{color:node.color || undefined}}
-            className="mb-4 w-full bg-transparent text-center text-ellipsis text-2xl font-bold focus:text-clip text-foreground outline-none placeholder:text-muted-foreground"
+            className="mb-4 w-full bg-transparent note-page-title text-center text-ellipsis font-bold focus:text-clip text-foreground outline-none placeholder:text-muted-foreground"
             placeholder="Title"
           />
-          <div
-            style={{
-              fontFamily: `'${font}', system-ui, sans-serif`,
-              fontSize: `${size}px`,
-              lineHeight: spacing,
-            }}
-          >
+          <div>
             <RichEditor
-              colorizeAnnotations={page.colorizeAnnotations}
+              colorizeAnnotations={appearance.page.colorizeAnnotations}
               noteId={node.id}
               html={node.content}
               onChange={(html) => updateNode(section, node.id, { content: html })}

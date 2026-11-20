@@ -4,7 +4,7 @@ import {AlignLeft,AlignJustify,Type,Rows3,AlignCenter,Maximize2} from 'lucide-re
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {useKachamak} from '@/lib/kachamak/store';
 import {useTabPageDefaults} from './PageSurface';
-import {PAGE_FONTS,NOTE_FONT_SIZES,NEW_NOTE_FONT_SIZE,LINE_SPACINGS,noteAppearance,type PageFormat,type FormatTab,type TabPageSettings} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel,LINE_SPACINGS,noteAppearance,type PageFormat,type FormatTab,type TabPageSettings} from '@/lib/kachamak/page-format';
 
 function Choices<T extends string|number>({label,values,value,onChange,preview}:{label:string;values:{value:T;label:string}[];value:T;onChange:(value:T)=>void;preview?:(index:number)=>React.ReactNode}) {
   return <fieldset className="min-w-0"><legend className="mb-2 text-xs font-medium">{label}</legend><div className="flex flex-wrap gap-1">{values.map((item,index)=><button type="button" key={item.value} aria-label={`${label}: ${item.label}`} title={item.label} aria-pressed={value===item.value} onClick={()=>onChange(item.value)} className={`flex h-9 min-w-8 items-center justify-center rounded-md border px-1.5 text-xs transition-colors ${value===item.value?'border-amber-300/70 bg-amber-400/10 text-foreground':'border-border text-muted-foreground hover:bg-muted/40'}`}>{preview?preview(index):item.label}</button>)}</div></fieldset>;
@@ -16,15 +16,16 @@ export function PageFormatMenu({projectId,tab,label}:{projectId:string;tab:Forma
   const [open,setOpen]=useState(false);
   const {defaults,settings}=useTabPageDefaults();
   const home=tab==='homepage';
-  const {page,font,size,spacing}=noteAppearance({...defaults,size:home?14:NEW_NOTE_FONT_SIZE},settings);
+  const {page,font,spacing,size:noteSize}=noteAppearance(defaults,settings);
+  const size=home?(settings?.size??14):noteSize;
   const setTabFormat=useKachamak(s=>s.setTabFormat);
   const setSettings=(patch:TabPageSettings)=>{if(tab)setTabFormat(projectId,tab,patch);};
   const setPage=(patch:Partial<PageFormat>)=>setSettings({page:patch});
   return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button type="button" disabled={!tab} aria-label="Format" title="Tab settings" className="workspace-action text-slate-300"><Type aria-hidden="true"/></button></PopoverTrigger>
     <PopoverContent aria-label="Tab format" align="end" sideOffset={10} className="w-[440px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto border-border bg-popover p-0 text-popover-foreground shadow-xl kachamak-scroll">
-      <section className="p-4"><h1 className="mb-3 text-sm font-semibold">Tab settings · {label}</h1><h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Typography</h2><div className="grid grid-cols-2 gap-x-5 gap-y-5">
+      <section className="p-4"><h1 className="mb-3 text-sm font-semibold">Tab settings · {label}</h1><h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{home?'Typography':'Note typography'}</h2><div className="grid grid-cols-2 gap-x-5 gap-y-5">
         <label className="min-w-0 text-xs font-medium">Font family<select aria-label="Page font family" value={home&&!settings?.font?'':font} onChange={e=>setSettings({font:e.target.value})} className="mt-2 h-9 w-full rounded-md border border-border bg-background px-2 text-xs">{home&&!settings?.font&&<option value="" disabled>Workspace font</option>}{PAGE_FONTS.map(f=><option key={f}>{f}</option>)}</select></label>
-        <Choices label="Text size" value={size} values={NOTE_FONT_SIZES.map(n=>({value:n,label:`${n}px`}))} onChange={size=>setSettings({size})}/>
+        <Choices label="Text size" value={size} values={NOTE_FONT_SIZES.map(n=>({value:n,label:home?`${n}px`:noteSizeLabel(n)}))} onChange={size=>setSettings({size})}/>
         <Choices label="Line height" value={home&&!settings?.spacing?'':spacing} values={LINE_SPACINGS.map(n=>({value:n,label:`${n}×`}))} onChange={spacing=>setSettings({spacing})} preview={index=><Lines index={index} kind="height"/>}/>
         {!home&&<><div><Choices label="Text indent" value={page.indent} values={([0,1,1.5,2] as const).map(n=>({value:n,label:`${n}em`}))} onChange={indent=>setPage({indent})} preview={index=><Lines index={index} kind="indent"/>}/><label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={page.chicago} onChange={e=>setPage({chicago:e.target.checked})}/>Chicago Style</label></div>
         <Choices label="Paragraph spacing" value={page.paragraphGap??-1} values={([-1,0,0.5,1,1.5] as const).map(n=>({value:n,label:n===-1?'Original':`${n}em`}))} onChange={gap=>setPage({paragraphGap:gap===-1?null:gap})}/>

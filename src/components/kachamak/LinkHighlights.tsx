@@ -49,7 +49,7 @@ export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef
         const target=codex.find(n=>n.id===match.targetId), name=prefix+i;
         const color=target?.color && /^#[0-9a-f]{3,8}$/i.test(target.color)?target.color:match.missing?'#f87171':'#60a5fa';
         registry.set(name,new HighlightClass(range)); keys.push(name);
-        rules.push(`::highlight(${name}){color:${colorize?color:'inherit'};text-decoration:underline;text-decoration-style:${match.targetId?'solid':'dotted'};}`);
+        rules.push(`::highlight(${name}){color:${colorize?color:'inherit'};text-decoration:underline dotted var(--note-link-line) 1px;}`);
       }
       style.textContent=rules.join('\n');
     };

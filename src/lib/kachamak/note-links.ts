@@ -167,6 +167,6 @@ export function noteAnchorStyles(novel:Novel|undefined,scope:string,colorize=tru
     const selector=`[data-note-link-scope="${scope}"] a[href="#note/${id}"]`;
     const color=colorize?noteLinkColor(node.color):'inherit';
     // Rich text may carry its own text fill, even inside a correctly coloured anchor.
-    return `${selector},${selector} *{color:${color}!important;-webkit-text-fill-color:${color}!important;text-decoration-color:${color}!important;}`;
+    return `${selector},${selector} *{color:${color}!important;-webkit-text-fill-color:${color}!important;text-decoration-color:var(--note-link-line,${color})!important;}`;
   }).join('\n');
 }

@@ -37,7 +37,7 @@ assert.deepEqual(novel.sections.binder.map(n=>n.id),[act1,act2],'Row menu must n
 assert.deepEqual(parent.children.map(n=>n.id),[chapter1,chapter2,added],'New note follows Chapter 2 inside the selected Act 1');
 assert.equal(parent.collapsed,false,'Parent expands to show its newly appended note');
 assert.equal(findNode(novel.sections.binder,added).content,'','New note starts empty');
-assert.equal(findNode(novel.sections.binder,added).bodyFontSize,8);
+assert.equal(findNode(novel.sections.binder,added).bodyFontSize,undefined,'New notes inherit the current note typography');
 assert.equal(findNode(novel.sections.binder,added).hiddenDetailBlocks,undefined,'Children keep the existing Details layout');
 assert.equal(findNode(novel.sections.binder,added).title,'Untitled','No automatic chapter numbering');
 assert.equal(useKachamak.getState().renamingNodeId,added,'New note is ready for naming');
@@ -48,7 +48,7 @@ await React.act(async()=>actions.select(null));
 const top=await createFromTree(null,'Create top-level note');
 const topNote=findNode(useKachamak.getState().novels[0].sections.binder,top);
 assert.deepEqual(topNote.hiddenDetailBlocks,['image','aliases','codex','timeline']);
-assert.equal(topNote.bodyFontSize,8);
+assert.equal(topNote.bodyFontSize,undefined);
 assert.equal(topNote.content,'');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder.map(n=>n.id),[act1,act2,top],'No selected item appends at section root');
 // A selection from another section must not capture the new note.

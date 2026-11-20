@@ -1,3 +1,5 @@
+> **2026-11-20 — Tipografija beležaka.** Osnovni tekst je Tahoma 9 pt. Naslov beleške i nivoi H1–H6 rastu srazmerno veličini teksta iz podešavanja taba. Linkovi ka beleškama imaju tanku tačkastu liniju.
+
 > **2026-11-20 — Osvežavanje pre ponovnog čuvanja.** Ako se stranica osveži posle prekida slanja, original se otvara sa poslednjim potvrđenim rasporedom. Lokalni nacrt iz istog profila pregledača može da se oporavi kroz My Account → Storage → Recover as copies.
 
 > **2026-11-20 — Čuvanje na sporoj vezi.** Pregledač sada obnavlja rok za čuvanje i učitavanje biblioteke svaki put kad prenese još podataka. Ranije je prekidao i aktivan prenos posle 30 sekundi.
@@ -577,6 +579,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Odnos naslova i teksta u beleškama.** Uz osnovu od 9 pt (12 CSS px), naslov beleške ima 22 pt, a H1–H6 redom 18, 16, 14, 12, 11 i 10 pt. Skala obuhvata pisanje, podeljeni i neprekidni prikaz. Formatiranje označenog teksta ostaje lokalno. Postojeći sadržaj i ručno zadate vrednosti taba se čuvaju. Povezana imena koriste boju povezane beleške i tačkasto podvlačenje od jednog piksela.
 
 - **2026-11-20 — Provera Homepage-a posle osvežavanja bez veze.** U istom probnom albumu iz prethodnog testa premeštene su četiri od 48 kartica. Prenos je prekinut posle 320 KiB od 6,42 MB, pa je Chrome osvežen bez veze pre klika na Retry save. Posle ponovnog povezivanja original je prikazao prethodno potvrđen raspored. Oporavak lokalnog nacrta napravio je kopije obe knjige probne biblioteke. Posle novog učitavanja oporavljenog albuma potvrđeni su svi ID-jevi kartica, redosled, redovi i kolone i SHA-256 svake slike. U oporavljenom albumu svaka kartica i slika pojavila se jednom.
 

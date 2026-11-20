@@ -10,8 +10,12 @@ export function validNotePageSettings(value:unknown):boolean {
   const {font,spacing,page}=value as NotePageSettings;
   return (font===undefined||PAGE_FONTS.includes(font))&&(spacing===undefined||LINE_SPACINGS.includes(spacing))&&(page===undefined||validPageFormat(page));
 }
-export const NEW_NOTE_FONT_SIZE = 8;
-export const NOTE_FONT_SIZES = [NEW_NOTE_FONT_SIZE, 12, 14, 16, 18, 20, 24];
+// Sizes are stored in CSS pixels. In the note editor 12 CSS pixels are 9 typographic points.
+export const NOTE_BODY_SIZE = 12;
+export const NOTE_FONT_SIZES = [8, NOTE_BODY_SIZE, 14, 16, 18, 20, 24];
+export function noteSizeLabel(pixels:number) {
+  return `${Number((pixels * .75).toFixed(2))} pt`;
+}
 export const validNoteFontSize = (size: unknown) => size === undefined || typeof size === 'number' && NOTE_FONT_SIZES.includes(size);
 export type PageFormat={indent:0|1|1.5|2;chicago:boolean;paragraphGap:0|0.5|1|1.5|null;width:36|48|60|72|'full';align:'left'|'justify';divider:'line'|'dots'|'asterisks'|'space';layout:'centered'|'fit'|'stacked';colorizeAnnotations:boolean};
 export const DEFAULT_PAGE_FORMAT:PageFormat={indent:0,chicago:true,paragraphGap:null,width:48,align:'left',divider:'line',layout:'centered',colorizeAnnotations:true};
@@ -31,16 +35,20 @@ export function validTabPageSettings(value:unknown):value is TabPageSettings {
 }
 
 // A tab overrides only the individual properties the writer has chosen there.
-export function noteAppearance(defaults:EditorAppearance,tab?:TabPageSettings,node?:NoteNode|null) {
+export function noteAppearance(defaults:Pick<EditorAppearance,'spacing'|'page'>,tab?:TabPageSettings,node?:NoteNode|null) {
   const local=node?.pageSettings;
   const explicitSpacing=tab?.spacing??local?.spacing;
   return {
-    font:tab?.font??local?.font??defaults.font,
-    size:tab?.size??node?.bodyFontSize??defaults.size,
+    font:tab?.font??local?.font??'Tahoma',
+    // Earlier versions automatically stamped new notes with 8px.
+    size:tab?.size??(node?.bodyFontSize===8?undefined:node?.bodyFontSize)??NOTE_BODY_SIZE,
     spacing:explicitSpacing??defaults.spacing,
     explicitSpacing,
     page:{...(local?.page??defaults.page),...tab?.page}
   };
+}
+export function noteTypography(font:string,size:number,spacing:string):CSSProperties {
+  return {fontFamily:`'${font}', Arial, sans-serif`,fontSize:size,lineHeight:spacing,'--note-body-size':`${size}px`} as CSSProperties;
 }
 export function pageVariables(page:PageFormat,spacing?:string):CSSProperties {
   return {'--page-leading':spacing,'--page-width':page.width==='full'?'100%':`${page.width}rem`,'--page-indent':`${page.indent}em`,'--page-gap':`${page.paragraphGap??0}em`,'--page-align':page.align} as CSSProperties;

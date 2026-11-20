@@ -20,7 +20,7 @@ import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
 import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
-import {DEFAULT_PAGE_FORMAT,NEW_NOTE_FONT_SIZE,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
+import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -306,7 +306,7 @@ function makeNode(kind: NoteNode["kind"], title: string, template?: NoteNode): N
   const now = Date.now();
   const fields = template
     ? structuredClone({ ...template, children: [], hidden: false, collapsed: false })
-    : { bodyFontSize: NEW_NOTE_FONT_SIZE, synopsis: "", content: "", notes: "", status: "", label: "" };
+    : { synopsis: "", content: "", notes: "", status: "", label: "" };
   return {
     ...fields,
     id: uid(),

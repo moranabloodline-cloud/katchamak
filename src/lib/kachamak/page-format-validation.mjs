@@ -1,4 +1,4 @@
-export const PAGE_FONTS=['Segoe UI','Arial','Calibri','Cambria','Georgia','Garamond','Palatino Linotype','Times New Roman','Courier New','Verdana','EB Garamond','Literata'];
+export const PAGE_FONTS=['Segoe UI','Tahoma','Arial','Calibri','Cambria','Georgia','Garamond','Palatino Linotype','Times New Roman','Courier New','Verdana','EB Garamond','Literata'];
 export const validPageFormat=value=>!!value && typeof value==='object' &&
   [0,1,1.5,2].includes(value.indent) && typeof value.chicago==='boolean' &&
   [null,0,0.5,1,1.5].includes(value.paragraphGap) && [36,48,60,72,'full'].includes(value.width) &&

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { NoteConnections } from "./NoteConnections";
 import { RichEditor } from "./RichEditor";
+import {useNoteAppearance} from "./PageSurface";
+import {noteTypography} from "@/lib/kachamak/page-format";
 import { useKachamak } from "@/lib/kachamak/store";
 import { finishTimelineAdd, usesTimelineDialog, useTimelineAddRequest } from "@/lib/kachamak/timeline-actions";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -88,6 +90,8 @@ export function RightPanel({
   familySettings?: ReactNode;
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
+  const {font,size,spacing}=useNoteAppearance(node);
+  const proseStyle=noteTypography(font,size,spacing);
   const rightZoom = useKachamak((s) => s.rightZoom ?? 1);
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
@@ -188,7 +192,7 @@ export function RightPanel({
               <Label className="shrink-0 text-xs text-muted-foreground">
                 Synopsis
               </Label>
-              <div className="mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5 text-sm">
+              <div style={proseStyle} className="note-prose mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5">
                 <RichEditor
                   html={node.synopsis}
                   onChange={(html) =>
@@ -209,7 +213,7 @@ export function RightPanel({
               <Label className="shrink-0 text-xs text-muted-foreground">
                 Notes
               </Label>
-              <div className="mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5 text-sm">
+              <div style={proseStyle} className="note-prose mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5">
                 <RichEditor
                   html={node.notes}
                   onChange={(html) => updateNode(section, node.id, { notes: html })}

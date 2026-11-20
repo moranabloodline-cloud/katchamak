@@ -9,7 +9,15 @@ const React=await import('react'),{createRoot}=await import('react-dom/client');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
 const {findNodeInNovel}=await import('../src/lib/kachamak/utils.ts');
 const {applyEditorTypography,applyEditorHistory}=await import('../src/lib/kachamak/editor-blocks.ts');
-const {PAGE_FONTS,DEFAULT_PAGE_FORMAT,validEditorAppearance}=await import('../src/lib/kachamak/page-format.ts');
+const {PAGE_FONTS,DEFAULT_PAGE_FORMAT,DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,noteAppearance,noteSizeLabel}=await import('../src/lib/kachamak/page-format.ts');
+for (const legacy of [{}, {bodyFontSize:8}]) {
+  const inherited=noteAppearance(DEFAULT_EDITOR_APPEARANCE,undefined,legacy);
+  assert.equal(inherited.font,'Tahoma');
+  assert.equal(noteSizeLabel(inherited.size),'9 pt');
+}
+const tabOverride=noteAppearance(DEFAULT_EDITOR_APPEARANCE,{font:'Georgia',size:8},{bodyFontSize:8});
+assert.equal(tabOverride.font,'Georgia');
+assert.equal(tabOverride.size,8,'An explicit tab size still overrides the inherited base');
 const {EditorPage}=await import('../src/components/kachamak/WriteArea.tsx');
 const {Workspace}=await import('../src/components/kachamak/Workspace.tsx');
 const actions=useKachamak.getState();actions.createNovel('Format QA','Tester');
@@ -19,7 +27,7 @@ const root=createRoot(document.body.appendChild(document.createElement('div')));
 function Editor(){const novels=useKachamak(s=>s.novels);return React.createElement(EditorPage,{node:findNodeInNovel(novels[0],id).node,section:'binder'});}
 await React.act(async()=>root.render(React.createElement(Editor)));
 const editor=document.querySelector('[aria-label="Note content"]'),original=editor.innerHTML;
-assert.equal(editor.closest('[style*="font-size"]').style.fontSize,'8px','The new note body starts at 8 in the workspace');
+assert.equal(editor.closest('[style*="font-size"]').style.fontSize,'12px','The new note body starts at 9pt');
 let range=document.createRange();range.setStart(editor.querySelector('p').firstChild,2);range.setEnd(editor.querySelector('b').firstChild,2);
 await React.act(async()=>assert.equal(applyEditorTypography(range,'fontSize','20px'),true));
 assert.equal(editor.textContent,'Alpha beta gamma.Second paragraph.');
@@ -50,7 +58,7 @@ assert.equal(editor.querySelector('span[style*="line-height"]'),null);
 assert.equal(editor.textContent,'Alpha beta gamma.Second paragraph.');
 await React.act(async()=>applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'));
 assert.equal(editor.innerHTML,original);
-assert.equal(PAGE_FONTS.length,12);
+assert.ok(PAGE_FONTS.includes('Tahoma'));
 const contentBeforePage=node().content;
 await React.act(async()=>{actions.setEditorFont('Georgia');actions.setEditorSize(18);actions.setEditorSpacing('2.0');actions.setPageFormat({indent:1.5,paragraphGap:0.5,width:60,align:'justify',divider:'dots',layout:'stacked',colorizeAnnotations:false});});
 assert.equal(node().content,contentBeforePage);assert.equal(editor.innerHTML,contentBeforePage);
