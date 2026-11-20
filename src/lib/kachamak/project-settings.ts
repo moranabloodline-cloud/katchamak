@@ -25,13 +25,20 @@ export function readHomepageImage(file:File):Promise<string> {
 
 async function readProjectImage(file:File,bounds:{width:number;height:number},homepage:boolean):Promise<string> {
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024)throw new Error('Choose a JPG, PNG or WebP image up to 10 MB.');
-  const bitmap=await createImageBitmap(file);
+  return encodeProjectBitmap(await createImageBitmap(file),file.type,bounds,homepage);
+}
+
+export function encodeHomepageCutout(bitmap:ImageBitmap):string {
+  return encodeProjectBitmap(bitmap,'image/png',{width:2400,height:1600},true);
+}
+
+function encodeProjectBitmap(bitmap:ImageBitmap,mime:string,bounds:{width:number;height:number},homepage:boolean):string {
   try{
     if(!bitmap.width||!bitmap.height)throw new Error('This image could not be read.');
     const canvas=document.createElement('canvas');
     const ctx=canvas.getContext('2d');
     if(!ctx)throw new Error('Image processing is unavailable.');
-    const keepAlpha=homepage && file.type!=='image/jpeg';
+    const keepAlpha=homepage && mime!=='image/jpeg';
     let scale=Math.min(1,bounds.width/bitmap.width,bounds.height/bitmap.height);
     do {
       canvas.width=Math.max(1,Math.round(bitmap.width*scale));
@@ -41,7 +48,7 @@ async function readProjectImage(file:File,bounds:{width:number;height:number},ho
         ctx.fillRect(0,0,canvas.width,canvas.height);
       }
       ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-      if(keepAlpha && file.type==='image/png'){
+      if(keepAlpha && mime==='image/png'){
         const png=canvas.toDataURL('image/png');
         if(validCoverImage(png))return png;
       }

@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Columns3, GripVertical, LockKeyhole, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, LockKeyhole, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {EMPTY_HOMEPAGE, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
@@ -10,6 +10,8 @@ import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {useKachamak} from '@/lib/kachamak/store';
 import {TABS, type Novel, type NoteNode} from '@/lib/kachamak/types';
 import {useHomepageDrag} from './useHomepageDrag';
+import {HomeArtwork} from './HomeArtwork';
+import {HomeArtworkEditor} from './HomeArtworkEditor';
 import {HomeImagePlaceholder} from './HomeImagePlaceholder';
 import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
@@ -22,7 +24,7 @@ function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>) {
     target?.kind==='web' ? new URL(target.url).hostname : note?.title;
   return {
     title:block.title || destination,
-    image:block.image || note?.image,
+    image:block.imageCutout || block.image || note?.image,
     name:block.title || destination || block.text.split('\n')[0] || (target?.kind==='note'?'Unavailable note':'Image'),
   };
 }
@@ -31,7 +33,7 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
   const banner=block.layout==='banner';
   const caption=image && (banner || block.layout==='image') ? block.title : title;
   return <>
-    {image&&<img draggable={false} src={image} alt="" className="block h-auto w-full"/>}
+    {image&&<HomeArtwork src={image} frame={block.imageFrame}/>}
     {(caption||block.text||!image)&&<span className={`flex w-full flex-col gap-2 break-words p-5 ${banner?'@[640px]:p-8':''}`}>
       {caption&&<span className={`font-semibold leading-tight ${banner?'text-3xl @[640px]:text-4xl':block.layout==='text'?'text-xl':'text-lg'}`}>{caption}</span>}
       {block.text&&<span className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{block.text}</span>}
@@ -48,13 +50,14 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
   const openTab=useOpenWorkspaceTab(novel);
   const drag=useHomepageDrag(page.locked,(id,p)=>change(novel.id,p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell}|null>(null);
+  const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
   const [message,setMessage]=useState('');
   const opener=useRef<HTMLElement|null>(null);
   const captureOpener=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const restoreFocus=()=>requestAnimationFrame(()=>{if(opener.current?.isConnected)opener.current.focus();});
   const closeEditor=()=>{setEditor(null);restoreFocus();};
-  useEffect(()=>{if(page.locked)setEditor(null);else setPreviewId(null);setMessage('');},[page.locked]);
+  useEffect(()=>{if(page.locked){setEditor(null);setArtwork(null);}else setPreviewId(null);setMessage('');},[page.locked]);
   const edit=(original?:HomeBlock,cell?:HomeCell)=>{captureOpener();setMessage('');setEditor({original,cell:original?.cell??cell});};
   const preview=page.blocks.find(block=>block.id===previewId);
   const details=preview&&blockDisplay(preview,byId);
@@ -114,6 +117,8 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
           block.target?.kind==='web'?<a aria-label={name} className="absolute inset-0" href={block.target.url} target="_blank" rel="noopener noreferrer"/>:
           block.target&&<button type="button" aria-label={name} className="absolute inset-0 w-full" onClick={()=>activate(block)}/>}
       </div>}
+      {!page.locked&&display.image&&!row&&<Button size="icon" variant="outline" className="home-arrange pointer-events-none absolute right-2 top-2 z-[1] size-8 bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+        aria-label={'Reposition image: '+name} title="Reposition image" onClick={()=>{captureOpener();setArtwork({block,src:block.image||display.image!});}}><Crop/></Button>}
       {hint&&<span aria-hidden="true" className={`pointer-events-none absolute z-10 rounded-full bg-amber-400 ${hint.axis==='row'
         ? `inset-x-0 h-1 ${hint.side==='before'?'-top-2':'-bottom-2'}` : `inset-y-0 w-1 ${hint.side==='before'?'-left-2':'-right-2'}`}`}/>}
       {!page.locked&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
@@ -141,11 +146,13 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
         {roots.map((block,index)=>renderBlock(block,index,roots.length))}
       </div>
     </div>
+    {!page.locked&&artwork&&<HomeArtworkEditor src={artwork.src} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
+      onSave={options=>change(novel.id,{type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
     {!page.locked&&editor&&<HomeBlockEditor original={editor.original} cell={editor.cell} notes={notes} onClose={closeEditor} onSave={block=>change(novel.id,editor.original?{type:'edit',original:editor.original,block}:{type:'add',block})}/>}
     {page.locked&&preview&&details&&<Dialog open onOpenChange={open=>{if(!open){setPreviewId(null);restoreFocus();}}}>
       <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>{details.title||'Block preview'}</DialogTitle></DialogHeader>
-        {details.image&&<img src={details.image} alt={details.title||'Block image'} className="mx-auto max-h-[68dvh] w-auto rounded-md object-contain"/>}
+        {details.image&&(preview.imageFrame?<div className="mx-auto w-full" style={{maxWidth:`${68*preview.imageFrame.ratio}dvh`}}><HomeArtwork src={details.image} frame={preview.imageFrame} alt={details.title||'Block image'}/></div>:<img src={details.image} alt={details.title||'Block image'} className="mx-auto max-h-[68dvh] w-auto rounded-md object-contain"/>)}
         {preview.text&&<p className="whitespace-pre-wrap break-words">{preview.text}</p>}
       </DialogContent>
     </Dialog>}

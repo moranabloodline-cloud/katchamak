@@ -1,3 +1,5 @@
+> **2026-11-20 — Kadriranje i uklanjanje pozadine.** Na otključanoj početnoj strani dugme Reposition image otvara kadar sa ručicama, zumom i donjim prelivom. Remove background obrađuje sliku na uređaju. Original je sačuvan i pozadina se može vratiti.
+
 > **2026-11-20 — Slike na početnoj strani.** Baner prati širinu bloka i visinu slike. Novoučitane PNG i WebP slike zadržavaju providnost. Blok Image omogućava da se mesto za sliku prvo postavi u red ili kolonu, a slika doda klikom. Za providnost ranije učitane slike sa tamnom JPEG pozadinom potreban je izvorni fajl.
 
 > **2026-11-20 — Redovi i kolone na početnoj strani.** Svaki red ima jednu do šest jednakih kolona. Elementi se slažu po visini unutar kolone, prate njenu širinu i mogu da se prevuku između redova. Podržani su naslovi, istaknute poruke, liste linkova, razdelnici, YouTube video i uža širina za čitanje.
@@ -555,6 +557,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-20 — Obrada slike na početnoj strani.** Jednobojne podloge uklanjaju se lokalno prema boji ivice. Za složenije podloge radnik u pregledaču koristi U²-Netp. Sačuvani kadar i izdvojeni motiv provereni su posle zaključavanja i osvežavanja na probnoj knjizi.
 
 - **2026-11-20 — Slike i baneri na početnoj strani.** Uklonjeni su kadriranje i preliv na baneru. Široki probni logo proveren je preko cele strane, unutar kolone i na mobilnoj širini. Testovi pokrivaju providne i poluprovidne piksele, kompresiju, zaključavanje, ponovni pristup sačuvanoj strani i navigaciju sa slike na belešku.
 

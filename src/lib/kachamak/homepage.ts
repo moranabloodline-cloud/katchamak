@@ -10,6 +10,21 @@ export type HomeTarget =
   | { kind: 'tab'; tab: SectionKey }
   | { kind: 'web'; url: string };
 
+export interface HomeImageFrame {
+  ratio:number;
+  zoom:number;
+  x:number;
+  y:number;
+  fade:boolean;
+}
+
+function validFrame(frame:HomeImageFrame|undefined) {
+  if(frame===undefined)return true;
+  const within=(value:number,min:number,max:number)=>Number.isFinite(value)&&value>=min&&value<=max;
+  return !!frame && within(frame.ratio,1/4096,4096) && within(frame.zoom,1,6) &&
+    within(frame.x,0,1) && within(frame.y,0,1) && typeof frame.fade==='boolean';
+}
+
 export interface HomeBlock {
   id: string;
   layout: HomeLayout;
@@ -17,6 +32,8 @@ export interface HomeBlock {
   title: string;
   text: string;
   image?: string;
+  imageFrame?: HomeImageFrame;
+  imageCutout?: string;
   target?: HomeTarget;
   cell?: HomeCell;
   columns?: number;
@@ -70,7 +87,7 @@ function validBlock(block: HomeBlock) {
   return !!block && typeof block.id === 'string' && !!block.id &&
     HOME_LAYOUTS.includes(block.layout) && ['standard','wide','full'].includes(block.width) &&
     typeof block.title === 'string' && typeof block.text === 'string' &&
-    validCoverImage(block.image) && validTarget(block.target) &&
+    validCoverImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
     (block.cell===undefined || (!!block.cell && typeof block.cell.rowId==='string' && Number.isInteger(block.cell.column))) &&
     (block.layout!=='row' || (!block.cell && Number.isInteger(block.columns) && block.columns!>=1 && block.columns!<=6)) &&
     (block.layout!=='video' || !!youtubeVideoId(block.videoUrl)) &&

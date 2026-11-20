@@ -8,6 +8,8 @@ import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
 import {readHomepageImage} from '@/lib/kachamak/project-settings';
 import {isWebsite, youtubeVideoId, type HomeBlock, type HomeCell, type HomeLayout, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
+import {HomeArtwork} from './HomeArtwork';
+import {HomeArtworkEditor} from './HomeArtworkEditor';
 import {HomeDestinationFields,homeSelectClass} from './HomeDestinationFields';
 import type {flattenNotes} from '@/lib/kachamak/note-links';
 
@@ -32,6 +34,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
   const [draft,setDraft]=useState<HomeBlock>(()=>original??{id:crypto.randomUUID(),layout:'card',width:'standard',title:'',text:'',cell});
   const row=draft.layout==='row', divider=draft.layout==='divider', list=draft.layout==='links', video=draft.layout==='video';
   const hasDestination=!row&&!divider&&!list&&!video;
+  const [adjusting,setAdjusting]=useState(false);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false);
   const upload=useRef(0), fileInput=useRef<HTMLInputElement>(null);
   useEffect(()=>()=>{upload.current++;},[]);
@@ -44,7 +47,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
     const version=++upload.current;setBusy(true);setError('');
     try {
       const image=await readHomepageImage(file);
-      if(upload.current===version)patch({image});
+      if(upload.current===version)patch({image,imageFrame:undefined,imageCutout:undefined});
     } catch(err) {
       if(upload.current===version)setError(err instanceof Error?err.message:'Could not open that image.');
     } finally {if(upload.current===version)setBusy(false);}
@@ -71,10 +74,11 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
         {!divider&&<Label className="grid gap-2">Title<Input value={draft.title} onChange={event=>patch({title:event.target.value})}/></Label>}
         {!row&&!divider&&!video&&<Label className="grid gap-2">Text<Textarea rows={3} value={draft.text} onChange={event=>patch({text:event.target.value})}/></Label>}
         {!row&&!divider&&!video&&<div className="flex flex-wrap items-center gap-2">
-          {draft.image&&<img src={draft.image} alt="Block image preview" className="block max-h-36 w-full object-contain"/>}
+          {draft.image&&(draft.imageFrame?<div className="mx-auto w-full" style={{maxWidth:`${9*draft.imageFrame.ratio}rem`}}><HomeArtwork src={draft.imageCutout||draft.image} frame={draft.imageFrame} alt="Block image preview"/></div>:<img src={draft.imageCutout||draft.image} alt="Block image preview" className="block max-h-36 w-full object-contain"/>)}
           <input type="file" aria-label="Block image file" ref={fileInput} accept="image/jpeg,image/png,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void loadImage(file);}}/>
           <Button type="button" variant="outline" onClick={()=>fileInput.current?.click()}><ImagePlus/>{busy?'Loading image…':draft.image?'Replace image':'Add image'}</Button>
-          {draft.image&&<Button type="button" variant="ghost" onClick={()=>{upload.current++;setBusy(false);patch({image:undefined});}}>Remove image</Button>}
+          {draft.image&&<Button type="button" variant="outline" disabled={busy} onClick={()=>setAdjusting(true)}>Reposition image</Button>}
+          {draft.image&&<Button type="button" variant="ghost" onClick={()=>{upload.current++;setBusy(false);patch({image:undefined,imageFrame:undefined,imageCutout:undefined});}}>Remove image</Button>}
         </div>}
         {!row&&!draft.cell&&<Label className="grid gap-2">Width<select className={homeSelectClass} value={draft.width} onChange={e=>patch({width:e.target.value as HomeBlock['width']})}><option value="standard">Standard</option><option value="wide">Wide</option><option value="full">Full row</option></select></Label>}
         {hasDestination&&<HomeDestinationFields notes={notes} target={draft.target} onChange={target=>patch({target})} optional/>}
@@ -88,6 +92,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
         {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy}>{original?'Save block':'Add to homepage'}</Button></div>
       </form>
+      {adjusting&&draft.image&&<HomeArtworkEditor block={draft} src={draft.image} onClose={()=>setAdjusting(false)} onSave={options=>{patch(options);return true;}}/>}
     </DialogContent>
   </Dialog>;
 }

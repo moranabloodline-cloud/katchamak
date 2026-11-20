@@ -81,7 +81,14 @@ for(const blocks of [[card,card],[{...card,image:'broken'}],[{...card,target:{ki
 }
 const slot={id:'logo',layout:'image',width:'full',title:'',text:''};
 assert.ok(change(add(slot)));
-const linkedLogo={...slot,image:banner.image,target:card.target};
+const crop={ratio:3,zoom:1.5,x:.25,y:.4,fade:true};
+const linkedLogo={...slot,image:banner.image,imageFrame:crop,imageCutout:'data:image/webp;base64,Yg==',target:card.target};
+assert.ok(validHomepage({locked:false,blocks:[linkedLogo]}));
+for(const invalid of [{zoom:.5},{zoom:7},{ratio:0},{x:NaN},{y:1.01},{fade:'on'}]){
+  assert.equal(validHomepage({locked:false,blocks:[{...linkedLogo,imageFrame:{...crop,...invalid}}]}),false);
+}
+assert.equal(validHomepage({locked:false,blocks:[{...linkedLogo,image:undefined}]}),false);
+assert.equal(validHomepage({locked:false,blocks:[{...linkedLogo,imageCutout:'invalid'}]}),false);
 assert.ok(change({type:'edit',original:slot,block:linkedLogo}));
 assert.ok(change({type:'lock',locked:true}));
 const saved=JSON.parse(JSON.stringify(current()));
