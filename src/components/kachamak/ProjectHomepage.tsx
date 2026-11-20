@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Columns3, GripVertical, LockKeyhole, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Columns3, GripVertical, LockKeyhole, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {EMPTY_HOMEPAGE, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
@@ -10,6 +10,7 @@ import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {useKachamak} from '@/lib/kachamak/store';
 import {TABS, type Novel, type NoteNode} from '@/lib/kachamak/types';
 import {useHomepageDrag} from './useHomepageDrag';
+import {HomeImagePlaceholder} from './HomeImagePlaceholder';
 import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import {useOpenWorkspaceTab} from './WorkspaceTabs';
@@ -27,14 +28,14 @@ function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>) {
 }
 
 function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:string}) {
-  const banner=block.layout==='banner', prose=block.layout==='text';
+  const banner=block.layout==='banner';
+  const caption=image && (banner || block.layout==='image') ? block.title : title;
   return <>
-    {image && <img draggable={false} src={image} alt="" className={banner?'absolute inset-0 size-full object-cover':prose?'w-full max-h-56 object-cover':'aspect-[2/1] w-full object-cover'}/>}
-    {banner && image && <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent"/>}
-    {(title||block.text||!image)&&<span className={`relative flex w-full flex-col gap-2 break-words p-5 ${banner?'mt-auto @[640px]:p-8':''} ${banner&&image?'text-white':''}`}>
-      {title&&<span className={`font-semibold leading-tight ${banner?'text-3xl @[640px]:text-4xl':prose?'text-xl':'text-lg'}`}>{title}</span>}
-      {block.text&&<span className={`whitespace-pre-wrap text-sm leading-relaxed ${banner&&image?'text-white/90':'text-muted-foreground'}`}>{block.text}</span>}
-      {!title&&!block.text&&!image&&<span>Unavailable note</span>}
+    {image&&<img draggable={false} src={image} alt="" className="block h-auto w-full"/>}
+    {(caption||block.text||!image)&&<span className={`flex w-full flex-col gap-2 break-words p-5 ${banner?'@[640px]:p-8':''}`}>
+      {caption&&<span className={`font-semibold leading-tight ${banner?'text-3xl @[640px]:text-4xl':block.layout==='text'?'text-xl':'text-lg'}`}>{caption}</span>}
+      {block.text&&<span className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{block.text}</span>}
+      {!caption&&!block.text&&!image&&<span>Unavailable note</span>}
     </span>}
   </>;
 }
@@ -82,9 +83,12 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
     const editButton={type:'button' as const,draggable:!page.locked,onDragStart:(e:React.DragEvent<HTMLButtonElement>)=>drag.start(e,block.id,row),onDragEnd:drag.finish,
       'aria-label':'Edit '+name,title:'Drag to rearrange, or click to edit',onClick:()=>edit(block)};
-    const classic=['card','banner','text'].includes(block.layout);
+    const classic=['card','banner','image','text'].includes(block.layout);
+    const emptyImage=block.layout==='image'&&!display.image;
+    const bare=block.layout==='image'||Boolean(display.image&&(block.layout==='banner'||(block.image&&!display.title&&!block.text)));
     const face=<BlockFace block={block} title={display.title} image={display.image}/>;
-    const cardClass=`relative flex w-full flex-col overflow-hidden rounded-xl border border-border text-left transition-colors hover:border-amber-500/60 focus-visible:outline-2 focus-visible:outline-amber-400 ${block.layout==='banner'?'min-h-44 justify-end bg-gradient-to-br from-muted to-background':block.layout==='text'?'bg-background':'bg-card'}`;
+    const frame=bare?'bg-transparent':`overflow-hidden rounded-xl border border-border hover:border-amber-500/60 ${block.layout==='banner'?'min-h-44 justify-end bg-gradient-to-br from-muted to-background':block.layout==='text'?'bg-background':'bg-card'}`;
+    const cardClass='relative flex w-full flex-col text-left focus-visible:outline-2 focus-visible:outline-amber-400 '+frame;
     const hint=!drag.hint?.cell&&drag.hint?.targetId===block.id?drag.hint:null;
     return <article key={block.id} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
       {row?<div className={'@container/row rounded-lg px-1 py-3 '+(page.locked?'':'outline outline-dashed outline-border')}>
@@ -99,8 +103,10 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
             </div>;
           })}
         </div>
-      </div>:classic?(
-        page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/></a>:
+      </div>:emptyImage&&!page.locked?(
+        <HomeImagePlaceholder onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change(novel.id,{type:'edit',original:block,block:{...block,image}})}/>
+      ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
+        page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
           <button {...editButton} aria-label={page.locked?name:'Edit '+name} title={page.locked?undefined:editButton.title} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
       ):<div className="relative min-w-0">
         <HomeDocumentBlock block={block} image={display.image} interactive={page.locked} describe={describe} open={openTarget}/>
@@ -111,6 +117,7 @@ export function ProjectHomepage({novel,onBack}:{novel:Novel;onBack:()=>void}) {
       {hint&&<span aria-hidden="true" className={`pointer-events-none absolute z-10 rounded-full bg-amber-400 ${hint.axis==='row'
         ? `inset-x-0 h-1 ${hint.side==='before'?'-top-2':'-bottom-2'}` : `inset-y-0 w-1 ${hint.side==='before'?'-left-2':'-right-2'}`}`}/>}
       {!page.locked&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+        {emptyImage&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
         <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change(novel.id,{type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
         <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change(novel.id,{type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
         <Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm(row?'Remove this row and keep its elements on the homepage?':'Remove this block from the homepage?'))change(novel.id,{type:'remove',original:block});}}><Trash2/></Button>

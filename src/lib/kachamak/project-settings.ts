@@ -15,17 +15,43 @@ export function novelSettingsPatch(novel:Novel,patch:NovelSettingsPatch):NovelSe
   return {title:next.title.trim(),author:next.author.trim(),series:next.series?.trim()||'',seriesIndex:next.seriesIndex?.trim()||'',language:next.language?.trim(),genres:next.genres?.map(value=>value.trim()),subgenres:next.subgenres?.map(value=>value.trim()),chapterCount:next.chapterCount,targetAudience:next.targetAudience?.trim(),tones:next.tones?.map(value=>value.trim()),writingStyles:next.writingStyles?.map(value=>value.trim()),plotTechniques:next.plotTechniques?.map(value=>value.trim()),sellingPoints:next.sellingPoints?.map(value=>value.trim()),explicitContent:next.explicitContent,archived:next.archived??false,cover:{...next.cover}};
 }
 /** A portable, bounded raster image: included in cloud snapshots and JSON backups. */
-export async function readNovelCover(file:File,bounds={width:960,height:1440}):Promise<string> {
+export function readNovelCover(file:File,bounds={width:960,height:1440}):Promise<string> {
+  return readProjectImage(file,bounds,false);
+}
+
+export function readHomepageImage(file:File):Promise<string> {
+  return readProjectImage(file,{width:2400,height:1600},true);
+}
+
+async function readProjectImage(file:File,bounds:{width:number;height:number},homepage:boolean):Promise<string> {
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024)throw new Error('Choose a JPG, PNG or WebP image up to 10 MB.');
   const bitmap=await createImageBitmap(file);
   try{
     if(!bitmap.width||!bitmap.height)throw new Error('This image could not be read.');
-    const scale=Math.min(1,bounds.width/bitmap.width,bounds.height/bitmap.height),canvas=document.createElement('canvas');
-    canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
-    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Image processing is unavailable.');
-    ctx.fillStyle='#161616';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-    for(const quality of [.88,.76,.6,.45]){const image=canvas.toDataURL('image/jpeg',quality);if(validCoverImage(image))return image;}
-    throw new Error('This cover is too detailed. Choose a smaller image.');
+    const canvas=document.createElement('canvas');
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('Image processing is unavailable.');
+    const keepAlpha=homepage && file.type!=='image/jpeg';
+    let scale=Math.min(1,bounds.width/bitmap.width,bounds.height/bitmap.height);
+    do {
+      canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+      canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      if(!keepAlpha){
+        ctx.fillStyle='#161616';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+      }
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      if(keepAlpha && file.type==='image/png'){
+        const png=canvas.toDataURL('image/png');
+        if(validCoverImage(png))return png;
+      }
+      for(const quality of [.88,.76,.6,.45]){
+        const image=canvas.toDataURL(keepAlpha?'image/webp':'image/jpeg',quality);
+        if(validCoverImage(image))return image;
+      }
+      scale*=0.75;
+    } while(homepage && (canvas.width>1 || canvas.height>1));
+    throw new Error('This image is too detailed. Choose a smaller image.');
   }finally{bitmap.close();}
 }
 

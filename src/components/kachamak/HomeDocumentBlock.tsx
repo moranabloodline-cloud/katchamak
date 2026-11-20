@@ -22,7 +22,7 @@ export function HomeDocumentBlock({block,image,interactive,describe,open}:{
   return <div className={'min-w-0 break-words '+(block.layout==='callout'?'flex items-start gap-3 rounded-lg border border-sky-400/35 bg-sky-400/10 px-4 py-3':'space-y-2')}>
     {block.layout==='callout'&&<Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-sky-400"/>}
     <div className="min-w-0 flex-1 space-y-2">
-      {image&&<img draggable={false} alt="" src={image} className="max-h-56 w-full rounded object-cover"/>}
+      {image&&<img draggable={false} alt="" src={image} className="block h-auto w-full"/>}
       {title&&(block.layout==='heading'||video?<h2 className="text-2xl font-semibold leading-tight">{title}</h2>:<h3 className="text-base font-semibold">{title}</h3>)}
       {block.text&&<p className="whitespace-pre-wrap text-sm leading-relaxed">{block.text}</p>}
       {block.layout==='links'&&<ul className="space-y-1 text-sm">{block.links?.map(link=>{

@@ -1,7 +1,7 @@
 import { SECTION_KEYS, type SectionKey } from './types';
 import { validCoverImage } from './project-settings';
 
-export const HOME_LAYOUTS = ['card','banner','text','row','heading','callout','links','divider','video'] as const;
+export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
 export type HomeCell = {rowId:string; column:number};
 export type HomeLink = {id:string; label:string; target:HomeTarget};

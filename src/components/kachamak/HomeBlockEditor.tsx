@@ -6,7 +6,7 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
-import {readNovelCover} from '@/lib/kachamak/project-settings';
+import {readHomepageImage} from '@/lib/kachamak/project-settings';
 import {isWebsite, youtubeVideoId, type HomeBlock, type HomeCell, type HomeLayout, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
 import {HomeDestinationFields,homeSelectClass} from './HomeDestinationFields';
 import type {flattenNotes} from '@/lib/kachamak/note-links';
@@ -19,6 +19,7 @@ const layouts = [
   {kind:'divider',label:'Divider',icon:Minus},
   {kind:'video',label:'Video',icon:Video},
   {kind:'card', label:'Card', icon:PanelsTopLeft},
+  {kind:'image', label:'Image', icon:ImagePlus},
   {kind:'banner', label:'Banner', icon:LayoutPanelTop},
   {kind:'text', label:'Text', icon:Type},
 ] as const;
@@ -42,7 +43,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
   const loadImage=async(file:File)=>{
     const version=++upload.current;setBusy(true);setError('');
     try {
-      const image=await readNovelCover(file,{width:1440,height:800});
+      const image=await readHomepageImage(file);
       if(upload.current===version)patch({image});
     } catch(err) {
       if(upload.current===version)setError(err instanceof Error?err.message:'Could not open that image.');
@@ -53,7 +54,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
     if(list&&links.some(l=>!validDestination(l.target))){setError('Choose a valid destination for every link.');return;}
     const target=hasDestination?draft.target:undefined;
     if(target&&!validDestination(target)){setError('Choose a note or enter a full website address.');return;}
-    if(!row&&!divider&&!video&&!draft.title.trim()&&!draft.text.trim()&&!draft.image&&!target&&!(list&&links.length)){setError('Add text, an image or a destination.');return;}
+    if(draft.layout!=='image'&&!row&&!divider&&!video&&!draft.title.trim()&&!draft.text.trim()&&!draft.image&&!target&&!(list&&links.length)){setError('Add text, an image or a destination.');return;}
     const block:HomeBlock={...draft,title:draft.title.trim(),target,columns:row?draft.columns:undefined,
       links:list?links:undefined,videoUrl:video?draft.videoUrl?.trim():undefined};
     if(onSave(block))onClose();
@@ -70,7 +71,7 @@ export function HomeBlockEditor({original,cell,notes,onSave,onClose}:{
         {!divider&&<Label className="grid gap-2">Title<Input value={draft.title} onChange={event=>patch({title:event.target.value})}/></Label>}
         {!row&&!divider&&!video&&<Label className="grid gap-2">Text<Textarea rows={3} value={draft.text} onChange={event=>patch({text:event.target.value})}/></Label>}
         {!row&&!divider&&!video&&<div className="flex flex-wrap items-center gap-2">
-          {draft.image&&<img src={draft.image} alt="Block image preview" className="h-12 w-20 rounded object-cover"/>}
+          {draft.image&&<img src={draft.image} alt="Block image preview" className="block max-h-36 w-full object-contain"/>}
           <input type="file" aria-label="Block image file" ref={fileInput} accept="image/jpeg,image/png,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void loadImage(file);}}/>
           <Button type="button" variant="outline" onClick={()=>fileInput.current?.click()}><ImagePlus/>{busy?'Loading image…':draft.image?'Replace image':'Add image'}</Button>
           {draft.image&&<Button type="button" variant="ghost" onClick={()=>{upload.current++;setBusy(false);patch({image:undefined});}}>Remove image</Button>}

@@ -3,6 +3,7 @@ import {newNovel} from '../src/lib/kachamak/seed.ts';
 import {useKachamak} from '../src/lib/kachamak/store.ts';
 import {isReadableProject} from '../src/lib/kachamak/project-validation.ts';
 import {changeHomepage,EMPTY_HOMEPAGE,validHomepage,youtubeVideoId} from '../src/lib/kachamak/homepage.ts';
+import {readHomepageImage} from '../src/lib/kachamak/project-settings.ts';
 import {openProjectNote,returnToPreviousNote} from '../src/lib/kachamak/note-navigation.ts';
 
 const first=newNovel('First book','Tester'),second=newNovel('Second book','Tester');
@@ -78,6 +79,16 @@ for(const blocks of [[card,card],[{...card,image:'broken'}],[{...card,target:{ki
   assert.equal(validHomepage({locked:false,blocks}),false);
   assert.equal(isReadableProject({...current(),homepage:{locked:true,blocks}}),false);
 }
+const slot={id:'logo',layout:'image',width:'full',title:'',text:''};
+assert.ok(change(add(slot)));
+const linkedLogo={...slot,image:banner.image,target:card.target};
+assert.ok(change({type:'edit',original:slot,block:linkedLogo}));
+assert.ok(change({type:'lock',locked:true}));
+const saved=JSON.parse(JSON.stringify(current()));
+assert.ok(isReadableProject(saved));
+assert.deepEqual(saved.homepage.blocks.find(b=>b.id==='logo'),linkedLogo);
+assert.equal(change({type:'edit',original:linkedLogo,block:slot}),false);
+assert.equal(store().novels[1],second);
 // Grid membership and reading order survive edits to the row itself.
 let grid={locked:false,blocks:[]};
 const apply=action=>{const next=changeHomepage(grid,action);assert.ok(next);assert.ok(validHomepage(next));grid=next;};
@@ -108,4 +119,31 @@ for(const url of ['https://www.youtube.com/watch?v=M7lc1UVf-VE','https://youtu.b
 assert.equal(youtubeVideoId('https://example.com/watch?v=M7lc1UVf-VE'),null);
 assert.equal(validHomepage({locked:false,blocks:[{...row,columns:0}]}),false);
 assert.equal(validHomepage({locked:false,blocks:[{...card,layout:'links',links:[{id:'one',label:'Missing',target:{kind:'note'}}]}]}),false);
+// A transparent logo must never pass through the opaque JPEG cover encoder.
+const encodedTypes=[];
+let drawnSize,closedBitmaps=0;
+const context={
+  drawImage(_bitmap,_x,_y,width,height){drawnSize=[width,height];},
+  fillRect(){assert.fail('Homepage PNG/WebP must retain the transparent canvas');},
+};
+globalThis.createImageBitmap=async()=>({width:3000,height:300,close(){closedBitmaps++;}});
+let forceCompression=false;
+globalThis.document={createElement(){
+  return {getContext:()=>context,toDataURL(mime){
+    encodedTypes.push(mime);
+    if(forceCompression && (mime==='image/png'||this.width>2000))return 'data:'+mime+';base64,'+'A'.repeat(700000);
+    return 'data:'+mime+';base64,aQ==';
+  }};
+}};
+const png=new File(['logo'],'logo.png',{type:'image/png'});
+assert.match(await readHomepageImage(png),/^data:image\/png/);
+assert.deepEqual(encodedTypes,['image/png']);
+assert.deepEqual(drawnSize,[2400,240]);
+forceCompression=true;
+assert.match(await readHomepageImage(png),/^data:image\/webp/);
+assert.ok(encodedTypes.every(type=>type==='image/png'||type==='image/webp'));
+assert.deepEqual(drawnSize,[1800,180]);
+assert.equal(closedBitmaps,2);
+delete globalThis.document;
+delete globalThis.createImageBitmap;
 console.log('Homepage edits, project isolation, lock, order, navigation, backup and validation passed.');
