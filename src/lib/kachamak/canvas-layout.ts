@@ -84,16 +84,19 @@ export function unifiedCanvas<T extends Homepage>(page:T):T {
 export const legacyRowLeft=-1240;
 export function worldRows(rows:HomeBlock[],width:number,heights:ReadonlyMap<string,number>,originX=legacyRowLeft){
   const rects=new Map<string,BoardRect>();
+  const stack:BoardRect[]=[];
   for(const row of rows){
     const {x,y:anchor}=row.at??{x:originX,y:0};
     let y=anchor;
     const h=heights.get(row.id)??112;
     // Older pages were a stack. Keep that order and let subsequent rows make room for a growing row.
-    for(const previous of [...rects.values()].sort((a,b)=>a.y-b.y)){
+    if(!row.manualPosition)for(const previous of stack){
       if(x<previous.x+previous.w && x+width>previous.x && y<previous.y+previous.h+16 && y+h+16>previous.y)
         y=previous.y+previous.h+16;
     }
-    rects.set(row.id,{x,y,w:width,h});
+    const rect={x,y,w:width,h};
+    rects.set(row.id,rect);
+    if(!row.manualPosition){stack.push(rect);stack.sort((a,b)=>a.y-b.y);}
   }
   return rects;
 }

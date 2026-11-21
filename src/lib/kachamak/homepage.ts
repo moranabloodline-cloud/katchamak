@@ -1,9 +1,9 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
-import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,type CanvasTransfer} from './canvas-layout';
+import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,worldRows,type CanvasTransfer} from './canvas-layout';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
-import {validCanvasFields,validBoard,moveOnBoard,type CanvasFields,type BoardMove} from './canvas-board';
+import {validCanvasFields,validBoard,moveOnBoard,isPoint,type Point,type CanvasFields,type BoardMove} from './canvas-board';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
@@ -42,10 +42,11 @@ export interface HomeBlock extends CanvasFields {
   target?: HomeTarget;
   cell?: HomeCell;
   columns?: number;
+  manualPosition?:true;
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -68,7 +69,7 @@ export function homepageRows(novel: Novel) {
     siblings.push(page);
     children.set(page.parentId, siblings);
   }
-  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean; mode?:Homepage['mode']}[] = [];
+  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean; mode?:Homepage['mode']; icon?:string; color?:string}[] = [];
   const pending = children.get(null)!.map(page => ({page, path:page.title, depth:0})).reverse();
   const visited = new Set<string>();
   while (pending.length) {
@@ -76,7 +77,7 @@ export function homepageRows(novel: Novel) {
     if (visited.has(page.id)) continue;
     visited.add(page.id);
     const nested = children.get(page.id) ?? [];
-    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0, mode:page.mode});
+    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0, mode:page.mode,icon:page.icon,color:page.color});
     for (let i = nested.length - 1; i >= 0; i--) {
       const child = nested[i];
       pending.push({page:child, path:path+' / '+child.title, depth:depth+1});
@@ -156,14 +157,21 @@ function validBlock(block: HomeBlock) {
     validCanvasFields(block) && (block.layout!=='audio' || isWebsite(block.audio)) && typeof block.title === 'string' && typeof block.text === 'string' &&
     validProjectImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
     (block.cell===undefined || (!!block.cell && typeof block.cell.rowId==='string' && Number.isInteger(block.cell.column))) &&
+    (block.manualPosition===undefined||block.manualPosition===true&&block.layout==='row'&&isPoint(block.at)) &&
     (block.layout!=='row' || (!block.cell && Number.isInteger(block.columns) && block.columns!>=1 && block.columns!<=6)) &&
     (block.layout!=='video' || !!youtubeVideoId(block.videoUrl)) &&
     (block.links===undefined || (Array.isArray(block.links) && block.links.every(l=>l && typeof l.id==='string' && !!l.id && typeof l.label==='string' && !!l.target && validTarget(l.target)) && new Set(block.links.map(l=>l.id)).size===block.links.length));
 }
+type AppearanceField='icon'|'color';
+function validAppearance(field:AppearanceField,value:unknown) {
+  return typeof value==='string' && (field==='color'?/^#[0-9a-f]{6}$/i:/^[a-z0-9][a-z0-9-]{0,79}$/i).test(value);
+}
+
 export function validHomepage(value: unknown): boolean {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object') return false;
   const page = value as Homepage;
+  if(page.icon!==undefined&&!validAppearance('icon',page.icon) || page.color!==undefined&&!validAppearance('color',page.color))return false;
   if(page.legacyRowX!==undefined && !Number.isFinite(page.legacyRowX))return false;
   if(page.title!==undefined && typeof page.title!=='string')return false;
   if(typeof page.locked!=='boolean' || !Array.isArray(page.blocks) || !page.blocks.every(validBlock))return false;
@@ -176,6 +184,8 @@ export function validHomepage(value: unknown): boolean {
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
 export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
+  | {type:'appearance';field:AppearanceField;value:string}
+  | {type:'moveRow';id:string;at:Point;heights:[string,number][]}
   | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
   | {type:'task'; id:string; index:number; done:boolean}
   | { type: 'lock'; locked: boolean }
@@ -188,6 +198,7 @@ export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
   | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  if(action.type==='appearance')return action.value===''||validAppearance(action.field,action.value)?{...page,[action.field]:action.value||undefined}:null;
   if(page.mode==='canvas')return changeUnifiedCanvas(page,action);
   const next=applyHomeChange(page,action);
   return next && validBoard(next) ? next : null;
@@ -198,6 +209,20 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
   if(action.type==='lock')return {...page,locked:action.locked};
   if(page.locked)return null;
   if(action.type==='width')return {...page,width:action.width};
+  if(action.type==='moveRow'){
+    const rows=page.blocks.filter(b=>b.layout==='row'),row=rows.find(b=>b.id===action.id);
+    if(!row||!isPoint(action.at))return null;
+    const original=worldRows(rows,page.width==='reading'?736:1160,new Map(action.heights),page.legacyRowX);
+    return {...page,blocks:page.blocks.map(b=>{
+      if(b.id===row.id)return {...b,at:action.at,manualPosition:true};
+      // Taking a row out of the legacy stack must not pull its neighbours up.
+      if(!row.manualPosition && b.layout==='row' && !b.manualPosition){
+        const bounds=original.get(b.id)!;
+        if(bounds.y!==(b.at?.y??0))return {...b,at:{x:bounds.x,y:bounds.y}};
+      }
+      return b;
+    })};
+  }
   if(action.type==='dockCards'||action.type==='releaseCards'){
     return validCell(page.blocks,action.cell)?transferCanvasCards(page,action):null;
   }
@@ -240,7 +265,7 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
-  if(action.type==='dockCards'||action.type==='releaseCards')return null;
+  if(action.type==='moveRow'||action.type==='appearance'||action.type==='dockCards'||action.type==='releaseCards')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
   if(action.type==='boardSelection')return applySelection(page,action);

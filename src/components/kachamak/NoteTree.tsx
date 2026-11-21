@@ -23,8 +23,8 @@ import { SECTION_KEYS, TABS } from "@/lib/kachamak/types";
 import { useKachamak } from "@/lib/kachamak/store";
 import { exportNoteJson } from "@/lib/kachamak/store";
 import { findNode, locateNode } from "@/lib/kachamak/utils";
-import {ColourPalette} from "./PresetColourPicker";
-import { NOTE_ICONS, iconForNote, noteIconKey } from "@/lib/kachamak/icons";
+import {TreeIconPicker} from "./TreeIconPicker";
+import { iconForNote, noteIconKey } from "@/lib/kachamak/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -323,8 +322,8 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
           )}
         </button>
         {/* note icon — click it to pick a different icon or colour */}
-        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-          <PopoverTrigger asChild>
+        <TreeIconPicker open={pickerOpen} onOpenChange={setPickerOpen} icon={selectedIcon} color={node.color}
+          onIcon={icon=>updateNode(section,node.id,{icon})} onColor={color=>updateNode(section,node.id,{color})}>
             <button
               type="button"
               aria-label="Change icon"
@@ -334,49 +333,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             >
               {rowIcon(node, open)}
             </button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="bottom"
-            align="start"
-            className="max-h-[min(calc(100dvh-1.5rem),var(--radix-popover-content-available-height))] w-[min(36rem,calc(100vw-1.5rem))] overflow-y-auto border-white/10 bg-[#1b1b1b] p-3 kachamak-scroll"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-2 text-[11px] font-semibold tracking-wide text-muted-foreground">
-              Icon
-            </p>
-            <div className="grid grid-cols-8 gap-1 sm:grid-cols-12">
-              {pickerOpen && NOTE_ICONS.map(({ key, label, Cmp }) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-label={label}
-                  title={label}
-                  onClick={() => {
-                    updateNode(section, node.id, { icon: key });
-                    setPickerOpen(false);
-                  }}
-                  className={`flex h-8 min-w-0 items-center justify-center rounded-md transition-colors hover:bg-white/10 ${
-                    selectedIcon === key ? "bg-white/15" : ""
-                  }`}
-                >
-                  <Cmp
-                    className="h-4 w-4"
-                    style={{
-                      color:
-                        selectedIcon === key && node.color
-                          ? node.color
-                          : "#a1a1aa",
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-            <p className="mb-2 mt-3 text-[11px] font-semibold tracking-wide text-muted-foreground">
-              Colour
-            </p>
-            <ColourPalette value={node.color} onChange={color=>updateNode(section,node.id,{color})}/>
-          </PopoverContent>
-        </Popover>
+        </TreeIconPicker>
         {renaming ? (
           <input
             ref={renameRef}

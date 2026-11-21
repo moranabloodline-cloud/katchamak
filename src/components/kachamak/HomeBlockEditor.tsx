@@ -57,7 +57,7 @@ export function HomeBlockEditor({novel,original,cell,createRow,notes,pages,onSav
   };
   return <Dialog open onOpenChange={open=>{if(!open)onClose();}}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-      <DialogHeader><DialogTitle>{row?(original?'Edit fixed row':'Add fixed row'):original?'Edit block':'Add block'}</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>{row?(original?'Edit row':'Add row'):original?'Edit block':'Add block'}</DialogTitle></DialogHeader>
       <form className="grid gap-4" onSubmit={event=>{event.preventDefault();save();}}>
         {!row&&<div role="group" aria-label="Block layout" className="grid grid-cols-3 gap-2">{layouts.filter(l=>l.kind!=='row').map(({kind,label,icon:Icon})=>
           <Button key={kind} type="button" variant="outline" aria-pressed={draft.layout===kind} className={draft.layout===kind?'border-amber-500/60 bg-amber-500/10':''} onClick={()=>chooseLayout(kind)}><Icon/>{label}</Button>)}</div>}

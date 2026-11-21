@@ -299,7 +299,7 @@ const ICON_MAP: Record<string, IconCmp> = Object.fromEntries(
 
 export function iconByName(key: string | undefined): IconCmp | null {
   if (!key) return null;
-  return ICON_MAP[key] ?? null;
+  return Object.hasOwn(ICON_MAP,key) ? ICON_MAP[key] : null;
 }
 
 /** An unset icon inherits File. Timeline items have their own contextual symbols. */

@@ -10,7 +10,11 @@
 .cv-fixed-section [data-home-cell][data-card-drop] > button { color:var(--foreground); }
 .cv-row-title { display:flex; align-items:center; gap:7px; font:600 13px/1.4 system-ui,sans-serif; }
 .cv-row-title { padding:6px 8px; }
-.cv-row-title span { color:var(--muted-foreground); font-weight:400; }
+.cv-row-grip { display:inline-grid; place-items:center; border-radius:4px; padding:3px; color:var(--muted-foreground); }
+.cv-row-grip:hover,.cv-row-grip:focus-visible { background:var(--muted); color:var(--foreground); }
+[data-row-handle] { cursor:grab; touch-action:none; user-select:none; }
+[data-row-handle]:active { cursor:grabbing; }
+.cv-row-title span:not(.cv-row-name) { color:var(--muted-foreground); font-weight:400; }
 .cv-width { max-width:8rem; border:1px solid var(--border); border-radius:5px; background:var(--background); font-size:12px; }
 .cv-board-head { display:flex; align-items:center; gap:10px; height:42px; flex:none; padding:0 14px; border-bottom:1px solid var(--border); background:var(--background); }
 .cv-board-head>svg { color:#c0a173; }

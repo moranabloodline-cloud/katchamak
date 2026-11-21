@@ -14,6 +14,8 @@ import {toast} from 'sonner';
 import {HOME_ROOT, homepageRows} from '@/lib/kachamak/homepage';
 import {useKachamak} from '@/lib/kachamak/store';
 import type {Novel} from '@/lib/kachamak/types';
+import {TreeIconPicker} from './TreeIconPicker';
+import {iconByName} from '@/lib/kachamak/icons';
 import {WorkspaceNavigation} from './WorkspaceNavigation';
 
 type PageDialog = {action:'create'|'rename'; id:string|null};
@@ -22,6 +24,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   novel:Novel; selected:string; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>; onDismiss:()=>void;
 }) {
   const [dialog,setDialog]=useState<PageDialog|null>(null);
+  const [picking,setPicking]=useState<string|null>(null);
   const [title,setTitle]=useState('');
   const [error,setError]=useState('');
   const rows=useMemo(()=>homepageRows(novel),[novel]);
@@ -83,6 +86,9 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
     if(useKachamak.getState().deleteHomePage(novel.id,id))selection.clear();
     else toast.error('The canvas could not be deleted.');
   }
+  function appearance(id:string,field:'icon'|'color',value:string){
+    if(!useKachamak.getState().changeHomepage(novel.id,{type:'appearance',field,value},id))toast.error('The canvas could not be updated.');
+  }
   const choose=(id:string)=>{useKachamak.getState().openHomePage(novel.id,id);onDismiss();};
   const submit=()=>{
     if(!dialog)return;
@@ -102,7 +108,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
         if(row.depth>hiddenBelow)return null;
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;
         const active=selected===row.id;
-        const Icon=row.id===HOME_ROOT?House:PanelsTopLeft;
+        const Icon=iconByName(row.icon)??(row.id===HOME_ROOT?House:PanelsTopLeft);
         const clearDisabled=row.id===HOME_ROOT && (!!novel.homepage?.locked || !novel.homepage?.blocks.length);
         const deleteLabel=row.id===HOME_ROOT?'Clear canvas':'Delete canvas';
         return <ContextMenu key={row.id}><ContextMenuTrigger asChild><div {...dropTarget(row.id)} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex items-center rounded-md border '+(over===row.id?'ring-1 ring-inset ring-teal-400 ':'')+
@@ -111,6 +117,13 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
             aria-expanded={!collapsed.has(row.id)} onClick={()=>setCollapsed(current=>{const next=new Set(current);if(next.has(row.id))next.delete(row.id);else next.add(row.id);return next;})}>
             {collapsed.has(row.id)?<ChevronRight className="size-3"/>:<ChevronDown className="size-3"/>}
           </button>:<span className="w-6 shrink-0"/>}
+          <TreeIconPicker open={picking===row.id} onOpenChange={open=>setPicking(open?row.id:null)} icon={row.icon} color={row.color} allowDefault
+            onIcon={key=>appearance(row.id,'icon',key)} onColor={color=>appearance(row.id,'color',color)}>
+            <button type="button" aria-label={'Change icon and colour: '+row.title} title="Change icon and colour"
+              className="mr-1 shrink-0 rounded p-0.5 text-amber-300 hover:bg-white/10" style={{color:row.color}}>
+              <Icon className="size-3.5"/>
+            </button>
+          </TreeIconPicker>
           <button type="button" title={row.path} aria-current={active?'page':undefined} data-tree-move-id={row.id===HOME_ROOT?undefined:row.id} aria-pressed={selection.marked?.has(row.id)??active}
             onClick={event=>{
               if (row.id===HOME_ROOT) {if (event.ctrlKey||event.metaKey||event.shiftKey) return;selection.clear();}
@@ -122,7 +135,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
               event.dataTransfer.setData('application/x-kachamak-home-pages',JSON.stringify(sources));
               event.dataTransfer.effectAllowed='move';setDrag(sources);
             }} onDragEnd={finishDrag} className="flex min-w-0 flex-1 select-none items-center gap-2 py-1.5 text-left text-sm">
-            <Icon className="size-3.5 shrink-0 text-amber-300"/><span className="truncate">{row.title}</span>
+            <span className="truncate" style={{color:row.color}}>{row.title}</span>
           </button>
           {row.id===HOME_ROOT && <>
             <Button size="icon" variant="ghost" className="size-7 shrink-0" aria-label="New canvas" title="New canvas" onClick={()=>show('create',null)}><Plus/></Button>

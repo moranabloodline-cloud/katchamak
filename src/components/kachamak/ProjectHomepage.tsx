@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, LockKeyhole, MoreHorizontal, MoveDown, Pencil, Plus, Rows3, SquareCheck, Trash2} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, MoreHorizontal, MoveDown, Pencil, Plus, Rows3, SquareCheck, Trash2} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
@@ -77,7 +77,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const selectedIds=useMemo(()=>new Set(selection),[selection]);
   const rowAnchor=useRef<string|null>(null);
   const drag=useHomepageDrag(page.locked,(id,p)=>change(p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
-  const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;at?:HomeBlock['at']}|null>(null);
+  const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;manualPosition?:true;at?:HomeBlock['at']}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
   const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
@@ -85,8 +85,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const opener=useRef<HTMLElement|null>(null);
   const classicPosition=useRef<HomeBlock['at']>(undefined);
   const addRowButton=useRef<HTMLButtonElement>(null);
-  const addRow=(at:NonNullable<HomeBlock['at']>)=>{
-    captureOpener();setEditor({createRow:true,at});
+  const addRow=(at:NonNullable<HomeBlock['at']>,manualPosition?:true)=>{
+    captureOpener();setEditor({createRow:true,at,manualPosition});
   };
   const captureOpener=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const restoreFocus=()=>requestAnimationFrame(()=>{if(opener.current?.isConnected)opener.current.focus();});
@@ -138,7 +138,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
     const editButton={type:'button' as const,draggable:!page.locked&&!row,onDragStart:(e:React.DragEvent<HTMLButtonElement>)=>drag.start(e,block.id),onDragEnd:drag.finish,
-      'aria-label':'Edit '+name,title:row?'Edit fixed row':'Drag within this row, or click to edit',onClick:()=>edit(block)};
+      'aria-label':'Edit '+name,title:row?'Edit row':'Drag within this row, or click to edit',onClick:()=>edit(block)};
     const classic=['card','banner','image','text'].includes(block.layout);
     const emptyImage=block.layout==='image'&&!display.image;
     const bare=block.layout==='image'||Boolean(display.image&&(block.layout==='banner'||(block.image&&!display.title&&!block.text)));
@@ -156,7 +156,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         selectInColumn(block,toggle,e.shiftKey);
       }} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
       {row?<div className={'@container/row rounded-lg px-1 py-3 '+(page.locked?'':'outline outline-dashed outline-border')}>
-        {(block.title||!page.locked)&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title"><LockKeyhole size={13}/>{block.title||'Fixed row'}<span>{block.columns} {block.columns===1?'column':'columns'}</span></h2>
+        {(block.title||!page.locked)&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title">
+          {!page.locked&&<button type="button" data-row-handle={block.id} aria-label={'Move row: '+(block.title||'Row')} title="Drag row · Arrow keys to move" className="cv-row-grip"><GripVertical size={16}/></button>}
+          <span className="cv-row-name" data-row-handle={page.locked?undefined:block.id}>{block.title||'Row'}</span><span>{block.columns} {block.columns===1?'column':'columns'}</span></h2>
         {!page.locked&&<div className="ml-auto flex flex-wrap justify-end gap-2">
           <button {...editButton} id={'home-edit-row-'+block.id} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3"/>Edit row</button>
           <button type="button" onClick={removeRow} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button>
@@ -212,7 +214,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     </article>;
   }
   const actions=(placeRow:()=>NonNullable<HomeBlock['at']>)=><>
-    {roots.length>0&&<select aria-label="Fixed rows width" title="Fixed rows width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
+    {roots.length>0&&<select aria-label="Row width" title="Row width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
     <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={()=>addRow(placeRow())}><Rows3 size={15}/>Add row</Button>
   </>;
   const renderRow=(row:HomeBlock,release:(cards:HomeBlock[])=>void,removeRow:()=>void)=><div className="@container cv-fixed-section">
@@ -241,13 +243,13 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   };
   return <>
     <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages}
-      selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
+      selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={at=>{captureOpener();setEditor({});classicPosition.current=at;}}/>
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}
     {!page.locked&&artwork&&<HomeArtworkEditor src={projectImageSrc(novel.gallery,artwork.src)!} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
       onSave={options=>change({type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
-    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} createRow={editor.createRow} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block:editor.at||classicPosition.current?{...block,at:editor.at??classicPosition.current}:block})}/>}
+    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} createRow={editor.createRow} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block:editor.at||classicPosition.current?{...block,at:editor.at??classicPosition.current,...(editor.manualPosition?{manualPosition:true as const}:{})}:block})}/>}
     {page.locked&&preview&&details&&<Dialog open onOpenChange={open=>{if(!open){setPreviewId(null);restoreFocus();}}}>
       <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>{details.title||'Block preview'}</DialogTitle></DialogHeader>

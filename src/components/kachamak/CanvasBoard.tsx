@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode,type PointerEvent as PEvent} from 'react';
-import {Check,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Trash2,UnlockKeyhole} from 'lucide-react';
+import {Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
@@ -17,18 +17,18 @@ import {CanvasTools,toolsByKind} from './CanvasTools';
 import {InkPaths} from './CanvasInk';
 import {useCanvasRowDrop} from './useCanvasRowDrop';
 
-type Gesture={boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
+type Gesture={boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
   selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
   rows:HomeBlock[];rowContents:HomeBlock[];heldLines:HomeBlock[];
-  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
+  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Point{
   try{const p=JSON.parse(sessionStorage.getItem(key)??'null');if(Number.isFinite(p?.x)&&Number.isFinite(p?.y))return p;}catch{}
   return first?{x:32-(first.at?.x??originX)*zoom,y:36-(first.at?.y??0)*zoom}:{x:32,y:36};
 }
-export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selection,setSelection,rows,rowContents,heldLines,renderRow,layoutActions,editClassic,renderClassic,addClassic}:Props){
+export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selection,setSelection,rows,rowContents,heldLines,renderRow,layoutActions,addRow,editClassic,renderClassic,addClassic}:Props){
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
   const positionKey='kachamak-board:'+novel.id+':'+page.id;
   const cameraKey=positionKey+':world';
@@ -49,7 +49,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
   const setSelected=(id:string|null)=>{setFramed(false);setSelection(id?[id]:[]);};
   const [marquee,setMarquee]=useState<BoardRect|null>(null);
   const convertSelection=useKachamak(s=>s.convertBoardSelection);
-  const [editor,setEditor]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
+  const [editor,setEditor]=useState<{initial:HomeBlock;original?:HomeBlock;exact?:boolean}|null>(null);
   const [status,setStatus]=useState('');
   const gesture=useRef<Gesture|null>(null);
   const consumeClick=useRef(false);
@@ -58,15 +58,17 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
     setPan(p=>({x:p.x+dx,y:p.y+dy}));
     setMove(m=>m&&({...m,at:{x:m.at.x-dx/zoomRef.current,y:m.at.y-dy/zoomRef.current}}));
   });
-  const [menu,setMenu]=useState<{block:HomeBlock;column?:number}|null>(null);
-  const [cellRects,setCellRects]=useState(new Map<string,BoardRect>());
+  const [menu,setMenu]=useState<{block:HomeBlock;column?:number}|{at:Point}|null>(null);
+  const [movingRow,setMovingRow]=useState<{id:string;at:Point}|null>(null);
+  const [cellRects,setCellRects]=useState(new Map<string,BoardRect & {rowId:string}>());
   const rowWidth=page.width==='reading'?736:1160;
   const rowRects=useMemo(()=>worldRows(rows,rowWidth,heights,page.legacyRowX),[rows,rowWidth,heights,page.legacyRowX]);
   const previousRows=useRef(rows.length);
   useLayoutEffect(()=>{
     const el=surface.current,added=rows.length>previousRows.current;
     previousRows.current=rows.length;
-    const bounds=added&&rowRects.get(rows.at(-1)!.id);
+    const last=rows.at(-1);
+    const bounds=added&&last&&!last.manualPosition&&rowRects.get(last.id);
     if(el&&bounds && (bounds.y*zoom+pan.y>el.clientHeight-110 || bounds.x*zoom+pan.x>el.clientWidth-90))
       setPan({x:24-bounds.x*zoom,y:32-bounds.y*zoom});
   },[rows,rowRects,zoom,pan]);
@@ -104,7 +106,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
   const batch=(command:SelectionCommand)=>save({type:'boardSelection',ids:items.map(b=>b.id),command,heights:[...heights]});
   const save=(action:HomeChange)=>{const ok=change(action);if(!ok)setStatus('The board changed. Select the item again.');return ok;};
   useEffect(()=>{try{sessionStorage.setItem(cameraKey,JSON.stringify(pan));}catch{}},[pan,cameraKey]);
-  useEffect(()=>{if(page.locked){rowDrop.clear();setEditor(null);setFrom(null);setTool('select');setMove(null);setSelected(null);setMarquee(null);setLiveInk([]);gesture.current=null;}},[page.locked]);
+  useEffect(()=>{if(page.locked){rowDrop.clear();setEditor(null);setFrom(null);setTool('select');setMove(null);setMovingRow(null);setSelected(null);setMarquee(null);setLiveInk([]);gesture.current=null;}},[page.locked]);
   useLayoutEffect(()=>{
     if(previousZoom.current===zoom)return;
     const s=surface.current;if(!s)return;
@@ -141,12 +143,12 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
     const endpoints=new Set(heldLines.flatMap(b=>[b.edge!.from,b.edge!.to]));
     const cards=[...container.querySelectorAll<HTMLElement>('[data-home-cell] [data-home-block]')];
     function measure(){
-      const origin=container!.getBoundingClientRect();
-      const next=new Map<string,BoardRect>();
+      const next=new Map<string,BoardRect & {rowId:string}>();
       for(const card of cards){
         const id=card.dataset.homeBlock!;if(!endpoints.has(id))continue;
-        const r=card.getBoundingClientRect(),scale=zoomRef.current;
-        next.set(id,{x:(r.x-origin.x)/scale,y:(r.y-origin.y)/scale,w:r.width/scale,h:r.height/scale});
+        const row=card.closest<HTMLElement>('[data-world-row]')!;
+        const origin=row.getBoundingClientRect(),r=card.getBoundingClientRect(),scale=zoomRef.current;
+        next.set(id,{rowId:row.dataset.worldRow!,x:(r.x-origin.x)/scale,y:(r.y-origin.y)/scale,w:r.width/scale,h:r.height/scale});
       }
       setCellRects(next);
     }
@@ -162,17 +164,25 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       e.preventDefault();e.stopPropagation();
       const factor=e.deltaMode===1?16:e.deltaMode===2?el.clientHeight:1;
       if(e.ctrlKey){
-        const r=el.getBoundingClientRect();lastPointer.current={x:e.clientX-r.x,y:e.clientY-r.y};
+        lastPointer.current=local(e.clientX,e.clientY);
         setZoom(zoomRef.current*Math.exp(-Math.max(-400,Math.min(400,e.deltaY*factor))*.002));
       }else setPan(p=>({x:p.x-(e.deltaX+(e.shiftKey?e.deltaY:0))*factor,y:p.y-(e.shiftKey?0:e.deltaY)*factor}));
     };
     el.addEventListener('wheel',wheel,{passive:false});
     return ()=>{reset();el.removeEventListener('wheel',wheel);};
   },[positionKey]);
-  const local=(x:number,y:number)=>{const r=surface.current!.getBoundingClientRect();return {x:x-r.left,y:y-r.top};};
+  const local=(x:number,y:number)=>{
+    const el=surface.current!,r=el.getBoundingClientRect();
+    return {x:(x-r.left)*el.clientWidth/r.width,y:(y-r.top)*el.clientHeight/r.height};
+  };
   const boardPoint=(p:Point)=>({x:(p.x-pan.x)/zoom,y:(p.y-pan.y)/zoom});
   function visualRect(id:string){
-    const r=(rects.get(id)??cellRects.get(id))!;
+    const cell=cellRects.get(id);
+    if(cell){
+      const origin=movingRow?.id===cell.rowId?movingRow.at:rowRects.get(cell.rowId);
+      if(origin)return {...cell,x:origin.x+cell.x,y:origin.y+cell.y};
+    }
+    const r=rects.get(id)!;
     if(!move)return r;
     if(move.group?.has(id)||move.group?.has(blocks.get(id)?.columnId??'')){
       const start=rects.get(move.id)!;return {...r,x:r.x+move.at.x-start.x,y:r.y+move.at.y-start.y};
@@ -221,14 +231,14 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       world.current?.querySelector<HTMLElement>('[data-board-card="'+CSS.escape(first.id)+'"]')?.focus({preventScroll:true});
     });
   }
-  function pick(kind:CanvasTool){
+  function pick(kind:CanvasTool,at?:Point){
     if(page.locked)return;
     setFrom(null);setStatus('');
     if(kind==='line'||kind==='draw'){setTool(current=>current===kind?'select':kind);return;}
     setTool('select');
-    const initial={...newCanvasBlock(kind),at:nextPosition(kind)};
-    if(kind!=='column'&&focused?.layout==='column')Object.assign(initial,{columnId:focused.id});
-    setEditor({initial});
+    const initial={...newCanvasBlock(kind),at:at??nextPosition(kind)};
+    if(!at&&kind!=='column'&&focused?.layout==='column')Object.assign(initial,{columnId:focused.id});
+    setEditor({initial,exact:!!at});
   }
   function finishLink(id:string){
     if(!from){setFrom(id);return;}
@@ -255,6 +265,15 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
     }
     if(save(block.layout==='row'||block.cell?{type:'remove',original:block,positions,column}:{type:'removeBoardItem',original:block,positions}))setSelected(null);
   }
+  function moveRow(id:string,at:Point){
+    return save({type:'moveRow',id,at,heights:[...heights]});
+  }
+  function centerRow(id:string){
+    const el=surface.current,r=rowRects.get(id);
+    if(!el||!r)return;
+    const middle=boardPoint({x:el.clientWidth/2,y:el.clientHeight/2});
+    moveRow(id,{x:middle.x-r.w/2,y:middle.y-r.h/2});
+  }
   function fit(){
     const s=surface.current,rs=[...rects.values(),...rowRects.values()];if(!s||!rs.length)return;
     const left=Math.min(...rs.map(r=>r.x)),right=Math.max(...rs.map(r=>r.x+r.w)),top=Math.min(...rs.map(r=>r.y)),bottom=Math.max(...rs.map(r=>r.y+r.h));
@@ -271,6 +290,11 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       const endpoint=id??target.closest<HTMLElement>('[data-home-cell] [data-home-block]')?.dataset.homeBlock;
       if(endpoint){consumeClick.current=true;finishLink(endpoint);e.preventDefault();}
       return;
+    }
+    else if(!page.locked&&tool==='select'&&target.closest('[data-row-handle]')){
+      const id=target.closest<HTMLElement>('[data-row-handle]')!.dataset.rowHandle!;
+      gesture.current={kind:'row',id,start,boardStart:p,origin:rowRects.get(id)!};
+      setSelected(null);
     }
     else if(target.closest('[data-world-row]'))return;
     else if(!page.locked&&tool==='draw'){gesture.current={kind:'ink',start,origin:p,points:[[p.x,p.y]]};setLiveInk([[p.x,p.y]]);}
@@ -298,6 +322,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
     const g=gesture.current;if(!g||!e.isPrimary)return;
     const dx=point.x-g.start.x,dy=point.y-g.start.y,p=boardPoint(point);
     if(g.kind==='frame' && (marquee||Math.abs(dx)+Math.abs(dy)>3))setMarquee(frameBetween(g.origin,p));
+    if(g.kind==='row'&&(movingRow||Math.abs(dx)+Math.abs(dy)>3))
+      setMovingRow({id:g.id!,at:{x:g.origin.x+p.x-g.boardStart!.x,y:g.origin.y+p.y-g.boardStart!.y}});
     if(g.kind==='pan')setPan({x:g.origin.x+dx,y:g.origin.y+dy});
     if(g.kind==='ink'){g.points!.push([p.x,p.y]);setLiveInk([...g.points!]);}
     if(g.kind==='move'&&(Math.abs(dx)+Math.abs(dy)>3 || move)){
@@ -312,6 +338,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
     const g=gesture.current;if(!g||!e.isPrimary)return;
     const point=local(e.clientX,e.clientY),p=boardPoint(point);
     const dragged=Math.abs(point.x-g.start.x)+Math.abs(point.y-g.start.y)>3;
+    if(g.kind==='row'&&dragged && surface.current?.contains(document.elementFromPoint(e.clientX,e.clientY)))
+      moveRow(g.id!,{x:g.origin.x+p.x-g.boardStart!.x,y:g.origin.y+p.y-g.boardStart!.y});
     if(g.kind==='frame'){
       setFramed(dragged);
       const hits=dragged?framedItems(page.blocks,rects,frameBetween(g.origin,p)):[];
@@ -344,7 +372,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
     }
     cancelGesture();
   }
-  function cancelGesture(){rowDrop.clear();gesture.current=null;setMove(null);setLiveInk([]);setMarquee(null);}
+  function cancelGesture(){rowDrop.clear();gesture.current=null;setMove(null);setMovingRow(null);setLiveInk([]);setMarquee(null);}
   const editBlock=(b:HomeBlock)=>{
     if(!(b.layout in toolsByKind) || b.layout==='image'&&(b.imageFrame||b.imageCutout))editClassic(b);
     else setEditor({initial:b,original:b});
@@ -362,17 +390,23 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       const hit=(e.target as Element).closest<HTMLElement>('[data-board-edge-copy],[data-board-edge],[data-board-card],[data-home-block],[data-home-cell]');
       const id=hit?.dataset.boardEdgeCopy??hit?.dataset.boardEdge??hit?.dataset.boardCard??hit?.dataset.homeBlock??hit?.dataset.homeCell;
       const block=id&&(blocks.get(id)??rowContents.find(b=>b.id===id)??heldLines.find(b=>b.id===id));
-      if(page.locked||!block||!surface.current?.contains(hit!)){e.preventDefault();return;}
-      setMenu({block,column:hit?.hasAttribute('data-home-cell')?Number(hit.dataset.column):undefined});
+      if(page.locked||!surface.current?.contains(e.target as Node)){e.preventDefault();return;}
+      if(block)setMenu({block,column:hit?.hasAttribute('data-home-cell')?Number(hit.dataset.column):undefined});
+      else setMenu({at:boardPoint(local(e.clientX,e.clientY))});
     }}>
     <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
       onClickCapture={e=>{if(consumeClick.current){consumeClick.current=false;e.stopPropagation();e.preventDefault();}}}
       onPointerDown={startGesture} onPointerMove={track} onPointerUp={endGesture} onPointerCancel={cancelGesture} onLostPointerCapture={cancelGesture}
-      onKeyDown={e=>{if(e.key==='Escape'){resetTool();setSelected(null);}if(e.target===surface.current&&e.key==='Delete')remove();}}>
+      onKeyDown={e=>{if(e.key==='Escape'){resetTool();setSelected(null);}if(e.target===surface.current&&e.key==='Delete')remove();
+        const handle=(e.target as HTMLElement).closest<HTMLElement>('[data-row-handle]');
+        if(handle&&!page.locked&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+          e.preventDefault();const id=handle.dataset.rowHandle!,r=rowRects.get(id)!;
+          moveRow(id,{x:r.x+(e.key==='ArrowRight'?16:e.key==='ArrowLeft'?-16:0),y:r.y+(e.key==='ArrowDown'?16:e.key==='ArrowUp'?-16:0)});
+        }}}>
       <div ref={world} className="cv-world" style={{transform:'translate('+pan.x+'px,'+pan.y+'px) scale('+zoom+')'}}>
         {rows.map(row=>{
           const r=rowRects.get(row.id)!;
-          return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:r.x,top:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row))}</div>;
+          return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:movingRow?.id===row.id?movingRow.at.x:r.x,top:movingRow?.id===row.id?movingRow.at.y:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row))}</div>;
         })}
         <svg className="cv-lines" aria-label="Connections" style={{zIndex:1}}>{[...page.blocks.filter(b=>b.layout==='line'),...heldLines].map(b=>{
           const a=visualRect(b.edge!.from),z=visualRect(b.edge!.to);
@@ -418,7 +452,14 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       {marquee&&<div className="cv-marquee" aria-hidden="true" style={{left:pan.x+marquee.x*zoom,top:pan.y+marquee.y*zoom,width:marquee.w*zoom,height:marquee.h*zoom}}/>}
       {!rows.length&&!page.blocks.length&&!page.locked&&tool==='select'&&<button type="button" className="cv-first" onClick={()=>pick('note')}><Plus size={18}/>Add your first note</button>}
     </div></ContextMenuTrigger>{menu&&<ContextMenuContent>
-      <ContextMenuItem onSelect={()=>remove(menu.block,menu.column)}><Trash2 size={14}/>Delete {menu.column!==undefined?'column':menu.block.layout==='line'?'connection':menu.block.layout}</ContextMenuItem>
+      {'at' in menu?<>
+        <ContextMenuItem onSelect={()=>addRow(menu.at)}><Rows3 size={14}/>Add row here</ContextMenuItem>
+        <ContextMenuItem onSelect={()=>pick('column',menu.at)}><Columns3 size={14}/>Add column here</ContextMenuItem>
+        <ContextMenuItem onSelect={()=>addClassic(menu.at)}><Square size={14}/>Add card here</ContextMenuItem>
+      </>:<>
+        {menu.block.layout==='row'&&menu.column===undefined&&<ContextMenuItem onSelect={()=>centerRow(menu.block.id)}><Focus size={14}/>Center row in view</ContextMenuItem>}
+        <ContextMenuItem onSelect={()=>remove(menu.block,menu.column)}><Trash2 size={14}/>Delete {menu.column!==undefined?'column':menu.block.layout==='line'?'connection':menu.block.layout}</ContextMenuItem>
+      </>}
     </ContextMenuContent>}</ContextMenu>
     <div className="cv-board-dock">
       {btn('Select items',MousePointer2,resetTool,tool==='select')}{btn('Pan board',Hand,()=>{setFrom(null);setTool('pan');},tool==='pan')}
@@ -432,7 +473,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>:!page.locked&&<CanvasTools onPick={pick} onClassic={()=>addClassic(nextPosition('note'))} active={tool==='draw'||tool==='line'?tool:null}/>}
     {editor&&!page.locked&&<CanvasItemEditor novel={novel} initial={editor.initial} creating={!editor.original} onClose={()=>setEditor(null)} onSave={block=>{
       const ok=save(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block});if(ok){setSelected(block.id);
-        if(!editor.original&&!block.columnId&&block.at){const r=surface.current!.getBoundingClientRect();
+        if(!editor.original&&!editor.exact&&!block.columnId&&block.at){const r=surface.current!.getBoundingClientRect();
           if(block.at.y*zoom+pan.y>r.height-110||block.at.x*zoom+pan.x>r.width-65)setPan({x:r.width/2-(block.at.x+100)*zoom,y:r.height/2-(block.at.y+45)*zoom});}}
       return ok;}}/>}
   </section>;
