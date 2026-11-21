@@ -192,7 +192,7 @@ export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
   | { type: 'lock'; locked: boolean }
   | { type:'width'; width:'reading'|'wide' }
   | { type:'into'; id:string; cell:HomeCell }
-  | { type: 'add'; block: HomeBlock }
+  | { type: 'add'; block: HomeBlock; before?:string }
   | { type: 'edit'; original: HomeBlock; block: HomeBlock }
   | { type: 'remove'; original: HomeBlock; column?:number; positions?:Record<string,{x:number;y:number}> }
   | { type: 'move'; id: string; offset: -1 | 1 }
@@ -289,7 +289,11 @@ function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
   if (action.type === 'width') return {...page,width:action.width};
   if (action.type === 'add') {
     if (!validBlock(action.block) || (action.block.cell && !validCell(page.blocks,action.block.cell)) || page.blocks.some(b => b.id === action.block.id)) return null;
-    return { ...page, blocks: [...page.blocks, action.block] };
+    const before=action.before && action.block.cell
+      ? page.blocks.findIndex(b=>b.id===action.before && sameCell(b.cell,action.block.cell)) : -1;
+    const blocks=[...page.blocks];
+    blocks.splice(before<0?blocks.length:before,0,action.block);
+    return {...page,blocks};
   }
   const id = 'original' in action ? action.original.id : action.id;
   const index = page.blocks.findIndex(b => b.id === id);

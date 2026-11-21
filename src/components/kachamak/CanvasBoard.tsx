@@ -16,13 +16,14 @@ import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
 import {CanvasItemFace} from './CanvasItemFace';
 import {CanvasTools,toolsByKind} from './CanvasTools';
 import {InkPaths} from './CanvasInk';
+import {useCanvasToolDrop,type CanvasPlacement} from './useCanvasToolDrop';
 import {useCanvasRowDrop} from './useCanvasRowDrop';
 
 type Gesture={boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
   selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
   rows:HomeBlock[];rowContents:HomeBlock[];heldLines:HomeBlock[];
-  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
+  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(placement:CanvasPlacement)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void;toolsHost?:HTMLDivElement|null;showInspector?:()=>void;onToolPicked?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Point{
@@ -50,7 +51,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const setSelected=(id:string|null)=>{setFramed(false);setSelection(id?[id]:[]);};
   const [marquee,setMarquee]=useState<BoardRect|null>(null);
   const convertSelection=useKachamak(s=>s.convertBoardSelection);
-  const [editor,setEditor]=useState<{initial:HomeBlock;original?:HomeBlock;exact?:boolean}|null>(null);
+  const [editor,setEditor]=useState<{initial:HomeBlock;original?:HomeBlock;before?:string;exact?:boolean}|null>(null);
   const [status,setStatus]=useState('');
   const gesture=useRef<Gesture|null>(null);
   const consumeClick=useRef(false);
@@ -177,6 +178,16 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     return {x:(x-r.left)*el.clientWidth/r.width,y:(y-r.top)*el.clientHeight/r.height};
   };
   const boardPoint=(p:Point)=>({x:(p.x-pan.x)/zoom,y:(p.y-pan.y)/zoom});
+  const toolDrop=useCanvasToolDrop(surface,page.locked,zoom,local,boardPoint,(kind,placement)=>{
+    setTool('select');setFrom(null);setStatus('');
+    if(kind==='layout')addClassic(placement);
+    else {
+      const initial=newCanvasBlock(kind);
+      if('cell' in placement)setEditor({initial:{...initial,cell:placement.cell},before:placement.before,exact:true});
+      else setEditor({initial:{...initial,at:placement.at},exact:true});
+    }
+    onToolPicked?.();
+  });
   function visualRect(id:string){
     const cell=cellRects.get(id);
     if(cell){
@@ -396,7 +407,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       if(block)setMenu({block,column:hit?.hasAttribute('data-home-cell')?Number(hit.dataset.column):undefined});
       else setMenu({at:boardPoint(local(e.clientX,e.clientY))});
     }}>
-    <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
+    <div {...toolDrop.events} ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
       onClickCapture={e=>{if(consumeClick.current){consumeClick.current=false;e.stopPropagation();e.preventDefault();}}}
       onPointerDown={startGesture} onPointerMove={track} onPointerUp={endGesture} onPointerCancel={cancelGesture} onLostPointerCapture={cancelGesture}
       onKeyDown={e=>{if(e.key==='Escape'){resetTool();setSelected(null);}if(e.target===surface.current&&e.key==='Delete')remove();
@@ -451,13 +462,15 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
         })}
         {liveInk.length>0&&<svg className="cv-live-ink"><InkPaths strokes={[liveInk]} color={inkColor}/></svg>}
       </div>
+      {toolDrop.preview&&<div aria-hidden="true" className={toolDrop.preview.cell?'cv-tool-slot':'cv-tool-origin'}
+        style={{left:toolDrop.preview.x,top:toolDrop.preview.y,width:toolDrop.preview.width}}/>}
       {marquee&&<div className="cv-marquee" aria-hidden="true" style={{left:pan.x+marquee.x*zoom,top:pan.y+marquee.y*zoom,width:marquee.w*zoom,height:marquee.h*zoom}}/>}
       {!rows.length&&!page.blocks.length&&!page.locked&&tool==='select'&&<button type="button" className="cv-first" onClick={()=>pick('note')}><Plus size={18}/>Add your first note</button>}
     </div></ContextMenuTrigger>{menu&&<ContextMenuContent>
       {'at' in menu?<>
         <ContextMenuItem onSelect={()=>addRow(menu.at)}><Rows3 size={14}/>Add row here</ContextMenuItem>
         <ContextMenuItem onSelect={()=>pick('column',menu.at)}><Columns3 size={14}/>Add column here</ContextMenuItem>
-        <ContextMenuItem onSelect={()=>addClassic(menu.at)}><Square size={14}/>Add card here</ContextMenuItem>
+        <ContextMenuItem onSelect={()=>addClassic({at:menu.at})}><Square size={14}/>Add card here</ContextMenuItem>
       </>:<>
         {menu.block.layout==='row'&&menu.column===undefined&&<ContextMenuItem onSelect={()=>centerRow(menu.block.id)}><Focus size={14}/>Center row in view</ContextMenuItem>}
         <ContextMenuItem onSelect={()=>remove(menu.block,menu.column)}><Trash2 size={14}/>Delete {menu.column!==undefined?'column':menu.block.layout==='line'?'connection':menu.block.layout}</ContextMenuItem>
@@ -475,10 +488,10 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     {toolsHost && createPortal(<>
       {!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'&&<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}
       convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>}
-      <CanvasTools disabled={page.locked} onPick={kind=>{pick(kind);onToolPicked?.();}} onClassic={()=>{addClassic(nextPosition('note'));onToolPicked?.();}} active={tool==='draw'||tool==='line'?tool:null}/>
+      <CanvasTools disabled={page.locked} onDrag={toolDrop.start} onDragEnd={toolDrop.clear} onPick={kind=>{pick(kind);onToolPicked?.();}} onClassic={()=>{addClassic({at:nextPosition('note')});onToolPicked?.();}} active={tool==='draw'||tool==='line'?tool:null}/>
     </>,toolsHost)}
     {editor&&!page.locked&&<CanvasItemEditor novel={novel} initial={editor.initial} creating={!editor.original} onClose={()=>setEditor(null)} onSave={block=>{
-      const ok=save(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block});if(ok){setSelected(block.id);
+      const ok=save(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block,before:editor.before});if(ok){setSelected(block.id);
         if(!editor.original&&!editor.exact&&!block.columnId&&block.at){const r=surface.current!.getBoundingClientRect();
           if(block.at.y*zoom+pan.y>r.height-110||block.at.x*zoom+pan.x>r.width-65)setPan({x:r.width/2-(block.at.x+100)*zoom,y:r.height/2-(block.at.y+45)*zoom});}}
       return ok;}}/>}

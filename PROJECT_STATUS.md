@@ -1,3 +1,5 @@
+> **2026-11-21 — Canvas · prevlačenje iz Tools panela.** Kartice se puštaju na tačnu poziciju na platnu ili na označeno mesto između kartica u koloni reda.
+
 > **2026-11-21 — Canvas · Info i Tools.** Svaki Canvas ima svoj sinopsis i beleške. Drugi tab desnog panela odmah prikazuje sve alate.
 
 > **2026-11-21 — Dodavanje na mestu klika i pomeranje reda.** Desni klik na prazno platno dodaje red, kolonu ili karticu na izabrane koordinate. Red može da se prevuče i centrira u prikazu. Canvas i njegove podstranice imaju sopstvenu ikonicu i boju u stablu.
@@ -655,6 +657,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **Canvas · prevlačenje novih kartica (21.11.2026).** Prevlačenje iz palete otvara uređivač sa već izabranim mestom. Potvrda upisuje jednu karticu, a otkazivanje odbacuje unos. U Chromium-u su provereni pomereno platno, različiti zumovi, umetanje u praznu i popunjenu kolonu, zaključavanje i redosled posle ponovnog učitavanja.
 
 - **Canvas · desni panel (21.11.2026).** Info koristi uređivače Synopsis i Notes i na zaključanom platnu. Tools prikazuje punu paletu i komande za selekciju. Pamte se izabrani tab, širina i otvorenost panela. U probnoj knjizi provereni su glavna i ugnježdena stranica, ponovno učitavanje i uski ekran.
 

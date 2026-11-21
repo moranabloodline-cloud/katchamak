@@ -26,6 +26,14 @@
 .cv-mode-select { cursor:default; }
 .cv-mode-pan { cursor:grab; }
 .cv-mode-pan:active { cursor:grabbing; }
+.cv-tools-grid button[draggable=true] { cursor:grab; }
+.cv-tools-grid button[draggable=true]:active { cursor:grabbing; }
+.cv-tool-slot,.cv-tool-origin { position:absolute; z-index:4; pointer-events:none; border-top:3px solid #e6b865; }
+.cv-tool-slot { transform:translateY(-50%); box-shadow:0 0 0 1px #302413; }
+.cv-tool-origin { height:14px; border-left:3px solid #e6b865; border-top-style:dashed; }
+@media (width < 64rem) {
+  [data-workspace-chrome]:has([data-tool-dragging]) { pointer-events:none; opacity:.12; }
+}
 .cv-marquee { position:absolute; z-index:2; pointer-events:none; border:1px solid #d6a95e; background:rgb(214 169 94 / 12%); }
 .cv-mode-line,.cv-mode-draw,.cv-mode-draw *,.cv-connectable { cursor:crosshair; }
 .cv-world { position:absolute; left:0; top:0; transform-origin:0 0; }

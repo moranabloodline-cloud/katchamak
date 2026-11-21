@@ -77,20 +77,19 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const selectedIds=useMemo(()=>new Set(selection),[selection]);
   const rowAnchor=useRef<string|null>(null);
   const drag=useHomepageDrag(page.locked,(id,p)=>change(p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
-  const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;manualPosition?:true;at?:HomeBlock['at']}|null>(null);
+  const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;manualPosition?:true;at?:HomeBlock['at'];before?:string}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
   const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
   const [message,setMessage]=useState('');
   const opener=useRef<HTMLElement|null>(null);
-  const classicPosition=useRef<HomeBlock['at']>(undefined);
   const addRowButton=useRef<HTMLButtonElement>(null);
   const addRow=(at:NonNullable<HomeBlock['at']>,manualPosition?:true)=>{
     captureOpener();setEditor({createRow:true,at,manualPosition});
   };
   const captureOpener=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const restoreFocus=()=>requestAnimationFrame(()=>{if(opener.current?.isConnected)opener.current.focus();});
-  const closeEditor=()=>{classicPosition.current=undefined;setEditor(null);restoreFocus();};
+  const closeEditor=()=>{setEditor(null);restoreFocus();};
   useEffect(()=>{if(page.locked){setEditor(null);setItem(null);setArtwork(null);}else setPreviewId(null);setMessage('');},[page.locked]);
   const edit=(original?:HomeBlock,cell?:HomeCell)=>{captureOpener();setMessage('');if(original&&['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(original.layout))setItem({initial:original,original});
     else setEditor({original,cell:original?.cell??cell});};
@@ -244,12 +243,12 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   return <>
     <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
-      addClassic={at=>{captureOpener();setEditor({});classicPosition.current=at;}}/>
+      addClassic={placement=>{captureOpener();setEditor(placement);}}/>
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}
     {!page.locked&&artwork&&<HomeArtworkEditor src={projectImageSrc(novel.gallery,artwork.src)!} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
       onSave={options=>change({type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
-    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} createRow={editor.createRow} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block:editor.at||classicPosition.current?{...block,at:editor.at??classicPosition.current,...(editor.manualPosition?{manualPosition:true as const}:{})}:block})}/>}
+    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} createRow={editor.createRow} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',before:editor.before,block:editor.at?{...block,at:editor.at,...(editor.manualPosition?{manualPosition:true as const}:{})}:block})}/>}
     {page.locked&&preview&&details&&<Dialog open onOpenChange={open=>{if(!open){setPreviewId(null);restoreFocus();}}}>
       <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>{details.title||'Block preview'}</DialogTitle></DialogHeader>

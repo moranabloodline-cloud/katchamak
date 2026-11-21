@@ -1,4 +1,6 @@
 'use client';
+import type {DragEvent} from 'react';
+import type {PaletteItem} from './useCanvasToolDrop';
 import {NotebookPen, Link2, ListChecks, Spline, Columns3, Heading, Film, MapPinned, AudioLines, Pipette, Table2, MessageCircle, PenTool, Image, Pencil, Shapes} from 'lucide-react';
 import {CANVAS_TOOLS,type CanvasTool} from '@/lib/kachamak/canvas-board';
 
@@ -13,17 +15,27 @@ export const toolsByKind={
   draw:{name:'Draw',icon:Pencil,color:'#de9195'}
 } as const;
 
-export function CanvasTools({onPick,active,onClassic,disabled}:{onPick:(kind:CanvasTool)=>void;onClassic:()=>void;active?:CanvasTool|null;disabled:boolean}){
+type Props={
+  onPick:(kind:CanvasTool)=>void;
+  onClassic:()=>void;
+  active?:CanvasTool|null;
+  disabled:boolean;
+  onDrag:(event:DragEvent<HTMLButtonElement>,kind:PaletteItem)=>void;
+  onDragEnd:()=>void;
+};
+
+export function CanvasTools({onPick,active,onClassic,disabled,onDrag,onDragEnd}:Props){
+  const dragProps=(kind:PaletteItem)=>({draggable:!disabled,onDragStart:(event:DragEvent<HTMLButtonElement>)=>onDrag(event,kind),onDragEnd});
   return <fieldset className="cv-tools" aria-label="Canvas tools" disabled={disabled}>
     {disabled&&<p className="mb-3 text-xs text-muted-foreground">Unlock the canvas to add elements.</p>}
     <div className="cv-tools-grid">
       {CANVAS_TOOLS.map(kind=>{
         const {icon:Icon,name,color}=toolsByKind[kind];
-        return <button key={kind} type="button" title={name} aria-label={'Add '+name} aria-pressed={active===kind} onClick={()=>onPick(kind)}>
+        return <button {...(kind==='line'?{}:dragProps(kind))} key={kind} type="button" title={name} aria-label={'Add '+name} aria-pressed={active===kind} onClick={()=>onPick(kind)}>
           <Icon size={18} strokeWidth={1.7} style={{color}}/><span>{name}</span>
         </button>;
       })}
-      <button type="button" onClick={onClassic} aria-label="Add layout block"><Shapes size={18}/>Layout block</button>
+      <button {...dragProps('layout')} type="button" onClick={onClassic} aria-label="Add layout block"><Shapes size={18}/>Layout block</button>
     </div>
   </fieldset>;
 }

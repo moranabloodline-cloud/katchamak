@@ -68,6 +68,18 @@ const original={mode:'canvas',locked:false,blocks:[
   groupRow,item('already','note',{cell:lane}),item('right','image',{at:{x:350,y:4},image:'gallery:old'}),
   item('next','note',{at:{x:0,y:140}}),item('left','note',{at:{x:20,y:12}}),
   item('other','note',{at:{x:800,y:12}}),link('inside','left','right'),link('outside','next','other')]};
+// A new palette card is saved in its column at the captured sibling, in one operation.
+const insert={type:'add',block:item('fresh','note',{cell:lane}),before:'already'};
+const inserted=changeHomepage(original,insert);
+assert.ok(validHomepage(inserted));
+assert.deepEqual(inserted.blocks.filter(b=>b.cell).map(b=>b.id),['fresh','already']);
+assert.equal(changeHomepage(inserted,insert),null);
+assert.equal(changeHomepage({...original,locked:true},insert),null);
+assert.equal(changeHomepage(original,{...insert,block:{...insert.block,cell:{rowId:'row',column:9}}}),null);
+for(const anchor of ['moved-away','right']){
+  const appended=changeHomepage(original,{...insert,before:anchor});
+  assert.deepEqual(appended.blocks.filter(b=>b.cell).map(b=>b.id),['already','fresh']);
+}
 const ids=['next','right','left'],groupDock={type:'dockCards',ids,cell:lane};
 let group=changeHomepage(original,groupDock);assert.ok(validHomepage(group));
 const ordered=['left','right','next'];
