@@ -49,6 +49,8 @@ import { TemplatePicker } from "./TemplatePicker";
 import { toast } from "sonner";
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from "@/components/ui/context-menu";
 
+import {branchSources,insideBranches,noteParents,type BranchSource} from '@/lib/kachamak/tree-move';
+import {useTreeSelection} from './useTreeSelection';
 import {visibleNoteTree,timelineKind} from '@/lib/kachamak/timeline-tree';
 import {addTimelineNote} from '@/lib/kachamak/timeline-actions';
 
@@ -87,6 +89,8 @@ const SECTION_LABELS = TABS.filter((t) =>
 type DropMode = "before" | "after" | "onto";
 
 interface TreeDnd {
+  rootId?:string;
+  selection:ReturnType<typeof useTreeSelection>;
   drop: { id: string; mode: DropMode } | null;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragEnd: () => void;
@@ -229,12 +233,17 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
       <div
         role="treeitem"
         ref={rowRef}
-        aria-selected={selected}
+        aria-selected={dnd.selection.marked?.has(node.id)??selected}
         aria-expanded={hasChildren ? open : undefined}
         aria-level={depth + 1}
         data-note-id={node.id}
+        data-tree-move-id={node.id!==dnd.rootId?node.id:undefined}
         tabIndex={0}
-        onClick={(e) => { if (!renaming && e.currentTarget.contains(e.target as Node)) { select(node.id); e.currentTarget.focus(); } }}
+        onClick={e=>{
+          if (renaming || !e.currentTarget.contains(e.target as Node)) return;
+          if (!dnd.selection.click(node.id,e)) select(node.id);
+          e.currentTarget.focus();
+        }}
         onContextMenu={(e) => {
           if ((e.target as HTMLElement).closest('input,textarea,[contenteditable="true"]')) { e.stopPropagation(); return; }
           e.preventDefault();e.stopPropagation();
@@ -251,7 +260,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             const tree=e.currentTarget.closest('[role="tree"]');
             const rows=Array.from(tree?.querySelectorAll<HTMLElement>('[role="treeitem"]')??[]);
             const index=rows.indexOf(e.currentTarget);
-            const go=(row:HTMLElement|undefined)=>{if(!row?.dataset.noteId)return;select(row.dataset.noteId);row.focus();row.scrollIntoView?.({block:'nearest',inline:'nearest'});};
+            const go=(row:HTMLElement|undefined)=>{if(!row?.dataset.noteId)return;dnd.selection.clear();select(row.dataset.noteId);row.focus();row.scrollIntoView?.({block:'nearest',inline:'nearest'});};
             if(e.key==='ArrowDown')go(rows[index+1]);
             if(e.key==='ArrowUp')go(rows[index-1]);
             if(e.key==='Home')go(rows[0]);
@@ -265,13 +274,13 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
           }
           if (e.key === "Enter") select(node.id);
           /* Delete key deletes the selected note (goes to Trash) */
-          if (e.key === "Delete" && selected && !renaming) {
+          if (e.key === "Delete" && selected && !renaming && (!dnd.selection.marked || (dnd.selection.marked.size===1 && dnd.selection.marked.has(node.id)))) {
             e.stopPropagation();
             e.preventDefault();
             requestDelete();
           }
         }}
-        draggable={!renaming}
+        draggable={!renaming && node.id!==dnd.rootId}
         onDragStart={(e) => dnd.onDragStart(e, node.id)}
         onDragEnd={dnd.onDragEnd}
         onDragOver={(e) => dnd.onDragOverRow(e, node.id)}
@@ -283,6 +292,8 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
           selected
             ? "bg-amber-400/10 text-amber-100 border border-amber-400/40"
             : "border border-transparent hover:bg-white/5 text-foreground/90"
+        } ${
+          dnd.selection.marked?.has(node.id) ? "outline outline-1 -outline-offset-1 outline-teal-400" : ""
         } ${
           dropHere === "onto"
             ? "bg-amber-400/15 ring-1 ring-inset ring-amber-400/70"
@@ -577,7 +588,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const updateNode = useKachamak((s) => s.updateNode);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
-  const moveNodeTo = useKachamak((s) => s.moveNodeTo);
+  const moveTreeNotes = useKachamak((s) => s.moveTreeNotes);
   const treeScope = useKachamak((s) => s.treeScope);
   const leftZoom = useKachamak((s) => s.leftZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
@@ -601,88 +612,56 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
     }
   }, [reveal, leftZoom, treeScope]);
 
-  /* ---------- drag & drop (kao u Scriveneru) ----------
-     Računa se nad STVARNIM stablom sekcije (roots), ne nad filtriranim prikazom
-     (treeScope „top“/„folders“ prave klonove) — pa pozicije i hijerarhija uvek
-     odgovaraju stvarnim podacima. dragSrcId putuje u refu jer dataTransfer ne
-     može da se čita tokom dragover-a. */
-  const dragSrcId = useRef<string | null>(null);
-  const [drop, setDrop] = useState<{ id: string; mode: DropMode } | null>(null);
-
-  const isInvalidTarget = (srcId: string, targetId: string): boolean => {
-    if (srcId === targetId) return true;
-    const srcNode = findNode(roots, srcId);
-    return !srcNode || !!findNode([srcNode], targetId);
+  const selection=useTreeSelection(treeRef,selectedNodeId);
+  const [drag,setDrag]=useState<{sources:BranchSource[]; ids:Set<string>; parents:Map<string,string|null>}|null>(null);
+  const [drop,setDrop]=useState<{id:string;mode:DropMode}|null>(null);
+  const clearDrag=()=>{setDrag(null);setDrop(null);};
+  const modeForEvent=(event:React.DragEvent):DropMode=>{
+    const rect=event.currentTarget.getBoundingClientRect();
+    const fraction=(event.clientY-rect.top)/Math.max(rect.height,1);
+    return fraction<0.3?'before':fraction>0.7?'after':'onto';
   };
-
-  const modeForEvent = (e: React.DragEvent): DropMode => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const y = (e.clientY - rect.top) / Math.max(rect.height, 1);
-    return y < 0.3 ? "before" : y > 0.7 ? "after" : "onto";
+  const allowed=(id:string,mode:DropMode)=>drag && !insideBranches(id,drag.ids,drag.parents) &&
+    (id!==rootId || mode==='onto');
+  const finish=(event:React.DragEvent,id:string|null,mode:DropMode)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    clearDrag();
+    if (!activeNovelId || !drag || event.dataTransfer.getData('application/x-kachamak-note-tree')!==JSON.stringify(drag.sources) ||
+        (id && !allowed(id,mode))) return;
+    try {
+      const parentId=mode==='onto'?id:drag.parents.get(id!)!;
+      moveTreeNotes(activeNovelId,section,drag.sources,parentId,id && mode!=='onto'?{id,side:mode}:undefined);
+      selection.clear();
+    } catch(error) {toast.error(error instanceof Error?error.message:'The notes could not be moved.');}
   };
-
-  const treeDnd: TreeDnd = {
-    drop,
-    onDragStart: (e, id) => {
-      dragSrcId.current = id;
-      e.dataTransfer.setData("text/plain", id);
-      e.dataTransfer.effectAllowed = "move";
+  const treeDnd:TreeDnd={
+    drop,selection,rootId,
+    onDragStart:(event,id)=>{
+      const parents=noteParents(roots);
+      const ids=selection.dragIds(id);
+      const sources=branchSources(ids,parents);
+      event.dataTransfer.setData('application/x-kachamak-note-tree',JSON.stringify(sources));
+      event.dataTransfer.setData('text/plain',id);
+      event.dataTransfer.effectAllowed='move';
+      setDrag({sources,ids:new Set(ids),parents});
     },
-    onDragEnd: () => {
-      dragSrcId.current = null;
-      setDrop(null);
+    onDragEnd:clearDrag,
+    onDragOverRow:(event,id)=>{
+      if (!drag) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const mode=modeForEvent(event);
+      const valid=allowed(id,mode);
+      event.dataTransfer.dropEffect=valid?'move':'none';
+      setDrop(previous=>valid?(previous?.id===id && previous.mode===mode?previous:{id,mode}):null);
     },
-    onDragOverRow: (e, id) => {
-      const srcId = dragSrcId.current;
-      if (!srcId || isInvalidTarget(srcId, id)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      const mode = modeForEvent(e);
-      setDrop((d) => (d && d.id === id && d.mode === mode ? d : { id, mode }));
+    onDragLeaveRow:(event,id)=>{
+      if (!event.currentTarget.contains(event.relatedTarget as Node|null)) setDrop(previous=>previous?.id===id?null:previous);
     },
-    onDragLeaveRow: (e, id) => {
-      /* relatedTarget = element u koji se ulazi — bez ove provere svaki prelaz
-         preko unutrašnjih elemenata reda bi tremao indikator */
-      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-      setDrop((d) => (d && d.id === id ? null : d));
-    },
-    onDropRow: (e, id) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const srcId = dragSrcId.current;
-      dragSrcId.current = null;
-      setDrop(null);
-      if (!srcId || isInvalidTarget(srcId, id)) return;
-      const mode = modeForEvent(e);
-      const tgtLoc = locateNode(roots, id);
-      if (!tgtLoc) return;
-      if (mode === "onto") {
-        /* u notu — postaje sub-strana (store automatski otvori roditelja) */
-        moveNodeTo(section, srcId, section, id);
-        return;
-      }
-      /* pre/posle — ista lista rođaka; korekcija indeksa ako se vadi iz istog
-         niza (destIndex je pozicija u listu POSLE vađenja vučene note) */
-      const srcLoc = locateNode(roots, srcId);
-      if (!srcLoc) return;
-      let insertIdx = mode === "before" ? tgtLoc.index : tgtLoc.index + 1;
-      if (srcLoc.parentId === tgtLoc.parentId) {
-        if (srcLoc.index < tgtLoc.index) insertIdx -= 1;
-        if (insertIdx === srcLoc.index) return;
-      }
-      moveNodeTo(section, srcId, section, tgtLoc.parentId, insertIdx);
-    },
+    onDropRow:(event,id)=>finish(event,id,modeForEvent(event)),
   };
-
-  /* pad na prazan prostor stabla = vrh sekcije, na kraj liste */
-  const handleDropRoot = (e: React.DragEvent) => {
-    const srcId = dragSrcId.current;
-    dragSrcId.current = null;
-    setDrop(null);
-    if (!srcId || srcId === rootId) return;
-    moveNodeTo(section, srcId, section, rootId ?? null);
-  };
-
+  const handleDropRoot=(event:React.DragEvent)=>finish(event,rootId??null,'onto');
   const scopedRoot = rootId ? findNode(roots, rootId) : null;
   const visibleRoots = visibleNoteTree(scopedRoot ? [scopedRoot] : roots, section, treeScope);
 
@@ -721,8 +700,9 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2"
         style={{ zoom: leftZoom }}
         role="tree"
+        aria-multiselectable="true"
         aria-label={capLabel}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={e=>{if(drag){e.preventDefault();e.dataTransfer.dropEffect="move";}}}
         onDrop={handleDropRoot}
       >
         {visibleRoots.map((r) => (
@@ -750,6 +730,9 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         </>}
       </ContextMenuContent>
       </ContextMenu>
+      {drag && <div className="shrink-0 rounded border border-dashed border-teal-400/60 p-2 text-center text-xs" onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';}} onDrop={handleDropRoot}>
+        Move to {rootId?capLabel:'top level'}
+      </div>}
       {novel && templateTarget?.bookId === novel.id && <TemplatePicker templates={novel.sections.templates}
         onClose={() => setTemplateTarget(null)} onChoose={templateId => {
           const state = useKachamak.getState();

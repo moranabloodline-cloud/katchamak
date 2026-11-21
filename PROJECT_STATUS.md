@@ -1,3 +1,5 @@
+> **2026-11-21 — Grupno premeštanje u levom stablu.** Ctrl ili Cmd bira pojedinačne stavke, a Shift opseg vidljivih redova. Izabrane grane u Galeriji, na Homepage-u i u svim tabovima za beleške premeštaju se zajedno.
+
 > **2026-11-21 — Prevlačenje foldera u stablu Galerije.** Folder sa celim sadržajem može da se premesti u drugi folder ili na Gallery za povratak u koren.
 
 > **2026-11-21 — Grupno premeštanje slika u Galeriji.** Ctrl ili Cmd bira pojedinačne slike, a Shift označava raspon u trenutnom folderu. Prevlačenje označene slike premešta ceo izbor.
@@ -607,6 +609,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Zajednički izbor foldera, stranica i beleški.** Roditelj i označeni potomak putuju kao jedna grana. Jedna izmena proverava celo odredište, dubinu i početne roditelje. Za beleške ostaje moguće spuštanje pre ili posle druge beleške, a izdvojeni tab zadržava svoj koren. U Chromeu su provereni izbor mišem, podfolder i povratak u koren u Galeriji, na Homepage-u i u osam sekcija beleški, kao i redosled na izdvojenom tabu i čuvanje posle osvežavanja.
 
 - **2026-11-21 — Premeštanje grane Galerije mišem.** Otvoren podfolder prati novu putanju. Sopstvena grana je isključena iz odredišta. Provera u Chromeu obuhvatila je premeštanje foldera sa dva nivoa podfoldera, povratak u koren, otkazivanje i ponovno učitavanje posle oba poteza. Slike i njihove veze bile su očuvane, a grupno prevlačenje slika prošlo je regresionu proveru.
 

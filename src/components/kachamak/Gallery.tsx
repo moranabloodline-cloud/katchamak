@@ -9,15 +9,17 @@ import {Button} from '@/components/ui/button';
 import {useKachamak} from '@/lib/kachamak/store';
 import {checkGalleryUploadSize} from '@/lib/kachamak/cloud-library';
 import {readHomepageImage} from '@/lib/kachamak/project-settings';
+import {branchSources,insideBranches,type BranchSource} from '@/lib/kachamak/tree-move';
+import {useTreeSelection} from './useTreeSelection';
 import {galleryPath, type GalleryEntry} from '@/lib/kachamak/gallery';
 import {uid} from '@/lib/kachamak/utils';
 import type {Novel} from '@/lib/kachamak/types';
 import {WorkspaceNavigation} from './WorkspaceNavigation';
 import {toast} from 'sonner';
 
-export type GalleryDrag = {bookId:string; parentId:string|null} & (
-  | {kind:'images'; imageIds:string[]}
-  | {kind:'folder'; folderId:string}
+export type GalleryDrag = {bookId:string} & (
+  | {kind:'images'; imageIds:string[]; parentId:string|null}
+  | {kind:'folder'; sources:BranchSource[]}
 );
 type SetGalleryDrag = (source:GalleryDrag|null)=>void;
 
@@ -26,7 +28,7 @@ function dragType(source:GalleryDrag) {
 }
 
 function dragData(source:GalleryDrag) {
-  return source.kind==='folder'?source.folderId:JSON.stringify(source.imageIds);
+  return JSON.stringify(source.kind==='folder'?source.sources:source.imageIds);
 }
 
 function beginDrag(event:DragEvent, source:GalleryDrag, setDrag:SetGalleryDrag) {
@@ -44,6 +46,8 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
   drag:GalleryDrag|null; setDrag:SetGalleryDrag;
 }) {
   const entries=novel.gallery;
+  const tree=useRef<HTMLElement>(null);
+  const select=useTreeSelection(tree,folderId);
   const source=drag?.bookId===novel.id ? drag : undefined;
   // null is the Gallery root. undefined means the pointer is outside a target.
   const [over,setOver]=useState<string|null|undefined>(undefined);
@@ -59,7 +63,8 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
   },[source,over,collapsed,setCollapsed]);
 
   function dropTarget(destination:string|null, rowClass:string, insideSource=false) {
-    const allowed=!!source && !insideSource && source.parentId!==destination;
+    const allowed=!!source && !insideSource && (source.kind==='images'?source.parentId!==destination:
+      topSources.some(item=>item.parentId!==destination));
     return {
       onDragOver(event:DragEvent) {
         if (!source || !event.dataTransfer.types.includes(dragType(source))) return;
@@ -79,9 +84,10 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
         if (!allowed) return;
         try {
           const change=source.kind==='folder'
-            ? {type:'move' as const,id:source.folderId,from:source.parentId,parentId:destination}
+            ? {type:'moveFolders' as const,sources:source.sources,parentId:destination}
             : {type:'moveImages' as const,ids:source.imageIds,from:source.parentId,parentId:destination};
           useKachamak.getState().editGallery(novel.id,change);
+          if (source.kind==='folder') select.clear();
           if (source.kind==='folder' && destination && collapsed.has(destination)) {
             setCollapsed(previous=>{const expanded=new Set(previous);expanded.delete(destination);return expanded;});
           }
@@ -95,7 +101,9 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
     };
   }
 
-  const draggedFolder=source?.kind==='folder'?source.folderId:undefined;
+  const parents=useMemo(()=>new Map((entries??[]).filter(item=>item.kind==='folder').map(item=>[item.id,item.parentId])),[entries]);
+  const draggedFolders=useMemo(()=>new Set(source?.kind==='folder'?source.sources.map(item=>item.id):[]),[source]);
+  const topSources=useMemo(()=>source?.kind==='folder'?source.sources.filter(item=>!insideBranches(item.parentId,draggedFolders,parents)):[],[source,parents,draggedFolders]);
   const rows=useMemo(()=>{
     const folders=new Map<string|null,GalleryEntry[]>();
     for (const entry of (entries??[]).filter(entry=>entry.kind==='folder').sort(compareNames)) {
@@ -103,34 +111,35 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
       if(siblings)siblings.push(entry);
       else folders.set(entry.parentId,[entry]);
     }
-    const stack=(folders.get(null)??[]).map(item=>({item,depth:0,insideSource:item.id===draggedFolder})).reverse();
+    const stack=(folders.get(null)??[]).map(item=>({item,depth:0,insideSource:draggedFolders.has(item.id)})).reverse();
     const visible:{item:GalleryEntry;depth:number;insideSource:boolean;branch:boolean}[]=[];
     while(stack.length) {
       const {item,depth,insideSource}=stack.pop()!;
       const children=folders.get(item.id)??[];
       visible.push({item,depth,insideSource,branch:children.length>0});
       if(!collapsed.has(item.id)) {
-        for(let i=children.length-1;i>=0;i--)stack.push({item:children[i],depth:depth+1,insideSource:insideSource||children[i].id===draggedFolder});
+        for(let i=children.length-1;i>=0;i--)stack.push({item:children[i],depth:depth+1,insideSource:insideSource||draggedFolders.has(children[i].id)});
       }
     }
     return visible;
-  },[entries,collapsed,draggedFolder]);
+  },[entries,collapsed,draggedFolders]);
   return <div className="flex h-full min-h-0 flex-col">
     <WorkspaceNavigation/>
-    <nav aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto p-1">
-      <button type="button" aria-current={folderId===null?'page':undefined} onClick={()=>openFolder(null)}
+    <nav ref={tree} aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto p-1">
+      <button type="button" aria-current={folderId===null?'page':undefined} onClick={()=>{select.clear();openFolder(null);}}
         {...dropTarget(null,'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm')}>
         <Images className="size-4 text-teal-300"/>Gallery
       </button>
       {rows.map(({item,depth,branch,insideSource})=><div key={item.id} style={{paddingLeft:8+depth*14}}
-        {...dropTarget(item.id,'flex items-center rounded-md text-sm',insideSource)}>
+        {...dropTarget(item.id,'flex items-center rounded-md text-sm '+(select.marked?.has(item.id)?'outline outline-1 -outline-offset-1 outline-teal-400':''),insideSource)}>
         {branch?<button type="button" className="grid size-6 shrink-0 place-items-center" aria-expanded={!collapsed.has(item.id)}
           aria-label={(collapsed.has(item.id)?'Expand ':'Collapse ')+item.name}
           onClick={()=>setCollapsed(previous=>{const next=new Set(previous);if(next.has(item.id))next.delete(item.id);else next.add(item.id);return next;})}>
           {collapsed.has(item.id)?<ChevronRight className="size-3"/>:<ChevronDown className="size-3"/>}
         </button>:<span className="w-6 shrink-0"/>}
-        <button type="button" aria-current={folderId===item.id?'page':undefined} onClick={()=>openFolder(item.id)} title={item.name}
-          draggable onDragStart={event=>beginDrag(event,{kind:'folder',bookId:novel.id,folderId:item.id,parentId:item.parentId},setDrag)}
+        <button type="button" aria-current={folderId===item.id?'page':undefined} data-tree-move-id={item.id} aria-pressed={select.marked?.has(item.id)??(folderId===item.id)}
+          onClick={event=>{if (!select.click(item.id,event)) openFolder(item.id);}} title={item.name}
+          draggable onDragStart={event=>beginDrag(event,{kind:'folder',bookId:novel.id,sources:branchSources(select.dragIds(item.id),parents)},setDrag)}
           onDragEnd={()=>setDrag(null)}
           className="flex min-w-16 flex-1 cursor-grab select-none items-center gap-2 py-1.5 pr-2 text-left active:cursor-grabbing">
           <Folder className="size-4 shrink-0 text-amber-300/80"/><span className="truncate">{item.name}</span>

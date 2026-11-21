@@ -157,11 +157,15 @@ export function ancestorIds(roots: NoteNode[], id: string): string[] {
 export const CLOUD_NOTE_LEVELS = 99;
 
 export function canPlaceNote(roots: NoteNode[], parentId: string | null, branch: NoteNode): boolean {
+  return canPlaceNotes(roots,parentId,[branch]);
+}
+
+export function canPlaceNotes(roots: NoteNode[], parentId: string | null, branches: NoteNode[]): boolean {
   if (process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP === '1') return true;
   const level = parentId ? ancestorIds(roots, parentId).length + 2 : 1;
   const fits = (node: NoteNode, at: number): boolean =>
     at <= CLOUD_NOTE_LEVELS && node.children.every(child => fits(child, at + 1));
-  return fits(branch, level);
+  return branches.every(branch=>fits(branch,level));
 }
 
 /** Leaf notes = notes without children (they are the cards in Corkboard). */

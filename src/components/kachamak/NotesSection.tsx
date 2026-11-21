@@ -366,7 +366,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
               {view==='gallery' && novel ? <GalleryTree key={novel.id} novel={novel} drag={galleryDrag} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder} collapsed={closedFolders} setCollapsed={setClosedFolders}/> : view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
-                <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />}
+                <NoteTree key={treeScopeKey} section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />}
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
                 Collapse skroz desno u istom redu — po Nikoli */}

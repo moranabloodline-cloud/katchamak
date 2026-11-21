@@ -1,11 +1,14 @@
 'use client';
 
-import {useEffect, useMemo, useState, type Dispatch, type SetStateAction} from 'react';
+import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
 import {ChevronDown, ChevronRight, FileText, House, MoreVertical, Plus, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {branchSources,insideBranches,type BranchSource} from '@/lib/kachamak/tree-move';
+import {useTreeSelection} from './useTreeSelection';
+import {toast} from 'sonner';
 import {HOME_ROOT, homepageRows} from '@/lib/kachamak/homepage';
 import {useKachamak} from '@/lib/kachamak/store';
 import type {Novel} from '@/lib/kachamak/types';
@@ -21,6 +24,43 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const [error,setError]=useState('');
   const rows=useMemo(()=>homepageRows(novel),[novel]);
   const pages=novel.homePages;
+  const tree=useRef<HTMLElement>(null);
+  const selection=useTreeSelection(tree,selected);
+  const [drag,setDrag]=useState<BranchSource[]|null>(null);
+  const [over,setOver]=useState<string|null|undefined>();
+  const parents=useMemo(()=>{
+    const result=new Map((pages??[]).map(page=>[page.id,page.parentId]));
+    result.set(HOME_ROOT,null);
+    return result;
+  },[pages]);
+  const draggedIds=useMemo(()=>new Set(drag?.map(source=>source.id)),[drag]);
+  const topSources=useMemo(()=>drag?.filter(source=>!insideBranches(source.parentId,draggedIds,parents)),[drag,draggedIds,parents]);
+  const finishDrag=()=>{setDrag(null);setOver(undefined);};
+  function dropTarget(id:string|null) {
+    const allowed=!!topSources?.some(page=>page.parentId!==id) && !insideBranches(id,draggedIds,parents);
+    return {
+      onDragOver(event:DragEvent) {
+        if (!drag) return;
+        event.preventDefault();event.stopPropagation();
+        event.dataTransfer.dropEffect=allowed?'move':'none';
+        setOver(allowed?id:undefined);
+      },
+      onDragLeave(event:DragEvent) {
+        if (!event.currentTarget.contains(event.relatedTarget as Node|null)) setOver(current=>current===id?undefined:current);
+      },
+      onDrop(event:DragEvent) {
+        if (!drag) return;
+        event.preventDefault();event.stopPropagation();
+        finishDrag();
+        if (!allowed || event.dataTransfer.getData('application/x-kachamak-home-pages')!==JSON.stringify(drag)) return;
+        try {
+          useKachamak.getState().moveHomePages(novel.id,drag,id);
+          selection.clear();
+          if (id && collapsed.has(id)) setCollapsed(previous=>{const next=new Set(previous);next.delete(id);return next;});
+        } catch(error) {toast.error(error instanceof Error?error.message:'The pages could not be moved.');}
+      }
+    };
+  }
   useEffect(()=>{
     const byId=new Map(pages?.map(p=>[p.id,p]));
     setCollapsed(previous=>{
@@ -46,18 +86,29 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   let hiddenBelow=Infinity;
   return <div className="flex h-full flex-col">
     <WorkspaceNavigation includeHomePages/>
-    <nav aria-label="Homepage pages" className="min-h-0 flex-1 overflow-auto p-1">
+    <nav ref={tree} {...dropTarget(null)} aria-label="Homepage pages" className="min-h-0 flex-1 overflow-auto p-1">
       {rows.map(row=>{
         if(row.depth>hiddenBelow)return null;
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;
         const active=selected===row.id;
         const Icon=row.id===HOME_ROOT?House:FileText;
-        return <div key={row.id} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex items-center rounded-md border '+(active?'border-amber-500/60 bg-amber-400/10 text-amber-300':'border-transparent hover:bg-white/5')}>
+        return <div key={row.id} {...dropTarget(row.id)} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex items-center rounded-md border '+(over===row.id?'ring-1 ring-inset ring-teal-400 ':'')+
+          (selection.marked?.has(row.id)?'outline outline-1 -outline-offset-1 outline-teal-400 ':'')+(active?'border-amber-500/60 bg-amber-400/10 text-amber-300':'border-transparent hover:bg-white/5')}>
           {row.hasChildren?<button type="button" className="grid size-6 shrink-0 place-items-center" aria-label={(collapsed.has(row.id)?'Expand ':'Collapse ')+row.title}
             aria-expanded={!collapsed.has(row.id)} onClick={()=>setCollapsed(current=>{const next=new Set(current);if(next.has(row.id))next.delete(row.id);else next.add(row.id);return next;})}>
             {collapsed.has(row.id)?<ChevronRight className="size-3"/>:<ChevronDown className="size-3"/>}
           </button>:<span className="w-6 shrink-0"/>}
-          <button type="button" title={row.path} aria-current={active?'page':undefined} onClick={()=>choose(row.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left text-sm">
+          <button type="button" title={row.path} aria-current={active?'page':undefined} data-tree-move-id={row.id===HOME_ROOT?undefined:row.id} aria-pressed={selection.marked?.has(row.id)??active}
+            onClick={event=>{
+              if (row.id===HOME_ROOT) {if (event.ctrlKey||event.metaKey||event.shiftKey) return;selection.clear();}
+              else if (selection.click(row.id,event)) return;
+              choose(row.id);
+            }}
+            draggable={row.id!==HOME_ROOT} onDragStart={event=>{
+              const sources=branchSources(selection.dragIds(row.id),parents);
+              event.dataTransfer.setData('application/x-kachamak-home-pages',JSON.stringify(sources));
+              event.dataTransfer.effectAllowed='move';setDrag(sources);
+            }} onDragEnd={finishDrag} className="flex min-w-0 flex-1 select-none items-center gap-2 py-1.5 text-left text-sm">
             <Icon className="size-3.5 shrink-0 text-amber-300"/><span className="truncate">{row.title}</span>
           </button>
           {row.id===HOME_ROOT && <>
@@ -73,6 +124,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
         </div>;
       })}
     </nav>
+    {drag && <div {...dropTarget(null)} className={'shrink-0 rounded border border-dashed border-teal-400/60 p-2 text-center text-xs '+(over===null?'bg-teal-400/15':'')}>Move to top level</div>}
     {dialog&&<Dialog open onOpenChange={open=>{if(!open)setDialog(null);}}><DialogContent className="sm:max-w-sm">
       <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
       <form className="grid gap-4" onSubmit={e=>{e.preventDefault();submit();}}>

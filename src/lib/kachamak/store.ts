@@ -28,6 +28,7 @@ import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from '
 import {relationshipKey,validKind} from './kinship';
 import {availableProjectImage, validProjectImage, galleryImageRef, projectImageRefs} from './project-image';
 import { changeGallery, type GalleryChange } from './gallery';
+import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} from './tree-move';
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
@@ -137,6 +138,7 @@ interface KachamakState {
   renameNovel: (title: string) => void;
   activeHomePageId: string;
   openHomePage: (projectId: string, pageId: string) => boolean;
+  moveHomePages: (bookId:string,sources:BranchSource[],parentId:string|null)=>void;
   createHomePage: (projectId: string, parentId: string | null, title: string) => boolean;
   renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
 
@@ -159,6 +161,7 @@ interface KachamakState {
   updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>) => void;
   deleteNode: (section: SectionKey, id: string) => void;
   moveNode: (section: SectionKey, id: string, dir: "up" | "down") => void;
+  moveTreeNotes: (bookId:string,section:SectionKey,sources:BranchSource[],parentId:string|null,position?:TreePosition)=>void;
   moveNodeTo: (
     fromSection: SectionKey,
     id: string,
@@ -579,6 +582,7 @@ export const useKachamak = create<KachamakState>()(
           for(const used of projectImageRefs(book, true))if(used===ref)throw new Error('This image is in use. Remove it from the book, including any notes in Trash, before deleting it from Gallery.');
         }
         const gallery=changeGallery(book.gallery??[],change);
+        if (gallery===book.gallery) return state;
         return {novels:state.novels.map(n=>n===book?touch({...book,gallery}):n)};
       }),
       closeTab: (tab) => {
@@ -637,6 +641,16 @@ export const useKachamak = create<KachamakState>()(
         set({activeHomePageId: pageId, view: 'homepage'});
         return true;
       },
+      moveHomePages: (bookId,sources,parentId) => set(state=>{
+        const novel=state.novels.find(n=>n.id===bookId);
+        if (!novel || state.activeNovelId!==bookId || sources.some(item=>item.id===HOME_ROOT)) throw new Error('Choose pages from the open book.');
+        const pages=novel.homePages??[];
+        const parents=new Map(pages.map(page=>[page.id,page.parentId]));
+        parents.set(HOME_ROOT,null);
+        const next=reparentEntries(pages,parents,sources,parentId);
+        if (next===pages) return state;
+        return {novels:state.novels.map(n=>n===novel?touch({...n,homePages:next}):n)};
+      }),
       createHomePage: (projectId, parentId, title) => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (state.activeNovelId !== projectId || !novel || !title.trim() || (parentId !== null && !homepageEntry(novel, parentId))) return false;
@@ -806,6 +820,12 @@ export const useKachamak = create<KachamakState>()(
       },
 
       /* Move — the note becomes the last child of the destination (or a section root) */
+      moveTreeNotes: (bookId,section,sources,parentId,position) => set(state=>{
+        const novel=state.novels.find(n=>n.id===bookId);
+        if (!novel || state.activeNovelId!==bookId) throw new Error('Choose notes from the open book.');
+        const nodes=moveNoteBranches(novel.sections[section],sources,parentId,position);
+        return {novels:state.novels.map(n=>n===novel?touch({...n,sections:{...n.sections,[section]:nodes}}):n)};
+      }),
       moveNodeTo: (fromSection, id, destSection, destParentId, destIndex) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;

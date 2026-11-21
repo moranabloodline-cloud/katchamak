@@ -1,3 +1,4 @@
+import {reparentEntries,type BranchSource} from './tree-move';
 import {validCoverImage} from './project-image';
 
 type Item = {id:string; name:string; parentId:string|null};
@@ -7,6 +8,7 @@ export type GalleryChange =
   | {type:'rename'; id:string; name:string}
   | {type:'move'; id:string; parentId:string|null; from?:string|null}
   | {type:'moveImages'; ids:string[]; from:string|null; parentId:string|null}
+  | {type:'moveFolders'; sources:BranchSource[]; parentId:string|null}
   | {type:'remove'; id:string};
 
 export function validGallery(value:unknown):value is GalleryEntry[]|undefined {
@@ -54,6 +56,10 @@ export function changeGallery(entries:GalleryEntry[], change:GalleryChange):Gall
     const result = [...entries,...change.entries];
     if (!validGallery(result)) throw new Error('The destination or image is no longer available.');
     return result;
+  }
+  if (change.type === 'moveFolders') {
+    const parents=new Map(entries.filter(item=>item.kind==='folder').map(item=>[item.id,item.parentId]));
+    return reparentEntries(entries,parents,change.sources,change.parentId);
   }
   if (change.type === 'moveImages') {
     const ids = new Set(change.ids);
