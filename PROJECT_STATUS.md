@@ -1,3 +1,5 @@
+> **2026-11-21 — Izbor slika iz Gallery.** Beleške, Homepage, Timeline i naslovnica koriste zajedničku sliku iz galerije knjige. Izbor pretražuje foldere, a sačuvane veze prate sliku posle promene imena ili mesta.
+
 > **2026-11-21 — Gallery.** Svaka knjiga ima galeriju slika sa sopstvenim stablom foldera i podfoldera. Slike i raspored foldera čuvaju se uz knjigu i ulaze u JSON rezervnu kopiju.
 
 > **2026-11-21 — Zumiranje u Split prikazu.** Ctrl + točkić menja veličinu teksta i lenjira samo u belešci ispod miša, i kada druga beleška ima fokus. Bočni paneli i obe gornje trake zadržavaju svoje dimenzije.
@@ -597,6 +599,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Slike iz galerije knjige.** Upload slika za projekat nalazi se u Gallery. Beleška, blokovi na svim Homepage stranicama, Timeline kartice, naslovnica i izbor avatara otvaraju galeriju. Slika u upotrebi zaštićena je od brisanja. U Chromeu je ista slika iz podfoldera postavljena na belešku, zaključani baner, Timeline događaj i naslovnicu. Nakon ponovnog učitavanja proverene su sve četiri veze i jedna kopija slike u knjizi. Testovi pokrivaju i ranije ugrađene slike, kopiranje između knjiga i JSON rezervnu kopiju.
 
 - **2026-11-21 — Galerija slika.** U radnu traku dodat je Gallery. U levom panelu je stablo foldera, a u radnoj površini pregled sadržaja, putanja i komande New folder i Upload images. Slike i folderi mogu da se preimenuju i premeste. U Chromeu su na dve probne knjige provereni kreiranje podfoldera, dodavanje i pregled PNG slike, premeštanje, čuvanje, ponovno učitavanje i navigacija u uskom prozoru. Automatski test pokriva i validaciju uvoza, kružnih putanja i brisanja popunjenog foldera.
 

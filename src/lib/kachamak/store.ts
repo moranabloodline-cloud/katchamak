@@ -13,7 +13,7 @@ import type {
   TreeScope,
   ViewMode,
 } from "./types";
-import {novelSettingsPatch,validCoverImage,type NovelSettingsPatch} from "./project-settings";
+import {novelSettingsPatch,type NovelSettingsPatch} from "./project-settings";
 import { DEFAULT_NOTE_ICON, SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
@@ -25,6 +25,7 @@ import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspace
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
+import {availableProjectImage, validProjectImage, galleryImageRef, projectImageRefs} from './project-image';
 import { changeGallery, type GalleryChange } from './gallery';
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
@@ -572,6 +573,10 @@ export const useKachamak = create<KachamakState>()(
       editGallery: (projectId,change) => set(state => {
         const book=state.novels.find(n=>n.id===projectId);
         if (!book || state.activeNovelId!==projectId) throw new Error('Reopen the project to change its gallery.');
+        if(change.type==='remove') {
+          const ref=galleryImageRef(change.id);
+          for(const used of projectImageRefs(book))if(used===ref)throw new Error('This image is in use. Remove it from the book, including any notes in Trash, before deleting it from Gallery.');
+        }
         const gallery=changeGallery(book.gallery??[],change);
         return {novels:state.novels.map(n=>n===book?touch({...book,gallery}):n)};
       }),
@@ -651,7 +656,7 @@ export const useKachamak = create<KachamakState>()(
         if (!novel || state.activeNovelId !== projectId) return false;
         const current = pageId === HOME_ROOT ? novel.homepage ?? EMPTY_HOMEPAGE : novel.homePages?.find(p => p.id === pageId);
         const next = current && changeHomepage(current, action);
-        if (!next) return false;
+        if (!next || next.blocks.some(block=>!availableProjectImage(novel.gallery,block.image))) return false;
         const updated = pageId === HOME_ROOT ? {...novel, homepage: next} :
           {...novel, homePages: novel.homePages!.map(p => p.id === pageId ? {...p, ...next} : p)};
         set({novels: state.novels.map(n => n === novel ? touch(updated) : n)});
@@ -722,7 +727,7 @@ export const useKachamak = create<KachamakState>()(
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
-        if (!validCoverImage(patch.image)||!validDocumentTarget(patch.documentTarget)) return;
+        if (!validProjectImage(patch.image)||!availableProjectImage(novel.gallery,patch.image)||!availableProjectImage(novel.gallery,patch.event?.banner)||!validDocumentTarget(patch.documentTarget)) return;
         if (!validNotePageSettings(patch.pageSettings) || !validNoteFontSize(patch.bodyFontSize) || !validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (!validHiddenDetailBlocks(patch.collapsedDetailBlocks)||!validDetailBlockOrder(patch.detailBlockOrder)) return;
         if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
@@ -973,7 +978,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 49,
+      version: 50,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -986,6 +991,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<50){ /* Previously embedded artwork remains readable alongside book-local gallery references. */ }
         if(version<49){ /* An absent gallery is an empty project gallery. */ }
         if(version<48) s.activeHomePageId=HOME_ROOT;
         if(version<47){ /* Optional tab defaults leave existing notes and their formatting intact. */ }

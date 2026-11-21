@@ -3,14 +3,15 @@ import {Plus,Hourglass,Zap} from 'lucide-react';
 import {eventType,eventDuration,formatDate,type StoryCalendar,type TimelineGroup} from '@/lib/kachamak/story-calendar';
 import {groupFor,type EventRow} from '@/lib/kachamak/timeline-data';
 import {iconByName} from '@/lib/kachamak/icons';
-import {validCoverImage} from '@/lib/kachamak/project-settings';
+import {projectImageSrc} from '@/lib/kachamak/project-image';
+import type {Novel} from '@/lib/kachamak/types';
 import {stripHtml} from '@/lib/kachamak/utils';
 import {TimelineCardMenu} from './TimelineCardMenu';
 
-export function TimelineCards({rows,calendar,groups,compact,synopsis,selectedId,onEdit,onAdd}:{rows:EventRow[];calendar:StoryCalendar;groups:TimelineGroup[];compact:boolean;synopsis:boolean;selectedId?:string;onEdit:(row:EventRow)=>void;onAdd:()=>void}) {
+export function TimelineCards({gallery,rows,calendar,groups,compact,synopsis,selectedId,onEdit,onAdd}:{gallery?:Novel['gallery'];rows:EventRow[];calendar:StoryCalendar;groups:TimelineGroup[];compact:boolean;synopsis:boolean;selectedId?:string;onEdit:(row:EventRow)=>void;onAdd:()=>void}) {
   const cardCalendar=calendar.dateFormat ? calendar : {...calendar,dateFormat:'MMMM D^, YYYY E'};
   return <div className="min-h-0 flex-1 overflow-auto px-3 py-6 sm:px-5 kachamak-scroll"><div className="mx-auto max-w-[54rem]">
-    {rows.map(row=>{const period=eventType(row.event)==='period',Icon=iconByName(row.node.icon)??(period?Hourglass:Zap),group=groups.find(g=>g.id===groupFor(row.event,groups)),banner=row.event.cardStyle!=='color'&&row.event.banner&&validCoverImage(row.event.banner)?row.event.banner:undefined;
+    {rows.map(row=>{const period=eventType(row.event)==='period',Icon=iconByName(row.node.icon)??(period?Hourglass:Zap),group=groups.find(g=>g.id===groupFor(row.event,groups)),banner=row.event.cardStyle!=='color'?projectImageSrc(gallery,row.event.banner):undefined;
       const color=row.event.cardColor??group?.color??row.node.color??'#45494a',opacity=row.event.cardOpacity??(banner ? .2 : .6),detail=row.event.cardDetail??(synopsis?'synopsis':'title');
       const startDate=formatDate(cardCalendar,row.event.start,row.event.precision);
       const duration=eventDuration(row.event,calendar);

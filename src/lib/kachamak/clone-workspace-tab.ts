@@ -1,3 +1,4 @@
+import {galleryImage, galleryImageRef} from './project-image';
 import { v5 as namedUuid } from 'uuid';
 import { TABS, type NoteNode, type Novel, type SectionKey, type TabKey } from './types';
 import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, forEachNode, uid } from './utils';
@@ -99,9 +100,24 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
   const targets = new Set(Array.from(mapping.values(), target => target.id));
   const now = Date.now();
   const statuses = new Set(destination.statuses);
+  const gallery=[...(destination.gallery??[])];
+  const transferImage=(value?:string)=>{
+    const sourceItem=galleryImage(source.gallery,value);
+    if(!sourceItem)return value;
+    let match=gallery.find(item=>item.kind==='image' && item.image===sourceItem.image);
+    if(!match) {
+      let id=newId('gallery:'+sourceItem.id);
+      while(gallery.some(item=>item.id===id))id=newId('gallery:'+id);
+      match={...sourceItem,id,parentId:null};
+      gallery.push(match);
+    }
+    return galleryImageRef(match.id);
+  };
   const copy = (original: NoteNode, depth: number): NoteNode => {
     if (depth >= CLOUD_NOTE_LEVELS) throw new Error('The copied notes would be nested too deeply. Choose a higher-level destination tab.');
     const node = structuredClone({ ...original, children: [] });
+    if (node.image) node.image=transferImage(node.image);
+    if (node.event?.banner) node.event.banner=transferImage(node.event.banner);
     if (node.status) statuses.add(node.status);
     const content = remapHtml(node.content ?? '', mapping, false);
     const linkChoices = node.linkChoices?.flatMap(choice => {
@@ -134,6 +150,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
     count: mapping.size,
     novel: {
       ...destination, updatedAt: now, statuses: [...statuses],
+      ...(gallery.length!==(destination.gallery?.length??0)?{gallery}:{}),
       sections: {...destination.sections, [to.section]: parentId ? insert(destinationRoots) : nextSiblings},
     },
   };

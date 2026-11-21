@@ -1,12 +1,14 @@
 'use client';
-import {useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 import {ImagePlus, LayoutPanelTop, PanelsTopLeft, Type, Columns3, Heading, Info, Link2, Minus, Video, Plus, Trash2} from 'lucide-react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
-import {readHomepageImage} from '@/lib/kachamak/project-settings';
+import {GalleryImagePicker} from './GalleryImagePicker';
+import {projectImageSrc} from '@/lib/kachamak/project-image';
+import type {Novel} from '@/lib/kachamak/types';
 import {isWebsite, youtubeVideoId, type HomeBlock, type HomeCell, type HomeLayout, type homepageRows, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
 import {HomeArtwork} from './HomeArtwork';
 import {HomeArtworkEditor} from './HomeArtworkEditor';
@@ -27,31 +29,21 @@ const layouts = [
 ] as const;
 
 
-export function HomeBlockEditor({original,cell,notes,pages,onSave,onClose}:{
-  original?:HomeBlock; cell?:HomeCell; notes:ReturnType<typeof flattenNotes>; pages:ReturnType<typeof homepageRows>;
+export function HomeBlockEditor({novel,original,cell,notes,pages,onSave,onClose}:{
+  novel:Novel; original?:HomeBlock; cell?:HomeCell; notes:ReturnType<typeof flattenNotes>; pages:ReturnType<typeof homepageRows>;
   onSave:(block:HomeBlock)=>boolean; onClose:()=>void;
 }) {
   const [draft,setDraft]=useState<HomeBlock>(()=>original??{id:crypto.randomUUID(),layout:'card',width:'standard',title:'',text:'',cell});
   const row=draft.layout==='row', divider=draft.layout==='divider', list=draft.layout==='links', video=draft.layout==='video';
   const hasDestination=!row&&!divider&&!list&&!video;
   const [adjusting,setAdjusting]=useState(false);
-  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
-  const upload=useRef(0), fileInput=useRef<HTMLInputElement>(null);
-  useEffect(()=>()=>{upload.current++;},[]);
+  const [error,setError]=useState('');
+  const image=projectImageSrc(novel.gallery,draft.image);
   const patch=(value:Partial<HomeBlock>)=>setDraft(current=>({...current,...value}));
   const chooseLayout=(layout:HomeLayout)=>patch({layout,width:layout==='card'?'standard':layout==='text'?'wide':'full',columns:draft.columns??2});
   const links=draft.links??[];
   const updateLink=(id:string,value:Partial<HomeLink>)=>patch({links:links.map(l=>l.id===id?{...l,...value}:l)});
   const validDestination=(target:HomeTarget)=>target.kind==='page'?pages.some(p=>p.id===target.id):target.kind==='note'?notes.some(n=>n.node.id===target.id):target.kind==='web'?isWebsite(target.url):true;
-  const loadImage=async(file:File)=>{
-    const version=++upload.current;setBusy(true);setError('');
-    try {
-      const image=await readHomepageImage(file);
-      if(upload.current===version)patch({image,imageFrame:undefined,imageCutout:undefined});
-    } catch(err) {
-      if(upload.current===version)setError(err instanceof Error?err.message:'Could not open that image.');
-    } finally {if(upload.current===version)setBusy(false);}
-  };
   const save=()=>{
     if(video&&!youtubeVideoId(draft.videoUrl)){setError('Enter a YouTube video address.');return;}
     if(list&&links.some(l=>!validDestination(l.target))){setError('Choose a valid destination for every link.');return;}
@@ -74,11 +66,12 @@ export function HomeBlockEditor({original,cell,notes,pages,onSave,onClose}:{
         {!divider&&<Label className="grid gap-2">Title<Input value={draft.title} onChange={event=>patch({title:event.target.value})}/></Label>}
         {!row&&!divider&&!video&&<Label className="grid gap-2">Text<Textarea rows={3} value={draft.text} onChange={event=>patch({text:event.target.value})}/></Label>}
         {!row&&!divider&&!video&&<div className="flex flex-wrap items-center gap-2">
-          {draft.image&&(draft.imageFrame?<div className="mx-auto w-full" style={{maxWidth:`${9*draft.imageFrame.ratio}rem`}}><HomeArtwork src={draft.imageCutout||draft.image} frame={draft.imageFrame} alt="Block image preview"/></div>:<img src={draft.imageCutout||draft.image} alt="Block image preview" className="block max-h-36 w-full object-contain"/>)}
-          <input type="file" aria-label="Block image file" ref={fileInput} accept="image/jpeg,image/png,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void loadImage(file);}}/>
-          <Button type="button" variant="outline" onClick={()=>fileInput.current?.click()}><ImagePlus/>{busy?'Loading image…':draft.image?'Replace image':'Add image'}</Button>
-          {draft.image&&<Button type="button" variant="outline" disabled={busy} onClick={()=>setAdjusting(true)}>Reposition image</Button>}
-          {draft.image&&<Button type="button" variant="ghost" onClick={()=>{upload.current++;setBusy(false);patch({image:undefined,imageFrame:undefined,imageCutout:undefined});}}>Remove image</Button>}
+          {image&&(draft.imageFrame?<div className="mx-auto w-full" style={{maxWidth:`${9*draft.imageFrame.ratio}rem`}}><HomeArtwork src={draft.imageCutout||image} frame={draft.imageFrame} alt="Block image preview"/></div>:<img src={draft.imageCutout||image} alt="Block image preview" className="block max-h-36 w-full object-contain"/>)}
+          <GalleryImagePicker novel={novel} onPick={ref=>patch({image:ref,imageFrame:undefined,imageCutout:undefined})}>
+            <Button type="button" variant="outline"><ImagePlus/>{image?'Replace image':'Choose from Gallery'}</Button>
+          </GalleryImagePicker>
+          {draft.image&&<Button type="button" variant="outline" onClick={()=>setAdjusting(true)}>Reposition image</Button>}
+          {draft.image&&<Button type="button" variant="ghost" onClick={()=>{patch({image:undefined,imageFrame:undefined,imageCutout:undefined});}}>Remove image</Button>}
         </div>}
         {!row&&!draft.cell&&<Label className="grid gap-2">Width<select className={homeSelectClass} value={draft.width} onChange={e=>patch({width:e.target.value as HomeBlock['width']})}><option value="standard">Standard</option><option value="wide">Wide</option><option value="full">Full row</option></select></Label>}
         {hasDestination&&<HomeDestinationFields notes={notes} pages={pages} target={draft.target} onChange={target=>patch({target})} optional/>}
@@ -90,9 +83,9 @@ export function HomeBlockEditor({original,cell,notes,pages,onSave,onClose}:{
           <Button type="button" variant="ghost" className="justify-self-end" onClick={()=>patch({links:links.filter(l=>l.id!==link.id)})}><Trash2/>Remove link</Button>
         </fieldset>)}<Button type="button" variant="outline" onClick={()=>patch({links:[...links,{id:crypto.randomUUID(),label:'',target:{kind:'note',id:''}}]})}><Plus/>Add link</Button></div>}
         {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy}>{original?'Save block':'Add to homepage'}</Button></div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">{original?'Save block':'Add to homepage'}</Button></div>
       </form>
-      {adjusting&&draft.image&&<HomeArtworkEditor block={draft} src={draft.image} onClose={()=>setAdjusting(false)} onSave={options=>{patch(options);return true;}}/>}
+      {adjusting&&image&&<HomeArtworkEditor block={draft} src={image} onClose={()=>setAdjusting(false)} onSave={options=>{patch(options);return true;}}/>}
     </DialogContent>
   </Dialog>;
 }

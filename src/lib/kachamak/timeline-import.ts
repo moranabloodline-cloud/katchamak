@@ -1,4 +1,5 @@
 import {useKachamak} from './store';
+import {availableProjectImage} from './project-image';
 import {GREGORIAN,validCalendar,validEvent,type StoryCalendar} from './story-calendar';
 import type {NoteNode} from './types';
 import {CLOUD_NOTE_LEVELS,uid} from './utils';
@@ -19,6 +20,7 @@ export function importTimeline(projectId:string,json:string) {
     const n=value as Record<string,unknown>;
     if(typeof n.title!=='string'||!n.title.trim()||n.title.length>500||!Array.isArray(n.children)||!['content','synopsis','notes'].every(k=>n[k]===undefined||typeof n[k]==='string')||n.event!==undefined&&!validEvent(n.event)||n.timelineKind!==undefined&&!['event','period'].includes(String(n.timelineKind)))throw new Error('A timeline note has invalid text or dates.');
     const event=n.event?{...(n.event as NonNullable<NoteNode['event']>)}:undefined;
+    if(!availableProjectImage(novel.gallery,event?.banner))throw new Error('A timeline image is missing from this book’s Gallery.');
     if(event)delete event.groupId; // Project-specific group IDs are not portable.
     return {id:uid(),title:n.title.trim(),kind:'doc',content:typeof n.content==='string'?n.content:'',synopsis:typeof n.synopsis==='string'?n.synopsis:'',notes:typeof n.notes==='string'?n.notes:'',status:'',label:'',createdAt:now,updatedAt:now,children:n.children.map(child=>read(child,depth+1)),event,timelineKind:n.timelineKind as NoteNode['timelineKind'],collapsed:n.collapsed===true,...(typeof n.color==='string'&&/^#[a-f0-9]{6}$/i.test(n.color)?{color:n.color}:{}),...(typeof n.icon==='string'?{icon:n.icon}:{})};
   };

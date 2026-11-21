@@ -1,9 +1,10 @@
 import type { Novel, SectionKey } from './types';
 import { INSPECTOR_TABS, SECTION_KEYS } from './types';
-import { validNovelMetadata, validCoverImage } from './project-settings';
+import { validNovelMetadata } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validNoteFontSize, validNotePageSettings, validTabPageSettings } from './page-format';
+import {validProjectImage, projectImageRefs, availableProjectImage} from './project-image';
 import { validGallery } from './gallery';
 import { validHomepage, validHomePages } from './homepage';
 import { validDocumentTarget } from './document-target';
@@ -31,7 +32,7 @@ export function isReadableProject(value: unknown): boolean {
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.ignoreAutoLinking === undefined || typeof node.ignoreAutoLinking === 'boolean') &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
-      validFamilyMembers(node.familyMembers) && validCoverImage(node.image) && validDocumentTarget(node.documentTarget) &&
+      validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validNotePageSettings(node.pageSettings) && validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
@@ -63,5 +64,7 @@ export function isReadableProject(value: unknown): boolean {
     if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;
     if (!validTimelineExtra(t)) return false;
   }
+  const book=value as Novel;
+  for(const ref of projectImageRefs(book))if(!availableProjectImage(book.gallery,ref))return false;
   return true;
 }

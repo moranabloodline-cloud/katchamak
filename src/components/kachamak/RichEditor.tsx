@@ -132,6 +132,13 @@ export function RichEditor({
           const target=id&&novel?findNodeInNovel(novel,id):null;
           if(target){if(event.ctrlKey||event.metaKey)openProjectNote(target.node.id);else setPreview(target.node.id);}else toast.error('This linked note is unavailable. It may be in Trash.');
         }}
+        onDrop={event=>{
+          const transfer=event.dataTransfer;
+          if(Array.from(transfer.files).some(file=>file.type.startsWith('image/')) || /<img\b/i.test(transfer.getData('text/html'))){
+            event.preventDefault();
+            toast.info('Choose the note image from the book’s Gallery.');
+          }
+        }}
         onPaste={event => {
           event.preventDefault();
           const content = preparePastedContent(event.clipboardData.getData('text/html'), event.clipboardData.getData('text/plain'));

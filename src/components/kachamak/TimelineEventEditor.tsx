@@ -1,9 +1,10 @@
 'use client';
 import {ColourPalette} from './PresetColourPicker';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useKachamak } from '@/lib/kachamak/store';
-import { readNovelCover } from '@/lib/kachamak/project-settings';
+import {GalleryImagePicker} from './GalleryImagePicker';
+import {projectImageSrc} from '@/lib/kachamak/project-image';
 import { flattenNotes } from '@/lib/kachamak/note-links';
 import { TIMELINE_LIMIT, dateAtPrecision, type DatePrecision, eventType, minutesPerDay, absoluteYear, eraYear, dateToMinute, minuteToDate, monthDays, type StoryCalendar, type StoryDate, type StoryEvent } from '@/lib/kachamak/story-calendar';
 import type { NoteNode, Novel, SectionKey } from '@/lib/kachamak/types';
@@ -51,20 +52,12 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
   const [iconOpen,setIconOpen]=useState(false),[linkOpen,setLinkOpen]=useState(false);
   const [style,setStyle]=useState<'image'|'color'>(current?.node.event?.cardStyle??(current?.node.event?.banner?'image':'color'));
   const [cardColor,setCardColor]=useState<string|undefined>(current?.node.event?.cardColor);
-  const [loadingBanner,setLoadingBanner]=useState(false);
-  const bannerRequest=useRef(0);
-  useEffect(()=>()=>{bannerRequest.current++;},[]);
-  const uploadBanner=async(file:File)=>{
-    const request=++bannerRequest.current;setLoadingBanner(true);setError('');
-    try{const image=await readNovelCover(file);if(request===bannerRequest.current)setBanner(image);}
-    catch(error){if(request===bannerRequest.current)setError(error instanceof Error?error.message:'The banner could not be read.');}
-    finally{if(request===bannerRequest.current)setLoadingBanner(false);}
-  };
-
+  const [pickerOpen,setPickerOpen]=useState(false);
+  const bannerSrc=projectImageSrc(novel.gallery,banner);
   const rows=flattenNotes(novel),chosen=rows.find(r=>r.node.id===target);
   const choose=(id:string)=>{
     const row=rows.find(r=>r.node.id===id),event=row?.node.event;
-    bannerRequest.current++;setLoadingBanner(false);setError('');
+    setPickerOpen(false);setError('');
     setIcon(row?.node.icon??'');setLinks(row?.node.links??[]);
     setStyle(event?.cardStyle??(event?.banner?'image':'color'));setCardColor(event?.cardColor);setBanner(event?.banner);
     setKind(row?timelineKind(row.node)??'event':'event');setStartDirty(!event);setEndDirty(!event);
@@ -74,12 +67,11 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
     setPrecision(event?.precision??'day');setEndPrecision(event?.endPrecision??event?.precision??'day');
   };
   const save=()=>{
-    if(loadingBanner)return;
     setError('');if(!title.trim()){setError('Give this event a title.');return;}
     try {
       if(!hasStart||hasEnd&&!hasEndDate)throw new Error(hasEnd?'Choose a start and end date.':'Choose a start date.');
       const start=chosen?.node.event&&!startDirty?chosen.node.event.start:dateToMinute(calendar,dateAtPrecision(calendar,from,precision)),end=hasEnd?(chosen?.node.event?.end!==undefined&&!endDirty?chosen.node.event.end:dateToMinute(calendar,dateAtPrecision(calendar,to,endPrecision,true))):undefined;
-      if(style==='image'&&!banner)throw new Error('Choose an image for the Image style.');
+      if(style==='image'&&!bannerSrc)throw new Error('Choose an image for the Image style.');
       if(end!==undefined&&end<=start)throw new Error('A Time Period must end after its start.');
       if(calendar.range&&(start<calendar.range.start||(end??start)>calendar.range.end))throw new Error('Choose dates within the earliest and latest dates in Time System.');
       const event:StoryEvent={...(chosen?.node.event??{}),type:kind,cardStyle:style,cardColor,start,...(end!==undefined?{end}:{}),precision,...(hasEnd?{endPrecision}:{}),...(banner?{banner}:{})};
@@ -87,6 +79,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       const state=useKachamak.getState();
       if(state.activeNovelId!==novel.id)throw new Error('The active book changed. Reopen the event.');
       const live=state.novels.find(n=>n.id===novel.id)!;
+      if(banner&&!projectImageSrc(live.gallery,banner))throw new Error('This image is no longer in the gallery. Choose another image.');
       const row=target?flattenNotes(live).find(r=>r.node.id===target):null;
       if(target&&!row)throw new Error('This note is no longer available.');
       const oldEvent=row?.node.event;
@@ -103,7 +96,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
   const Icon=iconByName(icon)??(hasEnd?Hourglass:Zap);
   let dateText='Choose a date';try{dateText=formatDate(calendar,dateToMinute(calendar,from),precision);}catch{/* Show validation on Update. */}
   const content=<>
-    {!embedded&&<div aria-label="Event preview" className="relative flex min-h-[76px] items-center overflow-hidden rounded bg-cover bg-center px-3" style={{backgroundImage:style==='image'&&banner?`linear-gradient(#202222b3,#202222b3),url("${banner}")`:'linear-gradient(to right,#ffffff08 1px,transparent 1px)',backgroundSize:style==='image'&&banner?'cover':'44px 100%'}}><span className="mr-2 h-9 w-[3px] shrink-0 rounded" style={{backgroundColor:color}}/><Icon className="mr-2 h-4 w-4 shrink-0 text-white"/><span className="min-w-0"><span className="block truncate text-[11px] font-semibold text-white">{title||'Untitled event'}</span><span className="block text-[9px] text-white/70">{hasStart?dateText:'No dates set'}{hasEnd?' · Time Period':''}</span></span></div>}
+    {!embedded&&<div aria-label="Event preview" className="relative flex min-h-[76px] items-center overflow-hidden rounded bg-cover bg-center px-3" style={{backgroundImage:style==='image'&&banner?`linear-gradient(#202222b3,#202222b3),url("${bannerSrc}")`:'linear-gradient(to right,#ffffff08 1px,transparent 1px)',backgroundSize:style==='image'&&banner?'cover':'44px 100%'}}><span className="mr-2 h-9 w-[3px] shrink-0 rounded" style={{backgroundColor:color}}/><Icon className="mr-2 h-4 w-4 shrink-0 text-white"/><span className="min-w-0"><span className="block truncate text-[11px] font-semibold text-white">{title||'Untitled event'}</span><span className="block text-[9px] text-white/70">{hasStart?dateText:'No dates set'}{hasEnd?' · Time Period':''}</span></span></div>}
     <form className="space-y-3" onSubmit={e=>{e.preventDefault();save();}} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();save();}}}>
       {!current&&<details className="text-[10px] text-muted-foreground"><summary className="cursor-pointer">Use an existing note</summary><input aria-label="Find an existing note" className={`${timeField} mt-2 w-full`} placeholder="Search notes…" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<div className="mt-1 max-h-28 overflow-auto">{rows.filter(row=>row.node.title.toLocaleLowerCase().includes(query.toLocaleLowerCase())).slice(0,30).map(row=><button key={row.node.id} style={{color:row.node.color || undefined}} type="button" className="block w-full rounded p-2 text-left text-xs hover:bg-white/5" onClick={()=>choose(row.node.id)}>{row.node.title}</button>)}</div>}</details>}
       <div className="flex gap-1"><Popover open={iconOpen} onOpenChange={setIconOpen}><PopoverTrigger asChild><button type="button" aria-label="Event icon" className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-white/10"><Icon className="h-4 w-4"/></button></PopoverTrigger><PopoverContent align="start" className="max-h-[min(calc(100dvh-1.5rem),var(--radix-popover-content-available-height))] w-[min(36rem,calc(100vw-1.5rem))] overflow-y-auto font-sans"><div className="grid grid-cols-8 gap-1 sm:grid-cols-12">{NOTE_ICONS.map(value=><button key={value.key} type="button" title={value.label} aria-label={`Choose icon ${value.label}`} className="rounded p-2 hover:bg-accent" onClick={()=>{setIcon(value.key);setIconOpen(false);}}><value.Cmp className="h-4 w-4"/></button>)}</div></PopoverContent></Popover><input aria-label="Event title" required maxLength={500} style={{color:chosen?.node.color || undefined}} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Event title" className="h-8 min-w-0 flex-1 rounded border border-white/10 bg-black/10 px-2 text-[11px] outline-none focus:border-white/40"/></div>
@@ -113,7 +106,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
         {hasEnd&&<><span className="font-semibold">End</span><DateButton label="End" calendar={calendar} value={to} optional={!hasEndDate} precision={endPrecision} onChange={(value,detail)=>{setTo(value);setKind('period');setEndPrecision(detail);setEndDirty(true);setHasEndDate(true);}} onClear={()=>setKind('event')}/></>}
       </div>
       <details><summary className="cursor-pointer text-[11px] text-muted-foreground">Appearance & links</summary><div className="mt-2 grid grid-cols-[52px_minmax(0,1fr)] items-center gap-2 text-[11px]">
-        <span className="font-semibold">Style</span><Popover><PopoverTrigger asChild><button type="button" aria-label="Event style" className="flex h-8 items-center gap-2 rounded border border-white/10 bg-black/10 px-2">{style==='image'?<ImageIcon className="h-3.5 w-3.5"/>:<Palette className="h-3.5 w-3.5"/>}{style==='image'?'Image':'Color'}<ChevronDown className="ml-auto h-3 w-3 text-muted-foreground"/></button></PopoverTrigger><PopoverContent align="end" className="w-60 space-y-3 font-sans"><div className="flex gap-2">{(['image','color'] as const).map(value=><button type="button" key={value} aria-pressed={style===value} className={`${timeButton} aria-pressed:bg-accent`} onClick={()=>setStyle(value)}>{value==='image'?'Image':'Color'}</button>)}</div>{style==='image'?<><label className={`${timeButton} cursor-pointer`}>{banner?'Change image':'Upload image'}<input type="file" aria-label="Upload event banner" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void uploadBanner(file);}}/></label>{banner&&<img src={banner} alt="Event image preview" className="h-20 w-full rounded object-cover"/>}{loadingBanner&&<p role="status" className="text-xs">Preparing image…</p>}</>:<ColourPalette label="Event card color" value={cardColor} onChange={value=>setCardColor(value||undefined)}/>}</PopoverContent></Popover>
+        <span className="font-semibold">Style</span><Popover><PopoverTrigger asChild><button type="button" aria-label="Event style" className="flex h-8 items-center gap-2 rounded border border-white/10 bg-black/10 px-2">{style==='image'?<ImageIcon className="h-3.5 w-3.5"/>:<Palette className="h-3.5 w-3.5"/>}{style==='image'?'Image':'Color'}<ChevronDown className="ml-auto h-3 w-3 text-muted-foreground"/></button></PopoverTrigger><PopoverContent align="end" className="w-60 space-y-3 font-sans"><div className="flex gap-2">{(['image','color'] as const).map(value=><button type="button" key={value} aria-pressed={style===value} className={`${timeButton} aria-pressed:bg-accent`} onClick={()=>setStyle(value)}>{value==='image'?'Image':'Color'}</button>)}</div>{style==='image'?<><button type="button" className={timeButton} onClick={()=>setPickerOpen(true)}>{banner?'Change image':'Choose from Gallery'}</button>{banner&&<img src={bannerSrc} alt="Event image preview" className="h-20 w-full rounded object-cover"/>}</>:<ColourPalette label="Event card color" value={cardColor} onChange={value=>setCardColor(value||undefined)}/>}</PopoverContent></Popover>
         <span className="font-semibold">Link</span><Popover open={linkOpen} onOpenChange={setLinkOpen}><PopoverTrigger asChild><button type="button" aria-label="Link a note to event" className="flex h-8 items-center gap-2 rounded border border-white/10 bg-black/10 px-2 text-muted-foreground"><Plus className="h-3.5 w-3.5"/>Add{links.length>0&&<span className="ml-auto text-[10px]">{links.length}</span>}</button></PopoverTrigger><PopoverContent align="end" className="w-64 space-y-2 font-sans"><label className="flex items-center gap-2"><Search className="h-3.5 w-3.5"/><input aria-label="Search linked notes" value={linkQuery} onChange={e=>setLinkQuery(e.target.value)} placeholder="Search notes…" className="min-w-0 flex-1 bg-transparent text-xs outline-none"/></label><div className="max-h-48 overflow-auto">{rows.filter(row=>row.node.id!==target&&!links.includes(row.node.id)&&row.node.title.toLocaleLowerCase().includes(linkQuery.toLocaleLowerCase())).slice(0,50).map(row=><button type="button" key={row.node.id} className="block w-full rounded p-2 text-left text-xs hover:bg-accent" onClick={()=>{setLinks([...links,row.node.id]);setLinkOpen(false);setLinkQuery('');}}>{row.node.title}</button>)}</div></PopoverContent></Popover>
       </div>
       {links.length>0&&<ul className="space-y-1 pl-[99px]">{links.map(id=>{const linked=rows.find(row=>row.node.id===id)?.node;return <li key={id} className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className="min-w-0 flex-1 truncate" style={{color:linked?.color || undefined}}>{linked?.title??'Unavailable note'}</span><button type="button" aria-label={`Remove event link ${linked?.title??id}`} onClick={()=>setLinks(links.filter(link=>link!==id))}><X className="h-3 w-3"/></button></li>;})}</ul>}
@@ -121,8 +114,9 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       {embedded&&!current?.node.event&&<p className="text-[11px] text-muted-foreground">Set dates to place this note on the timeline.</p>}
       {current&&timelineWarnings(novel.sections[current.section],current.node).map(message=><p key={message} role="status" className="text-xs text-amber-300">{message}</p>)}
       {error&&<p role="alert" className="text-xs text-red-400">{error}</p>}
-      <button type="submit" disabled={loadingBanner||!hasStart||hasEnd&&!hasEndDate} className="mt-1 flex h-8 w-full items-center justify-center gap-2 rounded bg-[#e4e4e7] text-[11px] font-medium text-black hover:bg-white disabled:opacity-50">{embedded?'Apply dates':current?'Update event':hasEnd?'Create Time Period':'Create event'}<span className="text-[10px] text-black/45">Ctrl + ↵</span></button>
+      <button type="submit" disabled={!hasStart||hasEnd&&!hasEndDate} className="mt-1 flex h-8 w-full items-center justify-center gap-2 rounded bg-[#e4e4e7] text-[11px] font-medium text-black hover:bg-white disabled:opacity-50">{embedded?'Apply dates':current?'Update event':hasEnd?'Create Time Period':'Create event'}<span className="text-[10px] text-black/45">Ctrl + ↵</span></button>
     </form>
+    <GalleryImagePicker novel={novel} open={pickerOpen} onOpenChange={setPickerOpen} onPick={ref=>setBanner(ref)}/>
 </>;
   if(embedded)return <section aria-label="Timeline note settings" className="font-sans">{content}</section>;
   return <Dialog open onOpenChange={value=>{if(!value)onClose();}}><DialogContent className="max-h-[90dvh] max-w-[calc(100vw-24px)] gap-3 overflow-y-auto rounded-xl border-border bg-card p-4 font-sans sm:max-w-[360px]"><DialogHeader><DialogTitle>{current?'Edit dates':hasEnd?'Add Time Period':'Add event'}</DialogTitle><DialogDescription className="sr-only">Set the type, dates and appearance of this note.</DialogDescription></DialogHeader>{content}</DialogContent></Dialog>;

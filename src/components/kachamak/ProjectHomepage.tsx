@@ -13,18 +13,20 @@ import {useHomepageDrag} from './useHomepageDrag';
 import {HomeArtwork} from './HomeArtwork';
 import {HomeArtworkEditor} from './HomeArtworkEditor';
 import {HomeImagePlaceholder} from './HomeImagePlaceholder';
+import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import {useOpenWorkspaceTab} from './WorkspaceTabs';
 
-function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>, pages:Map<string,string>) {
+function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>, pages:Map<string,string>, gallery:Novel['gallery']) {
   const target=block.target;
   const note=target?.kind==='note' ? notes.get(target.id) : undefined;
   const destination=target?.kind==='page' ? (pages.get(target.id) ?? 'Unavailable page') : target?.kind==='tab' ? TABS.find(t=>t.key===target.tab)?.label :
     target?.kind==='web' ? new URL(target.url).hostname : note?.title;
   return {
     title:block.title || destination,
-    image:block.imageCutout || block.image || note?.image,
+    source:block.image || note?.image,
+    image:block.imageCutout || projectImageSrc(gallery,block.image || note?.image),
     name:block.title || destination || block.text.split('\n')[0] || (target?.kind==='note'?'Unavailable note':'Image'),
   };
 }
@@ -66,7 +68,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   useEffect(()=>{if(page.locked){setEditor(null);setArtwork(null);}else setPreviewId(null);setMessage('');},[page.locked]);
   const edit=(original?:HomeBlock,cell?:HomeCell)=>{captureOpener();setMessage('');setEditor({original,cell:original?.cell??cell});};
   const preview=page.blocks.find(block=>block.id===previewId);
-  const details=preview&&blockDisplay(preview,byId,titles);
+  const details=preview&&blockDisplay(preview,byId,titles,novel.gallery);
   const describe=(target:HomeTarget)=>target.kind==='page'?(titles.get(target.id)??'Unavailable page'):target.kind==='note'?(byId.get(target.id)?.title||'Unavailable note'):target.kind==='web'?new URL(target.url).hostname:(TABS.find(t=>t.key===target.tab)?.label??target.tab);
   const openTarget=(target:HomeTarget)=>{
     setMessage('');
@@ -89,7 +91,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   for(const b of roots)if(b.layout==='row')lanes.set(b.id,Array.from({length:b.columns!},()=>[]));
   for(const b of page.blocks)if(b.cell)lanes.get(b.cell.rowId)?.[b.cell.column]?.push(b);
   function renderBlock(block:HomeBlock,index:number,count:number):React.ReactNode {
-    const display=blockDisplay(block,byId,titles);
+    const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
     const editButton={type:'button' as const,draggable:!page.locked,onDragStart:(e:React.DragEvent<HTMLButtonElement>)=>drag.start(e,block.id,row),onDragEnd:drag.finish,
@@ -115,7 +117,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
           })}
         </div>
       </div>:emptyImage&&!page.locked?(
-        <HomeImagePlaceholder onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
+        <HomeImagePlaceholder novel={novel} onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
       ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
         page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
           <button {...editButton} aria-label={page.locked?name:'Edit '+name} title={page.locked?undefined:editButton.title} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
@@ -126,7 +128,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
           block.target&&<button type="button" aria-label={name} className="absolute inset-0 w-full" onClick={()=>activate(block)}/>}
       </div>}
       {!page.locked&&display.image&&!row&&<Button size="icon" variant="outline" className="home-arrange pointer-events-none absolute right-2 top-2 z-[1] size-8 bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
-        aria-label={'Reposition image: '+name} title="Reposition image" onClick={()=>{captureOpener();setArtwork({block,src:block.image||display.image!});}}><Crop/></Button>}
+        aria-label={'Reposition image: '+name} title="Reposition image" onClick={()=>{captureOpener();setArtwork({block,src:display.source||display.image!});}}><Crop/></Button>}
       {hint&&<span aria-hidden="true" className={`pointer-events-none absolute z-10 rounded-full bg-amber-400 ${hint.axis==='row'
         ? `inset-x-0 h-1 ${hint.side==='before'?'-top-2':'-bottom-2'}` : `inset-y-0 w-1 ${hint.side==='before'?'-left-2':'-right-2'}`}`}/>}
       {!page.locked&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
@@ -159,9 +161,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {roots.map((block,index)=>renderBlock(block,index,roots.length))}
       </div>
     </div>
-    {!page.locked&&artwork&&<HomeArtworkEditor src={artwork.src} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
+    {!page.locked&&artwork&&<HomeArtworkEditor src={projectImageSrc(novel.gallery,artwork.src)!} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
       onSave={options=>change({type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
-    {!page.locked&&editor&&<HomeBlockEditor original={editor.original} cell={editor.cell} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block})}/>}
+    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block})}/>}
     {page.locked&&preview&&details&&<Dialog open onOpenChange={open=>{if(!open){setPreviewId(null);restoreFocus();}}}>
       <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>{details.title||'Block preview'}</DialogTitle></DialogHeader>

@@ -1,5 +1,6 @@
 "use client";
 
+import {projectImageSrc} from '@/lib/kachamak/project-image';
 import { createContext, useContext, useEffect, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react";
 import { Archive, ArrowUpDown, BookOpen, ChevronDown, ChevronRight, Download, FolderOpen, Layers, LayoutGrid, List, MoreVertical, Plus, Search } from "lucide-react";
 import {saveWebLibrary} from "@/lib/kachamak/cloud-library";
@@ -59,7 +60,7 @@ function collectionPath(collections: Collection[], id: string | null): Collectio
 function Cover({ novel, small = false }: { novel: Novel; small?: boolean }) {
   // The existing project cover is a background + icon; keep that user data intact.
   return <span data-project-cover aria-hidden="true" className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-r-md border border-[#d7b469]/20 shadow-[4px_5px_14px_#0007] ${small ? "h-12 w-8 text-xl" : "aspect-[2/3] w-full text-5xl"}`} style={{ background: novel.cover?.bg || "linear-gradient(135deg,#30291f,#171717)" }}>
-    {novel.cover.image?<img src={novel.cover.image} alt="" className="absolute inset-0 h-full w-full object-cover"/>:<>
+    {novel.cover.image?<img src={projectImageSrc(novel.gallery,novel.cover.image)} alt="" className="absolute inset-0 h-full w-full object-cover"/>:<>
     <span className="absolute inset-y-0 left-0 w-[7%] border-r border-black/30 bg-black/20" />
     <span className="absolute inset-[8%] border border-white/15" />
     <span className="drop-shadow-lg">{novel.cover?.icon || <BookOpen className={small ? "h-4 w-4" : "h-12 w-12 text-[#dbc38d]"} />}</span>

@@ -1,4 +1,4 @@
-import { validCoverImage } from './project-settings';
+import {validProjectImage} from './project-image';
 export const DEFAULT_ERA_COLOR='#8b949e';
 // 13.8 billion Gregorian years fit exactly in integer minutes. Leave headroom
 // below MAX_SAFE_INTEGER for calendar-day arithmetic and viewport rounding.
@@ -120,7 +120,7 @@ export function validCalendar(value:unknown):value is StoryCalendar {
 export function validEvent(value:unknown):value is StoryEvent {
   if(!value||typeof value!=='object')return false;
   const e=value as StoryEvent;
-  return integer(e.start,-TIMELINE_LIMIT,TIMELINE_LIMIT)&&(e.end===undefined||integer(e.end,e.start,TIMELINE_LIMIT))&&(e.groupId===undefined||typeof e.groupId==='string')&&['year','month','day','time'].includes(e.precision)&&(e.endPrecision===undefined||['year','month','day','time'].includes(e.endPrecision))&&validCoverImage(e.banner)&&(e.cardColor===undefined||/^#[a-f0-9]{6}$/i.test(e.cardColor))&&(e.cardOpacity===undefined||Number.isFinite(e.cardOpacity)&&e.cardOpacity>=0&&e.cardOpacity<=1)&&(e.cardStyle===undefined||['image','color'].includes(e.cardStyle))&&(e.cardDetail===undefined||['title','dates','synopsis'].includes(e.cardDetail))&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
+  return integer(e.start,-TIMELINE_LIMIT,TIMELINE_LIMIT)&&(e.end===undefined||integer(e.end,e.start,TIMELINE_LIMIT))&&(e.groupId===undefined||typeof e.groupId==='string')&&['year','month','day','time'].includes(e.precision)&&(e.endPrecision===undefined||['year','month','day','time'].includes(e.endPrecision))&&validProjectImage(e.banner)&&(e.cardColor===undefined||/^#[a-f0-9]{6}$/i.test(e.cardColor))&&(e.cardOpacity===undefined||Number.isFinite(e.cardOpacity)&&e.cardOpacity>=0&&e.cardOpacity<=1)&&(e.cardStyle===undefined||['image','color'].includes(e.cardStyle))&&(e.cardDetail===undefined||['title','dates','synopsis'].includes(e.cardDetail))&&(e.type===undefined||e.type==='event'&&e.end===undefined||e.type==='period'&&e.end!==undefined&&e.end>e.start);
 }
 export function validTimelineExtra(t:TimelinePreferences) {
   return (t.calendar===undefined||validCalendar(t.calendar))&&

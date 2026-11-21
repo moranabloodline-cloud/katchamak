@@ -1,4 +1,5 @@
 'use client';
+import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {Check,ChevronDown,GitFork,Network,Plus,UserRound,X} from 'lucide-react';
 import type {FamilyRelationship,NoteNode,Novel} from '@/lib/kachamak/types';
@@ -149,7 +150,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
           return <button type="button" key={person.id} aria-label={'Preview '+person.title} title={person.title} onClick={()=>setPreview(person.id)}
             className="absolute flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-left shadow-sm hover:border-amber-400/60 focus-visible:outline-amber-400"
             style={{left:x,top:y,width:w,height:h}}>
-            {person.image?<img src={person.image} alt="" className="size-9 shrink-0 rounded-full object-cover"/>:<span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted" style={{color:person.color||undefined}}><Icon className="size-4"/></span>}
+            {person.image?<img src={projectImageSrc(novel.gallery,person.image)} alt="" className="size-9 shrink-0 rounded-full object-cover"/>:<span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted" style={{color:person.color||undefined}}><Icon className="size-4"/></span>}
             <span className="line-clamp-2 min-w-0 flex-1 break-words text-center text-sm font-semibold leading-tight" style={{color:person.color || undefined}}>{person.title}</span>
           </button>;
         })}

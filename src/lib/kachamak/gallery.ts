@@ -1,4 +1,4 @@
-import {validCoverImage} from './project-settings';
+import {validCoverImage} from './project-image';
 
 type Item = {id:string; name:string; parentId:string|null};
 export type GalleryEntry = Item & ({kind:'folder'} | {kind:'image'; image:string});

@@ -1,5 +1,5 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
-import { validCoverImage } from './project-settings';
+import {validProjectImage, validCoverImage} from './project-image';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
@@ -150,7 +150,7 @@ function validBlock(block: HomeBlock) {
   return !!block && typeof block.id === 'string' && !!block.id &&
     HOME_LAYOUTS.includes(block.layout) && ['standard','wide','full'].includes(block.width) &&
     typeof block.title === 'string' && typeof block.text === 'string' &&
-    validCoverImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
+    validProjectImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
     (block.cell===undefined || (!!block.cell && typeof block.cell.rowId==='string' && Number.isInteger(block.cell.column))) &&
     (block.layout!=='row' || (!block.cell && Number.isInteger(block.columns) && block.columns!>=1 && block.columns!<=6)) &&
     (block.layout!=='video' || !!youtubeVideoId(block.videoUrl)) &&
