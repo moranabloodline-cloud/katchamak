@@ -809,7 +809,7 @@ export const useKachamak = create<KachamakState>()(
         const target = findNode(roots, id);
         if (!target) return;
         if(patch.ignoreAutoLinking !== undefined && typeof patch.ignoreAutoLinking !== 'boolean')return;
-        if (patch.kanban !== undefined && !validKanban(patch.kanban)) return;
+        if (patch.kanban !== undefined && (!validKanban(patch.kanban) || patch.kanban.columns.some(col => col.cards.some(card => !availableProjectImage(novel.gallery,card.cover))))) return;
         if(patch.transaction!==undefined && !validTransaction(patch.transaction))return;
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
@@ -1074,7 +1074,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 63,
+      version: 64,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1087,6 +1087,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 64) { /* Kanban card details are optional on existing cards. */ }
         if (version < 63) for (const novel of s.novels ?? []) {
           if (novel.sections && novel.sections.kanban === undefined) novel.sections.kanban = [];
         }

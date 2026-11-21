@@ -1,3 +1,5 @@
+> **2026-11-21 — Detalji Kanban kartice.** Kartica ima oznake u boji, početak i rok, čekliste, članove, završetak i naslovnu sliku iz Galerije knjige. Komentari i istorija izmena prate karticu između kolona.
+
 > **2026-11-21 — Kanban table i podtable.** Svaka knjiga ima sopstveno Kanban stablo. Kartice čuvaju opis, prioritet i rok, a kolone i kartice svoj redosled.
 
 > **2026-11-21 — Trajna istorija izmena po knjizi.** Undo i Redo se vraćaju nakon osvežavanja stranice i ponovnog otvaranja knjige na istom uređaju. Svaki nalog i svaka knjiga imaju zasebnu istoriju.
@@ -665,6 +667,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Detalji Kanban kartice.** Kartica ima oznake u boji, početak i rok, čekliste, članove, završetak i naslovnu sliku iz Galerije knjige. Komentari i istorija izmena prate karticu između kolona. Članovi se dodeljuju po imenu unutar knjige.
 
 - **2026-11-21 — Kanban table i podtable.** Svaka knjiga ima sopstveno Kanban stablo. Kartice čuvaju opis, prioritet i rok, a kolone i kartice svoj redosled. Premeštanje kartice između kolona je jedna Undo/Redo izmena. Table su uključene u rezervnu kopiju knjige.
 

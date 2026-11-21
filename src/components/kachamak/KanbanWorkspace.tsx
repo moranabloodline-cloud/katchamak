@@ -1,13 +1,16 @@
 'use client';
 
 import {useState, type DragEvent} from 'react';
-import {ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Columns3, Ellipsis, Flag, FolderTree, GripVertical, Layers2, Pencil, Plus, SquareKanban, Trash2} from 'lucide-react';
+import {ArrowLeft, ArrowRight, CalendarDays, CircleCheck, ListChecks, MessageSquare, Users, ChevronRight, Columns3, Ellipsis, Flag, FolderTree, GripVertical, Layers2, Pencil, Plus, SquareKanban, Trash2} from 'lucide-react';
+import {KanbanCardDetails} from './KanbanCardDetails';
+import {useAccountPreferences} from '@/lib/kachamak/account-preferences';
+import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
 import {useKachamak} from '@/lib/kachamak/store';
 import {findNode, locateNode, uid} from '@/lib/kachamak/utils';
 import type {Novel, NoteNode} from '@/lib/kachamak/types';
-import {moveKanbanCard, moveKanbanColumn, newKanbanBoard, priorities, type KanbanBoard, type KanbanCard, type KanbanColumn} from '@/lib/kachamak/kanban';
+import {moveKanbanCard, moveKanbanColumn, newKanbanBoard, recordCardActivity, updateKanbanCard, type KanbanBoard, type KanbanCard, type KanbanColumn} from '@/lib/kachamak/kanban';
 import css from './kanban.module.css';
 
 type CardForm = {kind:'card'; columnId:string; card:KanbanCard; existing:boolean};
@@ -28,6 +31,8 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
   const [dragging,setDragging] = useState<string|null>(null);
   const [drop,setDrop] = useState<Placement|null>(null);
   const select = useKachamak(s=>s.select);
+
+  const author = useAccountPreferences(s=>s.displayName.trim()) || 'Workspace user';
 
   function commit(change:(current:KanbanBoard)=>KanbanBoard) {
     const state = useKachamak.getState();
@@ -50,26 +55,44 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
       if (!title) return;
       commit(b=>({columns:form.id ? b.columns.map(col=>col.id===form.id ? {...col,title} : col) :
         [...b.columns,{id:uid(),title,cards:[]}]}));
-    } else if (form.kind === 'card') {
-      const card = {...form.card, title:form.card.title.trim()};
-      if (!card.title) return;
-      commit(b=>{
-        if (!b.columns.some(col=>col.id===form.columnId)) return b;
-        if (!form.existing) return {columns:b.columns.map(col=>col.id===form.columnId ? {...col,cards:[...col.cards,card]} : col)};
-        const origin = b.columns.find(col=>col.cards.some(c=>c.id===card.id));
-        if (!origin) return b;
-        const arranged = origin.id === form.columnId ? b : moveKanbanCard(b,card.id,form.columnId);
-        return {columns:arranged.columns.map(col=>col.id===form.columnId ? {...col,cards:col.cards.map(c=>c.id===card.id?card:c)} : col)};
-      });
     } else if (form.kind === 'delete-column') {
       commit(b=>({columns:b.columns.filter(col=>col.id!==form.id)}));
-    } else {
+    } else if (form.kind === 'delete-card') {
       commit(b=>({columns:b.columns.map(col=>({...col,cards:col.cards.filter(card=>card.id!==form.id)}))}));
     }
     setForm(null);
   }
   function editCard(column:KanbanColumn,card?:KanbanCard) {
     setForm({kind:'card',columnId:column.id,existing:!!card,card:card ?? {id:uid(),title:'',description:'',priority:'Normal',due:''}});
+  }
+  const openedColumn = form?.kind === 'card' ? board.columns.find(col=>form.existing ? col.cards.some(c=>c.id===form.card.id) : col.id===form.columnId) : undefined;
+  const openedCard = form?.kind === 'card' ? (form.existing ? openedColumn?.cards.find(c=>c.id===form.card.id) : form.card) : undefined;
+
+  function changeCard(change:(card:KanbanCard)=>KanbanCard,message?:string) {
+    if(form?.kind !== 'card') return;
+    if(form.existing) {
+      commit(b=>updateKanbanCard(b,form.card.id,current=>{
+        const next=change(current);
+        return message && next!==current ? recordCardActivity(next,author,message) : next;
+      }));
+    } else {
+      setForm(f=>f?.kind==='card' && f.card.id===form.card.id ? {...f,card:change(f.card)} : f);
+    }
+  }
+  function createCard(title:string,description:string) {
+    if(form?.kind!=='card'||form.existing||!title.trim()) return;
+    commit(b=>({columns:b.columns.map(col=>{
+      if(col.id!==form.columnId||col.cards.some(c=>c.id===form.card.id))return col;
+      const created=recordCardActivity({...form.card,title,description},author,'added this card to '+col.title);
+      return {...col,cards:[...col.cards,created]};
+    })}));
+    setForm(null);
+  }
+  function copyCard() {
+    if(!openedCard||!openedColumn)return;
+    const copy=recordCardActivity({...openedCard,id:uid(),title:openedCard.title+' (copy)',feed:[]},author,'copied this card to '+openedColumn.title);
+    commit(b=>({columns:b.columns.map(col=>col.id===openedColumn.id ? {...col,cards:[...col.cards,copy]} : col)}));
+    editCard(openedColumn,copy);
   }
   function placement(event:DragEvent,column:KanbanColumn): Placement {
     const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[data-kanban-card]'));
@@ -88,7 +111,7 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
     if (!dragging || event.dataTransfer.getData(cardDrag)!==JSON.stringify([novel.id,node?.id,dragging])) return;
     event.preventDefault(); event.stopPropagation();
     const target = placement(event,column);
-    commit(b=>moveKanbanCard(b,dragging,target.column,target.before));
+    commit(b=>moveKanbanCard(b,dragging,target.column,target.before,author));
     finishDrag();
   }
   const ancestors:NoteNode[]=[];
@@ -102,10 +125,10 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
   const newColumn = ()=>setForm({kind:'column',id:null,title:''});
   const cardCount = board.columns.reduce((sum,col)=>sum+col.cards.length,0);
   const deleting = form?.kind==='delete-column' || form?.kind==='delete-card';
-  const formTitle = !form?'': form.kind==='card'?(form.existing?'Edit card':'Add card'):form.kind==='column'?
+  const formTitle = !form?'':form.kind==='column'?
     (form.id?'Rename column':'Add column'):form.kind==='board'?(form.parent?'New sub-board':'New board'):
     form.kind==='delete-column'?'Delete column?':'Delete card?';
-  const titleEmpty = form?.kind==='card' ? !form.card.title.trim() : !form?.title.trim();
+  const titleEmpty = !form || form.kind==='card' || !form.title.trim();
 
   return <section aria-label="Kanban workspace" className={css.workspace} style={{zoom}}>
     <header className={css.bar}>
@@ -145,13 +168,20 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
               className={[css.card,dragging===card.id?css.dragging:'',drop?.column===col.id&&drop.before===card.id?css.insert:''].join(' ')}
               draggable onDragStart={e=>{e.dataTransfer.setData(cardDrag,JSON.stringify([novel.id,node.id,card.id]));e.dataTransfer.effectAllowed='move';setDragging(card.id);}} onDragEnd={finishDrag}>
               <button className={css.cardBody} onClick={()=>editCard(col,card)} aria-label={'Edit '+card.title}>
-                <strong>{card.title}</strong>{card.description && <span className={css.excerpt}>{card.description}</span>}
+                {card.cover&&<img className={css.tileCover} alt="" src={projectImageSrc(novel.gallery,card.cover)}/>}
+                {!!card.labels?.length&&<span className={css.tileLabels}>{card.labels.map(label=><span key={label.name} style={{borderColor:label.color}}>{label.name}</span>)}</span>}
+                <strong>{card.complete&&<CircleCheck size={14} className={css.doneIcon} aria-label="Complete"/>}{card.title}</strong>{card.description && <span className={css.excerpt}>{card.description}</span>}
                 {(card.priority!=='Normal'||card.due)&&<span className={css.meta}>{card.priority!=='Normal'&&<span data-priority={card.priority}><Flag size={12}/>{card.priority}</span>}{card.due&&<span><CalendarDays size={12}/><time dateTime={card.due}>{card.due}</time></span>}</span>}
+                {(!!card.checklists?.length||!!card.members?.length||card.feed?.some(e=>e.kind==='comment'))&&<span className={css.meta}>
+                  {!!card.checklists?.length&&<span title="Checklist progress"><ListChecks size={13}/>{card.checklists.reduce((n,list)=>n+list.items.filter(item=>item.done).length,0)}/{card.checklists.reduce((n,list)=>n+list.items.length,0)}</span>}
+                  {!!card.members?.length&&<span title={card.members.join(', ')}><Users size={12}/>{card.members.length}</span>}
+                  {card.feed?.some(e=>e.kind==='comment')&&<span title="Comments"><MessageSquare size={12}/>{card.feed.filter(e=>e.kind==='comment').length}</span>}
+                </span>}
               </button>
               <DropdownMenu><DropdownMenuTrigger asChild><button className={css.cardMenu} aria-label={card.title+' card actions'}><GripVertical size={14}/></button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuItem onSelect={()=>editCard(col,card)}>Edit card</DropdownMenuItem>
-                  <DropdownMenuItem disabled={i===0} onSelect={()=>commit(b=>moveKanbanCard(b,card.id,col.id,col.cards[i-1]?.id))}>Move up</DropdownMenuItem>
-                  <DropdownMenuItem disabled={i===col.cards.length-1} onSelect={()=>commit(b=>moveKanbanCard(b,card.id,col.id,col.cards[i+2]?.id??null))}>Move down</DropdownMenuItem>
+                  <DropdownMenuItem disabled={i===0} onSelect={()=>commit(b=>moveKanbanCard(b,card.id,col.id,col.cards[i-1]?.id,author))}>Move up</DropdownMenuItem>
+                  <DropdownMenuItem disabled={i===col.cards.length-1} onSelect={()=>commit(b=>moveKanbanCard(b,card.id,col.id,col.cards[i+2]?.id??null,author))}>Move down</DropdownMenuItem>
                   <DropdownMenuSeparator/><DropdownMenuItem variant="destructive" onSelect={()=>setForm({kind:'delete-card',id:card.id,title:card.title})}>Delete card</DropdownMenuItem>
                 </DropdownMenuContent></DropdownMenu>
             </article>)}
@@ -161,19 +191,17 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
         {!board.columns.length&&<button className={css.addLane} onClick={newColumn}><Columns3 size={19}/>Add first column</button>}
       </div></div>
     </>}
-    <Dialog open={!!form} onOpenChange={open=>{if(!open)setForm(null);}}><DialogContent aria-describedby={undefined} className="sm:max-w-md">
+    {form?.kind==='card' && openedCard && openedColumn && <KanbanCardDetails key={openedCard.id} novel={novel} board={board} card={openedCard}
+      columnId={openedColumn.id} existing={form.existing} author={author} change={changeCard} onCreate={createCard} onClose={()=>setForm(null)}
+      onMove={id=>form.existing ? commit(b=>moveKanbanCard(b,form.card.id,id,null,author)) : setForm({...form,columnId:id})}
+      onDuplicate={copyCard} onDelete={()=>setForm({kind:'delete-card',id:openedCard.id,title:openedCard.title})}/>}
+    <Dialog open={!!form && form.kind!=='card'} onOpenChange={open=>{if(!open)setForm(null);}}><DialogContent aria-describedby={undefined} className="sm:max-w-md">
       <DialogHeader><DialogTitle>{formTitle}</DialogTitle></DialogHeader>
-      {form && <form className={css.form} onSubmit={e=>{e.preventDefault();save();}}>
+      {form && form.kind!=='card' && <form className={css.form} onSubmit={e=>{e.preventDefault();save();}}>
         {deleting ? <p>Delete “{form.title}”{form.kind==='delete-column'?' and all cards in this column':''}?</p> :
-          form.kind==='card' ? <>
-            <label>Card title<input autoFocus required maxLength={240} value={form.card.title} onChange={e=>setForm({...form,card:{...form.card,title:e.target.value}})}/></label>
-            <label>Description<textarea rows={4} value={form.card.description} onChange={e=>setForm({...form,card:{...form.card,description:e.target.value}})}/></label>
-            <label>Column<select value={form.columnId} onChange={e=>setForm({...form,columnId:e.target.value})}>{board.columns.map(col=><option key={col.id} value={col.id}>{col.title}</option>)}</select></label>
-            <div className={css.fields}><label>Priority<select value={form.card.priority} onChange={e=>setForm({...form,card:{...form.card,priority:e.target.value as KanbanCard['priority']}})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
-              <label>Due date<input type="date" max="9999-12-31" value={form.card.due} onChange={e=>setForm({...form,card:{...form.card,due:e.target.value}})}/></label></div>
-          </> : (form.kind==='board'||form.kind==='column')&&<label>{form.kind==='board'?'Board name':'Column name'}<input autoFocus required maxLength={160} value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label>}
+          (form.kind==='board'||form.kind==='column')&&<label>{form.kind==='board'?'Board name':'Column name'}<input autoFocus required maxLength={160} value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label>}
         <DialogFooter><button type="button" className={css.smallButton} onClick={()=>setForm(null)}>Cancel</button>
-          <button type="submit" disabled={!deleting&&titleEmpty} className={deleting?css.danger:css.primary}>{deleting?'Delete':form.kind==='board'?'Create board':form.kind==='card'&&!form.existing?'Add card':form.kind==='column'&&!form.id?'Add column':'Save changes'}</button></DialogFooter>
+          <button type="submit" disabled={!deleting&&titleEmpty} className={deleting?css.danger:css.primary}>{deleting?'Delete':form.kind==='board'?'Create board':form.kind==='column'&&!form.id?'Add column':'Save changes'}</button></DialogFooter>
       </form>}
     </DialogContent></Dialog>
   </section>;

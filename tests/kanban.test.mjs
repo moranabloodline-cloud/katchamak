@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
-import {moveKanbanCard, moveKanbanColumn, newKanbanBoard, validKanban} from '../src/lib/kachamak/kanban.ts';
+import {moveKanbanCard, moveKanbanColumn, newKanbanBoard, validKanban, cardEntry, recordCardActivity, updateKanbanCard} from '../src/lib/kachamak/kanban.ts';
 import {useKachamak, stepWorkspaceHistory, isUsableBackup, normalizeNovelSections} from '../src/lib/kachamak/store.ts';
 import {validCloudLibrary} from '../src/lib/kachamak/cloud-write-validation.mjs';
 import {findNode} from '../src/lib/kachamak/utils.ts';
@@ -60,6 +60,38 @@ delete saved.sections.kanban;
 assert.ok(isUsableBackup(saved));
 normalizeNovelSections(saved);
 assert.deepEqual(saved.sections.kanban,[]);
+const cover='gallery:illustration';
+state().editGallery(bookId,{type:'add',entries:[{kind:'image',id:'illustration',parentId:null,name:'Cover',image:'data:image/png;base64,AAAA'}]});
+const detailed=updateKanbanCard(moved,'a',current=>recordCardActivity({
+  ...current, start:'2027-01-01', complete:true, labels:[{name:'Draft',color:'#879abc'}], members:['Mira'],
+  checklists:[{id:'proof',title:'Proof',items:[{id:'read',text:'Read aloud',done:true}]}],
+  feed:[cardEntry('comment','Mira','Written before the move')], cover,
+},'Mira','completed this card'));
+const withMove=moveKanbanCard(detailed,'a','done',null,'Mira');
+const updated=withMove.columns[2].cards[0];
+assert.equal(updated.feed.at(-1).text,'moved this card from In progress to Done');
+assert.deepEqual(updated.feed.slice(0,-1),detailed.columns[1].cards[0].feed);
+assert.equal(moveKanbanCard(withMove,'a','done',null,'Mira'),withMove);
+for (const invalidPatch of [
+  {members:['Mira','mira']}, {checklists:[{id:'x',title:'List'}]}, {complete:'yes'},
+  {feed:[{kind:'comment',author:'Mira',text:'Hi',at:0}]}, {labels:[{name:'X',color:'invalid'}]},
+  {start:'2030-01-01'}, {cover:'https://example.com/photo.png'},
+]) {
+  assert.equal(validKanban(updateKanbanCard(withMove,'a',c=>({...c,...invalidPatch}))),false);
+}
+state().updateNode('kanban',child,{kanban:withMove});
+assert.deepEqual(getBoard(child).kanban,withMove);
+await Promise.resolve();
+state().updateNode('kanban',child,{kanban:updateKanbanCard(withMove,'a',c=>({...c,cover:'gallery:missing'}))});
+assert.deepEqual(getBoard(child).kanban,withMove,'An unavailable cover must be rejected');
+const restored=JSON.parse(JSON.stringify(book()));
+assert.ok(validCloudLibrary({novels:[restored],collections:[]}));
+assert.deepEqual(findNode(restored.sections.kanban,child).kanban.columns[2].cards[0],updated);
+restored.gallery=[];
+assert.equal(isUsableBackup(restored),false);
+assert.throws(()=>state().editGallery(bookId,{type:'remove',id:'illustration'}),/in use/);
+state().deleteNode('kanban',child);
+assert.throws(()=>state().editGallery(bookId,{type:'remove',id:'illustration'}),/in use/);
 state().createNovel('Another book','Tester');
 assert.equal(state().novels.find(n=>n.id===state().activeNovelId).sections.kanban.length,0);
 console.log('Kanban ordering, nesting, book isolation, undo/redo, cloud validation and backup round-trip passed.');

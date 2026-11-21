@@ -59,6 +59,9 @@ export function* projectImageRefs(book:Novel, includeEmbedded = false) {
         if (ref) yield ref;
       }
       if(isGalleryImageRef(note.image))yield note.image;
+      for (const column of note.kanban?.columns ?? []) {
+        for (const card of column.cards) if (isGalleryImageRef(card.cover)) yield card.cover;
+      }
       const banner=note.event?.banner;
       if(isGalleryImageRef(banner))yield banner;
       if(note.children?.length)stack.push(note.children);
