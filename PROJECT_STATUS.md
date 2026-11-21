@@ -1,3 +1,5 @@
+> **2026-11-21 — Galerija bez inspektora beleški.** Galerija koristi radnu površinu bez desnog panela Info i Details.
+
 > **2026-11-21 — Finance prikazuje samo Info.** Desni panel u prikazima Dashboard i List otvara Info za izabranu transakciju.
 
 > **2026-11-21 — Prelamanje opisa u Finance.** U panelu Info opis prati širinu polja i čuva ručno unete prelome pasusa.
@@ -619,6 +621,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Galerija.** Uklonjeni su desni inspektor i njegovo dugme za otvaranje iz Galerije. Provereni su koren, folder, pregled slike, povratak na Binder i Finance i ponovno učitavanje.
 
 - **2026-11-21 — Finance inspektor.** Info je jedini tab u desnom panelu za Finance. U probnoj knjizi provereni su koren, folder, transakcija, oba prikaza i osvežavanje stranice, kao i povratak na Binder sa sačuvanim izborom tabova.
 

@@ -482,7 +482,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </>}
       </main>
 
-      {rightPanelOpen ? (
+      {view !== 'gallery' && (rightPanelOpen ? (
         <>
           <Resizer
             side="right"
@@ -531,7 +531,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             </button>
           </div>
         </div>
-      )}
+      ))}
       </div>
     </div>
   );
