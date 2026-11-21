@@ -3,7 +3,7 @@ import {useState} from 'react';
 import {Info,Play} from 'lucide-react';
 import {youtubeVideoId,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
 
-function HomeVideo({id,title,interactive}:{id:string;title:string;interactive:boolean}){
+export function HomeVideo({id,title,interactive}:{id:string;title:string;interactive:boolean}){
   const [playing,setPlaying]=useState(false);
   const poster=<><img alt="" draggable={false} src={'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'} className="absolute inset-0 size-full object-cover opacity-75" onError={e=>{e.currentTarget.hidden=true;}}/><span className="relative grid h-11 w-16 place-items-center rounded-xl bg-red-600 text-white"><Play aria-hidden="true" className="size-6 fill-current"/></span></>;
   const frame='relative grid aspect-video min-h-[200px] w-full place-items-center overflow-hidden rounded-lg bg-zinc-900';

@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import {changeHomepage,validHomepage,homepageEntry} from '../src/lib/kachamak/homepage.ts';
+import {boardRects} from '../src/lib/kachamak/canvas-board.ts';
+import {newNovel} from '../src/lib/kachamak/seed.ts';
+import {isReadableProject} from '../src/lib/kachamak/project-validation.ts';
+import {useKachamak} from '../src/lib/kachamak/store.ts';
+
+const book=newNovel('Canvas tests','Writer');
+book.homepage={locked:true,blocks:[{id:'old',layout:'card',title:'Home',text:'',width:'standard'}]};
+const legacy=structuredClone(book.homepage);
+useKachamak.setState({novels:[book],activeNovelId:book.id});
+const store=useKachamak.getState;
+assert.ok(store().createHomePage(book.id,'home','Act I','board'));
+const id=store().activeHomePageId;
+assert.ok(store().createHomePage(book.id,id,'Scene guide','page'));
+assert.deepEqual(store().novels[0].homepage,legacy);
+const read=()=>homepageEntry(store().novels[0],id);
+function apply(action){assert.ok(store().changeHomepage(book.id,action,id));assert.ok(validHomepage(read()));}
+function add(id,layout,x,y,extra={}){apply({type:'add',block:{id,layout,at:{x,y},width:'standard',title:id,text:'',...extra}});}
+add('a','column',10,20);add('b','column',340,20);
+add('scene','note',75,85,{columnId:'a'});add('other','note',340,76,{columnId:'b'});
+add('edge','line',0,0,{edge:{from:'scene',to:'other'}});
+apply({type:'boardMove',id:'scene',at:{x:350,y:40},columnId:'b',before:'other'});
+const heights=new Map([['scene',120],['other',90]]);
+let rects=boardRects(read().blocks,heights);
+assert.equal(rects.get('scene').x,354);assert.ok(rects.get('scene').y<rects.get('other').y);
+apply({type:'boardMove',id:'b',at:{x:-100,y:-80}});
+rects=boardRects(read().blocks,heights);
+assert.equal(rects.get('scene').x,-86);
+assert.deepEqual(read().blocks.find(b=>b.id==='edge').edge,{from:'scene',to:'other'});
+assert.equal(changeHomepage(read(),{type:'boardMove',id:'a',at:{x:0,y:0},columnId:'a'}),null);
+add('check','todo',0,0,{tasks:[{text:'Find the clue',done:false}]});
+apply({type:'task',id:'check',index:0,done:true});
+apply({type:'lock',locked:true});
+assert.equal(changeHomepage(read(),{type:'boardMove',id:'scene',at:{x:5,y:8}}),null);
+assert.equal(changeHomepage(read(),{type:'task',id:'check',index:0,done:false}),null);
+assert.ok(isReadableProject(JSON.parse(JSON.stringify(store().novels[0]))));
+apply({type:'lock',locked:false});
+apply({type:'removeBoardItem',original:read().blocks.find(b=>b.id==='b'),positions:Object.fromEntries([...rects].map(([id,{x,y}])=>[id,{x,y}]))});
+assert.deepEqual(read().blocks.find(b=>b.id==='scene').at,{x:-86,y:-24});
+apply({type:'removeBoardItem',original:read().blocks.find(b=>b.id==='scene'),positions:{}});
+assert.ok(!read().blocks.find(b=>b.id==='edge'));
+assert.equal(validHomepage({...read(),blocks:[{id:'bad',layout:'line',width:'standard',title:'',text:'',edge:{from:'a',to:'absent'}}]}),false);
+assert.deepEqual(store().novels[0].homepage,legacy);
+console.log('Canvas nested creation, existing pages, column order and geometry, connected moves, lock, cleanup and backup round trip passed.');

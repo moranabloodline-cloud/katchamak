@@ -53,7 +53,7 @@ export function HomeBlockEditor({novel,original,cell,notes,pages,onSave,onClose}
     const block:HomeBlock={...draft,title:draft.title.trim(),target,columns:row?draft.columns:undefined,
       links:list?links:undefined,videoUrl:video?draft.videoUrl?.trim():undefined};
     if(onSave(block))onClose();
-    else setError('The homepage changed. Reopen this block to edit its latest version.');
+    else setError('The page changed. Reopen this block to edit its latest version.');
   };
   return <Dialog open onOpenChange={open=>{if(!open)onClose();}}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
@@ -83,7 +83,7 @@ export function HomeBlockEditor({novel,original,cell,notes,pages,onSave,onClose}
           <Button type="button" variant="ghost" className="justify-self-end" onClick={()=>patch({links:links.filter(l=>l.id!==link.id)})}><Trash2/>Remove link</Button>
         </fieldset>)}<Button type="button" variant="outline" onClick={()=>patch({links:[...links,{id:crypto.randomUUID(),label:'',target:{kind:'note',id:''}}]})}><Plus/>Add link</Button></div>}
         {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">{original?'Save block':'Add to homepage'}</Button></div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">{original?'Save block':'Add to page'}</Button></div>
       </form>
       {adjusting&&image&&<HomeArtworkEditor block={draft} src={image} onClose={()=>setAdjusting(false)} onSave={options=>{patch(options);return true;}}/>}
     </DialogContent>

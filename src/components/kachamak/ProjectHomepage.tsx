@@ -17,6 +17,12 @@ import {HomeImagePlaceholder} from './HomeImagePlaceholder';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
+import './canvas.css';
+import {CanvasBoard} from './CanvasBoard';
+import {CanvasTools} from './CanvasTools';
+import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
+import {CanvasItemFace} from './CanvasItemFace';
+import type {CanvasTool} from '@/lib/kachamak/canvas-board';
 import {useOpenWorkspaceTab} from './WorkspaceTabs';
 
 function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>, pages:Map<string,string>, gallery:Novel['gallery']) {
@@ -67,6 +73,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
+  const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
   const [message,setMessage]=useState('');
   const opener=useRef<HTMLElement|null>(null);
   const addRowButton=useRef<HTMLButtonElement>(null);
@@ -79,8 +86,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const captureOpener=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const restoreFocus=()=>requestAnimationFrame(()=>{if(opener.current?.isConnected)opener.current.focus();});
   const closeEditor=()=>{setEditor(null);restoreFocus();};
-  useEffect(()=>{if(page.locked){setEditor(null);setArtwork(null);}else setPreviewId(null);setMessage('');},[page.locked]);
-  const edit=(original?:HomeBlock,cell?:HomeCell)=>{captureOpener();setMessage('');setEditor({original,cell:original?.cell??cell});};
+  useEffect(()=>{if(page.locked){setEditor(null);setItem(null);setArtwork(null);}else setPreviewId(null);setMessage('');},[page.locked]);
+  const edit=(original?:HomeBlock,cell?:HomeCell)=>{captureOpener();setMessage('');if(original&&['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(original.layout))setItem({initial:original,original});
+    else setEditor({original,cell:original?.cell??cell});};
   const preview=page.blocks.find(block=>block.id===previewId);
   const details=preview&&blockDisplay(preview,byId,titles,novel.gallery);
   const describe=(target:HomeTarget)=>target.kind==='page'?(titles.get(target.id)??'Unavailable page'):target.kind==='note'?(byId.get(target.id)?.title||'Unavailable note'):target.kind==='web'?new URL(target.url).hostname:(TABS.find(t=>t.key===target.tab)?.label??target.tab);
@@ -100,6 +108,13 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     else if(block.target)openTarget(block.target);
     else {captureOpener();setPreviewId(block.id);}
   };
+  if(page.mode==='board')return <CanvasBoard novel={novel} page={page} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages}/>;
+  function addTool(kind:CanvasTool){
+    captureOpener();
+    if(kind==='column'){addRow();return;}
+    if(kind==='line'){change({type:'add',block:{id:crypto.randomUUID(),layout:'divider',width:'full',title:'',text:''}});return;}
+    setItem({initial:newCanvasBlock(kind)});
+  }
   const roots=page.blocks.filter(b=>!b.cell);
   const lanes=new Map<string,HomeBlock[][]>();
   for(const b of roots)if(b.layout==='row')lanes.set(b.id,Array.from({length:b.columns!},()=>[]));
@@ -151,7 +166,10 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
         page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&block.layout!=='card'&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
           <button {...editButton} aria-label={page.locked?name:'Edit '+name} title={page.locked?undefined:editButton.title} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
-      ):<div className="relative min-w-0">
+      ):['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(block.layout)?<div className="cv-page-card">
+        {!page.locked&&<button {...editButton} className="cv-page-grip"><GripVertical size={13}/>Edit {block.layout}</button>}
+        <CanvasItemFace block={block} novel={novel} source={block.target?.kind==='note'?byId.get(block.target.id):undefined} locked={page.locked} open={openTarget} describe={describe} toggle={(index,done)=>change({type:'task',id:block.id,index,done})}/>
+      </div>:<div className="relative min-w-0">
         <HomeDocumentBlock block={block} image={display.image} interactive={page.locked} describe={describe} open={openTarget}/>
         {!page.locked?<button {...editButton} className="absolute inset-0 w-full cursor-grab rounded focus-visible:outline-2 focus-visible:outline-amber-400 active:cursor-grabbing"/>:
           block.target?.kind==='web'?<a aria-label={name} className="absolute inset-0" href={block.target.url} target="_blank" rel="noopener noreferrer"/>:
@@ -169,7 +187,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       </div>}
     </article>;
   }
-  return <section style={{zoom:"var(--workspace-canvas-zoom, 1)"}} aria-label="Project homepage" aria-description={page.title} className="@container col-span-full row-start-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
+  return <div className="cv-page-shell col-span-full row-start-2"><section style={{zoom:"var(--workspace-canvas-zoom, 1)"}} aria-label="Project homepage" aria-description={page.title} className="@container col-span-full row-start-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
     <div className={'pointer-events-none sticky top-0 z-10 flex h-8 shrink-0 items-center justify-end gap-1.5 px-1.5'+(page.locked?' -mb-8':'')}>
       {onShowPages&&<Button size="icon" variant="ghost" className="pointer-events-auto mr-auto size-7 bg-background/90 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
       <div className="pointer-events-auto flex items-center gap-1.5 rounded-md bg-background/90">
@@ -192,6 +210,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {roots.map((block,index)=>renderBlock(block,index,roots.length))}
       </div>
     </div>
+    {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}
     {!page.locked&&artwork&&<HomeArtworkEditor src={projectImageSrc(novel.gallery,artwork.src)!} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
       onSave={options=>change({type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
     {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block})}/>}
@@ -202,5 +221,5 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {preview.text&&<p className="whitespace-pre-wrap break-words">{preview.text}</p>}
       </DialogContent>
     </Dialog>}
-  </section>;
+  </section>{!page.locked&&<CanvasTools onPick={addTool}/>}</div>;
 }

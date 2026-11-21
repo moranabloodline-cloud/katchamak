@@ -89,7 +89,7 @@ export function Workspace() {
   const openTab = useOpenWorkspaceTab(novel);
   const folder = novel && activeTab.startsWith('note:') ? findNodeInNovel(novel,activeTab.slice(5)) : null;
   const formatTab = pageView==='homepage'?'homepage':activeTab;
-  const formatLabel = formatTab==='homepage'?'Homepage':folder?.node.title??TABS.find(tab=>tab.key===activeTab)?.label??'Untitled tab';
+  const formatLabel = formatTab==='homepage'?'Canvas':folder?.node.title??TABS.find(tab=>tab.key===activeTab)?.label??'Untitled tab';
   useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
 

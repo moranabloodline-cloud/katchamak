@@ -1,7 +1,9 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
-export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video'] as const;
+import {validCanvasFields,validBoard,moveOnBoard,type CanvasFields,type BoardMove} from './canvas-board';
+
+export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
 export type HomeCell = {rowId:string; column:number};
 export type HomeLink = {id:string; label:string; target:HomeTarget};
@@ -26,7 +28,7 @@ function validFrame(frame:HomeImageFrame|undefined) {
     within(frame.x,0,1) && within(frame.y,0,1) && typeof frame.fade==='boolean';
 }
 
-export interface HomeBlock {
+export interface HomeBlock extends CanvasFields {
   id: string;
   layout: HomeLayout;
   width: 'standard' | 'wide' | 'full';
@@ -41,7 +43,7 @@ export interface HomeBlock {
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { title?:string; mode?:'page'|'board'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -52,7 +54,7 @@ export interface HomePageEntry extends Homepage {
 
 // Keep the original canvas at the same storage location, including for old backups.
 export function homepageEntry(novel: Novel, id: string): HomePageEntry | undefined {
-  if (id === HOME_ROOT) return {...(novel.homepage ?? EMPTY_HOMEPAGE), id, title:'Homepage', parentId:null};
+  if (id === HOME_ROOT) return {...(novel.homepage ?? EMPTY_HOMEPAGE), id, title:novel.homepage?.title||'Homepage', parentId:null};
   return novel.homePages?.find(page => page.id === id);
 }
 
@@ -64,7 +66,7 @@ export function homepageRows(novel: Novel) {
     siblings.push(page);
     children.set(page.parentId, siblings);
   }
-  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean}[] = [];
+  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean; mode?:Homepage['mode']}[] = [];
   const pending = children.get(null)!.map(page => ({page, path:page.title, depth:0})).reverse();
   const visited = new Set<string>();
   while (pending.length) {
@@ -72,7 +74,7 @@ export function homepageRows(novel: Novel) {
     if (visited.has(page.id)) continue;
     visited.add(page.id);
     const nested = children.get(page.id) ?? [];
-    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0});
+    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0, mode:page.mode});
     for (let i = nested.length - 1; i >= 0; i--) {
       const child = nested[i];
       pending.push({page:child, path:path+' / '+child.title, depth:depth+1});
@@ -149,7 +151,7 @@ function validTarget(value: HomeTarget | undefined) {
 function validBlock(block: HomeBlock) {
   return !!block && typeof block.id === 'string' && !!block.id &&
     HOME_LAYOUTS.includes(block.layout) && ['standard','wide','full'].includes(block.width) &&
-    typeof block.title === 'string' && typeof block.text === 'string' &&
+    validCanvasFields(block) && (block.layout!=='audio' || isWebsite(block.audio)) && typeof block.title === 'string' && typeof block.text === 'string' &&
     validProjectImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
     (block.cell===undefined || (!!block.cell && typeof block.cell.rowId==='string' && Number.isInteger(block.cell.column))) &&
     (block.layout!=='row' || (!block.cell && Number.isInteger(block.columns) && block.columns!>=1 && block.columns!<=6)) &&
@@ -160,16 +162,19 @@ export function validHomepage(value: unknown): boolean {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object') return false;
   const page = value as Homepage;
+  if(page.title!==undefined && typeof page.title!=='string')return false;
   if(typeof page.locked!=='boolean' || !Array.isArray(page.blocks) || !page.blocks.every(validBlock))return false;
   const rows=new Map(page.blocks.filter(b=>b.layout==='row').map(b=>[b.id,b.columns]));
-  return (page.width===undefined || page.width==='wide' || page.width==='reading')
+  return validBoard(page) && (page.width===undefined || page.width==='wide' || page.width==='reading')
     && new Set(page.blocks.map(b=>b.id)).size===page.blocks.length
     && page.blocks.every(b=>!b.cell || columnExists(b.cell.column,rows.get(b.cell.rowId)));
 }
 
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
-export type HomeChange =
+export type HomeChange = BoardMove
+  | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
+  | {type:'task'; id:string; index:number; done:boolean}
   | { type: 'lock'; locked: boolean }
   | { type:'width'; width:'reading'|'wide' }
   | { type:'into'; id:string; cell:HomeCell }
@@ -180,8 +185,24 @@ export type HomeChange =
   | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  const next=applyHomeChange(page,action);
+  return next && validBoard(next) ? next : null;
+}
+function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
+  if(action.type==='boardMove')return page.mode==='board'?moveOnBoard(page,action):null;
+  if(action.type==='removeBoardItem'){
+    const original=page.blocks.find(b=>b.id===action.original.id);
+    if(page.mode!=='board'||!original||JSON.stringify(original)!==JSON.stringify(action.original))return null;
+    return {...page,blocks:page.blocks.filter(b=>b.id!==original.id && b.edge?.from!==original.id && b.edge?.to!==original.id)
+      .map(b=>b.columnId===original.id?{...b,columnId:undefined,at:action.positions[b.id]??b.at}:b)};
+  }
+  if(action.type==='task'){
+    const item=page.blocks.find(b=>b.id===action.id);
+    if(!item?.tasks?.[action.index])return null;
+    return {...page,blocks:page.blocks.map(b=>b!==item?b:{...b,tasks:b.tasks!.map((t,i)=>i===action.index?{...t,done:action.done}:t)})};
+  }
   if (action.type === 'width') return {...page,width:action.width};
   if (action.type === 'add') {
     if (!validBlock(action.block) || (action.block.cell && !validCell(page.blocks,action.block.cell)) || page.blocks.some(b => b.id === action.block.id)) return null;

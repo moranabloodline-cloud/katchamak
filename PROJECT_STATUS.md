@@ -1,3 +1,5 @@
+> **2026-11-21 — Canvas.** Postojeće Homepage stranice zadržavaju raspored i veze. Stablo podržava imenovane stranice i slobodne table sa kolonama, karticama, vezama i crtanjem.
+
 > **2026-11-21 — Homepage bez desnog panela.** U zaključanom prikazu i pri uređivanju uklonjen je red Info, Details, Mentions i Family. Alatna traka koristi širinu radne površine.
 
 > **2026-11-21 — Uklonjen lenjir iz editora.** Beleške u prikazima Write, Split i Continuous koriste ceo prostor ispod alatne trake. Podešavanja stranice su u meniju Format.
@@ -637,6 +639,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Canvas stranice i table.** Provereni su dodavanje svih 15 elemenata, prevlačenje scene između kolona, veza koja prati karticu, zaključavanje, čuvanje i otvaranje originalne beleške posle osvežavanja.
 
 - **2026-11-21 — Homepage.** Provereni su zaključavanje, otključavanje, povratak iz Galerije i otvaranje posle osvežavanja. Binder pri povratku obnavlja izabranu karticu i širinu panela.
 

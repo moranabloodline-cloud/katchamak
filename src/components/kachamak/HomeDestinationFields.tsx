@@ -19,7 +19,7 @@ export function HomeDestinationFields({notes,pages,target,onChange,optional=fals
         case 'web':onChange({kind:'web',url:''});break;
         default:onChange(undefined);
       }
-    }}>{optional&&<option value="none">No destination</option>}<option value="page">Homepage</option><option value="note">Book note</option><option value="tab">Workspace tab</option><option value="web">Website</option></select></Label>
+    }}>{optional&&<option value="none">No destination</option>}<option value="page">Canvas page or board</option><option value="note">Book note</option><option value="tab">Workspace tab</option><option value="web">Website</option></select></Label>
     {target?.kind==='page'&&<Label className="grid gap-2">Page<select className={homeSelectClass} required value={target.id} onChange={e=>onChange({kind:'page',id:e.target.value})}>
       <option value="">Choose a page</option>{pages.map(page=><option key={page.id} value={page.id}>{page.path}</option>)}
     </select></Label>}

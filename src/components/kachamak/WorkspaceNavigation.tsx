@@ -42,7 +42,7 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
     const query=q.trim().toLocaleLowerCase();
     if(!novel || !query)return [];
     const pages=includeHomePages ? homepageRows(novel).filter(p=>p.title.toLocaleLowerCase().includes(query))
-      .map(p=>({id:p.id, title:p.title, group:'Homepage', page:true, icon:'', color:undefined})) : [];
+      .map(p=>({id:p.id, title:p.title, group:'Canvas', page:true, icon:'', color:undefined})) : [];
     if(pages.length>=20)return pages.slice(0,20);
     const notes=searchNotes(indexNotes(novel),q).slice(0,20-pages.length).map(({node,section})=>({id:node.id, title:node.title,
       group:TABS.find(t=>t.key===section)?.label ?? section, page:false, icon:noteIconKey(node), color:node.color}));

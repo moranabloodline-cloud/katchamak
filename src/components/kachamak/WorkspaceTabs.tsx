@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Wallet, Images, House, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
+import { Wallet, Images, Workflow, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
 import { useKachamak } from '@/lib/kachamak/store';
 import { type Novel, type TabKey } from '@/lib/kachamak/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -99,8 +99,8 @@ export function WorkspaceTabs({novel,openTab}:{novel:Novel;openTab:(key:TabKey)=
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}),useSensor(KeyboardSensor,{coordinateGetter:sortableKeyboardCoordinates,keyboardCodes:{start:['Space'],cancel:['Escape'],end:['Space']}}));
   return <><nav ref={ribbon} aria-label="Workspace sections" className="workspace-ribbon">
     <div className="workspace-ribbon-grid">
-      <button type="button" className="workspace-ribbon-tile" title="Homepage" aria-current={view==='homepage'?'page':undefined} onClick={()=>useKachamak.getState().setView('homepage')}>
-        <House aria-hidden="true" className="text-amber-300"/><span>Homepage</span>
+      <button type="button" className="workspace-ribbon-tile" title="Canvas" aria-current={view==='homepage'?'page':undefined} onClick={()=>useKachamak.getState().setView('homepage')}>
+        <Workflow aria-hidden="true" className="text-amber-300"/><span>Canvas</span>
       </button>
     <DndContext key={novel.id} sensors={sensors} collisionDetection={closestCenter} modifiers={[horizontalOnly]} onDragEnd={({active,over})=>{if(over&&active.id!==over.id)useKachamak.getState().moveWorkspaceTab(novel.id,active.id as TabKey,over.id as TabKey);}} accessibility={{screenReaderInstructions:{draggable:'Press Space to move a tab, Left or Right to choose a position, Space to drop, or Escape to cancel.'},announcements:{onDragStart:({active})=>`Moving ${tabLabel(active.id)}.`,onDragOver:({active,over})=>over?`${tabLabel(active.id)} over ${tabLabel(over.id)}.`:undefined,onDragEnd:({active,over})=>over?`Moved ${tabLabel(active.id)}.`:'Tab order unchanged.',onDragCancel:()=> 'Tab move cancelled.'}}}>
       <SortableContext items={tabs.map(tab=>tab.key)} strategy={horizontalListSortingStrategy}>
