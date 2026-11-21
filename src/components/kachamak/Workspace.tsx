@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { ChevronLeft, EyeOff, LoaderCircle, Minimize2, Save, Settings, Trash2 } from "lucide-react";
 import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
+import { resetZoomUnderPointer } from "@/lib/kachamak/workspace-zoom";
 import { useKachamak } from "@/lib/kachamak/store";
 import { TABS, type SectionKey } from "@/lib/kachamak/types";
 import { WorkspaceBrand } from "./WorkspaceBrand";
@@ -46,7 +47,12 @@ export function Workspace() {
         search?.select();
       }
     };
-    document.addEventListener('keydown',keyboard);return()=>document.removeEventListener('keydown',keyboard);
+    window.addEventListener('keydown', resetZoomUnderPointer, true);
+    document.addEventListener('keydown', keyboard);
+    return () => {
+      window.removeEventListener('keydown', resetZoomUnderPointer, true);
+      document.removeEventListener('keydown', keyboard);
+    };
   },[]);
   const setTreeScope = useKachamak((s) => s.setTreeScope);
   useEffect(()=>{if(useKachamak.getState().treeScope!=="all")setTreeScope("all");},[setTreeScope]);

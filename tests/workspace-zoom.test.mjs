@@ -4,7 +4,7 @@ import {JSDOM} from 'jsdom';
 const {window} = new JSDOM('', {url: 'https://test.local'});
 Object.assign(globalThis, {window, document: window.document});
 const {useKachamak} = await import('../src/lib/kachamak/store');
-const {currentPanelZoom} = await import('../src/lib/kachamak/workspace-zoom');
+const {currentPanelZoom, registerZoomReset, resetZoomUnderPointer} = await import('../src/lib/kachamak/workspace-zoom');
 
 function open(book, tab, view = 'write') {
   useKachamak.setState({activeNovelId: book, activeTab: tab, view});
@@ -39,4 +39,37 @@ assert.equal(value('right'), 2);
 set('right', 0);
 set('right', NaN);
 assert.equal(value('right'), 0.5);
-console.log('Verified zoom isolation by project, tab and pane, legacy defaults and bounds.');
+// JSDOM has no pointing device. Supply the browser's hovered ancestor chain
+// while real keyboard events originate from the focus in the other pane.
+document.body.innerHTML = '<main><section><input id="a"></section><section><input id="b"></section></main>';
+const a = document.getElementById('a'), b = document.getElementById('b');
+a.focus();
+const removeMain = registerZoomReset(document.querySelector('main'), () => set('mid', 1));
+const removePane = registerZoomReset(b.parentElement, () => set('paneB', 1));
+const query = document.querySelectorAll.bind(document);
+document.querySelectorAll = selector => selector === ':hover' ? [document.body, document.querySelector('main'), b.parentElement, b] : query(selector);
+window.addEventListener('keydown', resetZoomUnderPointer, true);
+function press(key, options) {
+  const event = new window.KeyboardEvent('keydown', {key, bubbles:true, cancelable:true, ...options});
+  a.dispatchEvent(event);
+  return event.defaultPrevented;
+}
+assert.equal(press('0', {}), false);
+assert.equal(press('0', {ctrlKey:true, shiftKey:true}), false);
+assert.equal(press('0', {ctrlKey:true, altKey:true}), false);
+assert.equal(press('0', {ctrlKey:true, isComposing:true}), false);
+assert.equal(press('Insert', {ctrlKey:true, code:'Numpad0'}), false);
+assert.equal(value('paneB'), 0.9);
+assert.equal(press('0', {ctrlKey:true, code:'Numpad0'}), true);
+assert.equal(value('paneB'), 1);
+assert.equal(value('paneA'), 1.6);
+assert.equal(value('mid'), 1.4);
+assert.equal(document.activeElement, a);
+removePane();
+removeMain();
+set('paneB', 1.2);
+press('0', {ctrlKey:true});
+assert.equal(value('paneB'), 1.2);
+window.removeEventListener('keydown', resetZoomUnderPointer, true);
+delete document.querySelectorAll;
+console.log('Verified independent zoom and Ctrl+0 targeting the hovered pane across keyboard focus.');

@@ -41,7 +41,7 @@ assert.equal(box.querySelector('[aria-label="Events without an exact day"]'),nul
 assert.doesNotMatch(box.textContent,/No exact day|Year only|Month only/);
 assert.ok(box.querySelector('[aria-label^="Add event on "]'),'Calendar still renders its day grid');
 const chartCenter=tick(1950),chartSpan=tick(2001)-tick(1900);
-await React.act(async()=>root.render(React.createElement(TimelineAxis,{calendar:GREGORIAN,rows,groups:[],center:chartCenter,span:chartSpan,compact:false,onOpen:row=>opened=row.node.id,onPan:value=>panned=value,onZoom:value=>zoomed=value})));
+await React.act(async()=>root.render(React.createElement(TimelineAxis,{calendar:GREGORIAN,rows,groups:[],center:chartCenter,span:chartSpan,defaultSpan:chartSpan,compact:false,onOpen:row=>opened=row.node.id,onPan:value=>panned=value,onZoom:value=>zoomed=value})));
 assert.equal(box.querySelectorAll('[aria-label^="Resize end"]').length,0);assert.equal(box.querySelectorAll('[draggable="true"]').length,0);
 assert.equal(box.querySelectorAll('[data-timeline-row]').length,rows.length,'Every note gets a separate row; no label competes for time range width');
 const pointer=async(el,type,x)=>React.act(async()=>el.dispatchEvent(new dom.MouseEvent(type,{bubbles:true,button:0,clientX:x})));
@@ -72,7 +72,12 @@ const button=label=>[...document.querySelectorAll('button')].find(el=>el.getAttr
 await React.act(async()=>button('Start date').click());
 const year=box.ownerDocument.querySelector('[aria-label="Start year"]');await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(year,'1800');year.dispatchEvent(new dom.Event('input',{bubbles:true}));});
 await React.act(async()=>button('Apply date').click());await React.act(async()=>button('Apply dates').click());assert.ok(box.querySelector('[role="alert"]').textContent.includes('Parent'));assert.equal(parent.children[0].event.start,tick(1900),'Invalid date form is rejected without writes');
-const click=async(label)=>{const control=button(label);assert.ok(control,label);await React.act(async()=>control.click());};
+const click=async(label)=>{
+  const control=button(label);assert.ok(control,label);
+  await React.act(async()=>control.click());
+  // Let the closing popover restore focus before the next toolbar click.
+  await React.act(async()=>new Promise(resolve=>setTimeout(resolve,0)));
+};
 const options=()=>document.querySelector('[aria-label="Filter timeline dates"]');
 const openOptions=async()=>{if(!options())await click('Range');};
 const closeOptions=async()=>{if(options())await click('Range');};

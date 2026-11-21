@@ -9,6 +9,31 @@ export function zoomScope(state:Scope) {
   return 'kachamak-workspace-zoom-v1:'+JSON.stringify([state.activeNovelId,state.view==='homepage'?'homepage':state.activeTab]);
 }
 
+// Keyboard focus may be in a different editor. Resolve the innermost hovered
+// wheel surface at keydown, including nested Split panes and chart viewports.
+const resetBySurface = new WeakMap<Element, () => void>();
+
+export function registerZoomReset(surface: Element, reset: () => void) {
+  resetBySurface.set(surface, reset);
+  return () => { resetBySurface.delete(surface); };
+}
+
+export function resetZoomUnderPointer(event: KeyboardEvent) {
+  if (event.key !== '0' || !event.ctrlKey || event.shiftKey || event.altKey ||
+      event.metaKey || event.isComposing || event.defaultPrevented) return;
+
+  event.preventDefault();
+  const hovered = document.querySelectorAll(':hover');
+  for (let i = hovered.length - 1; i >= 0; i--) {
+    const reset = resetBySurface.get(hovered[i]);
+    if (reset) {
+      event.stopPropagation();
+      reset();
+      return;
+    }
+  }
+}
+
 // Device preferences are independent of book edits. Each setting has its own
 // storage key so another window can change a different panel without a conflict.
 const memory=new Map<string,string>();

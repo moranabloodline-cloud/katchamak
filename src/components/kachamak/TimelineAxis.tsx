@@ -1,13 +1,14 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {TIMELINE_LIMIT,TIMELINE_MAX_SPAN,eventType,formatDate,type StoryCalendar,type TimelineGroup} from '@/lib/kachamak/story-calendar';
+import {registerZoomReset} from '@/lib/kachamak/workspace-zoom';
 import {groupFor,type EventRow} from '@/lib/kachamak/timeline-data';
 import {timelineAxisRows,timelineGeometry,timelineOutsideParent,timelineParent,timelineTicks} from '@/lib/kachamak/timeline-layout';
 import {iconByName} from '@/lib/kachamak/icons';
 import {Hourglass,Zap,TriangleAlert,ChevronLeft,ChevronRight} from 'lucide-react';
-interface Props {calendar:StoryCalendar;rows:EventRow[];groups:TimelineGroup[];center:number;span:number;compact:boolean;onPan:(center:number)=>void;onZoom:(viewport:{center:number;span:number})=>void;onOpen:(r:EventRow)=>void;selectedId?:string}
+interface Props {calendar:StoryCalendar;rows:EventRow[];groups:TimelineGroup[];center:number;span:number;defaultSpan:number;compact:boolean;onPan:(center:number)=>void;onZoom:(viewport:{center:number;span:number})=>void;onOpen:(r:EventRow)=>void;selectedId?:string}
 type Drag={x:number;width:number;delta:number};
-export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onZoom,onOpen,selectedId}:Props) {
+export function TimelineAxis({calendar,rows,groups,center,span,defaultSpan,compact,onPan,onZoom,onOpen,selectedId}:Props) {
   const chartRef=useRef<HTMLDivElement>(null),scaleRef=useRef<HTMLDivElement>(null);
   const gesture=useRef<Drag|null>(null),[drag,setDrag]=useState<Drag|null>(null);
   useEffect(()=>{
@@ -27,9 +28,13 @@ export function TimelineAxis({calendar,rows,groups,center,span,compact,onPan,onZ
         ? (event.clientX-scale.left)/scale.width : 0.5;
       onZoom({center:center+(anchor-0.5)*(span-nextSpan),span:nextSpan});
     };
+    const unregisterReset = registerZoomReset(chart, () => onZoom({center, span:defaultSpan}));
     chart.addEventListener('wheel',wheel,{passive:false});
-    return ()=>chart.removeEventListener('wheel',wheel);
-  },[center,span,onZoom]);
+    return () => {
+      unregisterReset();
+      chart.removeEventListener('wheel',wheel);
+    };
+  },[center,span,defaultSpan,onZoom]);
   const left=center-span/2-(drag?.delta??0);
   const begin=(e:React.PointerEvent)=>{if(e.button!==0)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);const value={x:e.clientX,width:e.currentTarget.getBoundingClientRect().width,delta:0};gesture.current=value;setDrag(value);};
   const move=(e:React.PointerEvent)=>{const g=gesture.current;if(!g)return;const delta=Math.round((e.clientX-g.x)/Math.max(1,g.width)*span);const next={...g,delta:Math.max(center-TIMELINE_LIMIT,Math.min(center+TIMELINE_LIMIT,delta))};gesture.current=next;setDrag(next);};

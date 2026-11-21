@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { useKachamak } from "@/lib/kachamak/store";
-import {currentPanelZoom, subscribeZoom, zoomScope, type ZoomPanel} from "@/lib/kachamak/workspace-zoom";
+import {currentPanelZoom, registerZoomReset, subscribeZoom, zoomScope, type ZoomPanel} from "@/lib/kachamak/workspace-zoom";
 
 export function usePanelZoom(panel:ZoomPanel) {
   useKachamak(zoomScope);
@@ -47,8 +47,18 @@ export function CtrlZoom({
         s.setPanelZoom(panel, currentPanelZoom(s,panel) + step);
       }
     };
+    const unregisterReset = registerZoomReset(el, () => {
+      acc = 0;
+      const state = useKachamak.getState();
+      // Shared Split chrome has no individual note under the pointer.
+      if (panel === 'mid' && state.view === 'split') return;
+      state.setPanelZoom(panel, 1);
+    });
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    return () => {
+      unregisterReset();
+      el.removeEventListener("wheel", onWheel);
+    };
   }, [panel, targetRef, scope]);
   return null;
 }

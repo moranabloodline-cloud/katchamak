@@ -9,7 +9,7 @@ import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {iconForNote} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
-import {saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
+import {registerZoomReset,saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
 import {familyDiagram} from '@/lib/kachamak/family-diagram';
@@ -123,8 +123,12 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
       viewport.scrollTop+=(after.top+(event.clientY-before.top)*next/current-event.clientY)/viewportScale;
       saveZoomSetting(scope,'family-diagram',String(next));
     };
+    const unregisterReset = registerZoomReset(viewport, () => saveZoomSetting(scope, 'family-diagram', '1'));
     viewport.addEventListener('wheel',wheel,{passive:false});
-    return ()=>viewport.removeEventListener('wheel',wheel);
+    return () => {
+      unregisterReset();
+      viewport.removeEventListener('wheel',wheel);
+    };
   },[width,height,scope,tree?.id,people.length]);
   const names=new Map(people.map(p=>[p.id,p.title]));
   const lineTypes=new Set(paths.map(path=>path.style));

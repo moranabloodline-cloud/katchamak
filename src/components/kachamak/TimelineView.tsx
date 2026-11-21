@@ -73,7 +73,8 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const scoped=!!scopeId||section==='timeline'||!!range;
   const calendarCenter=range?Math.max(range.start,calendarStart??range.start):calendarStart??fit.center;
   const center=local?.center??(mode==='calendar'?calendarCenter:scoped?defaultViewport.center:prefs?.center??fit.center);
-  const span=local?.span??(scoped?defaultViewport.span:prefs?.span??fit.span);
+  const defaultSpan=scoped?defaultViewport.span:prefs?.span??fit.span;
+  const span=local?.span??defaultSpan;
   const date=minuteToDate(calendar,center);
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
@@ -121,7 +122,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
         state.setTimeline({pinnedRootId:id});setRange(null);setViewSelection(null);
         if(id){state.select(id);onRevealNote?.(id);}
       }}/>
-    {mode==='axis'&&<TimelineAxis calendar={calendar} rows={rows} groups={groups} center={center} span={span} compact={prefs?.compact??false} onOpen={edit} selectedId={state.selectedNodeId??undefined} onPan={changeCenter} onZoom={changeViewport}/>}
+    {mode==='axis'&&<TimelineAxis calendar={calendar} rows={rows} groups={groups} center={center} span={span} compact={prefs?.compact??false} onOpen={edit} selectedId={state.selectedNodeId??undefined} onPan={changeCenter} onZoom={changeViewport} defaultSpan={defaultSpan}/>}
     {mode==='calendar'&&<TimelineCalendar gallery={novel.gallery} selectedId={state.selectedNodeId??undefined} rows={rows} calendar={calendar} groups={groups} center={center} compact={prefs?.compact??false} onOpen={edit} onAdd={start=>setEditing({start})}/>}
     {mode==='chronicle'&&<TimelineCards gallery={novel.gallery} calendar={calendar} rows={rows} groups={groups} compact={prefs?.compact??false} synopsis={prefs?.detail!=='titles'} selectedId={state.selectedNodeId??undefined} onEdit={edit} onAdd={()=>setEditing({start:scopeId?findNode(novel.sections[section],scopeId)?.event?.start??center:firstEvent?.event.start??center})}/>}
     {all.length>0&&!rows.length&&<div className="p-5 text-center text-xs text-muted-foreground">{range?<><p>No dated notes in this range.</p><button className={`${timeButton} mt-2`} onClick={()=>setRange(null)}>Clear range</button></>:<p>No dated notes in this period yet.</p>}</div>}
