@@ -1,6 +1,6 @@
 'use client';
 
-import {useMemo, useRef, useState, type Dispatch, type SetStateAction} from 'react';
+import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
 import {ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, Images, MoreHorizontal, Upload} from 'lucide-react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
@@ -13,17 +13,69 @@ import {galleryPath, type GalleryEntry} from '@/lib/kachamak/gallery';
 import {uid} from '@/lib/kachamak/utils';
 import type {Novel} from '@/lib/kachamak/types';
 import {WorkspaceNavigation} from './WorkspaceNavigation';
+import {toast} from 'sonner';
+
+const galleryDragType = 'application/x-kachamak-gallery-image';
+export type DraggedGalleryImage = {bookId:string; imageId:string};
+type SetDraggedImage = (source:DraggedGalleryImage|null)=>void;
 
 type Location = {folderId:string|null; openFolder:(id:string|null)=>void};
 const compareNames = (a:GalleryEntry,b:GalleryEntry) => a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
 const selectedRow = 'bg-amber-400/10 text-amber-300';
 
-export function GalleryTree({entries,folderId,openFolder,collapsed,setCollapsed}:Location & {
-  entries:GalleryEntry[]; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>;
+export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,draggedImage,setDraggedImage}:Location & {
+  novel:Novel; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>;
+  draggedImage:DraggedGalleryImage|null; setDraggedImage:SetDraggedImage;
 }) {
+  const entries=novel.gallery;
+  const source=draggedImage?.bookId===novel.id ? entries?.find(item=>item.id===draggedImage.imageId && item.kind==='image') : undefined;
+  // null is the Gallery root. undefined means the pointer is outside a target.
+  const [over,setOver]=useState<string|null|undefined>(undefined);
+  useEffect(()=>{
+    if (!source) { setOver(undefined); return; }
+    if (!over || !collapsed.has(over)) return;
+    const timer=setTimeout(()=>setCollapsed(previous=>{
+      const expanded=new Set(previous);
+      expanded.delete(over);
+      return expanded;
+    }),600);
+    return ()=>clearTimeout(timer);
+  },[source,over,collapsed,setCollapsed]);
+
+  function dropTarget(destination:string|null, rowClass:string) {
+    const allowed=!!source && source.parentId!==destination;
+    return {
+      onDragOver(event:DragEvent) {
+        if (!source || !event.dataTransfer.types.includes(galleryDragType)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect=allowed?'move':'none';
+        setOver(destination);
+      },
+      onDragLeave(event:DragEvent) {
+        if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+        setOver(current=>current===destination?undefined:current);
+      },
+      onDrop(event:DragEvent) {
+        if (!source || event.dataTransfer.getData(galleryDragType)!==source.id) return;
+        event.preventDefault();
+        setOver(undefined);
+        setDraggedImage(null);
+        if (!allowed) return;
+        try {
+          useKachamak.getState().editGallery(novel.id,{type:'move',id:source.id,parentId:destination});
+        } catch (error) {
+          toast.error(error instanceof Error?error.message:'The image could not be moved.');
+        }
+      },
+      className:rowClass+' '+(allowed && over===destination
+        ? 'bg-teal-400/15 ring-1 ring-inset ring-teal-400'
+        : 'hover:bg-white/5 '+(folderId===destination?selectedRow:'')),
+    };
+  }
+
   const rows=useMemo(()=>{
     const folders=new Map<string|null,GalleryEntry[]>();
-    for (const entry of entries.filter(entry=>entry.kind==='folder').sort(compareNames)) {
+    for (const entry of (entries??[]).filter(entry=>entry.kind==='folder').sort(compareNames)) {
       const siblings=folders.get(entry.parentId);
       if(siblings)siblings.push(entry);
       else folders.set(entry.parentId,[entry]);
@@ -44,11 +96,11 @@ export function GalleryTree({entries,folderId,openFolder,collapsed,setCollapsed}
     <WorkspaceNavigation/>
     <nav aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto p-1">
       <button type="button" aria-current={folderId===null?'page':undefined} onClick={()=>openFolder(null)}
-        className={'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm hover:bg-white/5 '+(folderId===null?selectedRow:'')}>
+        {...dropTarget(null,'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm')}>
         <Images className="size-4 text-teal-300"/>Gallery
       </button>
       {rows.map(({item,depth,branch})=><div key={item.id} style={{paddingLeft:8+depth*14}}
-        className={'flex items-center rounded-md text-sm hover:bg-white/5 '+(folderId===item.id?selectedRow:'')}>
+        {...dropTarget(item.id,'flex items-center rounded-md text-sm')}>
         {branch?<button type="button" className="grid size-6 shrink-0 place-items-center" aria-expanded={!collapsed.has(item.id)}
           aria-label={(collapsed.has(item.id)?'Expand ':'Collapse ')+item.name}
           onClick={()=>setCollapsed(previous=>{const next=new Set(previous);if(next.has(item.id))next.delete(item.id);else next.add(item.id);return next;})}>
@@ -65,7 +117,7 @@ export function GalleryTree({entries,folderId,openFolder,collapsed,setCollapsed}
 
 type Edit = {type:'create';parentId:string|null} | {type:'rename'|'move'|'remove';item:GalleryEntry};
 
-export function GalleryCanvas({novel,folderId,openFolder}:Location & {novel:Novel}) {
+export function GalleryCanvas({novel,folderId,openFolder,setDraggedImage}:Location & {novel:Novel;setDraggedImage:SetDraggedImage}) {
   const entries=novel.gallery??[];
   const path=galleryPath(entries,folderId);
   const items=entries.filter(entry=>entry.parentId===folderId).sort((a,b)=>a.kind===b.kind?compareNames(a,b):a.kind==='folder'?-1:1);
@@ -127,11 +179,19 @@ export function GalleryCanvas({novel,folderId,openFolder}:Location & {novel:Nove
       {!items.length?<p className="rounded-lg border border-dashed border-border px-5 py-12 text-center text-sm text-muted-foreground">Add images or create a folder here.</p>:
       <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
         {items.map(item=><li key={item.id} className="relative min-w-0 overflow-hidden rounded-lg border border-border bg-card">
-          <button type="button" aria-label={'Open '+item.name} className="block w-full text-left hover:bg-muted/50"
+          <button type="button" aria-label={'Open '+item.name} className={'block w-full text-left hover:bg-muted/50 '+(item.kind==='image'?'cursor-grab active:cursor-grabbing':'')}
+            draggable={item.kind==='image'}
+            onDragStart={event=>{
+              if (item.kind!=='image') return;
+              event.dataTransfer.effectAllowed='move';
+              event.dataTransfer.setData(galleryDragType,item.id);
+              setDraggedImage({bookId:novel.id,imageId:item.id});
+            }}
+            onDragEnd={()=>setDraggedImage(null)}
             onClick={()=>item.kind==='folder'?openFolder(item.id):setPreview(item)}>
             <span className="flex aspect-[3/2] items-center justify-center overflow-hidden bg-muted/25">
               {item.kind==='folder'?<FolderOpen className="size-10 text-amber-300/80" strokeWidth={1.4}/>:
-                <img src={item.image} alt="" loading="lazy" className="size-full object-contain"/>}
+                <img src={item.image} alt="" draggable={false} loading="lazy" className="size-full object-contain"/>}
             </span>
             <span className="block truncate py-2.5 pl-3 pr-9 text-sm" title={item.name}>{item.name}</span>
           </button>
