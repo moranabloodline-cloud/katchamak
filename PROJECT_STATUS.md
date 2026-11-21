@@ -1,3 +1,5 @@
+> **2026-11-21 — Boje rezultata u Finance.** Veliki iznosi prate tip i znak rezultata. Break-even traka je zlatna do pokrića i zelena kod punog pokrića. Folder sa prihodom bez troškova prikazuje „No expenses recorded“.
+
 > **2026-11-21 — Finance po knjizi.** Finance se uključuje preko menija +. Dashboard prati prihode, troškove, neto rezultat i pokriće troškova za knjigu ili izabrani folder. List i Inspector rade sa istim transakcijama.
 
 > **2026-11-21 — Ikonice preko slike beleške.** Zamena i uklanjanje slike prikazuju se pri prelasku mišem i dostupni su tastaturom.
@@ -613,6 +615,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Prikaz pokrića troškova.** U Chromeu su provereni prazna knjiga, folderi sa samo prihodom ili samo troškom, zlatna traka na 65%, zelena na 100% i boja pozitivnog, negativnog i nultog neto rezultata. Prošli su Finance testovi, TypeScript i desktop build.
 
 - **2026-11-21 — Finance.** Prihodi i troškovi koriste stablo beleški, Inspector, zajedničku korpu, automatsko čuvanje i rezervne kopije. Jedna valuta važi za celu knjigu. U probnoj knjizi provereni su unos, izmena, prevlačenje, iznosi po podfolderima, sortiranje, prebacivanje prikaza, zum panela i čuvanje posle osvežavanja. Provereni su JSON i izvoz svih beleški kao Markdown i HTML. Test starije migracije u details-blocks očekuje sliku direktno u belešci, iako ju je prethodna verzija već premeštala u Galeriju.
 

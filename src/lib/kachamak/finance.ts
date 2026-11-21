@@ -83,7 +83,7 @@ export function financeOverview(nodes: NoteNode[]) {
   }
   for (const node of nodes) visit(node,node.transaction ? undefined : node);
   const {income, expense} = totals;
-  const reached = income > 0 && income >= expense;
+  const reached = expense > 0 && income >= expense;
   const progress = reached ? 100 : expense ? Number(income * hundred / expense) : 0;
   return {...totals, net:income-expense, remaining:expense>income?expense-income:zero, reached, progress, entries,
     months:[...months].sort(([a],[b])=>a.localeCompare(b)), groups:[...groups.values()]};

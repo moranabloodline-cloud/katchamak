@@ -54,7 +54,7 @@ s.moveTreeNotes(book().id,'finance',[{id:cost,parentId:child}],sales);
 assert.equal(financeOverview(findNode(roots(),folder).children).expense,0n);
 assert.equal(financeOverview(findNode(roots(),sales).children).net,-35000n);
 assert.throws(()=>s.moveTreeNotes(book().id,'finance',[{id:cost,parentId:sales}],income));
-s.deleteNode('finance',cost);assert.equal(summary().reached,true);assert.equal(summary().expense,0n);
+s.deleteNode('finance',cost);assert.equal(summary().reached,false);assert.equal(summary().expense,0n);assert.equal(summary().progress,0);
 s.restoreFromTrash(book().trash.at(-1).id);assert.equal(summary().expense,100000n);
 s.hideTab(book().id,'finance');s.setTab('finance');s.closeTab('finance');s.setTab('finance');
 assert.equal(summary().entries.length,2);

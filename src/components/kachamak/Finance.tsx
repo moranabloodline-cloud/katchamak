@@ -11,6 +11,8 @@ const field = 'mt-1 block w-full rounded-md border border-border bg-background p
 const panel = 'min-w-0 rounded-xl border border-border bg-card/50 p-4';
 const typeLabel = {income:'Income',expense:'Expense'};
 const typeColor = {income:'text-emerald-300',expense:'text-rose-300'};
+const incomeAmountColor = 'text-emerald-300/80 [[data-theme=light]_&]:text-emerald-800';
+const expenseAmountColor = 'text-rose-300/80 [[data-theme=light]_&]:text-rose-800';
 
 export function addFinanceNote(parentId:string|null, kind:'folder'|'income'|'expense') {
   const state = useKachamak.getState();
@@ -99,6 +101,8 @@ export function FinanceWorkspace({novel,selected,rootId,list}:{novel:Novel;selec
   const scope=financeScope(roots,selected?.id,rootId);
   const parentId=scope?.transaction?findParentId(roots,scope.id):scope?.id??null;
   const overview=financeOverview(scope?.transaction?[scope]:scope?.children??roots);
+  const noExpenses = overview.entries.length > 0 && overview.expense === BigInt(0);
+  const netColor = overview.net > 0 ? incomeAmountColor : overview.net < 0 ? expenseAmountColor : '';
   const currency=novel.financeCurrency??'EUR';
   const formatter=new Intl.NumberFormat(undefined,{style:'currency',currency});
   const money:Money=minor=>formatter.format(decimalAmount(minor));
@@ -119,13 +123,15 @@ export function FinanceWorkspace({novel,selected,rootId,list}:{novel:Novel;selec
     {selected?.transaction && <div className={panel+' mb-4 lg:hidden'}><FinanceEditor key={selected.id} node={selected} currency={currency}/></div>}
     <div className="space-y-4">{!list&&<>
       <div className="grid gap-3 @sm:grid-cols-2 @4xl:grid-cols-4">
-        {([['Total income',overview.income],['Total expenses',overview.expense],['Net result',overview.net]] as const).map(([title,value])=><section key={title} className={panel}>
-          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</h3><strong className="mt-2 block break-words text-2xl font-semibold tabular-nums">{money(value)}</strong>
+        {([['Total income',overview.income,incomeAmountColor],['Total expenses',overview.expense,expenseAmountColor],['Net result',overview.net,netColor]] as const).map(([title,value,color])=><section key={title} className={panel}>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</h3><strong className={'mt-2 block break-words text-2xl font-semibold tabular-nums '+color}>{money(value)}</strong>
         </section>)}
         <section className="min-w-0 rounded-xl border border-amber-400/35 bg-amber-400/5 p-4"><h3 className="text-xs font-medium uppercase tracking-wide text-amber-300">Break-even</h3>
-          <strong className="mt-2 block text-2xl font-semibold tabular-nums">{overview.reached?'Reached':!overview.expense?'—':overview.progress+'%'}</strong>
-          <progress aria-label="Break-even progress" className="my-1 h-1.5 w-full accent-amber-400" max={100} value={overview.progress}/>
-          <p className="text-xs text-muted-foreground">{!overview.entries.length?'No transactions yet':overview.reached?'Break-even reached':overview.expense?money(overview.remaining)+' remaining to break even':'No expenses recorded'}</p>
+          <strong className="mt-2 block text-2xl font-semibold tabular-nums">{noExpenses?'No expenses recorded':overview.reached?'Reached':overview.entries.length?overview.progress+'%':'—'}</strong>
+          <span role="progressbar" aria-label="Break-even progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={overview.progress} className="my-1 inline-block h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <span className={'block h-full '+(overview.reached?'bg-emerald-400':'bg-amber-400')} style={{width:overview.progress+'%'}}/>
+          </span>
+          {!noExpenses && <p className="text-xs text-muted-foreground">{!overview.entries.length?'No transactions yet':overview.reached?'Break-even reached':money(overview.remaining)+' remaining to break even'}</p>}
         </section>
       </div>
       <MonthlyChart months={overview.months} money={money}/>
