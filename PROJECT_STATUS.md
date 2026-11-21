@@ -1,3 +1,5 @@
+> **2026-11-21 — Grupno premeštanje slika u Galeriji.** Ctrl ili Cmd bira pojedinačne slike, a Shift označava raspon u trenutnom folderu. Prevlačenje označene slike premešta ceo izbor.
+
 > **2026-11-21 — Prevlačenje slika u Galeriji.** Slika se iz radne površine premešta na folder, podfolder ili koren Galerije u levom stablu.
 
 > **2026-11-21 — Ranije dodate slike u Galeriji.** Otvaranje biblioteke prenosi slike beležaka, Homepage stranica, Timeline kartica i naslovnica u galeriju pripadajuće knjige. Ista sačuvana slika dobija jednu stavku.
@@ -603,6 +605,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Višestruki izbor u Galeriji.** Označene slike imaju okvir, kvačicu i zajednički brojač. Jedna izmena proverava i premešta izabrane slike, čuvajući njihove veze. Provera u Chromeu obuhvatila je izbor raspona unazad, dodatni izbor, otkazivanje, prevlačenje u podfolder i koren, kao i čuvanje i ponovno otvaranje bez duplikata.
 
 - **2026-11-21 — Premeštanje slike mišem.** Ciljni folder se ističe, a zadržavanje iznad zatvorene grane otkriva podfoldere. Spuštanje koristi postojeće premeštanje stavke i čuva njen identitet. U Chromeu su provereni prevlačenje sa same slike, spuštanje u podfolder i koren, otkazivanje, pregled slike, ponovno učitavanje i veze iz beleške, Homepage stranice, Timeline kartice i naslovnice.
 

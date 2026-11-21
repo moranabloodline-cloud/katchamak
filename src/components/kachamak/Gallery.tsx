@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
-import {ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, Images, MoreHorizontal, Upload} from 'lucide-react';
+import {Check, ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, Images, MoreHorizontal, Upload, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
 import {Input} from '@/components/ui/input';
@@ -16,19 +16,19 @@ import {WorkspaceNavigation} from './WorkspaceNavigation';
 import {toast} from 'sonner';
 
 const galleryDragType = 'application/x-kachamak-gallery-image';
-export type DraggedGalleryImage = {bookId:string; imageId:string};
-type SetDraggedImage = (source:DraggedGalleryImage|null)=>void;
+export type GalleryImageDrag = {bookId:string; imageIds:string[]; parentId:string|null};
+type SetImageDrag = (source:GalleryImageDrag|null)=>void;
 
 type Location = {folderId:string|null; openFolder:(id:string|null)=>void};
 const compareNames = (a:GalleryEntry,b:GalleryEntry) => a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
 const selectedRow = 'bg-amber-400/10 text-amber-300';
 
-export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,draggedImage,setDraggedImage}:Location & {
+export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,imageDrag,setImageDrag}:Location & {
   novel:Novel; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>;
-  draggedImage:DraggedGalleryImage|null; setDraggedImage:SetDraggedImage;
+  imageDrag:GalleryImageDrag|null; setImageDrag:SetImageDrag;
 }) {
   const entries=novel.gallery;
-  const source=draggedImage?.bookId===novel.id ? entries?.find(item=>item.id===draggedImage.imageId && item.kind==='image') : undefined;
+  const source=imageDrag?.bookId===novel.id ? imageDrag : undefined;
   // null is the Gallery root. undefined means the pointer is outside a target.
   const [over,setOver]=useState<string|null|undefined>(undefined);
   useEffect(()=>{
@@ -56,15 +56,15 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
         setOver(current=>current===destination?undefined:current);
       },
       onDrop(event:DragEvent) {
-        if (!source || event.dataTransfer.getData(galleryDragType)!==source.id) return;
+        if (!source || event.dataTransfer.getData(galleryDragType)!==JSON.stringify(source.imageIds)) return;
         event.preventDefault();
         setOver(undefined);
-        setDraggedImage(null);
+        setImageDrag(null);
         if (!allowed) return;
         try {
-          useKachamak.getState().editGallery(novel.id,{type:'move',id:source.id,parentId:destination});
+          useKachamak.getState().editGallery(novel.id,{type:'moveImages',ids:source.imageIds,from:source.parentId,parentId:destination});
         } catch (error) {
-          toast.error(error instanceof Error?error.message:'The image could not be moved.');
+          toast.error(error instanceof Error?error.message:'The selected images could not be moved.');
         }
       },
       className:rowClass+' '+(allowed && over===destination
@@ -117,10 +117,42 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
 
 type Edit = {type:'create';parentId:string|null} | {type:'rename'|'move'|'remove';item:GalleryEntry};
 
-export function GalleryCanvas({novel,folderId,openFolder,setDraggedImage}:Location & {novel:Novel;setDraggedImage:SetDraggedImage}) {
+export function GalleryCanvas({novel,folderId,openFolder,setImageDrag}:Location & {novel:Novel;setImageDrag:SetImageDrag}) {
   const entries=novel.gallery??[];
   const path=galleryPath(entries,folderId);
-  const items=entries.filter(entry=>entry.parentId===folderId).sort((a,b)=>a.kind===b.kind?compareNames(a,b):a.kind==='folder'?-1:1);
+  const items=useMemo(()=>(novel.gallery??[]).filter(entry=>entry.parentId===folderId)
+    .sort((a,b)=>a.kind===b.kind?compareNames(a,b):a.kind==='folder'?-1:1),[novel.gallery,folderId]);
+  const imageIds=useMemo(()=>items.filter(entry=>entry.kind==='image').map(entry=>entry.id),[items]);
+  const [selection,setSelection]=useState<Set<string>>(()=>new Set());
+  const anchor=useRef<string|null>(null);
+  useEffect(()=>{
+    const visible=new Set(imageIds);
+    if (anchor.current && !visible.has(anchor.current)) anchor.current=null;
+    setSelection(previous=>{
+      const kept=new Set([...previous].filter(id=>visible.has(id)));
+      return kept.size===previous.size?previous:kept;
+    });
+  },[imageIds]);
+
+  function selectImage(id:string, toggle:boolean, range:boolean) {
+    if (range) {
+      const end=imageIds.indexOf(id);
+      const previousAnchor=anchor.current===null?-1:imageIds.indexOf(anchor.current);
+      const start=previousAnchor<0?end:previousAnchor;
+      const span=imageIds.slice(Math.min(start,end),Math.max(start,end)+1);
+      setSelection(previous=>new Set(toggle?[...previous,...span]:span));
+      if (previousAnchor<0) anchor.current=id;
+    } else {
+      anchor.current=id;
+      setSelection(previous=>{
+        if (!toggle) return new Set([id]);
+        const next=new Set(previous);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }
+  }
   const [editing,setEditing]=useState<Edit|null>(null);
   const [draft,setDraft]=useState('');
   const [preview,setPreview]=useState<GalleryEntry|null>(null);
@@ -168,7 +200,12 @@ export function GalleryCanvas({novel,folderId,openFolder,setDraggedImage}:Locati
           {path.map(item=><span key={item.id} className="flex min-w-0 items-center gap-1"><ChevronRight className="size-3 shrink-0 text-muted-foreground"/>
             <button type="button" className="max-w-48 truncate rounded p-1 hover:bg-muted" onClick={()=>openFolder(item.id)}>{item.name}</button></span>)}
         </nav>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {selection.size>0 && <div className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+            <span role="status">{selection.size} selected</span>
+            <button type="button" aria-label="Clear image selection" title="Clear selection" className="rounded p-1 hover:bg-muted"
+              onClick={()=>{anchor.current=null;setSelection(new Set());}}><X className="size-3.5"/></button>
+          </div>}
           <Button size="sm" variant="outline" onClick={()=>edit({type:'create',parentId:folderId})}><FolderPlus/>New folder</Button>
           <Button size="sm" variant="secondary" disabled={uploading} onClick={()=>input.current?.click()}><Upload/>{uploading?'Uploading…':'Upload images'}</Button>
           <input ref={input} aria-label="Choose gallery images" type="file" className="hidden" accept="image/png,image/jpeg,image/webp" multiple
@@ -178,17 +215,29 @@ export function GalleryCanvas({novel,folderId,openFolder,setDraggedImage}:Locati
       {error&&!editing&&<p role="alert" className="mb-3 text-sm text-red-400">{error}</p>}
       {!items.length?<p className="rounded-lg border border-dashed border-border px-5 py-12 text-center text-sm text-muted-foreground">Add images or create a folder here.</p>:
       <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
-        {items.map(item=><li key={item.id} className="relative min-w-0 overflow-hidden rounded-lg border border-border bg-card">
-          <button type="button" aria-label={'Open '+item.name} className={'block w-full text-left hover:bg-muted/50 '+(item.kind==='image'?'cursor-grab active:cursor-grabbing':'')}
+        {items.map(item=><li key={item.id} className={'relative min-w-0 overflow-hidden rounded-lg border bg-card '+
+          (selection.has(item.id)?'border-teal-400 ring-1 ring-teal-400':'border-border')}>
+          <button type="button" aria-label={'Open '+item.name} aria-pressed={item.kind==='image'?selection.has(item.id):undefined}
+            className={'block w-full select-none text-left hover:bg-muted/50 '+(item.kind==='image'?'cursor-grab active:cursor-grabbing':'')}
             draggable={item.kind==='image'}
             onDragStart={event=>{
               if (item.kind!=='image') return;
+              const ids=selection.has(item.id)?imageIds.filter(id=>selection.has(id)):[item.id];
+              if (!selection.has(item.id)) selectImage(item.id,false,false);
               event.dataTransfer.effectAllowed='move';
-              event.dataTransfer.setData(galleryDragType,item.id);
-              setDraggedImage({bookId:novel.id,imageId:item.id});
+              event.dataTransfer.setData(galleryDragType,JSON.stringify(ids));
+              setImageDrag({bookId:novel.id,imageIds:ids,parentId:folderId});
             }}
-            onDragEnd={()=>setDraggedImage(null)}
-            onClick={()=>item.kind==='folder'?openFolder(item.id):setPreview(item)}>
+            onDragEnd={()=>setImageDrag(null)}
+            onClick={event=>{
+              if (item.kind==='folder') {openFolder(item.id);return;}
+              const toggle=event.ctrlKey || event.metaKey;
+              selectImage(item.id,toggle,event.shiftKey);
+              if (!toggle && !event.shiftKey) setPreview(item);
+            }}>
+            {selection.has(item.id) && <span aria-hidden="true" className="pointer-events-none absolute left-2 top-2 grid size-5 place-items-center rounded-full bg-teal-400 text-black">
+              <Check className="size-3.5" strokeWidth={3}/>
+            </span>}
             <span className="flex aspect-[3/2] items-center justify-center overflow-hidden bg-muted/25">
               {item.kind==='folder'?<FolderOpen className="size-10 text-amber-300/80" strokeWidth={1.4}/>:
                 <img src={item.image} alt="" draggable={false} loading="lazy" className="size-full object-contain"/>}

@@ -20,6 +20,18 @@ assert.equal(validGallery([image,{...city,parentId:'map'}]),false);
 entries=changeGallery(entries,{type:'rename',id:'city',name:'Capital'});
 entries=changeGallery(entries,{type:'move',id:'map',parentId:'maps'});
 entries=changeGallery(entries,{type:'remove',id:'city'});
+const second={...image,id:'map-2',name:'Second map.png'};
+const source=[maps,city,image,second];
+const batch={type:'moveImages',ids:[second.id,image.id],from:'city',parentId:null};
+const moved=changeGallery(source,batch);
+assert.deepEqual(moved,[maps,city,{...image,parentId:null},{...second,parentId:null}]);
+assert.deepEqual(changeGallery(source,{...batch,ids:[image.id,second.id,image.id]}),moved);
+assert.equal(changeGallery(source,{...batch,parentId:'city'}),source);
+for (const invalid of [{ids:[image.id,'missing']},{ids:[image.id,city.id]},{parentId:'missing'},{parentId:image.id},{from:null}]) {
+  assert.throws(()=>changeGallery(source,{...batch,...invalid}));
+}
+assert.throws(()=>changeGallery([maps,city,image,{...second,parentId:null}],batch));
+assert.deepEqual(source.map(item=>item.parentId),[null,'maps','city','city']);
 const book={...emptyBook,gallery:entries,tabOrder:['gallery','binder']};
 const imported=JSON.parse(JSON.stringify(book));
 assert.ok(isReadableProject(imported));assert.ok(validCloudLibrary({novels:[imported],collections:[]}));

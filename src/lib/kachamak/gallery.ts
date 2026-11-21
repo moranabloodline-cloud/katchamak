@@ -6,6 +6,7 @@ export type GalleryChange =
   | {type:'add'; entries:GalleryEntry[]}
   | {type:'rename'; id:string; name:string}
   | {type:'move'; id:string; parentId:string|null}
+  | {type:'moveImages'; ids:string[]; from:string|null; parentId:string|null}
   | {type:'remove'; id:string};
 
 export function validGallery(value:unknown):value is GalleryEntry[]|undefined {
@@ -53,6 +54,18 @@ export function changeGallery(entries:GalleryEntry[], change:GalleryChange):Gall
     const result = [...entries,...change.entries];
     if (!validGallery(result)) throw new Error('The destination or image is no longer available.');
     return result;
+  }
+  if (change.type === 'moveImages') {
+    const ids = new Set(change.ids);
+    if (change.parentId !== null && !entries.some(entry => entry.kind === 'folder' && entry.id === change.parentId)) {
+      throw new Error('The destination folder is no longer available.');
+    }
+    const sources = entries.filter(entry => ids.has(entry.id));
+    if (sources.length !== ids.size || sources.some(entry => entry.kind !== 'image' || entry.parentId !== change.from)) {
+      throw new Error('The gallery changed. Select the images again.');
+    }
+    if (!ids.size || change.from === change.parentId) return entries;
+    return entries.map(entry => ids.has(entry.id) ? {...entry,parentId:change.parentId} : entry);
   }
   const item = entries.find(entry => entry.id === change.id);
   if (!item) throw new Error('This item is no longer in the gallery.');
