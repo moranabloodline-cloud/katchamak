@@ -1,9 +1,9 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
-import {canvasParts,inFixedRow,releaseRow,unifiedCanvas} from './canvas-layout';
+import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,type CanvasTransfer} from './canvas-layout';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
-import {isPoint,validCanvasFields,validBoard,moveOnBoard,type Point,type CanvasFields,type BoardMove} from './canvas-board';
+import {validCanvasFields,validBoard,moveOnBoard,type CanvasFields,type BoardMove} from './canvas-board';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
@@ -174,10 +174,8 @@ export function validHomepage(value: unknown): boolean {
 
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
-export type HomeChange = BoardMove | BoardSelectionChange
+export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
   | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
-  | {type:'dockCard'; id:string; cell:HomeCell}
-  | {type:'releaseCard'; id:string; cell:HomeCell; at:Point}
   | {type:'task'; id:string; index:number; done:boolean}
   | { type: 'lock'; locked: boolean }
   | { type:'width'; width:'reading'|'wide' }
@@ -199,16 +197,8 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
   if(action.type==='lock')return {...page,locked:action.locked};
   if(page.locked)return null;
   if(action.type==='width')return {...page,width:action.width};
-  if(action.type==='dockCard'||action.type==='releaseCard'){
-    const current=page.blocks.find(b=>b.id===action.id);
-    if(!current||current.positionLocked||['line','column','row'].includes(current.layout))return null;
-    if(action.type==='dockCard'){
-      if(current.cell || !validCell(page.blocks,action.cell) || (current.columnId && page.blocks.find(b=>b.id===current.columnId)?.positionLocked))return null;
-      const docked={...current,at:undefined,columnId:undefined,cell:action.cell};
-      return {...page,blocks:[...page.blocks.filter(b=>b!==current),docked]};
-    }
-    if(!current.cell||!sameCell(current.cell,action.cell)||!isPoint(action.at))return null;
-    return {...page,blocks:page.blocks.map(b=>b===current?{...b,cell:undefined,at:action.at}:b)};
+  if(action.type==='dockCards'||action.type==='releaseCards'){
+    return validCell(page.blocks,action.cell)?transferCanvasCards(page,action):null;
   }
   const {fixed,free,parked}=canvasParts(page.blocks);
   const block='original' in action?action.original:'block' in action?action.block:'id' in action?page.blocks.find(b=>b.id===action.id):undefined;
@@ -237,7 +227,7 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
-  if(action.type==='dockCard'||action.type==='releaseCard')return null;
+  if(action.type==='dockCards'||action.type==='releaseCards')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
   if(action.type==='boardSelection')return applySelection(page,action);

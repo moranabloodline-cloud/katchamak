@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, LockKeyhole, MoreHorizontal, MoveDown, Pencil, Plus, Rows3, Trash2} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, LockKeyhole, MoreHorizontal, MoveDown, Pencil, Plus, Rows3, SquareCheck, Trash2} from 'lucide-react';
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from '@/components/ui/alert-dialog';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
@@ -73,6 +73,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const updatePage=useKachamak(s=>s.changeHomepage);
   const change=(action:HomeChange)=>updatePage(novel.id,action,page.id,true);
   const openTab=useOpenWorkspaceTab(novel);
+  const [selection,setSelection]=useState<string[]>([]);
+  const selectedIds=useMemo(()=>new Set(selection),[selection]);
+  const rowAnchor=useRef<string|null>(null);
   const drag=useHomepageDrag(page.locked,(id,p)=>change(p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
@@ -114,7 +117,23 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const lanes=new Map<string,HomeBlock[][]>();
   for(const b of roots)if(b.layout==='row')lanes.set(b.id,Array.from({length:b.columns!},()=>[]));
   for(const b of page.blocks)if(b.cell)lanes.get(b.cell.rowId)?.[b.cell.column]?.push(b);
-  function renderBlock(block:HomeBlock,index:number,count:number,release:(b:HomeBlock)=>void):React.ReactNode {
+  function selectInColumn(block:HomeBlock,toggle:boolean,range:boolean){
+    if(!block.cell)return;
+    const siblings=lanes.get(block.cell.rowId)![block.cell.column];
+    const previous=siblings.filter(b=>selectedIds.has(b.id)).map(b=>b.id);
+    if(range){
+      const index=siblings.findIndex(b=>b.id===block.id);
+      const anchor=previous.includes(rowAnchor.current??'')?rowAnchor.current:previous[0];
+      const start=anchor?siblings.findIndex(b=>b.id===anchor):index;
+      const span=siblings.slice(Math.min(start,index),Math.max(start,index)+1).map(b=>b.id);
+      setSelection(toggle?[...new Set([...previous,...span])]:span);
+      rowAnchor.current=anchor??block.id;
+    }else{
+      rowAnchor.current=block.id;
+      setSelection(toggle?(selectedIds.has(block.id)?previous.filter(id=>id!==block.id):[...previous,block.id]):[block.id]);
+    }
+  }
+  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[]):React.ReactNode {
     const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
@@ -127,7 +146,15 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     const frame=bare?'bg-transparent':`overflow-hidden ${block.layout==='card'?'rounded-md':'rounded-xl'} border border-border hover:border-amber-500/60 ${block.layout==='banner'?'min-h-44 justify-end bg-gradient-to-br from-muted to-background':block.layout==='text'?'bg-background':'bg-card'}`;
     const cardClass='relative flex w-full flex-col text-left focus-visible:outline-2 focus-visible:outline-amber-400 '+frame;
     const hint=!drag.hint?.cell&&drag.hint?.targetId===block.id?drag.hint:null;
-    return <article key={block.id} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
+    const selected=!!block.cell&&!page.locked&&selectedIds.has(block.id);
+    return <article key={block.id} data-fixed-selected={selected||undefined}
+      onClickCapture={!block.cell||page.locked?undefined:e=>{
+        const target=e.target as Element;
+        if(!e.currentTarget.contains(target)||target.closest('.home-arrange'))return;
+        const toggle=e.ctrlKey||e.metaKey;
+        if(toggle||e.shiftKey){e.preventDefault();e.stopPropagation();}
+        selectInColumn(block,toggle,e.shiftKey);
+      }} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
       {row?<div className={'@container/row rounded-lg px-1 py-3 '+(page.locked?'':'outline outline-dashed outline-border')}>
         {(block.title||!page.locked)&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title"><LockKeyhole size={13}/>{block.title||'Fixed row'}<span>{block.columns} {block.columns===1?'column':'columns'}</span></h2>
         {!page.locked&&<div className="ml-auto flex flex-wrap justify-end gap-2">
@@ -149,9 +176,10 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         </div>}</div>}
         <div className="grid grid-cols-1 gap-4 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {lanes.get(block.id)?.map((children,column)=>{
+            const selectedSiblings=children.filter(b=>selectedIds.has(b.id));
             const active=drag.hint?.cell?.rowId===block.id && drag.hint.cell.column===column;
             return <div key={column} data-home-cell={block.id} data-column={column} className={`relative flex min-w-0 flex-col gap-3 rounded pb-6 ${page.locked?'':'min-h-14'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
-              {children.map((child,i)=>renderBlock(child,i,children.length,release))}
+              {children.map((child,i)=>renderBlock(child,i,children.length,release,selectedSiblings))}
               {!page.locked&&<DropdownMenu><DropdownMenuTrigger asChild>
                 <button type="button" aria-label={'Add element to column '+(column+1)} className="absolute bottom-0 left-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"><Plus className="size-3"/>Add element</button>
               </DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
@@ -186,10 +214,11 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {emptyImage&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
         <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change({type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
         <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change({type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
+        {block.cell&&<Button type="button" size="icon" variant="ghost" className="size-7" aria-label={'Select '+name} aria-pressed={selected} title="Select card · Shift for range" onClick={e=>selectInColumn(block,true,e.shiftKey)}><SquareCheck/></Button>}
         {block.cell&&<DropdownMenu><DropdownMenuTrigger asChild>
           <Button size="icon" variant="ghost" className="size-7" aria-label={'More actions: '+name} title="More actions"><MoreHorizontal/></Button>
         </DropdownMenuTrigger><DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={()=>release(block)}><MoveDown size={15}/>Premesti na slobodnu površinu</DropdownMenuItem>
+          <DropdownMenuItem onSelect={()=>release(selected?selectedSiblings:[block])}><MoveDown size={15}/>Premesti na slobodnu površinu{selected&&selectedSiblings.length>1&&<span className="ml-auto pl-2 text-muted-foreground">{selectedSiblings.length}</span>}</DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>}
         {!row&&<Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm('Remove this block from the homepage?'))change({type:'remove',original:block});}}><Trash2/></Button>}
       </div>}
@@ -199,7 +228,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     {roots.length>0&&<select aria-label="Fixed rows width" title="Fixed rows width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
     <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={addRow}><Rows3 size={15}/>Add row</Button>
   </>;
-  const fixedRows=roots.length?(release:(block:HomeBlock)=>void)=><section aria-label="Fixed rows" className="@container cv-fixed-section" style={{zoom:"var(--workspace-canvas-zoom, 1)"}}>
+  const fixedRows=roots.length?(release:(cards:HomeBlock[])=>void)=><section aria-label="Fixed rows" className="@container cv-fixed-section" style={{zoom:"var(--workspace-canvas-zoom, 1)"}}>
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
       style={{fontFamily:style?.font,
       '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
@@ -225,7 +254,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   };
   return <>
     <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages}
-      fixedRows={fixedRows} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
+      selection={selection} setSelection={setSelection} fixedRows={fixedRows} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={at=>{captureOpener();setEditor({});classicPosition.current=at;}}/>
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}

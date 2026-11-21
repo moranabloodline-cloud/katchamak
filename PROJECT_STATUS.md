@@ -1,3 +1,5 @@
+> **2026-11-21 — Grupno premeštanje na Canvasu.** Više kartica može da se prevuče u jednu fiksnu kolonu i vrati jednim izborom iz menija.
+
 > **2026-11-21 — Premeštanje Canvas kartica.** Slobodna kartica može da se prevuče u fiksnu kolonu, a meni kartice je vraća u slobodan raspored.
 
 > **2026-11-21 — Jedinstven Canvas.** Fiksni redovi i slobodne kartice dele istu radnu površinu.
@@ -647,6 +649,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Grupe kartica u fiksnoj koloni.** Redosled prati položaj kartica na slobodnoj površini. U koloni rade pojedinačni izbor, Ctrl i Shift. Pri oslobađanju grupa izlazi sleva nadesno po redosledu u koloni. Iste veze i slike ostaju u podacima knjige.
 
 - **2026-11-21 — Kartice između rasporeda.** Kolona se označava pri prevlačenju. Komanda „Premesti na slobodnu površinu“ oslobađa karticu pojedinačno. Slike, odredišta i sačuvane veze prate istu karticu.
 

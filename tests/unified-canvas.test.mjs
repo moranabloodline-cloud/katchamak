@@ -32,8 +32,8 @@ assert.equal(changeHomepage(page,{type:'into',id:'x',cell:{rowId:'r',column:0}})
 assert.equal(changeHomepage(page,{type:'add',block:item('invalid','line',{edge:{from:'x',to:'end'}})}),null);
 const originalX=page.blocks.find(b=>b.id==='x');
 const cell={rowId:'r',column:0};
-const dock={type:'dockCard',id:'x',cell};
-const release={type:'releaseCard',id:'x',cell,at:{x:-40,y:310}};
+const dock={type:'dockCards',ids:['x'],cell};
+const release={type:'releaseCards',ids:['x'],cell,at:{x:-40,y:310}};
 assert.equal(changeHomepage({...page,locked:true},dock),null);
 assert.equal(changeHomepage(page,{...dock,cell:{...cell,column:9}}),null);
 apply(dock);
@@ -59,6 +59,38 @@ apply(release);
 assert.equal(changeHomepage(page,release),null);
 assert.equal(canvasParts(page.blocks).free.filter(b=>b.id==='edge').length,1);
 assert.deepEqual(page.blocks.find(b=>b.id==='x').at,release.at);
+// Creation and click order differ from visual order. Keep both internal and external line IDs.
+const groupRow=item('row','row',{width:'full',columns:2});
+const lane={rowId:'row',column:1};
+const link=(id,from,to)=>item(id,'line',{edge:{from,to}});
+const original={mode:'canvas',locked:false,blocks:[
+  groupRow,item('already','note',{cell:lane}),item('right','image',{at:{x:350,y:4},image:'gallery:old'}),
+  item('next','note',{at:{x:0,y:140}}),item('left','note',{at:{x:20,y:12}}),
+  item('other','note',{at:{x:800,y:12}}),link('inside','left','right'),link('outside','next','other')]};
+const ids=['next','right','left'],groupDock={type:'dockCards',ids,cell:lane};
+let group=changeHomepage(original,groupDock);assert.ok(validHomepage(group));
+const ordered=['left','right','next'];
+assert.deepEqual(group.blocks.filter(b=>b.cell).map(b=>b.id),['already',...ordered]);
+assert.deepEqual(canvasParts(group.blocks).parked.map(b=>b.id),['inside','outside']);
+assert.equal(group.blocks.find(b=>b.id==='right').image,'gallery:old');
+assert.equal(group.blocks.length,original.blocks.length);
+for(const badIds of [[],['right','absent'],['right','right'],['left','row'],['left','already'],['right','inside']]){
+  assert.equal(changeHomepage(original,{...groupDock,ids:badIds}),null);
+}
+const lockedPeer={...original,blocks:original.blocks.map(b=>b.id==='next'?{...b,positionLocked:true}:b)};
+assert.equal(changeHomepage(lockedPeer,groupDock),null);
+assert.equal(changeHomepage(group,groupDock),null);
+group=JSON.parse(JSON.stringify(group));
+const groupRelease={type:'releaseCards',ids:[...ids].reverse(),cell:lane,at:{x:24,y:300}};
+assert.equal(changeHomepage(group,{...groupRelease,ids:['right','other']}),null);
+assert.equal(changeHomepage({...group,locked:true},groupRelease),null);
+const result=changeHomepage(group,groupRelease);assert.ok(validHomepage(result));
+assert.deepEqual(result.blocks.filter(b=>ids.includes(b.id)).map(b=>b.id),ordered);
+const positions=ordered.map(id=>result.blocks.find(b=>b.id===id).at);
+assert.ok(positions.every(p=>p.y===300));assert.ok(positions[0].x<positions[1].x&&positions[1].x<positions[2].x);
+assert.deepEqual(canvasParts(result.blocks).free.filter(b=>b.edge),original.blocks.filter(b=>b.edge));
+assert.equal(result.blocks.length,original.blocks.length);assert.equal(result.blocks.find(b=>b.id==='right').image,'gallery:old');
+assert.equal(changeHomepage(result,groupRelease),null);
 const book=newNovel('Canvas','Test');book.homePages=[{...page,id:'c',title:'One canvas',parentId:null}];
 useKachamak.setState({novels:[book],activeNovelId:book.id,activeHomePageId:'c'});
 assert.ok(useKachamak.getState().convertBoardSelection(book.id,'c',['x','y'],'Linked canvas',[]));

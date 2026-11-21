@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type ReactNode,type PointerEvent as PEvent} from 'react';
+import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode,type PointerEvent as PEvent} from 'react';
 import {Check,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Trash2,UnlockKeyhole} from 'lucide-react';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -15,16 +15,17 @@ import {CanvasTools,toolsByKind} from './CanvasTools';
 import {InkPaths} from './CanvasInk';
 import {useCanvasRowDrop} from './useCanvasRowDrop';
 
-type Gesture={kind:'pan'|'move'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
+type Gesture={dockable?:boolean;kind:'pan'|'move'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
-  fixedRows?: (release:(block:HomeBlock)=>void)=>ReactNode;layoutActions:ReactNode;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
+  selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
+  fixedRows?: (release:(blocks:HomeBlock[])=>void)=>ReactNode;layoutActions:ReactNode;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string):Point{
   try{const p=JSON.parse(sessionStorage.getItem(key)??'null');if(Number.isFinite(p?.x)&&Number.isFinite(p?.y))return p;}catch{}
   return {x:32,y:36};
 }
-export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixedRows,layoutActions,editClassic,renderClassic,addClassic}:Props){
+export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selection,setSelection,fixedRows,layoutActions,editClassic,renderClassic,addClassic}:Props){
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
   const scroller=useRef<HTMLDivElement>(null),freeArea=useRef<HTMLDivElement>(null);
   const rowDrop=useCanvasRowDrop(scroller);
@@ -38,7 +39,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
   const [heights,setHeights]=useState(new Map<string,number>());
   const [tool,setTool]=useState<'select'|'pan'|'line'|'draw'>('select');
   const [inkColor,setInkColor]=useState('#dfac74');
-  const [selection,setSelection]=useState<string[]>([]),[from,setFrom]=useState<string|null>(null);
+  const [from,setFrom]=useState<string|null>(null);
   const [framed,setFramed]=useState(false);
   const setSelected=(id:string|null)=>{setFramed(false);setSelection(id?[id]:[]);};
   const [marquee,setMarquee]=useState<BoardRect|null>(null);
@@ -51,6 +52,12 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
   const lastPointer=useRef<Point|null>(null),previousZoom=useRef(zoom);
   const rects=useMemo(()=>boardRects(page.blocks,heights),[page.blocks,heights]);
   const blocks=useMemo(()=>new Map(page.blocks.map(b=>[b.id,b])),[page.blocks]);
+  function toggleFreeCard(id:string){
+    setSelection(previous=>{
+      const active=previous.filter(key=>blocks.has(key));
+      return active.includes(id)?active.filter(key=>key!==id):[...active,id];
+    });
+  }
   const items=useMemo(()=>selectionRoots(page.blocks,new Set(selection)),[page.blocks,selection]);
   const selected=items.length===1?items[0].id:selection.length===1?selection[0]:undefined;
   const focused=selected?blocks.get(selected):undefined;
@@ -130,9 +137,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     return page.blocks.filter(b=>b.layout==='column'&&!b.positionLocked&&inside(p,rects.get(b.id)!))
       .sort((a,b)=>layers.get(b.id)!-layers.get(a.id)!)[0]?.id;
   }
-  function nextPosition(kind:CanvasTool):Point{
+  function nextPosition(kind:CanvasTool,width=kind==='column'?COLUMN_WIDTH:CARD_WIDTH):Point{
     const el=surface.current!,start=boardPoint({x:28,y:28});
-    const width=kind==='column'?COLUMN_WIDTH:CARD_WIDTH,step=COLUMN_WIDTH+24;
+    const step=COLUMN_WIDTH+24;
     const lanes=Math.max(1,1+Math.floor((el.clientWidth/zoom-56-width)/step));
     let best:Point|null=null;
     for(let lane=0;lane<lanes;lane++){
@@ -144,17 +151,20 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     }
     return best!;
   }
-  function releaseCard(block:HomeBlock){
-    if(!block.cell)return;
-    const at=nextPosition('note');
-    if(!save({type:'releaseCard',id:block.id,cell:block.cell,at}))return;
-    setTool('select');setFrom(null);setSelected(block.id);
+  function releaseCards(cards:HomeBlock[]){
+    const first=cards[0];
+    if(!first?.cell)return;
+    const ids=cards.map(b=>b.id);
+    const width=cards.reduce((total,b)=>total+(b.extent?.w??CARD_WIDTH)+24,-24);
+    const at=nextPosition('note',width);
+    if(!save({type:'releaseCards',ids,cell:first.cell,at}))return;
+    setTool('select');setFrom(null);setFramed(false);setSelection(ids);
     requestAnimationFrame(()=>{
       const s=surface.current;if(!s)return;
       freeArea.current?.scrollIntoView({block:'end'});
       if(at.y*zoom+pan.y>s.clientHeight-80||at.x*zoom+pan.x>s.clientWidth-80)
         setPan({x:s.clientWidth/2-(at.x+CARD_WIDTH/2)*zoom,y:s.clientHeight/2-(at.y+45)*zoom});
-      world.current?.querySelector<HTMLElement>('[data-board-card="'+CSS.escape(block.id)+'"]')?.focus({preventScroll:true});
+      world.current?.querySelector<HTMLElement>('[data-board-card="'+CSS.escape(first.id)+'"]')?.focus({preventScroll:true});
     });
   }
   function pick(kind:CanvasTool){
@@ -195,7 +205,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     else if(target.closest('button,a,input,audio,iframe,video,select,[data-board-edge],[data-board-edge-copy]'))return;
     else if(id&&!page.locked){
       if(e.shiftKey||e.ctrlKey||e.metaKey){
-        setSelection(prior=>prior.includes(id)?prior.filter(key=>key!==id):[...prior,id]);
+        toggleFreeCard(id);
         e.preventDefault();return;
       }
       const member=items.find(b=>b.id===id || b.id===blocks.get(id)?.columnId);
@@ -203,7 +213,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
       const anchor=group?member!.id:id;
       if(!group)setSelected(id);
       if((group??[blocks.get(id)!]).some(fixed)){e.preventDefault();return;}
-      gesture.current={kind:'move',start,origin:rects.get(anchor)!,id:anchor,group:group?.map(b=>b.id)};
+      const dockable=group?group.every(b=>b.layout!=='column'):blocks.get(id)?.layout!=='column';
+      gesture.current={kind:'move',start,origin:rects.get(anchor)!,id:anchor,group:group?.map(b=>b.id),dockable};
     }else if(!page.locked&&tool==='select'){
       const base=e.shiftKey||e.ctrlKey||e.metaKey?selection:[];
       gesture.current={kind:'frame',start,origin:p,base};
@@ -218,8 +229,10 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     if(g.kind==='pan')setPan({x:g.origin.x+dx,y:g.origin.y+dy});
     if(g.kind==='ink'){g.points!.push([p.x,p.y]);setLiveInk([...g.points!]);}
     if(g.kind==='move'&&(Math.abs(dx)+Math.abs(dy)>3 || move)){
-      const card=blocks.get(g.id!);
-      if(fixedRows && !g.group && card && card.layout!=='column')rowDrop.track(e.clientX,e.clientY,card.title||'Move card here');
+      if(fixedRows&&g.dockable){
+        const caption=g.group?g.group.length+' cards':blocks.get(g.id!)?.title||'Move card here';
+        rowDrop.track(e.clientX,e.clientY,caption);
+      }
       setMove({id:g.id!,at:{x:g.origin.x+dx/zoom,y:g.origin.y+dy/zoom},over:g.group?undefined:columnAt(p,g.id!),group:g.group?new Set(g.group):undefined});
     }
   }
@@ -233,9 +246,10 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
       setSelection(selectionRoots(page.blocks,new Set([...(g.base??[]),...hits])).map(b=>b.id));
     }
     if(g.kind==='move'&&(move||dragged)&&fixedRows){
-      const cell=!g.group&&blocks.get(g.id!)?.layout!=='column'&&rowDrop.target(e.clientX,e.clientY);
+      const cell=g.dockable&&rowDrop.target(e.clientX,e.clientY);
       if(cell){
-        if(save({type:'dockCard',id:g.id!,cell}))setSelected(null);
+        const ids=g.group??[g.id!];
+        if(save({type:'dockCards',ids,cell,heights:[...heights]})){setFramed(false);setSelection(ids);}
         cancelGesture();return;
       }
       // The gap between layouts, the header, and the side panels are not drop targets.
@@ -272,7 +286,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
       {!page.locked&&layoutActions}
       {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}</header>
     <div ref={scroller} className="cv-layout-scroll">
-    {fixedRows?.(releaseCard)}
+    {fixedRows?.(releaseCards)}
     <div ref={freeArea} className={'cv-free-area'+(fixedRows?' cv-below-rows':'')} hidden={!!fixedRows&&page.locked&&!page.blocks.length}>
     {fixedRows&&<h3 className="cv-free-label"><MousePointer2 size={13}/>Free canvas</h3>}
     <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
@@ -295,7 +309,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
           const looseInk=kind==='draw'&&!!b.extent;
           return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={0}
             onKeyDown={e=>{if(e.target!==e.currentTarget||page.locked)return;
-              if(e.key===' '&&(e.ctrlKey||e.metaKey||e.shiftKey)){e.preventDefault();setSelection(prior=>prior.includes(b.id)?prior.filter(id=>id!==b.id):[...prior,b.id]);return;}
+              if(e.key===' '&&(e.ctrlKey||e.metaKey||e.shiftKey)){e.preventDefault();toggleFreeCard(b.id);return;}
               if(e.key==='Enter'){if(tool==='line')finishLink(b.id);else editBlock(b);}
               if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
                 e.preventDefault();const delta={x:e.key==='ArrowRight'?16:e.key==='ArrowLeft'?-16:0,y:e.key==='ArrowDown'?16:e.key==='ArrowUp'?-16:0};
