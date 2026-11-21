@@ -47,7 +47,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     for(const b of books)if(b.id!==novel.id)visit(b,b.sections.publish??[],b.title);
     return choices;
   },[books,novel.id]);
-  useEffect(()=>{useKachamak.getState().installPublishStyles(novel.id);},[novel.id]);
+  useEffect(()=>{useKachamak.getState().installPublishStyles(novel.id);},[novel.id,novel.publishStyleCatalogVersion]);
   const rows=useMemo(()=>manuscriptEntries(novel),[novel]);
   const includedRows=useMemo(()=>rows.filter(row=>row.included),[rows]);
   const hasContents=includedRows.length>0;

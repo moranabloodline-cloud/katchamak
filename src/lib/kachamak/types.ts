@@ -127,6 +127,7 @@ export interface TrashItem {
 export interface Novel {
   publishEnabled?: boolean;
   publishStylesInstalled?: boolean;
+  publishStyleCatalogVersion?: number;
   publishManuscript?: import('./publish-manuscript').PublishManuscript;
   financeCurrency?: import('./finance').FinanceCurrency;
   gallery?: import('./gallery').GalleryEntry[];

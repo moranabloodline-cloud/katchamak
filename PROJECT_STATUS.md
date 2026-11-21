@@ -1,3 +1,5 @@
+> **2026-11-21 — Žanrovski House styles.** Publish nudi 22 zasebna uređiva stila po traženom redosledu. Prelom i fontovi koriste polazne vrednosti prema vrsti knjige. Prethodne beleške i njihove veze ostaju dostupne.
+
 > **2026-11-21 — Izbor rukopisa u Publish.** Svaka knjiga pamti izabrane stavke i njihov redosled za pregled i izvoz. Šest početnih stilova dostupno je kao zasebne beleške u levom stablu.
 
 > **2026-11-21 — Publish i stilovi knjige.** Opcioni tab Publish donosi šest stilova knjige, biblioteku stilova u stablu i živi pregled štampe i e-knjige. Iz istog Binder rukopisa priprema PDF preko dijaloga za štampu, EPUB, DOCX i HTML.
@@ -671,6 +673,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Publish:** Uvedena je druga verzija kataloga sa 22 stila. Svaka knjiga je preuzima jednom. Stilovi obuhvataju prozu, poeziju, strip, slikovnice i stručnu literaturu. Izvori za formate i prelom su [IngramSpark](https://www.ingramspark.com/blog/picking-a-popular-trim-size-for-your-book), [IngramSpark za poeziju](https://www.ingramspark.com/blog/what-to-consider-when-publishing-poetry), [Taylor](https://www.taylor.com/blog/a-guide-to-printing-childrens-books) i [Wiley](https://assets.wiley.com/image/upload/v1783020978/author-guidelines-for-preparing-print-ready-pdfs.pdf).
 
 - **2026-11-21 — Publish:** U Inspectoru je dodat Manuscript sa izborom poglavlja i beležaka, prevlačenjem, strelicama i vraćanjem Binder redosleda. Print, eBook i svi izvozi koriste isti spisak. Izbor stila iz levog panela otvara pregled i Tools.
 

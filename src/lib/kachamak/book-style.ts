@@ -1,7 +1,21 @@
 import {z} from 'zod';
 
 export const fonts = ['Georgia','Palatino Linotype','Times New Roman','Cambria','Arial','Trebuchet MS'] as const;
-export const trims = {'5 × 8 in':[127,203.2],'5.5 × 8.5 in':[139.7,215.9],'6 × 9 in':[152.4,228.6],A5:[148,210],A4:[210,297],'US Letter':[215.9,279.4]} as const;
+// Keep the intended serif/sans distinction on readers without Windows fonts.
+export const fontStacks:Record<typeof fonts[number],string>={
+  Georgia:'Georgia, "Times New Roman", serif',
+  'Palatino Linotype':'"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif',
+  'Times New Roman':'"Times New Roman", Times, serif',
+  Cambria:'Cambria, Georgia, serif',
+  Arial:'Arial, Helvetica, sans-serif',
+  'Trebuchet MS':'"Trebuchet MS", Arial, sans-serif'
+};
+export const trims = {
+  '5 × 7 in':[127,177.8], '5 × 8 in':[127,203.2], '5.25 × 8 in':[133.35,203.2],
+  '5.5 × 8.25 in':[139.7,209.55], '5.5 × 8.5 in':[139.7,215.9], '6 × 9 in':[152.4,228.6],
+  '6.625 × 10.25 in':[168.275,260.35], '7 × 10 in':[177.8,254], '8.5 × 8.5 in':[215.9,215.9],
+  A5:[148,210], A4:[210,297], 'US Letter':[215.9,279.4]
+} as const;
 export const alignments = ['left','center','right','justify'] as const;
 export const ornaments = ['None','Rule','Diamonds','Stars','Fleuron'] as const;
 export const glyphs = {None:'',Rule:'―',Diamonds:'◇',Stars:'✧  ✧  ✧',Fleuron:'❦'};
@@ -35,11 +49,3 @@ export const baseStyle:BookStyle={
   trim:'6 × 9 in',top:19,bottom:22,inner:22,outer:16,folios:true,running:true,recto:false,ink:'#26231f',heading:'#28211c',accent:'#875f31',
   pages:['Title page','Contents'],copyright:'',dedication:'',biography:'',colophon:''
 };
-export const houseStyles:{name:string;style:BookStyle}[]=[
-  {name:'Folio',style:baseStyle},
-  {name:'Briar',style:{...baseStyle,bodyFont:'Palatino Linotype',headingFont:'Palatino Linotype',initial:'Drop cap',ornament:'Fleuron',divider:'Fleuron',sink:14,heading:'#263c32',accent:'#466d55'}},
-  {name:'Signal',style:{...baseStyle,headingFont:'Arial',numbering:'Arabic',chapterAlign:'left',ornament:'None',headingSize:31,indent:0,paragraphGap:.65,align:'left',heading:'#173b52',accent:'#286882'}},
-  {name:'Vesper',style:{...baseStyle,bodyFont:'Cambria',headingFont:'Times New Roman',initial:'Raised cap',smallCaps:true,ornament:'Stars',divider:'Stars',chapterAlign:'right',headingSize:29,heading:'#472946',accent:'#955773'}},
-  {name:'Quarto',style:{...baseStyle,bodyFont:'Times New Roman',headingFont:'Trebuchet MS',trim:'A5',size:10.5,numbering:'Arabic',chapterAlign:'left',ornament:'Rule',paragraphGap:.45,indent:0,sink:2,heading:'#28304a',accent:'#636f85'}},
-  {name:'Solstice',style:{...baseStyle,bodyFont:'Palatino Linotype',trim:'5 × 8 in',smallCaps:true,ornament:'Diamonds',initial:'Drop cap',headingSize:21,divider:'Rule',heading:'#813f29',accent:'#a55a32'}}
-];

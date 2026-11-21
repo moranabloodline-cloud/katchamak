@@ -27,6 +27,7 @@ export function isReadableProject(value: unknown): boolean {
   if (n.author !== undefined && typeof n.author !== "string") return false;
   if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
   if(!validPublishManuscript(n.publishManuscript) || (n.publishStylesInstalled!==undefined && typeof n.publishStylesInstalled!=='boolean'))return false;
+  if(n.publishStyleCatalogVersion!==undefined && !(typeof n.publishStyleCatalogVersion==='number' && Number.isSafeInteger(n.publishStyleCatalogVersion) && n.publishStyleCatalogVersion>=1))return false;
   if(n.publishEnabled!==undefined && typeof n.publishEnabled!=='boolean')return false;
   if(n.financeCurrency!==undefined && !validCurrency(n.financeCurrency))return false;
   const cover = n.cover as Record<string, unknown>;

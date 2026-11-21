@@ -1,7 +1,7 @@
 import {manuscriptEntries} from './publish-manuscript';
 import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
-import {glyphs,trims} from './book-style';
+import {fontStacks,glyphs,trims} from './book-style';
 import {projectImageSrc} from './project-image';
 import type {Novel} from './types';
 
@@ -141,18 +141,18 @@ export function bookCss(s:BookStyle,lang:string,print:boolean){
     const b=s.blocks[k];return selector+'{font-size:'+b.size+'em;font-style:'+(b.italic?'italic':'normal')+';text-align:'+b.align+';'+(b.rule?'border-inline-start:2px solid '+s.accent+';padding-inline-start:1em;':'')+'}';
   }).join('\n');
   return `
-*{box-sizing:border-box}html,body{margin:0}body{font-family:"${s.bodyFont}",serif;color:${s.ink};font-size:${print?s.size+'pt':(s.size/11)+'em'};line-height:${s.leading};overflow-wrap:break-word}
+*{box-sizing:border-box}html,body{margin:0}body{font-family:${fontStacks[s.bodyFont]};color:${s.ink};font-size:${print?s.size+'pt':(s.size/11)+'em'};line-height:${s.leading};overflow-wrap:break-word}
 article{display:block}p{margin:0 0 ${s.paragraphGap}em;text-indent:${s.indent}em;text-align:${s.align};hyphens:${s.hyphens?'auto':'manual'};orphans:2;widows:2}p:empty{min-height:1em}
-h1,h2,h3,h4,h5,h6{font-family:"${s.headingFont}",serif;color:${s.heading};line-height:1.16;break-after:avoid}
+h1,h2,h3,h4,h5,h6{font-family:${fontStacks[s.headingFont]};color:${s.heading};line-height:1.16;break-after:avoid}
 h1{margin:.45em 0 .8em;font-size:${s.headingSize/s.size}em}img{max-width:100%;height:auto;max-height:${print?(h-s.top-s.bottom-8)+'mm':'65vh'};object-fit:contain}
 a{color:inherit}table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #aaa;padding:.3em}pre,.verse{white-space:pre-wrap;font-family:inherit}blockquote,aside,.letter,pre{margin:1em}
 .chapter-head{text-align:${s.chapterAlign};padding-top:${print?h*s.sink/100+'mm':s.sink/3+'em'};margin:0 0 ${s.chapterGap}em;break-inside:avoid;break-after:avoid}
 .chapter-head h1{margin:.3em 0 0}.chapter-art{max-height:5em;max-width:80%}.ornament,.scene,.number{color:${s.accent}}.number{font-size:.85em;letter-spacing:.12em}.scene{text-align:center;margin:${s.dividerGap}em 0;min-height:.35em;break-after:avoid}
 .opening{text-indent:${s.firstIndent?s.indent:0}em}.lead{font-variant:${s.smallCaps?'small-caps':'normal'}}
-${s.initial==='Normal'?'':'.opening::first-letter{font-family:"'+s.headingFont+'",serif;color:'+s.accent+';'+(s.initial==='Drop cap'?'float:left;font-size:3em;line-height:.85;margin:.07em .08em 0 0':'font-size:1.9em;line-height:.9')+'}'}
+${s.initial==='Normal'?'':'.opening::first-letter{font-family:'+fontStacks[s.headingFont]+';color:'+s.accent+';'+(s.initial==='Drop cap'?'float:left;font-size:3em;line-height:.85;margin:.07em .08em 0 0':'font-size:1.9em;line-height:.9')+'}'}
 .title-page{text-align:center;padding-top:${print?h*.19+'mm':'4em'}}.title-page p{text-align:center;text-indent:0}.contents p{text-indent:0;text-align:left;margin:.4em 0}.contents a{text-decoration:none}
 ${rules}
-${print?`@page{size:${w}mm ${h}mm;margin:${s.top}mm ${s.outer}mm ${s.bottom}mm ${s.inner}mm;@top-center{content:${s.running?'string(booktitle)':'none'};font:9pt "${s.headingFont}";color:${s.accent}}@bottom-center{content:${s.folios?'counter(page)':'none'};font:9pt "${s.bodyFont}"}}
+${print?`@page{size:${w}mm ${h}mm;margin:${s.top}mm ${s.outer}mm ${s.bottom}mm ${s.inner}mm;@top-center{content:${s.running?'string(booktitle)':'none'};font:9pt ${fontStacks[s.headingFont]};color:${s.accent}}@bottom-center{content:${s.folios?'counter(page)':'none'};font:9pt ${fontStacks[s.bodyFont]}}}
 @page:left{margin-left:${s.outer}mm;margin-right:${s.inner}mm}@page:blank{@top-center{content:none}@bottom-center{content:none}}
 article{break-before:page}article.chapter{break-before:${s.recto?'right':'page'}}article:first-child{break-before:auto}.book-name{string-set:booktitle content();height:0;overflow:hidden;line-height:0}`:'.book-name{display:none}article+article{margin-top:3em;break-before:page}'}
 `;
