@@ -8,7 +8,7 @@ const {workspaceTabs}=await import('../src/lib/kachamak/workspace-tabs.ts');
 const {houseStyles,houseStyleCatalogVersion}=await import('../src/lib/kachamak/house-styles.ts');
 const {genreSamples}=await import('../src/lib/kachamak/genre-samples.ts');
 const {baseStyle,trims,validBookStyle}=await import('../src/lib/kachamak/book-style.ts');
-const {publication,htmlEdition}=await import('../src/lib/kachamak/publication.ts');
+const {publication,htmlEdition,binderChapterChoices,prepareChapterSample,chapterSpecimen}=await import('../src/lib/kachamak/publication.ts');
 const {epubEdition}=await import('../src/lib/kachamak/publish-export.ts');
 const {wordEdition}=await import('../src/lib/kachamak/publish-word.ts');
 const {validCloudLibrary}=await import('../src/lib/kachamak/cloud-write-validation.mjs');
@@ -16,6 +16,36 @@ const state=()=>useKachamak.getState(), book=()=>state().novels[0];
 state().createNovel('River & Reed','Ana Petrović');
 const ch=state().addNode('binder',null,'chapter','Crossing');
 state().updateNode('binder',ch,{content:'<p>First <strong>four</strong> words stay here &amp; travel.</p><hr><p>Last line.</p><ul><li>Harbour</li></ul><script>bad()</script>'});
+// Preview selection follows the visible Binder even when an edition excludes or reorders a chapter.
+{
+  const first=book().sections.binder[0];
+  const note=(id,kind,title,content,children=[])=>({...first,id,kind,title,content,children});
+  const longScene=note('scene','scene','Arrival','<p><em>Fresh rain</em> on the quay.</p><h3>At dusk</h3><p>'+'The ferry returned. '.repeat(400)+'</p><p>Final sentence.</p>');
+  const following=note('next','chapter','Other chapter','<p>Other chapter body</p>');
+  const group=note('part','act','Part II','',[note('chosen','chapter','Light & shadow','<p>First line.</p>',[longScene,following]), {...following,id:'secret',hidden:true}]);
+  const namedCopy=note('copy','doc','Arrival','<p>Another arrival.</p>');
+  const fixture={...book(),language:'Serbian',sections:{...book().sections,binder:[first,group,namedCopy]},publishManuscript:{order:['copy',first.id],included:['copy',first.id]}};
+  const before=JSON.stringify(fixture);
+  const choices=binderChapterChoices(fixture);
+  assert.deepEqual(choices.map(c=>c.node.id),[first.id,'chosen','scene','next','copy']);
+  assert.deepEqual(choices.filter(c=>c.node.title==='Arrival').map(c=>c.path),['Part II / Light & shadow / Arrival','Arrival']);
+  const sample=prepareChapterSample(fixture,choices[1]);
+  assert.equal(sample.number,2);
+  assert(!sample.excerpt.includes('Final sentence.')&&sample.full.includes('Final sentence.'));
+  for(const {style} of houseStyles){
+    const miniature=chapterSpecimen(fixture,style,sample,true);
+    const detail=chapterSpecimen(fixture,style,sample,false);
+    const {html,title}=miniature.sections[0];
+    assert.equal(title,'Light & shadow');assert.equal(miniature.lang,'sr');
+    assert(html.includes('<em>Fresh rain</em>')&&html.includes('<h3>At dusk</h3>')&&html.includes('role="separator"')&&html.includes('Light &amp; shadow'));
+    assert(!html.includes('publish-samples/')&&!detail.sections[0].html.includes('Other chapter body'));
+    assert(detail.sections[0].html.includes('Final sentence.'));
+    const exported=publication(fixture,style).sections.filter(s=>s.kind==='chapter');
+    assert.deepEqual(exported.map(s=>s.title),['Arrival',first.title]);
+  }
+  assert.equal(JSON.stringify(fixture),before);
+  assert.deepEqual(binderChapterChoices({...fixture,sections:{binder:[]}}),[]);
+}
 const original=JSON.stringify(book().sections.binder);
 assert(!workspaceTabs(book()).some(t=>t.key==='publish'));
 state().setTab('publish');

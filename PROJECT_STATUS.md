@@ -1,3 +1,5 @@
+> **2026-11-21 — Poređenje istog poglavlja u Publish galeriji.** Izbor poglavlja iz Bindera prikazuje njegov početak u svim stilovima. Klik na stil otvara celo poglavlje, a Genre samples vraća žanrovske primere.
+
 > **2026-11-21 — Primeri žanrova u Publish galeriji.** Svih 22 stila ima svoj originalan uzorak. Poetry prikazuje strofe, Comics i Graphic Novels različite ilustrovane sekvence, a Children’s Books slikovnicu. Klik na karticu otvara isti primer u većem formatu.
 
 > **2026-11-21 — Žanrovski House styles.** Publish nudi 22 zasebna uređiva stila po traženom redosledu. Prelom i fontovi koriste polazne vrednosti prema vrsti knjige. Prethodne beleške i njihove veze ostaju dostupne.
@@ -675,6 +677,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Publish.** Izvor teksta za poređenje bira se u galeriji po putanji iz Bindera. Izabrano poglavlje dostupno je i u Print i eBook pregledu. Izvoz i dalje koristi redosled i izbor iz Manuscript panela.
 
 - **2026-11-21 — Publish:** Žanrovske minijature i uvećani Style sample koriste isti sadržaj i tipografiju stila. Uzorak se čuva uz kopiju stila. Ranije instalirani žanrovski katalog nadograđuje se bez ponovnog dodavanja beležaka. Izvoz koristi izabrani rukopis iz Bindera.
 

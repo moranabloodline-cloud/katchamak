@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
 import {fontStacks,glyphs,trims} from './book-style';
 import {projectImageSrc} from './project-image';
-import type {Novel} from './types';
+import type {Novel,NoteNode} from './types';
 
 export type Proof = 'Manuscript'|'Title page'|'Chapter opening'|'Body text'|'Scene break'|'Special blocks'|'End matter'|SpecialPage;
 export const proofs:Proof[]=['Manuscript','Title page','Chapter opening','Body text','Scene break','Special blocks','Copyright','Dedication','Contents','About the author','Colophon'];
@@ -28,7 +28,7 @@ const sampleParagraphs=[
 const paras=(value:string)=>value.split(/\n\s*\n/).map(p=>'<p>'+escapeText(p).replace(/\n/g,'<br/>')+'</p>').join('');
 export const sampleBody=sampleParagraphs.map(paras).join('');
 function divider(style:BookStyle){return '<div class="scene" role="separator">'+escapeText(glyphs[style.divider])+'</div>';}
-function cleanBody(raw:string,book:Novel,style:BookStyle,targets:Map<string,string>){
+function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,string>){
   const el=document.implementation.createHTMLDocument('').createElement('div');
   el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','style','start','colspan','rowspan'],ALLOW_DATA_ATTR:false});
   for(const n of Array.from(el.querySelectorAll<HTMLElement>('*'))){
@@ -52,7 +52,7 @@ function cleanBody(raw:string,book:Novel,style:BookStyle,targets:Map<string,stri
       if(target)n.setAttribute('href','#'+target);else n.removeAttribute('href');
     }
     if(n.tagName==='A' && !/^(https?:\/\/|mailto:|#)/i.test(n.getAttribute('href')??''))n.removeAttribute('href');
-    if(n.tagName==='HR' || (['P','DIV'].includes(n.tagName)&&!n.children.length && /^(?:\*\s*\*\s*\*|#\s*#\s*#)$/.test((n.textContent??'').trim()))){n.outerHTML=divider(style);continue;}
+    if(n.tagName==='HR' || (['P','DIV'].includes(n.tagName)&&!n.children.length && /^(?:\*\s*\*\s*\*|#\s*#\s*#)$/.test((n.textContent??'').trim()))){n.outerHTML=sceneBreak;continue;}
     if(['letter','verse','aside'].includes(old))n.className=old;
     if(n.tagName==='DIV' && !n.querySelector('div,p,h1,h2,h3,h4,h5,h6,ul,ol,table,section,figure,blockquote,pre') && !n.className){
       const p=document.createElement('p');p.append(...Array.from(n.childNodes));n.replaceWith(p);
@@ -61,7 +61,7 @@ function cleanBody(raw:string,book:Novel,style:BookStyle,targets:Map<string,stri
   if(el.childNodes.length && !el.querySelector('p,div,section,h1,h2,h3,h4,h5,h6,ul,ol,table,blockquote,pre,figure,aside')){const p=document.createElement('p');p.append(...Array.from(el.childNodes));el.append(p);}
   return el.innerHTML;
 }
-function opening(html:string){
+function openingBody(html:string){
   const doc=document.createElement('div');doc.innerHTML=html;
   const first=Array.from(doc.querySelectorAll('p')).find(p=>p.textContent?.trim());
   if(first){
@@ -78,8 +78,9 @@ function opening(html:string){
       remaining-=matches.length;
     }
   }
-  return doc.innerHTML;
+  return doc;
 }
+function opening(html:string){return openingBody(html).innerHTML;}
 function chapterHead(title:string,index:number,s:BookStyle,art?:string){
   const num=chapterNumber(index,s.numbering);
   return '<header class="chapter-head">'+(art?'<img class="chapter-art" alt="" src="'+escapeText(art)+'"/>':'')+
@@ -118,6 +119,68 @@ function bookLanguage(language?:string){
   const named:Record<string,string>={english:'en',serbian:'sr',srpski:'sr',french:'fr',german:'de',italian:'it',spanish:'es',russian:'ru',croatian:'hr'};
   return named[(language??'').toLowerCase()] || (/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(language??'')?language!:'en');
 }
+export type BinderChapterChoice={node:NoteNode;path:string;number:number};
+export function binderChapterChoices(book:Novel):BinderChapterChoice[]{
+  const choices:BinderChapterChoice[]=[];
+  let chapterCount=0;
+  function visit(nodes:NoteNode[],parentPath:string,parentNumber:number){
+    for(const node of nodes){
+      if(node.hidden)continue;
+      const path=parentPath?parentPath+' / '+node.title:node.title;
+      const number=node.kind==='chapter'?++chapterCount:parentNumber;
+      if(node.kind!=='act')choices.push({node,path,number:number||1});
+      visit(node.children,path,number);
+    }
+  }
+  visit(book.sections.binder??[],'',0);
+  return choices;
+}
+
+// Each thumbnail shows one sheet. Keep the complete chapter for the opened proof.
+function firstSheetExcerpt(body:HTMLElement){
+  const doc=body.ownerDocument;
+  const walker=doc.createTreeWalker(body,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);
+  const range=doc.createRange();
+  let remaining=4600,images=0;
+  for(let node=walker.nextNode();node;node=walker.nextNode()){
+    if(node.nodeType===3){
+      const text=node as Text;
+      if(text.length<=remaining){remaining-=text.length;continue;}
+      const cut=remaining>0&&/[\uD800-\uDBFF]/.test(text.data[remaining-1])?remaining-1:remaining;
+      range.setStart(text,cut);
+    }else if(node.nodeName==='IMG'&&++images>4){
+      range.setStartBefore(node);
+    }else continue;
+    range.setEnd(body,body.childNodes.length);
+    range.deleteContents();
+    break;
+  }
+  return body.innerHTML;
+}
+export function prepareChapterSample(book:Novel,choice:BinderChapterChoice){
+  const passages:string[]=[];
+  const targets=new Map<string,string>();
+  function collect(node:NoteNode){
+    if(node.content){
+      const html=cleanBody(node.content,book,'<hr>',targets);
+      if(html.replace(/<[^>]+>|&nbsp;/g,'').trim()||/<img\b/i.test(html))passages.push(html);
+    }
+    for(const child of node.children){
+      if(!child.hidden&&child.kind!=='chapter'&&child.kind!=='act')collect(child);
+    }
+  }
+  collect(choice.node);
+  const body=openingBody(passages.join('<hr>'));
+  return {title:choice.node.title,number:choice.number,full:body.innerHTML,excerpt:firstSheetExcerpt(body)};
+}
+export type ChapterSample=ReturnType<typeof prepareChapterSample>;
+export function chapterSpecimen(book:Novel,s:BookStyle,sample:ChapterSample,thumbnail:boolean):Publication{
+  const head=chapterHead(sample.title,sample.number,s,projectImageSrc(book.gallery,s.chapterImage));
+  const body=(thumbnail?sample.excerpt:sample.full).replaceAll('<hr>',divider(s));
+  return {title:book.title,author:book.author,lang:bookLanguage(book.language),sections:[
+    {id:'binder-sample',kind:'chapter',title:sample.title,html:head+body}
+  ]};
+}
 export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Publication{
   const chapters:Leaf[]=[];let index=0;
   const art=projectImageSrc(book.gallery,s.chapterImage);
@@ -127,7 +190,7 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
     const entries=manuscriptEntries(book).filter(row=>row.included);
     entries.forEach(({node},i)=>targets.set(node.id,'entry-'+i));
     for(const {node} of entries){
-      const content=cleanBody(node.content??'',book,s,targets);
+      const content=cleanBody(node.content??'',book,divider(s),targets);
       const part=(node.kind==='folder'||node.kind==='act'||(!content.replace(/<[^>]+>|&nbsp;/g,'').trim()&&!content.includes('<img') && node.children.length>0 && node.kind!=='chapter'));
       const leaf:Leaf={id:targets.get(node.id)!,title:node.title,kind:part?'part':'chapter',html:''};
       leaf.html=part?'<h1>'+escapeText(node.title)+'</h1>'+content:chapterHead(node.title,++index,s,art)+opening(content);
