@@ -1,3 +1,5 @@
+> **2026-11-21 — Skrolovanje u Split prikazu.** Točkić pomera samo belešku ispod pokazivača. Druga beleška, bočni paneli i obe gornje trake zadržavaju položaj i kada druga beleška ima fokus.
+
 > **2026-11-21 — Nezavisno skrolovanje bočnih panela.** U verziji 404 pomeranje stabla ili sadržaja Details zadržava položaj otvorene beleške, obe gornje trake i drugog panela, uključujući skrolovanje preko početka i kraja.
 
 > **2026-11-21 — Provera skrolovanja.** U verziji 404 obe gornje trake ostaju na mestu pri skrolovanju duge beleške i Timeline kartica. U Chromeu je u sva četiri probna slučaja izmereno pomeranje traka od 0 px.
@@ -591,6 +593,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Provera Split prikaza u verziji 404.** U Chromeu su iz stabla otvorene dve probne beleške od 420 i 360 pasusa. Na prozorima od 1550 × 860 i 1200 × 740 px provereni su oba smera skrolovanja i nastavak preko obe ivice, sa fokusom u suprotnoj belešci, već skrolovanim stablom i otvorenim Details panelom. Provera je ponovljena i posle pomeranja razdelnika. Druga beleška, bočni paneli i gornje trake pomerili su se za 0 px.
 
 - **2026-11-21 — Stablo i Details.** Provera u Chromeu na lokalnoj kopiji objavljenog paketa v404. Na 1550 × 860 i 1100 × 680 px otvorena je probna beleška od 420 pasusa i ostavljena na sredini, sa fokusom u editoru. Provereno je pojedinačno skrolovanje stabla sa 161 stavkom i panela Details sa 92 veze kroz sredinu, do dna, do vrha i preko obe ivice. Beleška, dve gornje trake i suprotni panel zadržali su položaj uz pomeranje od 0 px. Korišćeni su točkić i simulirani dodir.
 
