@@ -1,3 +1,5 @@
+> **2026-11-21 — Provera skrolovanja.** U verziji 404 obe gornje trake ostaju na mestu pri skrolovanju duge beleške i Timeline kartica. U Chromeu je u sva četiri probna slučaja izmereno pomeranje traka od 0 px.
+
 > **2026-11-21 — Stalne trake radnog prostora.** Svaki tab koristi isti gornji red za navigaciju i isti drugi red za pretragu, formatiranje teksta i inspektor. Komande modula nalaze se u radnoj površini ispod njih.
 
 > **2026-11-20 — Ikone postojećih beležaka.** Beleške bez izabrane ikone prikazuju File i kada se otvore iz stare knjige ili rezervne kopije. Ručni izbor uvek ima prednost.
@@ -587,6 +589,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Skrolovanje sadržaja.** Lokalno je pokrenut objavljeni paket v404 sa probnom knjigom (420 pasusa i 120 Timeline kartica). Na 1550 × 860 px i 390 × 690 px, skrolovanje do kraja, preko ivice i nazad pokretalo je samo sadržaj. Izmerene su pozicije obe trake, bočnih panela i stranice. Provereni su točkić miša i simulirani dodir.
 
 - **2026-11-21 — Poravnanje traka na svim tabovima.** Timeline, Relationships, Homepage i Trash dele raspored sa Binderom. Homepage zadržava punu širinu platna. Provereno u Chromeu na 11 tabova i prikaza, pri širinama prozora od 390, 850 i 1550 px, sa promenjenim i sklopljenim panelima.
 
