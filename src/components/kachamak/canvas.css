@@ -1,5 +1,15 @@
 .cv-board-shell,.cv-page-shell { position:relative; display:flex; min-width:0; min-height:0; overflow:hidden; }
 .cv-board-main { position:relative; display:flex; flex:1; flex-direction:column; min-width:0; }
+.cv-layout-scroll { display:flex; flex:1; min-height:0; flex-direction:column; overflow:auto; overscroll-behavior:contain; }
+.cv-fixed-section { flex:none; }
+.cv-free-area { position:relative; display:flex; flex:1 0 auto; flex-direction:column; min-height:0; }
+.cv-free-area[hidden] { display:none; }
+.cv-free-area.cv-below-rows { min-height:min(54dvh,490px); }
+.cv-row-title,.cv-free-label { display:flex; align-items:center; gap:7px; font:600 13px/1.4 system-ui,sans-serif; }
+.cv-row-title { padding:6px 8px; }
+.cv-row-title span { color:var(--muted-foreground); font-weight:400; }
+.cv-free-label { padding:12px 18px; border-top:1px solid var(--border); color:var(--muted-foreground); }
+.cv-width { max-width:8rem; border:1px solid var(--border); border-radius:5px; background:var(--background); font-size:12px; }
 .cv-board-head { display:flex; align-items:center; gap:10px; height:42px; flex:none; padding:0 14px; border-bottom:1px solid var(--border); background:var(--background); }
 .cv-board-head>svg { color:#c0a173; }
 .cv-board-head h2 { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font:600 15px/1.25 Georgia,serif; }

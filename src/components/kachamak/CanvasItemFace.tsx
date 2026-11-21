@@ -5,13 +5,14 @@ import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {youtubeVideoId,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
 import type {Novel,NoteNode} from '@/lib/kachamak/types';
 import {contentText} from '@/lib/kachamak/note-links';
+import {HomeArtwork} from './HomeArtwork';
 import {HomeVideo} from './HomeDocumentBlock';
 import {InkPaths} from './CanvasInk';
 
 export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle}:{block:HomeBlock;novel:Novel;source?:NoteNode;locked:boolean;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;toggle:(index:number,done:boolean)=>void}){
   const title=b.title || (b.target?describe(b.target):'');
-  const image=projectImageSrc(novel.gallery,b.image || (b.layout==='note'?source?.image:undefined));
+  const image=b.imageCutout||projectImageSrc(novel.gallery,b.image || (b.layout==='note'?source?.image:undefined));
   const id=youtubeVideoId(b.videoUrl);
   const destination=b.target && (b.target.kind==='web'?<a className="cv-link" href={b.target.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>{b.title||describe(b.target)}</a>:
     <button type="button" className="cv-link" onClick={()=>b.target&&open(b.target)}><ArrowUpRight size={14}/>{describe(b.target)}</button>);
@@ -19,7 +20,7 @@ export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle
   const body=b.text || excerpt;
   return <div className={'cv-face cv-face-'+b.layout}>
     {b.layout==='color'&&<div className="cv-swatch" style={{backgroundColor:b.color}}/>}
-    {image&&<div className="cv-picture"><img src={image} alt={b.title||b.layout} draggable={false}/>{b.pin&&<MapPin className="cv-pin" style={{left:b.pin.x*100+'%',top:b.pin.y*100+'%'}}/>}</div>}
+    {image&&<div className="cv-picture">{b.imageFrame?<HomeArtwork src={image} frame={b.imageFrame} alt={b.title||b.layout}/>:<img src={image} alt={b.title||b.layout} draggable={false}/>}{b.pin&&<MapPin className="cv-pin" style={{left:b.pin.x*100+'%',top:b.pin.y*100+'%'}}/>}</div>}
     {(b.layout==='sketch'||b.layout==='draw')&&<svg viewBox="0 0 320 180" preserveAspectRatio="none" aria-label={b.title||'Drawing'} style={b.extent?{aspectRatio:b.extent.w+'/'+b.extent.h}:undefined}><InkPaths strokes={b.ink??[]} color={b.color??'#d4b487'}/></svg>}
     {title&&b.layout!=='link'&&<h3>{title}</h3>}
     {body&&<p>{body}</p>}

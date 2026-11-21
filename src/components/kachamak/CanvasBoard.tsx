@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type PointerEvent as PEvent} from 'react';
+import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type ReactNode,type PointerEvent as PEvent} from 'react';
 import {Check,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Trash2,UnlockKeyhole} from 'lucide-react';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -16,14 +16,16 @@ import {InkPaths} from './CanvasInk';
 
 type Gesture={kind:'pan'|'move'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
+  fixedRows:ReactNode;layoutActions:ReactNode;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string):Point{
   try{const p=JSON.parse(sessionStorage.getItem(key)??'null');if(Number.isFinite(p?.x)&&Number.isFinite(p?.y))return p;}catch{}
   return {x:32,y:36};
 }
-export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Props){
+export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixedRows,layoutActions,editClassic,renderClassic,addClassic}:Props){
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
+  const scroller=useRef<HTMLDivElement>(null),freeArea=useRef<HTMLDivElement>(null);
   const positionKey='kachamak-board:'+novel.id+':'+page.id;
   const [pan,setPan]=useState<Point>(()=>initialPan(positionKey));
   const showGrid=useZoomSetting(positionKey,'grid')!=='hidden';
@@ -96,6 +98,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
     const el=surface.current;if(!el)return;
     const reset=registerZoomReset(el,()=>{lastPointer.current=null;setZoom(1);});
     const wheel=(e:WheelEvent)=>{
+      const scroll=scroller.current;
+      if(!e.ctrlKey&&!e.shiftKey&&scroll&&Math.abs(e.deltaY)>Math.abs(e.deltaX) &&
+        (e.deltaY<0&&scroll.scrollTop>1 || e.deltaY>0&&scroll.scrollTop+scroll.clientHeight<scroll.scrollHeight-1))return;
       e.preventDefault();e.stopPropagation();
       const factor=e.deltaMode===1?16:e.deltaMode===2?el.clientHeight:1;
       if(e.ctrlKey){
@@ -139,6 +144,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
   }
   function pick(kind:CanvasTool){
     if(page.locked)return;
+    if(fixedRows)freeArea.current?.scrollIntoView({block:'nearest'});
     setFrom(null);setStatus('');
     if(kind==='line'||kind==='draw'){setTool(current=>current===kind?'select':kind);return;}
     setTool('select');
@@ -224,13 +230,22 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
     cancelGesture();
   }
   function cancelGesture(){gesture.current=null;setMove(null);setLiveInk([]);setMarquee(null);}
-  const editFocused=()=>{if(focused&&focused.layout!=='line')setEditor({initial:focused,original:focused});};
+  const editBlock=(b:HomeBlock)=>{
+    if(!(b.layout in toolsByKind) || b.layout==='image'&&(b.imageFrame||b.imageCutout))editClassic(b);
+    else setEditor({initial:b,original:b});
+  };
+  const editFocused=()=>{if(focused&&focused.layout!=='line')editBlock(focused);};
   const resetTool=()=>{setTool('select');setFrom(null);cancelGesture();};
   const btn=(label:string,Icon:typeof Plus,fn:()=>void,pressed?:boolean)=><button type="button" title={label} aria-label={label} aria-pressed={pressed} className="cv-icon" onClick={fn}><Icon size={16}/></button>;
   return <section className="cv-board-shell col-span-full row-start-2" aria-label="Canvas board" aria-description={page.title}>
     <div className="cv-board-main"><header className="cv-board-head"><button type="button" className="md:hidden" aria-label="Show canvas tree" onClick={showTree}><ListTree size={16}/></button><Layers size={16}/><h2>{page.title}</h2>
       {focused&&!page.locked&&tool==='select'&&<div className="cv-selection-tools">{focused.positionLocked&&btn('Unlock position',UnlockKeyhole,()=>batch({kind:'lock',locked:false}))}{focused.layout!=='line'&&btn('Edit selected item',Pencil,editFocused)}{btn('Remove selected item',Trash2,remove)}</div>}
-      {btn(page.locked?'Unlock board':'Lock board',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}</header>
+      {!page.locked&&layoutActions}
+      {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}</header>
+    <div ref={scroller} className="cv-layout-scroll">
+    {fixedRows}
+    <div ref={freeArea} className={'cv-free-area'+(fixedRows?' cv-below-rows':'')} hidden={!!fixedRows&&page.locked&&!page.blocks.length}>
+    {fixedRows&&<h3 className="cv-free-label"><MousePointer2 size={13}/>Free canvas</h3>}
     <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
       onPointerDown={startGesture} onPointerMove={track} onPointerUp={endGesture} onPointerCancel={cancelGesture} onLostPointerCapture={cancelGesture}
       onKeyDown={e=>{if(e.key==='Escape'){resetTool();setSelected(null);}if(e.target===surface.current&&e.key==='Delete')remove();}}>
@@ -247,12 +262,12 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
           return <g key={b.id} id={edgePrefix+b.id} data-board-edge={b.id}><path d={d} fill="none" stroke={selected===b.id?'#f2ce80':'#a98854'} strokeWidth={2}/>{!page.locked&&<path d={d} fill="none" stroke="transparent" strokeWidth={18} style={{pointerEvents:'stroke',cursor:'pointer'}} role="button" tabIndex={0} aria-label="Select connection" onClick={()=>setSelected(b.id)} onKeyDown={e=>{if(e.key==='Enter')setSelected(b.id);}}/>}<circle cx={x2} cy={y2} r={3} fill="#dbb879"/></g>;
         })}</svg>
         {page.blocks.filter(b=>b.layout!=='line').map(b=>{
-          const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind];
+          const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind]??{icon:Layers,name:b.layout[0].toUpperCase()+b.layout.slice(1),color:'#c7ae83'};
           const looseInk=kind==='draw'&&!!b.extent;
           return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={0}
             onKeyDown={e=>{if(e.target!==e.currentTarget||page.locked)return;
               if(e.key===' '&&(e.ctrlKey||e.metaKey||e.shiftKey)){e.preventDefault();setSelection(prior=>prior.includes(b.id)?prior.filter(id=>id!==b.id):[...prior,b.id]);return;}
-              if(e.key==='Enter'){if(tool==='line')finishLink(b.id);else setEditor({initial:b,original:b});}
+              if(e.key==='Enter'){if(tool==='line')finishLink(b.id);else editBlock(b);}
               if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
                 e.preventDefault();const delta={x:e.key==='ArrowRight'?16:e.key==='ArrowLeft'?-16:0,y:e.key==='ArrowDown'?16:e.key==='ArrowUp'?-16:0};
                 if(items.length>1&&highlighted.has(b.id)){if(!items.some(fixed))batch({kind:'translate',delta});}
@@ -267,9 +282,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
                 <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked)setSelected(id);}}/>)}</g>
             </svg>}
             {!looseInk&&<div className="cv-card-cap"><Icon size={13}/>{column?<strong>{b.title||'Column'}</strong>:<span>{name}</span>}{b.positionLocked&&<LockKeyhole size={11} aria-label="Position locked"/>}{column&&<small>{page.blocks.filter(x=>x.columnId===b.id).length}</small>}
-              {!page.locked&&<button aria-label={'Edit '+(b.title||name)} type="button" onClick={()=>setEditor({initial:b,original:b})}><Pencil size={13}/></button>}</div>}
+              {!page.locked&&<button aria-label={'Edit '+(b.title||name)} type="button" onClick={()=>editBlock(b)}><Pencil size={13}/></button>}</div>}
             {column?(!page.locked&&<button type="button" className="cv-column-add" aria-label={'Add note to '+b.title} onClick={()=>{setTool('select');setEditor({initial:{...newCanvasBlock('note'),at:{x:r.x+14,y:r.y+56},columnId:b.id}});}}><Plus size={13}/> Note</button>):
-            <CanvasItemFace block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
+            !(kind in toolsByKind)?renderClassic(b):<CanvasItemFace block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
           </article>;
         })}
         {liveInk.length>0&&<svg className="cv-live-ink"><InkPaths strokes={[liveInk]} color={inkColor}/></svg>}
@@ -285,8 +300,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
       {btn(showGrid?'Hide grid':'Show grid',showGrid?Grid2X2:Grid2X2X,()=>saveZoomSetting(positionKey,'grid',showGrid?'hidden':'visible'))}
     </div>
     {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}{tool==='draw'&&<input aria-label="Drawing color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/>}<button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
-    </div>{!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'?<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}
-      convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>:!page.locked&&<CanvasTools onPick={pick} active={tool==='draw'||tool==='line'?tool:null}/>}
+    </div></div></div>{!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'?<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}
+      convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>:!page.locked&&<CanvasTools onPick={pick} onClassic={()=>{if(fixedRows)freeArea.current?.scrollIntoView({block:'nearest'});addClassic(nextPosition('note'));}} active={tool==='draw'||tool==='line'?tool:null}/>}
     {editor&&!page.locked&&<CanvasItemEditor novel={novel} initial={editor.initial} creating={!editor.original} onClose={()=>setEditor(null)} onSave={block=>{
       const ok=save(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block});if(ok){setSelected(block.id);
         if(!editor.original&&!block.columnId&&block.at){const r=surface.current!.getBoundingClientRect();

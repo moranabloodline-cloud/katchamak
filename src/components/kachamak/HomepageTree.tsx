@@ -2,7 +2,7 @@
 
 import {usePanelZoom} from './CtrlZoom';
 import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
-import {ChevronDown, ChevronRight, PanelsTopLeft, FileText, House, MoreVertical, Plus, X} from 'lucide-react';
+import {ChevronDown, ChevronRight, PanelsTopLeft, House, MoreVertical, Plus, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
@@ -22,7 +22,6 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
 }) {
   const [dialog,setDialog]=useState<PageDialog|null>(null);
   const [title,setTitle]=useState('');
-  const [mode,setMode]=useState<'page'|'board'>('page');
   const [error,setError]=useState('');
   const rows=useMemo(()=>homepageRows(novel),[novel]);
   const pages=novel.homePages;
@@ -73,18 +72,18 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
     });
   },[selected,pages,setCollapsed]);
   const show=(action:PageDialog['action'],id:string|null,name='')=>{
-    setError('');setMode('page');setTitle(action==='rename'?name:'');setDialog({action,id});
+    setError('');setTitle(action==='rename'?name:'');setDialog({action,id});
   };
   const choose=(id:string)=>{useKachamak.getState().openHomePage(novel.id,id);onDismiss();};
   const submit=()=>{
     if(!dialog)return;
     const state=useKachamak.getState();
-    const ok=dialog.action==='create'?state.createHomePage(novel.id,dialog.id,title,mode):
+    const ok=dialog.action==='create'?state.createHomePage(novel.id,dialog.id,title):
       state.renameHomePage(novel.id,dialog.id!,title);
     if(ok){setDialog(null);if(dialog.action==='create')onDismiss();}
     else setError('The page tree has changed. Close this dialog and try again.');
   };
-  const dialogTitle=dialog?.action==='rename'?'Rename page':dialog?.id?'New nested canvas':'New canvas';
+  const dialogTitle=dialog?.action==='rename'?'Rename canvas':dialog?.id?'New nested canvas':'New canvas';
   let hiddenBelow=Infinity;
   const leftZoom=usePanelZoom("left");
   return <div className="flex h-full flex-col">
@@ -94,7 +93,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
         if(row.depth>hiddenBelow)return null;
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;
         const active=selected===row.id;
-        const Icon=row.mode==='board'?PanelsTopLeft:row.id===HOME_ROOT?House:FileText;
+        const Icon=row.id===HOME_ROOT?House:PanelsTopLeft;
         return <div key={row.id} {...dropTarget(row.id)} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex items-center rounded-md border '+(over===row.id?'ring-1 ring-inset ring-teal-400 ':'')+
           (selection.marked?.has(row.id)?'outline outline-1 -outline-offset-1 outline-teal-400 ':'')+(active?'border-amber-500/60 bg-amber-400/10 text-amber-300':'border-transparent hover:bg-white/5')}>
           {row.hasChildren?<button type="button" className="grid size-6 shrink-0 place-items-center" aria-label={(collapsed.has(row.id)?'Expand ':'Collapse ')+row.title}
@@ -131,13 +130,10 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
     {dialog&&<Dialog open onOpenChange={open=>{if(!open)setDialog(null);}}><DialogContent className="sm:max-w-sm">
       <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
       <form className="grid gap-4" onSubmit={e=>{e.preventDefault();submit();}}>
-        {dialog.action==='create'&&<fieldset className="grid grid-cols-2 gap-2"><legend className="sr-only">Canvas layout</legend>{(['page','board'] as const).map(kind=><button key={kind} type="button" aria-pressed={mode===kind} onClick={()=>setMode(kind)} className={'rounded-lg border p-3 text-left '+(mode===kind?'border-amber-400/70 bg-amber-400/10':'border-border')}>
-          {kind==='page'?<FileText className="mb-2 size-4"/>:<PanelsTopLeft className="mb-2 size-4"/>}<strong className="block text-sm">{kind==='page'?'Page':'Board'}</strong><span className="text-xs text-muted-foreground">{kind==='page'?'Rows and columns':'Free placement'}</span>
-        </button>)}</fieldset>}
         <label className="grid gap-1.5 text-sm">Name<Input required autoFocus value={title} onChange={e=>setTitle(e.target.value)}/></label>
         {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={()=>setDialog(null)}>Cancel</Button>
-          <Button type="submit" disabled={!title.trim()}>{dialog.action==='create'?(mode==='page'?'Create page':'Create board'):'Save name'}</Button></div>
+          <Button type="submit" disabled={!title.trim()}>{dialog.action==='create'?'Create canvas':'Save name'}</Button></div>
       </form>
     </DialogContent></Dialog>}
   </div>;

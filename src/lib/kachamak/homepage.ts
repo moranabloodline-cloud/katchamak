@@ -1,6 +1,7 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
+import {inFixedRow,releaseRow,unifiedCanvas} from './canvas-layout';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
 import {validCanvasFields,validBoard,moveOnBoard,type CanvasFields,type BoardMove} from './canvas-board';
 
@@ -44,7 +45,7 @@ export interface HomeBlock extends CanvasFields {
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { title?:string; mode?:'page'|'board'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -186,9 +187,40 @@ export type HomeChange = BoardMove | BoardSelectionChange
   | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  if(page.mode==='canvas')return changeUnifiedCanvas(page,action);
   const next=applyHomeChange(page,action);
   return next && validBoard(next) ? next : null;
 }
+// Operate on the appropriate layout in isolation so a free-board command cannot move a fixed row.
+export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|null {
+  const page=unifiedCanvas(saved);
+  if(action.type==='lock')return {...page,locked:action.locked};
+  if(page.locked)return null;
+  if(action.type==='width')return {...page,width:action.width};
+  const fixed=page.blocks.filter(inFixedRow),free=page.blocks.filter(b=>!inFixedRow(b));
+  const block='original' in action?action.original:'block' in action?action.block:'id' in action?page.blocks.find(b=>b.id===action.id):undefined;
+  if(action.type==='add'&&page.blocks.some(b=>b.id===action.block.id))return null;
+  if(action.type==='remove'&&block?.layout==='row'){
+    if(!fixed.some(b=>b.id===block.id&&JSON.stringify(b)===JSON.stringify(block)))return null;
+    return releaseRow(page,block);
+  }
+  const structured=!!block && inFixedRow(block);
+  if(structured){
+    if(action.type==='boardMove'||action.type==='removeBoardItem')return null;
+    if(['move','place','into'].includes(action.type)&&block.layout==='row')return null;
+    if(action.type==='into'&&action.cell.rowId!==block.cell?.rowId)return null;
+    if(action.type==='place'&&(!block.cell || fixed.find(b=>b.id===action.targetId)?.cell?.rowId!==block.cell.rowId))return null;
+  }
+  if(action.type==='into'&&!structured)return null;
+  if(action.type==='edit'&&inFixedRow(action.block)!==structured)return null;
+  // Legacy callers may create a regular card without specifying its initial free position.
+  const edit=!structured && action.type==='add' && action.block.layout!=='line' && !action.block.at
+    ? {...action,block:{...action.block,at:{x:24+free.length*24,y:28+free.length*24}}} : action;
+  const next=changeHomepage({...page,mode:structured?'page':'board',blocks:structured?fixed:free},edit);
+  if(!next)return null;
+  return {...page,blocks:structured?[...next.blocks,...free]:[...fixed,...next.blocks]};
+}
+
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;

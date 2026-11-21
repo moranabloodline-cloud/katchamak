@@ -36,16 +36,16 @@ export function CanvasSelectionTools({items,fixed,clear,run,convert}:Props){
       </div></fieldset>
       <div className="cv-batch-actions">
         <button disabled={items.length<2} onClick={()=>run({kind:'connect'})}><Link2/>Connect with lines</button>
-        <button disabled={fixed} onClick={()=>{setTitle('');setError('');setNaming(true);}}><Layers/>Convert to board</button>
+        <button disabled={fixed} onClick={()=>{setTitle('');setError('');setNaming(true);}}><Layers/>Convert to canvas</button>
         <button onClick={()=>run({kind:'lock',locked:!allLocked})}>{allLocked?<UnlockKeyhole/>:<LockKeyhole/>}{allLocked?'Unlock position':'Lock position'}</button>
         <button disabled={!loose} onClick={()=>run({kind:'stack',front:true})}><ArrowUpToLine/>Bring to front</button>
         <button disabled={!loose} onClick={()=>run({kind:'stack',front:false})}><ArrowDownToLine/>Send to back</button>
       </div>
     </div>
-    <Dialog open={naming} onOpenChange={setNaming}><DialogContent className="sm:max-w-sm"><DialogHeader><DialogTitle>Convert to board</DialogTitle></DialogHeader>
+    <Dialog open={naming} onOpenChange={setNaming}><DialogContent className="sm:max-w-sm"><DialogHeader><DialogTitle>Convert to canvas</DialogTitle></DialogHeader>
       <form className="grid gap-3" onSubmit={e=>{e.preventDefault();if(!convert(title))setError('The selection changed. Select the items again.');}}>
-        <label className="grid gap-2">Board name<Input autoFocus required value={title} onChange={e=>setTitle(e.target.value)}/></label>
-        {error&&<p role="alert">{error}</p>}<Button disabled={!title.trim()} type="submit">Create board</Button>
+        <label className="grid gap-2">Canvas name<Input autoFocus required value={title} onChange={e=>setTitle(e.target.value)}/></label>
+        {error&&<p role="alert">{error}</p>}<Button disabled={!title.trim()} type="submit">Create canvas</Button>
       </form>
     </DialogContent></Dialog>
   </aside>;

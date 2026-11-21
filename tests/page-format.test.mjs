@@ -129,7 +129,7 @@ for(const label of ['Timeline','Relationships','Canvas','Trash','Binder']){
     for(let i=0;i<2;i++){
       assert.equal(inspectorOpen(useKachamak.getState()),false);
       assert.equal(document.querySelector('[aria-label="Note inspector"], [aria-label="Resize right panel"], [aria-label="Show hidden inspector tabs"]'),null);
-      await React.act(async()=>document.querySelector('[aria-label="Project homepage"] button:is([aria-label="Unlock page"],[aria-label="Lock page"])').click());
+      await React.act(async()=>document.querySelector('[aria-label="Canvas board"] button:is([aria-label="Unlock canvas"],[aria-label="Lock canvas"])').click());
     }
   }else{
     assert.ok(document.querySelector('[aria-label="Note inspector"]'));

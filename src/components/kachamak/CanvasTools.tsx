@@ -16,7 +16,7 @@ export const toolsByKind={
   draw:{name:'Draw',icon:Pencil,color:'#de9195'}
 } as const;
 
-export function CanvasTools({onPick,active}:{onPick:(kind:CanvasTool)=>void;active?:CanvasTool|null}){
+export function CanvasTools({onPick,active,onClassic}:{onPick:(kind:CanvasTool)=>void;onClassic?:()=>void;active?:CanvasTool|null}){
   const [collapsed,setCollapsed]=useState(false),[more,setMore]=useState(false);
   const panel=useRef<HTMLElement>(null),zoom=usePanelZoom('right');
   if(collapsed)return <button type="button" className="cv-tools-toggle" aria-label="Show canvas tools" title="Show canvas tools" onClick={()=>setCollapsed(false)}><Shapes size={18}/></button>;
@@ -28,6 +28,6 @@ export function CanvasTools({onPick,active}:{onPick:(kind:CanvasTool)=>void;acti
     <div className="cv-tools-head"><strong>Tools</strong><button type="button" aria-label="Hide canvas tools" title="Hide tools" onClick={()=>setCollapsed(true)}><PanelRightClose size={15}/></button></div>
     <div className="cv-tools-grid">{CANVAS_TOOLS.slice(0,7).map(button)}</div>
     <button type="button" aria-expanded={more} className="cv-more" onClick={()=>setMore(!more)}>More tools<ChevronDown size={14} style={{transform:more?'rotate(180deg)':undefined}}/></button>
-    {more&&<div className="cv-tools-grid">{CANVAS_TOOLS.slice(7).map(button)}</div>}
+    {more&&<div className="cv-tools-grid">{CANVAS_TOOLS.slice(7).map(button)}{onClassic&&<button type="button" onClick={onClassic} aria-label="Add layout block"><Shapes size={18}/>Layout block</button>}</div>}
   </div></aside>;
 }

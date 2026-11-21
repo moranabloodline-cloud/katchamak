@@ -1,3 +1,5 @@
+> **2026-11-21 — Jedinstven Canvas.** Fiksni redovi i slobodne kartice dele istu radnu površinu.
+
 > **2026-11-21 — Grupni izbor na Canvas tabli.** Prevlačenje okvira u režimu Select otvara alate za odabrane kartice i kolone.
 
 > **2026-11-21 — Mreža na Canvas tabli.** Dugme pored zuma prikazuje ili skriva tačkastu mrežu. Pregledač pamti izbor za svaku tablu posebno.
@@ -643,6 +645,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Raspored na Canvasu.** Novi Canvas odmah prima fiksne redove sa 1–6 jednakih kolona i slobodne elemente ispod njih. Kartice u redu mogu da menjaju kolonu unutar istog reda. Uklanjanje reda oslobađa njegov sadržaj. Starije stranice i table otvaraju se u zajedničkom prikazu.
 
 - **2026-11-21 — Canvas okvir i grupne komande.** Dodati su boja, poravnanje, ravnomeran razmak, linije, zaključavanje položaja i redosled slojeva. Pretvaranje izbora u podtablu čuva sadržaj kolona i povezuje spoljne veze sa karticom koja otvara novu tablu.
 
