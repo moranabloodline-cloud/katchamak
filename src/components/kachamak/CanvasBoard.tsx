@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect,useLayoutEffect,useMemo,useRef,useState,type PointerEvent as PEvent} from 'react';
-import {Check,Focus,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Trash2,UnlockKeyhole} from 'lucide-react';
+import {Check,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Trash2,UnlockKeyhole} from 'lucide-react';
 import {boardRects,CARD_WIDTH,COLUMN_WIDTH,type Point,type BoardRect,type CanvasTool,type Stroke} from '@/lib/kachamak/canvas-board';
 import type {HomeBlock,HomeChange,HomePageEntry,HomeTarget} from '@/lib/kachamak/homepage';
 import type {NoteNode,Novel} from '@/lib/kachamak/types';
@@ -23,6 +23,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
   const positionKey='kachamak-board:'+novel.id+':'+page.id;
   const [pan,setPan]=useState<Point>(()=>initialPan(positionKey));
+  const showGrid=useZoomSetting(positionKey,'grid')!=='hidden';
   const storedZoom=Number(useZoomSetting(positionKey,'zoom'));
   const zoom=storedZoom>=0.02&&storedZoom<=3?storedZoom:1;
   const setZoom=(level:number)=>saveZoomSetting(positionKey,'zoom',String(Math.min(3,Math.max(.02,Math.round(level*100)/100))));
@@ -176,7 +177,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
     <div className="cv-board-main"><header className="cv-board-head"><button type="button" className="md:hidden" aria-label="Show canvas tree" onClick={showTree}><ListTree size={16}/></button><Layers size={16}/><h2>{page.title}</h2>
       {focused&&!page.locked&&tool==='select'&&<div className="cv-selection-tools">{focused.layout!=='line'&&btn('Edit selected item',Pencil,editFocused)}{btn('Remove selected item',Trash2,remove)}</div>}
       {btn(page.locked?'Unlock board':'Lock board',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}</header>
-    <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
+    <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
       onPointerDown={startGesture} onPointerMove={track} onPointerUp={endGesture} onPointerCancel={cancelGesture} onLostPointerCapture={cancelGesture}
       onKeyDown={e=>{if(e.key==='Escape')resetTool();if(e.target===surface.current&&e.key==='Delete')remove();}}>
       <div ref={world} className="cv-world" style={{transform:'translate('+pan.x+'px,'+pan.y+'px) scale('+zoom+')'}}>
@@ -216,6 +217,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree}:Prop
       <span className="cv-dock-divider"/>{btn('Zoom out',Minus,()=>{lastPointer.current=null;setZoom(zoom/1.2);})}
       <button className="cv-zoom-level" title="Reset zoom" onClick={()=>{lastPointer.current=null;setZoom(1);}}>{Math.round(zoom*100)}%</button>
       {btn('Zoom in',Plus,()=>{lastPointer.current=null;setZoom(zoom*1.2);})}{btn('Fit board',Focus,fit)}
+      {btn(showGrid?'Hide grid':'Show grid',showGrid?Grid2X2:Grid2X2X,()=>saveZoomSetting(positionKey,'grid',showGrid?'hidden':'visible'))}
     </div>
     {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}{tool==='draw'&&<input aria-label="Drawing color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/>}<button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
     </div>{!page.locked&&<CanvasTools onPick={pick} active={tool==='draw'||tool==='line'?tool:null}/>}

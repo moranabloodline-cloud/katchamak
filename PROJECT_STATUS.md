@@ -1,3 +1,5 @@
+> **2026-11-21 — Mreža na Canvas tabli.** Dugme pored zuma prikazuje ili skriva tačkastu mrežu. Pregledač pamti izbor za svaku tablu posebno.
+
 > **2026-11-21 — Canvas.** Postojeće Homepage stranice zadržavaju raspored i veze. Stablo podržava imenovane stranice i slobodne table sa kolonama, karticama, vezama i crtanjem.
 
 > **2026-11-21 — Homepage bez desnog panela.** U zaključanom prikazu i pri uređivanju uklonjen je red Info, Details, Mentions i Family. Alatna traka koristi širinu radne površine.
@@ -639,6 +641,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Hide grid / Show grid.** Kontrola radi i na zaključanoj tabli. Promena vidljivosti mreže zadržava poziciju kartica i zum.
 
 - **2026-11-21 — Canvas stranice i table.** Provereni su dodavanje svih 15 elemenata, prevlačenje scene između kolona, veza koja prati karticu, zaključavanje, čuvanje i otvaranje originalne beleške posle osvežavanja.
 
