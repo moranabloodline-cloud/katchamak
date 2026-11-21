@@ -12,8 +12,20 @@ export function proofDocument(book:Publication,style:BookStyle,print:boolean){
     (print?'<script>window.PagedConfig={auto:false};</script><script src="/publish-pagination.js"></script>':'')+'</head><body>'+bookArticles(book)+
     (print?`<script>document.currentScript.remove();window.addEventListener('load',async()=>{try{await document.fonts.ready;await new Paged.Previewer().preview();function fit(){document.documentElement.style.setProperty('--fit',Math.min(1.3,Math.max(.15,(document.documentElement.clientWidth-36)/${width})));}fit();window.addEventListener('resize',fit);document.documentElement.dataset.ready='yes';window.dispatchEvent(new Event('proofready'));}catch(e){document.documentElement.dataset.ready='error';window.dispatchEvent(new Event('proofready'));}});</script>`:'')+'</body></html>';
 }
-export function PublishProof({source,print,frameRef,onReady,zoom}:{zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onReady:(ready:boolean)=>void}){
+function revealEntry(doc:Document,anchor?:string){
+  if(!anchor)return;
+  const entry=doc.querySelector('.pagedjs_pages [id="'+anchor+'"]')??doc.getElementById(anchor);
+  const view=doc.defaultView;
+  if(entry&&view)view.scrollTo(0,entry.getBoundingClientRect().top+view.scrollY-8);
+}
+export function PublishProof({source,print,frameRef,onReady,zoom,anchor}:{anchor?:string;zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onReady:(ready:boolean)=>void}){
   const [status,setStatus]=useState(''), token=useRef(0);
+  const currentAnchor=useRef(anchor);
+  useEffect(()=>{
+    currentAnchor.current=anchor;
+    const doc=frameRef.current?.contentDocument;
+    if(doc&&(!print||doc.documentElement.dataset.ready==='yes'))revealEntry(doc,anchor);
+  },[anchor,frameRef,print]);
   useEffect(()=>{token.current++;onReady(false);setStatus(print?'Setting pages…':'');},[source,print,onReady]);
   useEffect(()=>{frameRef.current?.contentDocument?.documentElement.style.setProperty('--panel-zoom',String(zoom));},[frameRef,zoom]);
   return <div className="relative flex min-h-0 flex-1 flex-col">
@@ -25,7 +37,7 @@ export function PublishProof({source,print,frameRef,onReady,zoom}:{zoom:number;s
         w.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='0'){e.preventDefault();useKachamak.getState().setPanelZoom('mid',1);}});
         const id=token.current;const done=()=>{if(id!==token.current||!frameRef.current)return;
           const doc=w.document;if(print && doc.documentElement.dataset.ready!=='yes'){setStatus('Pagination failed. Reopen the proof to try again.');return;}
-          const pages=doc.querySelectorAll('.pagedjs_page').length;setStatus(print?pages+' '+(pages===1?'page':'pages'):'');onReady(true);};
+          const pages=doc.querySelectorAll('.pagedjs_page').length;setStatus(print?pages+' '+(pages===1?'page':'pages'):'');onReady(true);revealEntry(doc,currentAnchor.current);};
         if(!print||w.document.documentElement.dataset.ready)done();else w.addEventListener('proofready',done,{once:true});
       }}/>
   </div>;

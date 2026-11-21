@@ -90,6 +90,7 @@ const SECTION_LABELS = TABS.filter((t) =>
 type DropMode = "before" | "after" | "onto";
 
 interface TreeDnd {
+  onActivate?:()=>void;
   rootId?:string;
   selection:ReturnType<typeof useTreeSelection>;
   drop: { id: string; mode: DropMode } | null;
@@ -114,7 +115,7 @@ interface TreeRowProps {
 function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissReveal, onTemplate }: TreeRowProps) {
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const selectNode = useKachamak((s) => s.select);
-  const select=(id:string|null)=>{selectNode(id);if(section==="timeline" || section==="family")useKachamak.getState().setView(section);};
+  const select=(id:string|null)=>{selectNode(id);dnd.onActivate?.();if(section==="timeline" || section==="family")useKachamak.getState().setView(section);};
   const updateNode = useKachamak((s) => s.updateNode);
   const addNode = useKachamak((s) => s.addNode);
   const deleteNode = useKachamak((s) => s.deleteNode);
@@ -544,7 +545,7 @@ function findTitle(roots: NoteNode[], id: string): string | null {
   return null;
 }
 
-export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section: SectionKey; rootId?: string; reveal?: { id: string }; onDismissReveal?: () => void }) {
+export function NoteTree({ section, rootId, reveal, onDismissReveal, onActivate }: { onActivate?:()=>void;section: SectionKey; rootId?: string; reveal?: { id: string }; onDismissReveal?: () => void }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const addNode = useKachamak((s) => s.addNode);
@@ -599,6 +600,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
     } catch(error) {toast.error(error instanceof Error?error.message:'The notes could not be moved.');}
   };
   const treeDnd:TreeDnd={
+    onActivate,
     drop,selection,rootId,
     onDragStart:(event,id)=>{
       const parents=noteParents(roots);

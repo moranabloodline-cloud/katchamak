@@ -16,7 +16,8 @@ import type {
   ViewMode,
 } from "./types";
 import {novelSettingsPatch,type NovelSettingsPatch} from "./project-settings";
-import {baseStyle,validBookStyle} from './book-style';
+import {changeManuscript,type ManuscriptChange} from './publish-manuscript';
+import {baseStyle,houseStyles,validBookStyle} from './book-style';
 import {newKanbanBoard, validKanban} from './kanban';
 import {newTransaction, validTransaction, type TransactionType} from './finance';
 import { DEFAULT_NOTE_ICON, SECTION_KEYS } from "./types";
@@ -135,6 +136,8 @@ interface KachamakState {
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
   changeFamilyRelationship: (projectId:string, treeId:string, relation:FamilyRelationship, remove?:boolean) => string | null;
+  installPublishStyles: (bookId:string) => void;
+  changePublishManuscript: (bookId:string,change:ManuscriptChange) => void;
   setTimeline: (patch: Partial<NonNullable<Novel['timeline']>>) => void;
   setView: (v: ViewMode) => void;
   setTreeScope: (s: TreeScope) => void;
@@ -624,6 +627,22 @@ export const useKachamak = create<KachamakState>()(
         set({novels:state.novels.map(n=>n===novel?touch({...novel,trash,familyRelationships:next}):n)});
         return null;
       },
+      installPublishStyles: (bookId) => set(state=>{
+        const book=state.novels.find(n=>n.id===bookId);
+        if(!book || book.publishStylesInstalled || state.activeNovelId!==bookId)return state;
+        const folder=makeNode('folder','House styles');
+        folder.icon='folder';
+        folder.children=houseStyles.map(preset=>({...makeNode('doc',preset.name),bookStyle:structuredClone(preset.style)}));
+        const sections={...book.sections,publish:[...(book.sections.publish??[]),folder]};
+        return {novels:state.novels.map(n=>n===book?touch({...book,sections,publishStylesInstalled:true}):n)};
+      }),
+      changePublishManuscript: (bookId,change) => set(state=>{
+        const book=state.novels.find(n=>n.id===bookId);
+        if(!book || state.activeNovelId!==bookId)return state;
+        const publishManuscript=changeManuscript(book,change);
+        if(book.publishManuscript===publishManuscript)return state;
+        return {novels:state.novels.map(n=>n===book?touch({...book,publishManuscript}):n)};
+      }),
       setTimeline: (patch) => set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,timeline:{rootId:null,detail:'synopsis',compact:false,...n.timeline,...patch}}):n)})),
 
       /* ulazak u Split (prvi put, kad paneli još nemaju note — kao u
@@ -1086,7 +1105,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 65,
+      version: 66,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1099,6 +1118,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 66) { /* Publish follows Binder until customized. Starter notes are installed on first opening. */ }
         if (version < 65) for (const novel of s.novels ?? []) {
           if (novel.sections) novel.sections.publish ??= [];
         }

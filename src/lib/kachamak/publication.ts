@@ -1,8 +1,9 @@
+import {manuscriptEntries} from './publish-manuscript';
 import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
 import {glyphs,trims} from './book-style';
 import {projectImageSrc} from './project-image';
-import type {Novel,NoteNode} from './types';
+import type {Novel} from './types';
 
 export type Proof = 'Manuscript'|'Title page'|'Chapter opening'|'Body text'|'Scene break'|'Special blocks'|'End matter'|SpecialPage;
 export const proofs:Proof[]=['Manuscript','Title page','Chapter opening','Body text','Scene break','Special blocks','Copyright','Dedication','Contents','About the author','Colophon'];
@@ -101,17 +102,17 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
   const chapters:Leaf[]=[];let index=0;
   const art=projectImageSrc(book.gallery,s.chapterImage);
   const targets=new Map<string,string>();
-  function indexNotes(nodes:NoteNode[]){for(const n of nodes){targets.set(n.id,'entry-'+targets.size);indexNotes(n.children);}}
-  function walk(nodes:NoteNode[]){
-    for(const node of nodes){
+  if(proof==='Manuscript'){
+    const entries=manuscriptEntries(book).filter(row=>row.included);
+    entries.forEach(({node},i)=>targets.set(node.id,'entry-'+i));
+    for(const {node} of entries){
       const content=cleanBody(node.content??'',book,s,targets);
       const part=(node.kind==='folder'||node.kind==='act'||(!content.replace(/<[^>]+>|&nbsp;/g,'').trim()&&!content.includes('<img') && node.children.length>0 && node.kind!=='chapter'));
       const leaf:Leaf={id:targets.get(node.id)!,title:node.title,kind:part?'part':'chapter',html:''};
       leaf.html=part?'<h1>'+escapeText(node.title)+'</h1>'+content:chapterHead(node.title,++index,s,art)+opening(content);
-      chapters.push(leaf);walk(node.children);
+      chapters.push(leaf);
     }
   }
-  if(proof==='Manuscript'){indexNotes(book.sections.binder??[]);walk(book.sections.binder??[]);}
   const model={title:book.title,author:book.author,lang:bookLanguage(book.language),sections:chapters};
   if(proof==='Manuscript'){
     const fronters=s.pages.filter(p=>!['About the author','Colophon'].includes(p));
@@ -121,7 +122,10 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
   const title='The Far Bank';
   if (['Copyright','Dedication','Contents','About the author','Colophon'].includes(proof)) {
     const samples={...s,dedication:s.dedication||'For everyone who made the crossing.',biography:s.biography||'The author writes about the people who cross the river.',colophon:s.colophon||'Set and composed for this edition.'};
-    return {...model,sections:[special(proof as SpecialPage,book,samples,[{id:'specimen',title,kind:'chapter',html:''}])]};
+    const contents:Leaf[]=proof==='Contents'&&book.sections.binder?.length
+      ?manuscriptEntries(book).filter(row=>row.included).map(({node},i)=>({id:'entry-'+i,title:node.title,kind:'chapter',html:''}))
+      :[{id:'specimen',title,kind:'chapter',html:''}];
+    return {...model,sections:[special(proof as SpecialPage,book,samples,contents)]};
   }
   const examples:Partial<Record<Proof,string>>={
     'Title page':special('Title page',book,s,[]).html,'Chapter opening':chapterHead(title,1,s,art)+opening(sampleBody)+divider(s)+paras('By the time the post boat passed the headland, he had read the letter twice. He folded it along the old creases and slipped it into his coat. The sky was clearing over the hills. For the first time in years, the clock on the customs house was running a little slow.'),

@@ -25,13 +25,13 @@ function Group({title,children,initial=false}:{title:string;children:ReactNode;i
   const [open,setOpen]=useState(initial);
   return <section className="border-b border-white/10 py-1"><button className="flex w-full items-center justify-between py-2.5 text-left text-sm font-semibold" aria-expanded={open} onClick={()=>setOpen(!open)}>{title}<ChevronDown className={'size-3.5 text-muted-foreground '+(open?'rotate-180':'')}/></button>{open&&<div className="grid gap-3 pb-4">{children}</div>}</section>;
 }
-export function PublishTools({novel,name,style:s,change,save,inspect,print,draft}:{draft:boolean;novel:Novel;name:string;style:BookStyle;change:(s:BookStyle)=>void;save:()=>void;inspect:(p:Proof)=>void;print:boolean}){
+export function PublishTools({novel,name,style:s,change,save,inspect,print}:{novel:Novel;name:string;style:BookStyle;change:(s:BookStyle)=>void;save:()=>void;inspect:(p:Proof)=>void;print:boolean}){
   const [block,setBlock]=useState<BlockName>('Quote');
   const patch=<K extends keyof BookStyle>(key:K,value:BookStyle[K])=>change({...s,[key]:value});
   const b=s.blocks[block],blockPatch=(value:Partial<typeof b>)=>patch('blocks',{...s.blocks,[block]:{...b,...value}});
   const matter=[['Copyright','copyright'],['Dedication','dedication'],['About the author','biography'],['Colophon','colophon']] as const;
   return <div aria-label="Book style settings" className="min-w-0">
-    <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3"><strong className="truncate text-sm">{name}{draft && <span className="ml-1 font-normal text-amber-300">· Draft</span>}</strong><button className={input+' shrink-0'} onClick={save}>Save as style</button></div>
+    <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3"><strong className="truncate text-sm">{name}</strong><button className={input+' shrink-0'} onClick={save}>Save as style</button></div>
     <Group title="Typography" initial>
       <Pick label="Body font" options={fonts} value={s.bodyFont} change={v=>patch('bodyFont',v)}/>
       <Pick label="Heading font" options={fonts} value={s.headingFont} change={v=>patch('headingFont',v)}/>

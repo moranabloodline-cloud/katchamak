@@ -1,3 +1,4 @@
+import {validPublishManuscript} from './publish-manuscript';
 import {validBookStyle} from './book-style';
 import {validKanban} from './kanban';
 import {validCurrency,validTransaction} from './finance';
@@ -25,6 +26,7 @@ export function isReadableProject(value: unknown): boolean {
   if (typeof n.title !== "string" || !n.title.trim()) return false;
   if (n.author !== undefined && typeof n.author !== "string") return false;
   if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
+  if(!validPublishManuscript(n.publishManuscript) || (n.publishStylesInstalled!==undefined && typeof n.publishStylesInstalled!=='boolean'))return false;
   if(n.publishEnabled!==undefined && typeof n.publishEnabled!=='boolean')return false;
   if(n.financeCurrency!==undefined && !validCurrency(n.financeCurrency))return false;
   const cover = n.cover as Record<string, unknown>;

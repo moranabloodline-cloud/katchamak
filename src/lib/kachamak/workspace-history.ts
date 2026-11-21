@@ -182,7 +182,7 @@ function write(root:unknown,path:Path,index:number,value:unknown):unknown{
 const mutatingTrees=new Set(['addNode','deleteNode','moveNode','moveNodeTo','duplicateNode','sortChildren','restoreFromTrash']);
 const tracked=new Set([...mutatingTrees,'updateNode','moveTreeNotes','renameNovel','addStatus','removeStatus','editGallery',
   'changeHomepage','createHomePage','renameHomePage','moveHomePages','deleteHomePage','convertBoardSelection',
-  'changeFamilyRelationship','setTabFormat','updateNovelSettings','setTimeline','importTimeline','cloneTab']);
+  'changeFamilyRelationship','setTabFormat','updateNovelSettings','changePublishManuscript','setTimeline','importTimeline','cloneTab']);
 function treeCopy(nodes:NoteNode[]):NoteNode[]{
   return nodes.map(n=>({...n,children:treeCopy(n.children)}));
 }

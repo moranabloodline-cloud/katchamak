@@ -1,3 +1,5 @@
+> **2026-11-21 — Izbor rukopisa u Publish.** Svaka knjiga pamti izabrane stavke i njihov redosled za pregled i izvoz. Šest početnih stilova dostupno je kao zasebne beleške u levom stablu.
+
 > **2026-11-21 — Publish i stilovi knjige.** Opcioni tab Publish donosi šest stilova knjige, biblioteku stilova u stablu i živi pregled štampe i e-knjige. Iz istog Binder rukopisa priprema PDF preko dijaloga za štampu, EPUB, DOCX i HTML.
 
 > **2026-11-21 — Detalji Kanban kartice.** Kartica ima oznake u boji, početak i rok, čekliste, članove, završetak i naslovnu sliku iz Galerije knjige. Komentari i istorija izmena prate karticu između kolona.
@@ -669,6 +671,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Publish:** U Inspectoru je dodat Manuscript sa izborom poglavlja i beležaka, prevlačenjem, strelicama i vraćanjem Binder redosleda. Print, eBook i svi izvozi koriste isti spisak. Izbor stila iz levog panela otvara pregled i Tools.
 
 - **2026-11-21 — Publish.** Opcioni tab Publish donosi šest stilova knjige, biblioteku stilova u stablu i živi pregled štampe i e-knjige. Iz istog Binder rukopisa priprema PDF preko dijaloga za štampu, EPUB, DOCX i HTML. Stilovi čuvaju izgled poglavlja, blokova, uvodnih i završnih stranica. Uključeni su u čuvanje knjige i Undo/Redo.
 
