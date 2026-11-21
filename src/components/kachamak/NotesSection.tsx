@@ -458,10 +458,6 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             onCreate={()=>useKachamak.getState().addNode('family',rootId??null,'doc','New family tree')} onEdit={openFamilyInspector}/>}
           {view === "timeline" && <TimelineView key={treeScopeKey} section={section} rootId={rootId} onRevealNote={id => setTreeReveal({ id, scope: treeScopeKey })} />}
           {view === "list" && <ListView section={section} rootId={rootId} />}
-          {/* Split: dva nezavisna editora (kao u Scriveneru) — klik na površinu
-              je bira, klik na notu otvara notu samo u izabranoj. Lenjir (traka
-              3) je unutar SplitEditors — JEDAN red iznad OBA panela, bez
-              pozadine; deli se samo površina ispod njega */}
           {(view === "write" || view === "split" || view === "continuous") && <DocumentOutline title={view === "continuous" && selectedSection !== section ? novel?.title ?? "Manuscript" : selected?.title ?? ""} scopeKey={`${activeNovelId}:${section}:${rootId ?? ""}:${selectedNodeId}:${view}`} pane={view === "split" ? activePane : undefined}>
             {view === "split" && <SplitEditors section={section} />}
             {view === "write" && (selected ? <WriteArea key={selected.id} node={selected} section={selectedSection}/> : <div className="p-10 text-center text-sm text-muted-foreground">Select a note from the tree to start writing.</div>)}

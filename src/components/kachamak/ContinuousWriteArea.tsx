@@ -1,7 +1,6 @@
 'use client';
 import {useEffect,useId,useRef,useState} from 'react';
 import DOMPurify from 'dompurify';
-import {RulerRow} from './WriteArea';
 import {NotePreview} from './NotePreview';
 import {useKachamak} from '@/lib/kachamak/store';
 import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
@@ -21,7 +20,6 @@ export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?
   const scrollRef=useRef<HTMLDivElement>(null),[preview,setPreview]=useState<string|null>(null);
   useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;},[selectedId,section,rootId,projectId]);
   return <div data-note-link-scope={scope} onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection((event.target as Element).closest<HTMLElement>('.kachamak-editor'));}} className="flex h-full min-h-0 flex-col"><style>{noteAnchorStyles(novel,scope)}</style>
-    <RulerRow node={notes.find(node=>node.id===selectedId)??notes[0]}/>
     <div ref={scrollRef} aria-label="Continuous manuscript · read only" className="min-h-0 flex-1 overflow-y-auto kachamak-scroll pb-[40vh]" style={{scrollbarGutter:'stable'}}>
       {notes.map(node=>{
         const appearance=noteAppearance(defaults,settings,node);

@@ -55,11 +55,6 @@ interface KachamakState {
   toggleRightPanel: () => void;
   setRightPanelOpen: (open: boolean) => void;
 
-  /* Scrivener-style ruler above the title in the editor — the eye at its end
-     hides it or shows it again (persisted preference) */
-  rulerVisible: boolean;
-  setRulerVisible: (v: boolean) => void;
-
   /* Split (kao u Scriveneru): dva nezavisna editora na radnoj površini.
      paneAId/paneBId = nota otvorena u levom/desnom editoru; activePane =
      površina koju je korisnik poslednja kliknuo — klik na notu u stablu/Gridu/
@@ -96,8 +91,7 @@ interface KachamakState {
   /* per-panel zoom (Ctrl + scroll over a panel) — 0.5 … 2.0, korak 0.1;
      uvećava SADRŽINU panela (tekstovi, kartice, redovi), ne i trake/okvir —
      da linije trake 2 ostaju poravnate (persisted preference).
-     Split površine imaju SVOJ odvojen zoom (paneAZoom/paneBZoom — po Nikoli
-     09.11., svaka radna površina svoj zoom, lenjir u svakoj površini);
+     Split površine imaju odvojen zoom (paneAZoom/paneBZoom);
      null = još nije podešen → nasleđuje midZoom (bez skoka pri prelasku iz
      Write moda), prvi Ctrl+skrol nad površinom ga zauvek odvaja. */
   leftZoom: number;
@@ -366,7 +360,6 @@ export const useKachamak = create<KachamakState>()(
 
       leftPanelOpen: true,
       rightPanelOpen: true,
-      rulerVisible: true,
 
       paneAId: null,
       paneBId: null,
@@ -417,8 +410,6 @@ export const useKachamak = create<KachamakState>()(
       toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
       setRightPanelOpen: open => set(s => updateInspectorLayout(s, {open})),
       toggleRightPanel: () => set(s => updateInspectorLayout(s, {open: !inspectorOpen(s)})),
-
-      setRulerVisible: (v) => set({ rulerVisible: v }),
 
       /* klik na površinu je bira: inspector, brojač na dnu i highlight u stablu
          prate fokusirani editor (kao u Scriveneru); dok je površina prazna,
@@ -1016,7 +1007,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 54,
+      version: 55,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1029,6 +1020,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 55) delete (s as {rulerVisible?: boolean}).rulerVisible;
         if(version<54){ /* Tabs without saved dimensions inherit the previous workspace layout. */ }
         if(version<53){ /* Untouched tabs inherit the book's legacy hidden inspector list. */ }
         if(version<52) for(const novel of s.novels??[]) if(novel.sections && novel.sections.finance===undefined) novel.sections.finance=[];

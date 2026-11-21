@@ -14,8 +14,7 @@ export function usePanelZoom(panel:ZoomPanel) {
    Mora nativan listener sa passive:false — React onWheel je pasivan, pa
    preventDefault (gašenje zooma pregledača) ne bi radio. Mali komadi delte se
    sabiraju (trackpad) — jedan „skok“ točkića = jedan korak.
-   Split površine (paneA/paneB) imaju SVOJ zoom — lenjir i strana se uvećavaju
-   zajedno, svaka površina odvojeno (po Nikoli); stopPropagation čuva event
+   Split površine (paneA/paneB) imaju nezavisan zoom. stopPropagation čuva event
    da ne „probije“ do main listenera ( koji bi menjao midZoom). Kad zoom
    površine još nije podešen (null), čita midZoom — bez skoka pri prelasku
    iz Write moda. */

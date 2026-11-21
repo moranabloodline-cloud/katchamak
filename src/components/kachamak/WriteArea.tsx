@@ -8,8 +8,6 @@ import {
   AlignRight,
   Bold,
   SpellCheck,
-  Eye,
-  EyeOff,
   Highlighter,
   Italic,
   IndentDecrease,
@@ -30,7 +28,7 @@ import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEd
 import {activeWritingEditor} from './WorkspaceNavigation';
 import {PageSurface,useNoteAppearance} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
-import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel,pageVariables} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import {LineSpacingMenu} from './LineSpacingMenu';
@@ -269,63 +267,6 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   );
 }
 
-/* ---------- traka 3: lenjir ---------- */
-
-/* A display ruler in CSS centimeters. Zero follows the text edge; all
-   subdivisions and labels share one origin. The separate eye toggles visibility. */
-function RulerStrip() {
-  const strip=useRef<HTMLDivElement>(null);
-  const [width,setWidth]=useState(0);
-  useEffect(()=>{
-    const element=strip.current;if(!element)return;
-    const measure=()=>setWidth(element.clientWidth);measure();
-    if(typeof ResizeObserver==='undefined')return;
-    const observer=new ResizeObserver(measure);observer.observe(element);return()=>observer.disconnect();
-  },[]);
-  const cm=96/2.54,leading=12;
-  return (
-    <div ref={strip} role="img" aria-label="Text ruler in centimeters" title="Centimeters · zero aligns with the text edge" className="relative h-7 overflow-hidden rounded-[3px] bg-muted/20 text-muted-foreground ring-1 ring-inset ring-border" style={{marginLeft:-leading,width:`calc(100% + ${leading}px)`}}>
-      {/* Every tick and label shares the same zero and CSS centimeter. */}
-      {[{step:cm/10,height:4,opacity:.3},{step:cm/2,height:7,opacity:.45},{step:cm,height:10,opacity:.65}].map(({step,height,opacity})=><div key={step} aria-hidden="true" className="absolute inset-x-0 bottom-0" style={{height,opacity,backgroundPositionX:leading,backgroundSize:`${step}px 100%`,backgroundImage:`repeating-linear-gradient(to right, currentColor 0px, currentColor 1px, transparent 1px, transparent ${step}px)`}}/>)}
-      {Array.from({length:Math.floor(Math.max(0,width-leading-9)/cm)+1},(_,i)=><span key={i} aria-hidden="true" className="absolute top-1 font-sans text-[10px] leading-[10px] tabular-nums" style={{left:leading+.5+i*cm,transform:'translateX(-50%)'}}>{i}</span>)}
-      <div aria-hidden="true" className="absolute inset-y-0 right-0 w-px bg-border"/>
-    </div>
-  );
-}
-
-/* traka 3 — red sa lenjirom preko CELE radne površine. Bez pozadine i ivica:
-   ista boja kao radna površina (#0d0d0d sa Workspace roota), zato se traka
-   „ne vidi“ (po Nikoli) — ali je traka, i NE deli se u Splitu; deli se samo
-   površina ISPOD nje. */
-export function RulerRow({node}:{node?:NoteNode|null}={}) {
-  const {page}=useNoteAppearance(node);
-  /* „?? true“ jer stari sačuvani store nema ovaj ključ (persist je ceo
-     state, verzija se ne menja; šema podataka ista) */
-  const rulerVisible = useKachamak((s) => s.rulerVisible ?? true);
-  const setRulerVisible = useKachamak((s) => s.setRulerVisible);
-
-  return (
-    <div data-workspace-chrome className="flex h-9 shrink-0 items-center overflow-y-auto px-6 kachamak-scroll" style={{scrollbarGutter:'stable'}}>
-      <div
-        data-page-ruler data-page-layout={page.layout}
-        className="relative h-7 w-full"
-        style={pageVariables(page)}
-      >
-        {rulerVisible && <RulerStrip />}
-        <button
-          type="button"
-          title={rulerVisible ? "Hide ruler" : "Show ruler"}
-          aria-label={rulerVisible ? "Hide ruler" : "Show ruler"}
-          onClick={() => setRulerVisible(!rulerVisible)}
-          className="absolute -right-6 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-        >
-          {rulerVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ---------- strana: naslov + tekst ---------- */
 
 /* One note surface, used by Write and both Split panes. Format supplies page
@@ -365,17 +306,10 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
   );
 }
 
-/* ---------- Write mod: lenjir + strana ---------- */
-
-/* U Write modu ispod fiksne formatne trake (traka 2, koju renderuje
-   NotesSection) idu: lenjir (traka 3) pa strana. Zoom srednjeg panela
-   (Ctrl + skrol) važi za lenjir i stranu, NE i za formatnu traku — da
-   donje linije trake 2 ostanu u istom redu kroz panele. */
 export function WriteArea({ node, section }: { node: NoteNode; section: SectionKey }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <RulerRow node={node} />
       <EditorPage node={node} section={section} />
     </div>
   );

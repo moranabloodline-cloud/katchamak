@@ -1,3 +1,5 @@
+> **2026-11-21 — Uklonjen lenjir iz editora.** Beleške u prikazima Write, Split i Continuous koriste ceo prostor ispod alatne trake. Podešavanja stranice su u meniju Format.
+
 > **2026-11-21 — Širina i otvorenost desnog panela po tabu.** Svaka knjiga pamti širinu i poslednje otvoreno ili zatvoreno stanje desnog panela zasebno za svaki tab koji koristi panel.
 
 > **2026-11-21 — Desni panel po tabu.** Svaki radni tab knjige pamti skrivene i poslednju izabranu karticu inspektora. Kartice inspektora na Homepage-u su trajno isključene.
@@ -633,6 +635,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Lenjir i njegovo oko.** Uklonjen je ceo red. Pri zumu od 100% izmereno je 36 px više prostora za svaku belešku u sva tri prikaza.
 
 - **2026-11-21 — Raspored desnog panela.** Provereni su povratak na zatvoren panel, obnova njegove širine, zasebno podešavanje za zakačenu belešku i osvežavanje nakon čuvanja.
 

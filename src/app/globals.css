@@ -328,10 +328,9 @@ html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 [data-home-size] [data-home-block] .text-3xl { font-size: calc(2.25 * var(--home-text-size)); }
 [data-home-spacing] [data-home-block] :is(h2,h3,p,ul,.whitespace-pre-wrap,.font-semibold) { line-height: var(--home-leading); }
 [data-home-align] [data-home-block] :is(h2,h3,p,ul,.whitespace-pre-wrap,.font-semibold) { text-align: var(--home-align); }
-[data-document-page], [data-page-ruler] { max-width: min(var(--page-width, 48rem), 100%); margin-inline: auto; }
+[data-document-page] { max-width: min(var(--page-width, 48rem), 100%); margin-inline: auto; }
 [data-page-layout="fit"] { max-width: 100%; }
 [data-document-page][data-page-layout="stacked"] { background: var(--background); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 20px #0002; }
-[data-page-ruler][data-page-layout="stacked"] { max-width: calc(min(var(--page-width, 48rem), 100%) - 3rem - 2px); }
 [data-document-page] .kachamak-editor { text-align: var(--page-align, left); }
 [data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"],
 [data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"] * { color: inherit !important; -webkit-text-fill-color: inherit !important; text-decoration-color: currentColor !important; }

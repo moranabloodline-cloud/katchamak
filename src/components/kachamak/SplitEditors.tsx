@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PenLine } from "lucide-react";
-import { EditorPage, RulerRow } from "./WriteArea";
+import { EditorPage } from "./WriteArea";
 import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -10,10 +10,6 @@ import { findNodeInNovel } from "@/lib/kachamak/utils";
 
 type Pane = "a" | "b";
 
-/* prazna površina — u taj editor još nije otvorena nota. Samo telo praznog
-   stanja: lenjir iznad njega renderuje panel (ista struktura kao pun panel —
-   „dva identična ekrana“ u svakom stanju), a formatna traka je JEDNA fiksna
-   instanta iznad svega (renderuje je NotesSection) */
 function EmptyPaneBody({ section, pane }: { section: SectionKey; pane: Pane }) {
   return (
     <div
@@ -85,17 +81,6 @@ function SplitResizer({
   );
 }
 
-/* Split (po Nikoli, kao u Scriveneru): formatna traka (traka 2) je JEDNA i
-   fiksna iznad svega — NE duplira se po panelu. Lenjir je u SVAKOJ radnoj
-   površini (ispravka 09.11.: svaka površina svoj lenjir, jer svaka površina
-   ima SVOJ odvojeni zoom — lenjir se uvećava sa stranom te površine). Deli se
-   radna površina: dva identična editora (lenjir + strana) + razdelnik koji
-   ih širi/skuplja. Klik na površinu je bira (activePane) — klik na notu u
-   stablu/Gridu/Listi onda otvara notu SAMO u izabranoj površini, druga
-   ostaje sa svojom notom. Ctrl+skrol nad površinom menja SAMO njen zoom
-   (paneAZoom/paneBZoom; null → nasleđuje midZoom dok korisnik ne pomeri).
-   Fokusirana površina ima tanku zlatnu liniju na vrhu (2px overlay — ne
-   pomera layout ni linije). */
 export function SplitEditors({ section }: { section: SectionKey }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
@@ -146,10 +131,7 @@ export function SplitEditors({ section }: { section: SectionKey }) {
             active ? "opacity-100" : "opacity-0"
           }`}
         />
-        {/* zoom POVŠINE: lenjir + strana se uvećavaju zajedno, svaka površina
-            odvojeno; širine panela i razdelnik ostaju u pravim pikselima */}
         <div className="flex min-h-0 flex-1 flex-col" style={{ zoom }}>
-          <RulerRow node={hit?.node} />
           {hit ? (
             <EditorPage key={hit.node.id} node={hit.node} section={hit.section} />
           ) : (
