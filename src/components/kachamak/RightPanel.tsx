@@ -83,7 +83,6 @@ export function RightPanel({
   onHide,
   timelineSettings,
   familySettings,
-  headerOnly = false,
   emptyInfo,
   infoEditor,
   infoOnly = false,
@@ -94,7 +93,6 @@ export function RightPanel({
   onHide?: () => void;
   timelineSettings?: ReactNode;
   familySettings?: ReactNode;
-  headerOnly?: boolean;
   emptyInfo?: ReactNode;
   infoEditor?: ReactNode;
   infoOnly?: boolean;
@@ -107,10 +105,9 @@ export function RightPanel({
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
   const workspace = useKachamak(s => s.activeTab);
   const settings = inspectorSettings(novel, workspace);
-  const configurable = !headerOnly && !infoOnly;
-  const visibleTabs = INSPECTOR_TABS.filter(t => headerOnly || (infoOnly ? t.key === 'info' : !settings.hidden.includes(t.key)));
+  const visibleTabs = INSPECTOR_TABS.filter(t => infoOnly ? t.key === 'info' : !settings.hidden.includes(t.key));
   const hiddenTabs = INSPECTOR_TABS.filter(t => settings.hidden.includes(t.key));
-  const activeTab = headerOnly ? '' : infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
+  const activeTab = infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
   const setInspectorTabHidden = useKachamak(s => s.setInspectorTabHidden);
   const selectInspectorTab = useKachamak(s => s.selectInspectorTab);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -142,14 +139,14 @@ export function RightPanel({
     "h-8 flex-none rounded-md border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors aria-selected:border-[#ad7e2e]/70 aria-selected:bg-[#3a2c18] aria-selected:text-[#fbe4a6] dark:aria-selected:text-[#fbe4a6]";
 
   return (
-    <Tabs value={activeTab} onValueChange={value => {if (configurable) selectInspectorTab(novel.id, value as InspectorTabKey);}} className="flex h-full flex-col gap-0">
+    <Tabs value={activeTab} onValueChange={value => {if (!infoOnly) selectInspectorTab(novel.id, value as InspectorTabKey);}} className="flex h-full flex-col gap-0">
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
       <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
         <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
           {visibleTabs.map(t=>{
-            const trigger=<TabsTrigger key={t.key} value={t.key} disabled={headerOnly} className={tabCls}>{t.label}</TabsTrigger>;
-            if(!configurable) return trigger;
+            const trigger=<TabsTrigger key={t.key} value={t.key} className={tabCls}>{t.label}</TabsTrigger>;
+            if(infoOnly) return trigger;
             return <ContextMenu key={t.key}>
               <ContextMenuTrigger asChild>{trigger}</ContextMenuTrigger>
               <ContextMenuContent aria-label={t.label+' tab actions'}>
@@ -158,7 +155,7 @@ export function RightPanel({
             </ContextMenu>;
           })}
         </TabsList>
-        {configurable && <DropdownMenu>
+        {!infoOnly && <DropdownMenu>
           <DropdownMenuTrigger asChild><button type="button" disabled={!hiddenTabs.length} aria-label="Show hidden inspector tabs" title={hiddenTabs.length?'Show hidden tabs':'All tabs are visible'} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-white/10 disabled:opacity-40"><Plus className="size-4"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" aria-label="Hidden inspector tabs" onCloseAutoFocus={event=>{
             if(!restoringTab.current)return;
@@ -172,7 +169,7 @@ export function RightPanel({
             }}>Show {t.label}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>}
-        {onHide && !headerOnly && (
+        {onHide && (
           <button
             type="button"
             aria-label="Hide panel"
@@ -187,7 +184,7 @@ export function RightPanel({
 
       {/* zoom desnog panela (Ctrl + skrol) — samo sadržina; red tabova (traka 2)
           i NoteMetaBar na dnu ostaju istih visina, linije ostaju poravnate */}
-      {!headerOnly && <div
+      <div
         className="min-h-0 flex-1 overflow-y-auto kachamak-scroll p-3"
         style={{ zoom: rightZoom }}
       >
@@ -264,7 +261,7 @@ export function RightPanel({
         <TabsContent value="family" forceMount={familySettings?true:undefined} hidden={activeTab!=='family'} className="mt-0 data-[state=inactive]:hidden">
           {familySettings ?? <p className="text-xs text-muted-foreground">Select a Family Tree note to edit its members and relationships.</p>}
         </TabsContent>
-      </div>}
+      </div>
     </Tabs>
   );
 }

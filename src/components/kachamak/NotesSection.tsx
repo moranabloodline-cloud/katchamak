@@ -445,8 +445,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </div>
       )}
 
-      {/* Homepage spans the editor and inspector columns below the shared toolbar. */}
-      <div className={wideCanvas ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
+      <div className={wideCanvas ? 'grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
       <main ref={mainRef} tabIndex={-1} style={{"--workspace-canvas-zoom":canvasZoom} as CSSProperties} className={wideCanvas ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
@@ -509,24 +508,24 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </>}
       </main>
 
-      {view !== 'gallery' && (rightPanelOpen ? (
+      {!wideCanvas && (rightPanelOpen ? (
         <>
-          {!wideCanvas && <Resizer
+          <Resizer
             key={JSON.stringify([activeNovelId, workspaceTab])}
             side="right" width={rightPanelWidth} onResize={setRightPanelWidth}
-          />}
+          />
           <aside
             data-workspace-chrome
             ref={rightPanelRef}
             style={{width: `var(--inspector-drag-width, ${rightPanelWidth}px)`}}
             className={view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
           >
-            {!wideCanvas && <CtrlZoom panel="right" targetRef={rightPanelRef} />}
+            <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {novel && <div className="min-h-0 flex-1">
               <RightPanel key={finance?'finance:'+novel.id+':'+(selected?.id??''):novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings} infoOnly={finance}
                 infoEditor={finance && selected?.transaction ? <FinanceEditor key={selected.id} node={selected} currency={novel.financeCurrency??'EUR'}/> : undefined}
-                headerOnly={wideCanvas} emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}
+                emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}
                 onHide={()=>{
                   setCompactFamily(false);
                   if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();
@@ -539,7 +538,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
                   : undefined}
               />
             </div>}
-            {!wideCanvas && !trash && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
+            {!trash && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
           </aside>
         </>
       ) : (

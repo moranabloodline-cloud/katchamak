@@ -28,8 +28,7 @@ export function inspectorWidth(state: PanelState) {
 }
 
 export function inspectorOpen(state: PanelState) {
-  if (state.view === 'homepage') return true;
-  if (state.activeTab === 'gallery') return false;
+  if (state.view === 'homepage' || state.activeTab === 'gallery') return false;
   return currentSettings(state)?.open ?? state.rightPanelOpen;
 }
 
