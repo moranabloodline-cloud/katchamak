@@ -18,7 +18,7 @@ import type {
 import {novelSettingsPatch,type NovelSettingsPatch} from "./project-settings";
 import {changeManuscript,type ManuscriptChange} from './publish-manuscript';
 import {baseStyle,validBookStyle} from './book-style';
-import {houseStyles,houseStyleCatalogVersion,previousHouseStyleNames} from './house-styles';
+import {attachGenreSamples,houseStyles,houseStyleCatalogVersion,previousHouseStyleNames} from './house-styles';
 import {newKanbanBoard, validKanban} from './kanban';
 import {newTransaction, validTransaction, type TransactionType} from './finance';
 import { DEFAULT_NOTE_ICON, SECTION_KEYS } from "./types";
@@ -631,6 +631,11 @@ export const useKachamak = create<KachamakState>()(
       installPublishStyles: (bookId) => set(state=>{
         const book=state.novels.find(n=>n.id===bookId);
         if(!book || (book.publishStyleCatalogVersion??0)>=houseStyleCatalogVersion || state.activeNovelId!==bookId)return state;
+        if(book.publishStyleCatalogVersion===2){
+          const sections={...book.sections,publish:attachGenreSamples(book.sections.publish??[])};
+          const trash=book.trash.map(item=>item.section==='publish'?{...item,node:attachGenreSamples([item.node])[0]}:item);
+          return {novels:state.novels.map(n=>n===book?touch({...book,sections,trash,publishStyleCatalogVersion:houseStyleCatalogVersion}):n)};
+        }
         const folder=makeNode('folder','House styles');
         folder.icon='folder';
         folder.children=houseStyles.map(preset=>({...makeNode('doc',preset.name),bookStyle:structuredClone(preset.style)}));
@@ -1113,7 +1118,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 67,
+      version: 68,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1126,6 +1131,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 68) { /* Genre samples are associated on opening Publish, including imported books. */ }
         if (version < 67) { /* Install the genre catalog on first use, including books restored from a cloud snapshot. */ }
         if (version < 66) { /* Publish follows Binder until customized. Starter notes are installed on first opening. */ }
         if (version < 65) for (const novel of s.novels ?? []) {

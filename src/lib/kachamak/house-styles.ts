@@ -1,6 +1,8 @@
 import {baseStyle, type BookStyle} from './book-style';
+import {houseGenres, type HouseGenre} from './house-genres';
+import type {NoteNode} from './types';
 
-export const houseStyleCatalogVersion = 2;
+export const houseStyleCatalogVersion = 3;
 export const previousHouseStyleNames = new Set(['Folio','Briar','Signal','Vesper','Quarto','Solstice']);
 
 // Finished-book trim benchmarks (inches), not manuscript submission formats:
@@ -24,8 +26,8 @@ const illustrated: BookStyle = {
   divider:'None', dividerGap:.5, running:false, folios:false, top:13, bottom:15, outer:13, inner:18
 };
 
-function preset(name:string, family:BookStyle, settings:Partial<BookStyle>){
-  return {name,style:{...family,...settings}};
+function preset(name:HouseGenre, family:BookStyle, settings:Partial<BookStyle>){
+  return {name,style:{...family,...settings,sampleGenre:name}};
 }
 
 export const houseStyles = [
@@ -134,3 +136,27 @@ export const houseStyles = [
     heading:'#252525', accent:'#393939'
   })
 ];
+
+function settingsKey(style:BookStyle){
+  // Backups can serialize object keys in a different order. Array order is significant.
+  return JSON.stringify(style,(key,value)=>{
+    if(key==='sampleGenre')return undefined;
+    if(value&&typeof value==='object'&&!Array.isArray(value))return Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)));
+    return value;
+  });
+}
+const originalGenres=new Map(houseStyles.map(p=>[settingsKey(p.style),p.name]));
+
+export function withGenreSample(style:BookStyle,title:string):BookStyle{
+  if(style.sampleGenre)return style;
+  const genre=houseGenres.find(name=>name===title)??originalGenres.get(settingsKey(style));
+  return genre?{...style,sampleGenre:genre}:style;
+}
+
+export function attachGenreSamples(nodes:NoteNode[]):NoteNode[]{
+  return nodes.map(node=>{
+    const children=node.children.length?attachGenreSamples(node.children):node.children;
+    const bookStyle=node.bookStyle&&withGenreSample(node.bookStyle,node.title);
+    return children===node.children&&bookStyle===node.bookStyle?node:{...node,children,bookStyle};
+  });
+}

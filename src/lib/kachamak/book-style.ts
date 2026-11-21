@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {houseGenres} from './house-genres';
 
 export const fonts = ['Georgia','Palatino Linotype','Times New Roman','Cambria','Arial','Trebuchet MS'] as const;
 // Keep the intended serif/sans distinction on readers without Windows fonts.
@@ -25,6 +26,7 @@ const number = (min:number,max:number)=>z.number().finite().min(min).max(max);
 const color=z.string().regex(/^#[a-f0-9]{6}$/i);
 const block=z.object({italic:z.boolean(),size:number(.7,2),align:z.enum(alignments),rule:z.boolean()});
 const schema=z.object({
+  sampleGenre:z.enum(houseGenres).optional(),
   bodyFont:z.enum(fonts), headingFont:z.enum(fonts), size:number(8,20), headingSize:number(14,48),
   leading:number(1,2.4), paragraphGap:number(0,2), indent:number(0,3), align:z.enum(alignments), hyphens:z.boolean(),
   numbering:z.enum(['Arabic','Roman','None']), chapterAlign:z.enum(['left','center','right']), sink:number(0,30),

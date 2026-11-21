@@ -1,3 +1,5 @@
+> **2026-11-21 — Primeri žanrova u Publish galeriji.** Svih 22 stila ima svoj originalan uzorak. Poetry prikazuje strofe, Comics i Graphic Novels različite ilustrovane sekvence, a Children’s Books slikovnicu. Klik na karticu otvara isti primer u većem formatu.
+
 > **2026-11-21 — Žanrovski House styles.** Publish nudi 22 zasebna uređiva stila po traženom redosledu. Prelom i fontovi koriste polazne vrednosti prema vrsti knjige. Prethodne beleške i njihove veze ostaju dostupne.
 
 > **2026-11-21 — Izbor rukopisa u Publish.** Svaka knjiga pamti izabrane stavke i njihov redosled za pregled i izvoz. Šest početnih stilova dostupno je kao zasebne beleške u levom stablu.
@@ -673,6 +675,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Publish:** Žanrovske minijature i uvećani Style sample koriste isti sadržaj i tipografiju stila. Uzorak se čuva uz kopiju stila. Ranije instalirani žanrovski katalog nadograđuje se bez ponovnog dodavanja beležaka. Izvoz koristi izabrani rukopis iz Bindera.
 
 - **2026-11-21 — Publish:** Uvedena je druga verzija kataloga sa 22 stila. Svaka knjiga je preuzima jednom. Stilovi obuhvataju prozu, poeziju, strip, slikovnice i stručnu literaturu. Izvori za formate i prelom su [IngramSpark](https://www.ingramspark.com/blog/picking-a-popular-trim-size-for-your-book), [IngramSpark za poeziju](https://www.ingramspark.com/blog/what-to-consider-when-publishing-poetry), [Taylor](https://www.taylor.com/blog/a-guide-to-printing-childrens-books) i [Wiley](https://assets.wiley.com/image/upload/v1783020978/author-guidelines-for-preparing-print-ready-pdfs.pdf).
 

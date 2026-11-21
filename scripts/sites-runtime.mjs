@@ -7,7 +7,7 @@ const studioTool = (resourceUri) => ({
   annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   _meta: { ui: { resourceUri }, "openai/outputTemplate": resourceUri, "openai/ui": { entrypoints: [{ type: "thread" }] } },
 });
-const MIME = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", txt: "text/plain; charset=utf-8", svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", woff2: "font/woff2", woff: "font/woff", ico: "image/x-icon", md: "text/markdown; charset=utf-8" };
+const MIME = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", txt: "text/plain; charset=utf-8", svg: "image/svg+xml", png: "image/png", webp: "image/webp", jpg: "image/jpeg", jpeg: "image/jpeg", woff2: "font/woff2", woff: "font/woff", ico: "image/x-icon", md: "text/markdown; charset=utf-8" };
 const rpc = (id, result, error) => Response.json(error ? { jsonrpc: "2.0", id, error } : { jsonrpc: "2.0", id, result }, { headers: { "Cache-Control": "no-store" } });
 
 export default {

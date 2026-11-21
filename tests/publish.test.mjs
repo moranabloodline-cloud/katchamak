@@ -6,6 +6,7 @@ for (const key of ['window','document','NodeFilter','XMLSerializer','HTMLElement
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
 const {workspaceTabs}=await import('../src/lib/kachamak/workspace-tabs.ts');
 const {houseStyles,houseStyleCatalogVersion}=await import('../src/lib/kachamak/house-styles.ts');
+const {genreSamples}=await import('../src/lib/kachamak/genre-samples.ts');
 const {baseStyle,trims,validBookStyle}=await import('../src/lib/kachamak/book-style.ts');
 const {publication,htmlEdition}=await import('../src/lib/kachamak/publication.ts');
 const {epubEdition}=await import('../src/lib/kachamak/publish-export.ts');
@@ -67,7 +68,21 @@ assert.deepEqual(house().children.map(n=>n.title),names);
 assert.equal(new Set(houseStyles.map(p=>JSON.stringify(p.style))).size,22);
 for(const node of house().children){
   const s=node.bookStyle, [width,height]=trims[s.trim];
+  const sample=publication(book(),s,'Chapter opening');
+  assert.equal(s.sampleGenre,node.title);
+  assert.equal(sample.title,genreSamples[node.title].title);
+  const sampleDOM=new JSDOM(sample.sections[0].html).window.document;
+  assert.equal(sampleDOM.querySelector('h1').textContent,sample.title);
+  if(node.title==='Poetry'){
+    assert.equal(sampleDOM.querySelectorAll('p.verse').length,3);
+    assert.equal(sampleDOM.querySelectorAll('p.verse br').length,9);
+  }
+  if(['Comics','Graphic Novels',"Children's Books"].includes(node.title)){
+    assert(sampleDOM.querySelector('figure img').getAttribute('src').endsWith('.webp'));
+    assert(sampleDOM.querySelector('figcaption').textContent.trim());
+  }
   const pub=publication(book(),s), formatted=htmlEdition(pub,s);
+  assert(!formatted.includes('genre-sample')&&!formatted.includes('publish-samples/')&&!formatted.includes(sample.title));
   assert(formatted.includes('size:'+width+'mm '+height+'mm'));
   assert(formatted.includes('font-size:'+s.size+'pt')&&formatted.includes('line-height:'+s.leading));
 }
@@ -138,4 +153,22 @@ assert.deepEqual(freshBook.sections.publish.map(n=>n.title),['House styles']);
 assert.deepEqual(freshBook.sections.publish[0].children.map(n=>n.title),names);
 assert(validCloudLibrary({novels:[freshBook],collections:[]}));
 assert(!validCloudLibrary({novels:[{...freshBook,publishStyleCatalogVersion:'2'}],collections:[]}));
+// Simulate a v2 catalog after a rename, a typography edit, and a deletion.
+const v2=JSON.parse(JSON.stringify(freshBook));
+v2.publishStyleCatalogVersion=2;
+const v2Notes=v2.sections.publish[0].children;
+for(const n of v2Notes)delete n.bookStyle.sampleGenre;
+const movedPoetry=v2Notes.find(n=>n.title==='Poetry');movedPoetry.title='My verse';
+const editedComic=v2Notes.find(n=>n.title==='Comics');editedComic.bookStyle.size=15;
+v2Notes.pop();
+v2.sections.publish[0].children=v2Notes.reverse();
+const v2Ids=v2Notes.map(n=>n.id);
+useKachamak.setState({novels:state().novels.map(n=>n.id===freshBookId?v2:n)});
+state().installPublishStyles(freshBookId);
+const migrated=state().novels.find(n=>n.id===freshBookId).sections.publish[0].children;
+assert.deepEqual(migrated.map(n=>n.id),v2Ids);
+assert.equal(migrated.find(n=>n.id===movedPoetry.id).bookStyle.sampleGenre,'Poetry');
+assert.equal(migrated.find(n=>n.id===editedComic.id).bookStyle.size,15);
+state().updateNode('publish',editedComic.id,{title:'Panel study'});
+assert.equal(publication(v2,migrated.find(n=>n.id===editedComic.id).bookStyle,'Chapter opening').title,genreSamples.Comics.title);
 console.log('Publish passed: editable preset notes, nested manuscript selection, independent export order, undo/redo, book persistence, EPUB, DOCX, HTML and proof.');

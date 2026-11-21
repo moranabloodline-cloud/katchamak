@@ -7,6 +7,7 @@ import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dia
 import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
 import {baseStyle,trims,type BookStyle} from '@/lib/kachamak/book-style';
 import {bookArticles,bookCss,proofs,publication,type Proof} from '@/lib/kachamak/publication';
+import {withGenreSample} from '@/lib/kachamak/house-styles';
 import {galleryImage,galleryImageRef} from '@/lib/kachamak/project-image';
 import {findNode,locateNode} from '@/lib/kachamak/utils';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -29,7 +30,7 @@ function Miniature({book,entry,selected,choose}:{book:Novel;entry:StyleCard;sele
   const source=useMemo(()=>{const sample=publication(book,s,'Chapter opening');return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,sample.lang,true)+'html{background:white;overflow:hidden}body{padding:'+s.top+'mm '+s.outer+'mm '+s.bottom+'mm '+s.inner+'mm}.book-name{display:none}</style><body>'+bookArticles(sample)+'</body></html>';},[book,s]);
   return <button type="button" aria-label={'Preview '+entry.name} aria-pressed={selected} onClick={choose} className={'group min-w-0 rounded-lg border p-2 text-left transition-colors '+(selected?'border-amber-400/70 bg-amber-400/5':'border-white/10 bg-white/[.025] hover:border-amber-300/40')}>
     <div ref={holder} className="pointer-events-none relative w-full overflow-hidden rounded-sm bg-white" style={{aspectRatio:w+'/'+h}}>
-      <iframe title={entry.name+' specimen'} tabIndex={-1} sandbox="" scrolling="no" loading="lazy" srcDoc={source} className="absolute left-0 top-0 origin-top-left border-0" style={{width:sheet,height:h*96/25.4,transformOrigin:'top left',transform:'scale('+width/sheet+')'}}/>
+      <iframe title={entry.name+' specimen'} tabIndex={-1} sandbox="allow-same-origin" scrolling="no" loading="lazy" srcDoc={source} className="absolute left-0 top-0 origin-top-left border-0" style={{width:sheet,height:h*96/25.4,transformOrigin:'top left',transform:'scale('+width/sheet+')'}}/>
     </div><div className="flex items-center justify-between gap-2 px-1 pb-0.5 pt-2"><span className="truncate font-semibold">{entry.name}</span>{selected&&<Check className="size-3.5 shrink-0 text-amber-300"/>}</div>
   </button>;
 }
@@ -68,14 +69,19 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   const entry=saved&&selected?{name:selected.title,style:saved,node:selected}:savedCards[0]??styleCards(roots)[0];
   const s=entry?.style??baseStyle;
   useEffect(()=>{if(selected?.id!==prev.current){
-    if(selected)setGallery(!selected.bookStyle);
+    if(selected){
+      if(gallery&&selected.bookStyle?.sampleGenre)setProof('Chapter opening');
+      setGallery(!selected.bookStyle);
+    }
     prev.current=selected?.id;
-  }},[selected,selected?.id]);
+  }},[selected,gallery]);
   const options=treeOptions(roots);
   const source=useMemo(()=>gallery?'':proofDocument(publication(novel,s,proof),s,print),[novel,s,proof,print,gallery]);
   const open=(card:StyleCard)=>{
     useKachamak.getState().select(card.node.id);
-    onInspect('tools');setGallery(false);
+    onInspect('tools');setWantPdf(false);
+    if(card.style.sampleGenre)setProof('Chapter opening');
+    setGallery(false);
   };
   const change=(next:BookStyle)=>{
     const state=useKachamak.getState();
@@ -117,7 +123,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
       </div>:<>
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
           <strong className="mr-auto truncate">{entry?.name??"Book proof"}</strong>
-          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v}>{v}</option>)}</select>
+          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&s.sampleGenre?'Style sample':v}</option>)}</select>
           <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setWantPdf(false);setPrint(m==='Print');}}>{m}</button>)}</div>
         </div>
         {proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:<PublishProof key={source} anchor={anchor} source={source} print={print} frameRef={frame} onReady={onReady} zoom={zoom}/>}
@@ -133,7 +139,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     }}/>:entry?<PublishTools novel={novel} name={entry.name} style={s} change={change} save={saveAs} inspect={inspect} print={print}/>:<button className={btn} onClick={saveAs}>Create style</button>,toolsHost)}
     <Dialog open={importing} onOpenChange={setImporting}><DialogContent aria-describedby={undefined}><DialogHeader><DialogTitle>Use style from another book</DialogTitle></DialogHeader>
       <div className="grid max-h-[60vh] gap-2 overflow-y-auto">{otherStyles.map(item=><button key={item.book.id+':'+item.node.id} className={btn+' justify-start text-left'} onClick={()=>{
-        const style={...item.node.bookStyle!};
+        const style={...withGenreSample(item.node.bookStyle!,item.node.title)};
         if(style.chapterImage){
           const source=galleryImage(item.book.gallery,style.chapterImage);
           const match=source&&novel.gallery?.find(img=>img.kind==='image'&&img.image===source.image);

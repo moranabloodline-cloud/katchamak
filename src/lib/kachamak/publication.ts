@@ -1,3 +1,4 @@
+import {genreSamples} from './genre-samples';
 import {manuscriptEntries} from './publish-manuscript';
 import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
@@ -94,6 +95,25 @@ function special(page:SpecialPage,book:Novel,style:BookStyle,chapters:Leaf[]):Le
   };
   return {id:'matter-'+page.toLowerCase().replaceAll(' ','-'),title:page,kind:'special',html:page==='Title page'?content[page]:'<h1>'+escapeText(page)+'</h1>'+content[page]};
 }
+function genreOpening(s:BookStyle,genre:NonNullable<BookStyle['sampleGenre']>,art?:string):Publication{
+  const sample=genreSamples[genre];
+  const passages=sample.passages.map(p=>{
+    if(typeof p==='string')return paras(p);
+    if('heading' in p)return '<h2>'+escapeText(p.heading)+'</h2>';
+    if('quote' in p)return '<blockquote>'+escapeText(p.quote)+'</blockquote>';
+    if('stanza' in p)return '<p class="verse" style="margin:0 0 1em;text-indent:0">'+p.stanza.map(escapeText).join('<br/>')+'</p>';
+    if('steps' in p)return '<ol>'+p.steps.map(step=>'<li>'+escapeText(step)+'</li>').join('')+'</ol>';
+    if('table' in p){
+      const head=p.table.columns.map(cell=>'<th scope="col">'+escapeText(cell)+'</th>').join('');
+      const body=p.table.rows.map(row=>'<tr>'+row.map(cell=>'<td>'+escapeText(cell)+'</td>').join('')+'</tr>').join('');
+      return '<table style="margin:.8em 0"><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table>';
+    }
+    const availableHeight=trims[s.trim][1]-s.top-s.bottom;
+    return '<figure style="margin:0;break-inside:avoid"><img src="publish-samples/'+p.picture+'.webp" alt="'+escapeText(p.alt)+'" style="display:block;width:100%;max-height:'+Math.round(availableHeight*.72)+'mm;object-fit:contain"/><figcaption style="margin-top:.7em">'+escapeText(p.caption)+'</figcaption></figure>';
+  }).join('');
+  const html=chapterHead(sample.title,1,s,art)+opening(passages);
+  return {title:sample.title,lang:'en',author:'',sections:[{id:'genre-sample',kind:'chapter',title:sample.title,html}]};
+}
 function bookLanguage(language?:string){
   const named:Record<string,string>={english:'en',serbian:'sr',srpski:'sr',french:'fr',german:'de',italian:'it',spanish:'es',russian:'ru',croatian:'hr'};
   return named[(language??'').toLowerCase()] || (/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(language??'')?language!:'en');
@@ -101,6 +121,7 @@ function bookLanguage(language?:string){
 export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Publication{
   const chapters:Leaf[]=[];let index=0;
   const art=projectImageSrc(book.gallery,s.chapterImage);
+  if(proof==='Chapter opening'&&s.sampleGenre)return genreOpening(s,s.sampleGenre,art);
   const targets=new Map<string,string>();
   if(proof==='Manuscript'){
     const entries=manuscriptEntries(book).filter(row=>row.included);
