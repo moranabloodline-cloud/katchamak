@@ -8,6 +8,7 @@ import {FinanceWorkspace, FinanceEditor} from "./Finance";
 import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
+import {KanbanWorkspace} from './KanbanWorkspace';
 import { EditorToolbar, WriteArea } from "./WriteArea";
 import {GalleryCanvas, GalleryTree, type GalleryDrag} from './Gallery';
 import {galleryPath} from '@/lib/kachamak/gallery';
@@ -316,7 +317,8 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
   const finance=section==='finance' && !trash && !gallery && storedView!=='homepage';
-  const view = finance ? (storedView==='list'?'finance-list':'finance-dashboard') : trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
+  const kanban = section === 'kanban' && !trash && !gallery && storedView !== 'homepage';
+  const view = kanban ? 'kanban' : finance ? (storedView==='list'?'finance-list':'finance-dashboard') : trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
 
   const wideCanvas = view==='homepage' || view==='gallery';
   const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();
@@ -368,7 +370,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
       return next;
     });
   };
-  const selected = wideCanvas || view==='trash' || (section!=='finance' && hit?.section==='finance') ? null : ((view==="timeline"&&section==="timeline")||view==='family'||finance)&&hit?.section!==section?null:hit?.node ?? null;
+  const selected = wideCanvas || view==='trash' || (section!=='finance' && hit?.section==='finance') || (section!=='kanban' && hit?.section==='kanban') ? null : ((view==="timeline"&&section==="timeline")||view==='family'||finance||kanban)&&hit?.section!==section?null:hit?.node ?? null;
   const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
@@ -384,6 +386,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const [mobilePages,setMobilePages]=useState(false);
   useEffect(()=>{setClosedFolders(new Set());setCollapsedPages(new Set());setMobilePages(false);},[activeNovelId]);
   useEffect(()=>{if(view!=='homepage')setMobilePages(false);},[view]);
+  useEffect(()=>{if (kanban) setMobilePages(false);},[kanban,selectedNodeId]);
 
   const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
   const target=view!=='continuous'&&selected?.documentTarget?.amount?selected.documentTarget:null;
@@ -400,6 +403,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             style={{ width: leftPanelWidth }}
             className={'hidden shrink-0 flex-col bg-black/20 md:flex '+(mobilePages?'max-md:bottom-0 max-md:max-h-[80dvh] max-md:top-auto max-md:border max-md:border-border max-md:shadow-xl':'')}
           >
+            {kanban && mobilePages && <button type="button" className="self-end px-3 py-2 text-xs md:hidden" onClick={()=>setMobilePages(false)}>Close boards</button>}
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
               {view==='gallery' && novel ? <GalleryTree key={novel.id} novel={novel} drag={galleryDrag} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder} collapsed={closedFolders} setCollapsed={setClosedFolders}/> : view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
@@ -454,7 +458,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
         {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} toolsHost={canvasToolsHost}
-          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : <>
+          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : kanban && novel ? <KanbanWorkspace key={novel.id+':'+(selected?.id??rootId??'')} novel={novel} rootId={rootId} selected={selected} zoom={canvasZoom} onShowTree={()=>setMobilePages(true)} /> : <>
         <div style={{zoom:view==="split"?undefined:canvasZoom}} className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {finance && novel && <FinanceWorkspace key={treeScopeKey} novel={novel} rootId={rootId} selected={selected} list={view==='finance-list'}/>}
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}

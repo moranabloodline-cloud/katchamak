@@ -16,6 +16,7 @@ import type {
   ViewMode,
 } from "./types";
 import {novelSettingsPatch,type NovelSettingsPatch} from "./project-settings";
+import {newKanbanBoard, validKanban} from './kanban';
 import {newTransaction, validTransaction, type TransactionType} from './finance';
 import { DEFAULT_NOTE_ICON, SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
@@ -308,7 +309,7 @@ function touch(novel: Novel): Novel {
 
 function updateInspectorTab(s: KachamakState, projectId: string, tab: InspectorTabKey, action: 'hide' | 'show' | 'select') {
   const workspace = s.activeTab;
-  if (s.activeNovelId !== projectId || s.view === 'homepage' || workspace === 'gallery' || workspace === 'finance') return s;
+  if (s.activeNovelId !== projectId || s.view === 'homepage' || workspace === 'gallery' || workspace === 'finance' || workspace === 'kanban') return s;
   const book = s.novels.find(n => n.id === projectId);
   if (!book) return s;
   const settings = changeInspectorTab(book, workspace, tab, action);
@@ -769,6 +770,10 @@ export const useKachamak = create<KachamakState>()(
         const financial = kind === "income" || kind === "expense";
         if (financial && section !== "finance") return null;
         const n = makeNode(typeof kind === "string" && !financial ? kind : "doc", template?.title ?? title ?? "Untitled", template ?? undefined);
+        if (section === 'kanban') {
+          n.kanban = newKanbanBoard();
+          n.icon = 'kanban-board';
+        }
         if (financial) n.transaction = newTransaction(kind);
         if (section === "finance" && kind === "folder") n.icon = "folder";
         if (parentId === null) {
@@ -804,6 +809,7 @@ export const useKachamak = create<KachamakState>()(
         const target = findNode(roots, id);
         if (!target) return;
         if(patch.ignoreAutoLinking !== undefined && typeof patch.ignoreAutoLinking !== 'boolean')return;
+        if (patch.kanban !== undefined && !validKanban(patch.kanban)) return;
         if(patch.transaction!==undefined && !validTransaction(patch.transaction))return;
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
@@ -896,6 +902,7 @@ export const useKachamak = create<KachamakState>()(
       moveNodeTo: (fromSection, id, destSection, destParentId, destIndex) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
+        if ((fromSection === 'kanban') !== (destSection === 'kanban')) return;
         const fromRoots = novel.sections[fromSection];
         const moving = findNode(fromRoots, id);
         if (!moving) return;
@@ -1067,7 +1074,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 62,
+      version: 63,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1080,6 +1087,9 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 63) for (const novel of s.novels ?? []) {
+          if (novel.sections && novel.sections.kanban === undefined) novel.sections.kanban = [];
+        }
         if(version<62){ /* Canvas Info fields and its inspector preferences are optional. */ }
         if(version<61){ /* Canvas appearance and manually placed rows are optional on older books. */ }
         if(version<60){ /* Rows without a world position keep their original reading order. */ }

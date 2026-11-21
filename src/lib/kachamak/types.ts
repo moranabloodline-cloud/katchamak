@@ -11,7 +11,8 @@ export type SectionKey =
   | "prompts"
   | "timeline"
   | "family"
-  | "finance";
+  | "finance"
+  | "kanban";
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
@@ -23,6 +24,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "timeline",
   "family",
   "finance",
+  "kanban",
 ];
 
 export type TabKey = SectionKey | "gallery" | "trash" | `note:${string}`;
@@ -51,6 +53,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "prompts", label: "Prompts" },
   { key: "timeline", label: "Timeline" },
   { key: "family", label: "Relationships" },
+  { key: "kanban", label: "Kanban" },
   { key: "finance", label: "Finance" },
   { key: "trash", label: "Trash" },
 ];
@@ -98,6 +101,7 @@ export interface NoteNode {
   aliases?: string[];
   ignoreAutoLinking?: boolean; // skip this note as a target during automatic link review
   linkChoices?: LinkChoice[];
+  kanban?: import('./kanban').KanbanBoard;
   transaction?: import('./finance').Transaction;
   event?: StoryEvent;
   timelineKind?: 'event' | 'period'; // an undated Timeline note awaiting its dates

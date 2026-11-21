@@ -24,6 +24,8 @@ function resetEditors(){batch=undefined;for(const reset of resetListeners)reset(
 function serializeBook(book:Novel){
   // A cloud reload can reorder JSON keys or restore different navigation preferences.
   return JSON.stringify(capture(book),(key,value)=>{
+    // Empty Kanban sections added to older books must match their saved history.
+    if (key === 'kanban' && Array.isArray(value) && !value.length) return undefined;
     if(key==='updatedAt'||key==='collapsed')return undefined;
     if(!record(value)||Array.isArray(value))return value;
     return Object.fromEntries(Object.keys(value).sort().map(field=>[field,value[field]]));

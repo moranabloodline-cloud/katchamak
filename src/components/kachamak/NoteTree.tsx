@@ -376,7 +376,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                  icon picker that "Change icon" just opened */
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              {section==="finance" ? !node.transaction && <>
+              {section==="kanban" ? <DropdownMenuItem onSelect={()=>addNode(section,node.id,"doc","New board")}>New sub-board</DropdownMenuItem> : section==="finance" ? !node.transaction && <>
                 <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'folder')}>New folder</DropdownMenuItem>
                 <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'income')}>+ Income</DropdownMenuItem>
                 <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'expense')}>+ Expense</DropdownMenuItem>
@@ -507,7 +507,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             Pick a destination — the note goes to the end of the chosen spot.
           </p>
           <div className="max-h-72 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-1.5">
-            {moveOpen && SECTION_LABELS.map((t) => {
+            {moveOpen && SECTION_LABELS.filter(t=>(section==="kanban") === (t.key==="kanban")).map((t) => {
               const sec = t.key as SectionKey;
               const roots = novel?.sections[sec] ?? [];
               return (
@@ -673,14 +673,14 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
         ))}
         {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
-            Empty. Right-click here to create your first note.
+            {section==='kanban'?'Right-click to create a board.':'Empty. Right-click here to create your first note.'}
           </p>
         )}
       </div>
       </ContextMenuTrigger>
       <ContextMenuContent aria-label="Tree actions" className="w-56 border-white/10 bg-[#1b1b1b] font-serif">
         {section==="timeline"&&<><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</ContextMenuItem><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</ContextMenuItem></>}
-              {section==="finance" ? <>
+              {section==="kanban" ? <ContextMenuItem onSelect={()=>addNode(section,rootId??null,"doc","New board")}>{rootId?"New sub-board":"New board"}</ContextMenuItem> : section==="finance" ? <>
                 <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'folder')}>New folder</ContextMenuItem>
                 <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'income')}>+ Income</ContextMenuItem>
                 <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'expense')}>+ Expense</ContextMenuItem>

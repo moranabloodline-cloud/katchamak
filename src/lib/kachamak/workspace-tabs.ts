@@ -2,7 +2,7 @@ import {TABS,type Novel,type TabKey,type SectionKey,type ViewMode} from './types
 import {findNodeInNovel} from './utils';
 
 export function validWorkspaceTabOrder(value:unknown):value is TabKey[]|undefined {
-  return value===undefined||Array.isArray(value)&&value.length<=10000&&new Set(value).size===value.length&&value.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family|finance|gallery)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)));
+  return value===undefined||Array.isArray(value)&&value.length<=10000&&new Set(value).size===value.length&&value.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family|finance|kanban|gallery)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)));
 }
 function availableTabs(novel:Novel): {key:TabKey;label:string;color?:string}[] {
   return [...TABS.filter(tab=>tab.key!=='trash'&&tab.key!=='timeline'&&tab.key!=='family'),...(novel.openNoteTabs??[]).flatMap(id=>{
@@ -38,6 +38,7 @@ export function visibleTabLocation(novel:Novel,key:TabKey,view:ViewMode) {
   const next=adjacent.find(tab=>!isWorkspaceTabHidden(novel,tab.key))?.key;
   // With every tab hidden the current document stays open and + remains available.
   if(!next)return null;
+  if(next==='kanban') return {activeTab:next,view:'write' as const,selectedNodeId:novel.sections.kanban?.find(n=>!n.hidden)?.id??null};
   if(next==='finance')return {activeTab:next,view:'write' as const,selectedNodeId:null};
   if(next==='family')return {activeTab:next,view:'family' as const,selectedNodeId:novel.sections.family?.find(n=>!n.hidden)?.id??null};
   if(next==='timeline')return {activeTab:next,view:'timeline' as const,selectedNodeId:null};

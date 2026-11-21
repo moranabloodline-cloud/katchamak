@@ -32,6 +32,7 @@ const SECTION_NAMES: Record<SectionKey, string> = {
   timeline: "Timeline",
   family: "Family Tree",
   finance: "Finance",
+  kanban: "Kanban",
 };
 
 export function TrashSections({novel}: {novel: Novel}) {

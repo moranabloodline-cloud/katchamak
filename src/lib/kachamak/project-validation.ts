@@ -1,3 +1,4 @@
+import {validKanban} from './kanban';
 import {validCurrency,validTransaction} from './finance';
 import type { Novel, SectionKey } from './types';
 import { validHiddenInspectorTabs, validInspectorByTab } from './inspector-tabs';
@@ -35,7 +36,7 @@ export function isReadableProject(value: unknown): boolean {
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.ignoreAutoLinking === undefined || typeof node.ignoreAutoLinking === 'boolean') &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
-      (node.transaction===undefined || validTransaction(node.transaction)) && validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
+      (node.kanban===undefined || validKanban(node.kanban)) && (node.transaction===undefined || validTransaction(node.transaction)) && validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validNotePageSettings(node.pageSettings) && validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
@@ -60,7 +61,7 @@ export function isReadableProject(value: unknown): boolean {
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && !validHiddenInspectorTabs(n.hiddenInspectorTabs)) return false;
   if (!validInspectorByTab(n.inspectorByTab)) return false;
-  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance'].includes(k)))) return false;
+  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance','kanban'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];
     if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;

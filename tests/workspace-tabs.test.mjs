@@ -12,7 +12,7 @@ const actions=useKachamak.getState();actions.createNovel('Tabs QA','Tester');
 const projectId=useKachamak.getState().activeNovelId;
 const folder=actions.addNode('binder',null,'doc','World');actions.updateNode('binder',folder,{content:'<p>Keep this manuscript.</p>'});actions.openNoteTab(folder);actions.select(folder);
 const novel=()=>useKachamak.getState().novels.find(n=>n.id===projectId),keys=()=>workspaceTabs(novel()).map(tab=>tab.key);
-assert.deepEqual(keys(),['binder','codex','planning','research','templates','prompts',`note:${folder}`,'timeline','family','gallery']);
+assert.deepEqual(keys(),['binder','codex','planning','research','templates','prompts','kanban',`note:${folder}`,'timeline','family','gallery']);
 const sections=novel().sections,selection=useKachamak.getState().selectedNodeId,active=useKachamak.getState().activeTab;
 actions.moveWorkspaceTab(projectId,'timeline','binder');assert.equal(keys()[0],'timeline');
 actions.moveWorkspaceTab(projectId,`note:${folder}`,'codex');assert.deepEqual(keys().slice(0,4),['timeline','binder',`note:${folder}`,'codex']);

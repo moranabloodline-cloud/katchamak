@@ -4,6 +4,7 @@ import type { ComponentType, CSSProperties } from "react";
 import { DEFAULT_NOTE_ICON, type NoteNode } from "./types";
 import {
   createLucideIcon,
+  SquareKanban,
   FlaskConical,
   Circle,
   Bomb,
@@ -184,6 +185,7 @@ export function MaterialFolder({
 
 /* everything a note can be — the user decides via name + icon + colour */
 export const NOTE_ICONS: { key: string; label: string; Cmp: IconCmp }[] = [
+  { key: "kanban-board", label: "Kanban board", Cmp: SquareKanban },
   { key: "folder", label: "Folder", Cmp: MaterialFolder },
   { key: "file", label: "Note", Cmp: FileText },
   { key: DEFAULT_NOTE_ICON, label: "File", Cmp: File },

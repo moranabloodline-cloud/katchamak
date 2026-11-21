@@ -1,3 +1,5 @@
+> **2026-11-21 — Kanban table i podtable.** Svaka knjiga ima sopstveno Kanban stablo. Kartice čuvaju opis, prioritet i rok, a kolone i kartice svoj redosled.
+
 > **2026-11-21 — Trajna istorija izmena po knjizi.** Undo i Redo se vraćaju nakon osvežavanja stranice i ponovnog otvaranja knjige na istom uređaju. Svaki nalog i svaka knjiga imaju zasebnu istoriju.
 
 > **2026-11-21 — Undo i Redo u svim tabovima.** Strelice u zajedničkoj traci i prečice vraćaju izmene u otvorenoj knjizi. U Split prikazu svaka beleška ima svoju istoriju kucanja.
@@ -663,6 +665,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Kanban table i podtable.** Svaka knjiga ima sopstveno Kanban stablo. Kartice čuvaju opis, prioritet i rok, a kolone i kartice svoj redosled. Premeštanje kartice između kolona je jedna Undo/Redo izmena. Table su uključene u rezervnu kopiju knjige.
 
 - **Trajna istorija izmena (21.11.2026).** Obe liste koraka čuvaju se u lokalnom IndexedDB skladištu uz otisak sadržaja knjige. Promena knjige zadržava Redo, a nova izmena otvara novu granu samo u toj knjizi. Split posle ponovnog otvaranja prepoznaje belešku kojoj pripada korak. Trajno brisanje iz korpe čisti istoriju te knjige.
 

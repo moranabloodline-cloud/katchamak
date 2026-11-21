@@ -182,7 +182,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
     const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
-    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','finance','gallery','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','finance','kanban','gallery','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
     const homeId = 'activeHomePageId' in saved ? saved.activeHomePageId : undefined;
     navigation.activeHomePageId = novel && typeof homeId === 'string' && homepageEntry(novel,homeId) ? homeId : HOME_ROOT;
     navigation.selectedNodeId = note(saved.selectedNodeId);
