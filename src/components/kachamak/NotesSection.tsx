@@ -497,7 +497,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {novel && <div className="min-h-0 flex-1">
               <RightPanel key={finance?'finance:'+novel.id+':'+(selected?.id??''):familySettings?`${novel.id}:family:${editFamily}`:novel.id}
-                novel={novel} node={selected} section={selectedSection} familySettings={familySettings}
+                novel={novel} node={selected} section={selectedSection} familySettings={familySettings} infoOnly={finance}
                 infoEditor={finance && selected?.transaction ? <FinanceEditor key={selected.id} node={selected} currency={novel.financeCurrency??'EUR'}/> : undefined}
                 headerOnly={wideCanvas} emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}
                 onHide={()=>{

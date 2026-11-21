@@ -1,3 +1,5 @@
+> **2026-11-21 — Finance prikazuje samo Info.** Desni panel u prikazima Dashboard i List otvara Info za izabranu transakciju.
+
 > **2026-11-21 — Prelamanje opisa u Finance.** U panelu Info opis prati širinu polja i čuva ručno unete prelome pasusa.
 
 > **2026-11-21 — Boje rezultata u Finance.** Veliki iznosi prate tip i znak rezultata. Break-even traka je zlatna do pokrića i zelena kod punog pokrića. Folder sa prihodom bez troškova prikazuje „No expenses recorded“.
@@ -617,6 +619,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Finance inspektor.** Info je jedini tab u desnom panelu za Finance. U probnoj knjizi provereni su koren, folder, transakcija, oba prikaza i osvežavanje stranice, kao i povratak na Binder sa sačuvanim izborom tabova.
 
 - **2026-11-21 — Finance → Info → Description.** Polje prelama i neprekinute linkove i raste po visini prema sadržaju. Na probnoj transakciji u Chromeu proverene su širine polja 191 i 424 px, prikaz na uskom ekranu i očuvanje unetog teksta nakon osvežavanja. Prošli su Finance testovi, TypeScript i desktop build.
 

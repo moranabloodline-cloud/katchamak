@@ -16,8 +16,7 @@ const expenseAmountColor = 'text-rose-300/80 [[data-theme=light]_&]:text-rose-80
 
 export function addFinanceNote(parentId:string|null, kind:'folder'|'income'|'expense') {
   const state = useKachamak.getState();
-  const id = state.addNode('finance',parentId,kind,kind==='folder'?'New folder':'New '+kind);
-  if (id && kind!=='folder' && state.activeNovelId) state.setInspectorTabHidden(state.activeNovelId,'info',false);
+  state.addNode('finance',parentId,kind,kind==='folder'?'New folder':'New '+kind);
 }
 
 export function FinanceEditor({node,currency}:{node:NoteNode;currency:string}) {

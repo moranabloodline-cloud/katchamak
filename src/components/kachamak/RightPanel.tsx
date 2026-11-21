@@ -84,6 +84,7 @@ export function RightPanel({
   headerOnly = false,
   emptyInfo,
   infoEditor,
+  infoOnly = false,
 }: {
   novel: Novel;
   node: NoteNode | null;
@@ -94,6 +95,7 @@ export function RightPanel({
   headerOnly?: boolean;
   emptyInfo?: ReactNode;
   infoEditor?: ReactNode;
+  infoOnly?: boolean;
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const {font,size,spacing}=useNoteAppearance(node);
@@ -102,7 +104,7 @@ export function RightPanel({
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
   const [tab, setTab] = useState<string|null>(null);
-  const visibleTabs = INSPECTOR_TABS.filter(t=>!novel.hiddenInspectorTabs?.includes(t.key));
+  const visibleTabs = INSPECTOR_TABS.filter(t=>infoOnly ? t.key==='info' : !novel.hiddenInspectorTabs?.includes(t.key));
   const hiddenTabs = INSPECTOR_TABS.filter(t=>novel.hiddenInspectorTabs?.includes(t.key));
   const preferred = tab ?? (familySettings?'family':timelineSettings?'details':'info');
   const activeTab = visibleTabs.find(t=>t.key===preferred)?.key ?? visibleTabs[0]?.key ?? '';
@@ -145,14 +147,18 @@ export function RightPanel({
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
       <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
         <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
-          {visibleTabs.map(t=><ContextMenu key={t.key}>
-            <ContextMenuTrigger asChild><TabsTrigger value={t.key} disabled={headerOnly} className={tabCls}>{t.label}</TabsTrigger></ContextMenuTrigger>
-            <ContextMenuContent aria-label={t.label+' tab actions'}>
-              <ContextMenuItem onSelect={()=>hideTab(t.key)}>Hide tab</ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>)}
+          {visibleTabs.map(t=>{
+            const trigger=<TabsTrigger key={t.key} value={t.key} disabled={headerOnly} className={tabCls}>{t.label}</TabsTrigger>;
+            if(infoOnly) return trigger;
+            return <ContextMenu key={t.key}>
+              <ContextMenuTrigger asChild>{trigger}</ContextMenuTrigger>
+              <ContextMenuContent aria-label={t.label+' tab actions'}>
+                <ContextMenuItem onSelect={()=>hideTab(t.key)}>Hide tab</ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>;
+          })}
         </TabsList>
-        <DropdownMenu>
+        {!infoOnly && <DropdownMenu>
           <DropdownMenuTrigger asChild><button type="button" disabled={!hiddenTabs.length} aria-label="Show hidden inspector tabs" title={hiddenTabs.length?'Show hidden tabs':'All tabs are visible'} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-white/10 disabled:opacity-40"><Plus className="size-4"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" aria-label="Hidden inspector tabs" onCloseAutoFocus={event=>{
             if(!restoringTab.current)return;
@@ -166,7 +172,7 @@ export function RightPanel({
               setTab(t.key);
             }}>Show {t.label}</DropdownMenuItem>)}
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu>}
         {onHide && (
           <button
             type="button"
