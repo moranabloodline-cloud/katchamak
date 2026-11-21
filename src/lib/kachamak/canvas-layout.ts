@@ -17,6 +17,7 @@ export function canvasParts(blocks:HomeBlock[]) {
 }
 
 export type CanvasTransfer =
+  | {type:'moveCellCards'; ids:string[]; from:HomeCell; cell:HomeCell; before?:string}
   | {type:'dockCards'; ids:string[]; cell:HomeCell; heights?:[string,number][]}
   | {type:'releaseCards'; ids:string[]; cell:HomeCell; at:Point};
 
@@ -26,6 +27,15 @@ export function transferCanvasCards(page:Homepage, action:CanvasTransfer):Homepa
   if(!ids.size||ids.size!==action.ids.length||cards.length!==ids.size)return null;
   if(cards.some(b=>b.positionLocked||b.layout==='line'||b.layout==='row'||b.layout==='column'))return null;
   const rest=page.blocks.filter(b=>!ids.has(b.id));
+  if(action.type==='moveCellCards'){
+    const inCell=(b:HomeBlock,cell:HomeCell)=>b.cell?.rowId===cell.rowId&&b.cell.column===cell.column;
+    if(!cards.every(b=>inCell(b,action.from)))return null;
+    const before=action.before;
+    const index=before===undefined?rest.length:rest.findIndex(b=>b.id===before&&inCell(b,action.cell));
+    if(index<0)return null;
+    const moved=cards.map(b=>({...b,cell:action.cell}));
+    return {...page,blocks:[...rest.slice(0,index),...moved,...rest.slice(index)]};
+  }
   if(action.type==='releaseCards'){
     if(!isPoint(action.at)||cards.some(b=>b.cell?.rowId!==action.cell.rowId||b.cell.column!==action.cell.column))return null;
     // The stored order of siblings is also the order displayed in this column.

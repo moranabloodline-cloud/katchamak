@@ -1,3 +1,5 @@
+> **2026-11-21 — Canvas: premeštanje kartica između kolona i brisanje selekcije.** Kartice se mogu prevući unutar reda ili u drugi red. Zlatna crta označava mesto umetanja. Del briše izabrane elemente uz potvrdu.
+
 > **2026-11-21 — Canvas · prevlačenje iz Tools panela.** Kartice se puštaju na tačnu poziciju na platnu ili na označeno mesto između kartica u koloni reda.
 
 > **2026-11-21 — Canvas · Info i Tools.** Svaki Canvas ima svoj sinopsis i beleške. Drugi tab desnog panela odmah prikazuje sve alate.
@@ -657,6 +659,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **Canvas — kolone i Del (21.11.2026).** Prevlačenje čuva identitet, redosled izabrane grupe i krajeve veza. Del radi za kartice, crteže, veze, kolone i redove. Uklanjanje kontejnera oslobađa preostale kartice na platnu.
 
 - **Canvas · prevlačenje novih kartica (21.11.2026).** Prevlačenje iz palete otvara uređivač sa već izabranim mestom. Potvrda upisuje jednu karticu, a otkazivanje odbacuje unos. U Chromium-u su provereni pomereno platno, različiti zumovi, umetanje u praznu i popunjenu kolonu, zaključavanje i redosled posle ponovnog učitavanja.
 

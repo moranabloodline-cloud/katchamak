@@ -9,7 +9,7 @@ import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionComman
 import {useKachamak} from '@/lib/kachamak/store';
 import {CanvasSelectionTools} from './CanvasSelectionTools';
 import {boardRects,CARD_WIDTH,COLUMN_WIDTH,type Point,type BoardRect,type CanvasTool,type Stroke} from '@/lib/kachamak/canvas-board';
-import type {HomeBlock,HomeChange,HomePageEntry,HomeTarget} from '@/lib/kachamak/homepage';
+import type {HomeBlock,HomeCell,HomeChange,HomePageEntry,HomeTarget} from '@/lib/kachamak/homepage';
 import type {NoteNode,Novel} from '@/lib/kachamak/types';
 import {registerZoomReset,saveZoomSetting,useZoomSetting} from '@/lib/kachamak/workspace-zoom';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
@@ -23,7 +23,7 @@ type Gesture={boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
   selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
   rows:HomeBlock[];rowContents:HomeBlock[];heldLines:HomeBlock[];
-  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(placement:CanvasPlacement)=>void;
+  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void,selectedColumn?:number)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(placement:CanvasPlacement)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void;toolsHost?:HTMLDivElement|null;showInspector?:()=>void;onToolPicked?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Point{
@@ -48,7 +48,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const [inkColor,setInkColor]=useState('#dfac74');
   const [from,setFrom]=useState<string|null>(null);
   const [framed,setFramed]=useState(false);
-  const setSelected=(id:string|null)=>{setFramed(false);setSelection(id?[id]:[]);};
+  const [selectedCell,setSelectedCell]=useState<HomeCell|null>(null);
+  const setSelected=(id:string|null)=>{setSelectedCell(null);setFramed(false);setSelection(id?[id]:[]);};
   const [marquee,setMarquee]=useState<BoardRect|null>(null);
   const convertSelection=useKachamak(s=>s.convertBoardSelection);
   const [editor,setEditor]=useState<{initial:HomeBlock;original?:HomeBlock;before?:string;exact?:boolean}|null>(null);
@@ -86,7 +87,12 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   }
   const items=useMemo(()=>selectionRoots(page.blocks,new Set(selection)),[page.blocks,selection]);
   const selected=items.length===1?items[0].id:selection.length===1?selection[0]:undefined;
-  const focused=selected?blocks.get(selected)??heldLines.find(b=>b.id===selected):undefined;
+  const focused=selected?blocks.get(selected)??rowContents.find(b=>b.id===selected)??heldLines.find(b=>b.id===selected):undefined;
+  const columnIndex=focused?.layout==='row'&&selectedCell?.rowId===focused.id?selectedCell.column:undefined;
+  function selectLane(lane:HTMLElement){
+    const rowId=lane.dataset.homeCell!;
+    setSelected(rowId);setSelectedCell({rowId,column:Number(lane.dataset.column)});
+  }
   const edgePrefix=useId();
   const columnEdges=useMemo(()=>{
     const inside=new Map<string,string[]>();
@@ -187,7 +193,24 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       else setEditor({initial:{...initial,at:placement.at},exact:true});
     }
     onToolPicked?.();
+  },(ids,from,cell,before)=>{
+    if(save({type:'moveCellCards',ids,from,cell,before})){
+      setFramed(false);setSelection(ids);surface.current?.focus({preventScroll:true});
+    }
   });
+  function startColumnDrag(e:React.DragEvent<HTMLDivElement>){
+    const el=(e.target as Element).closest<HTMLElement>('[data-home-cell] [data-home-block]');
+    if(!el||!e.currentTarget.contains(el))return;
+    const card=rowContents.find(b=>b.id===el.dataset.homeBlock);
+    if(!card?.cell||page.locked){e.preventDefault();return;}
+    const from=card.cell;
+    const moving=selection.includes(card.id)
+      ?rowContents.filter(b=>b.cell?.rowId===from.rowId&&b.cell.column===from.column&&selection.includes(b.id))
+      :[card];
+    if(moving.some(b=>b.positionLocked)){e.preventDefault();return;}
+    const ids=moving.map(b=>b.id);
+    setSelection(ids);toolDrop.startCards(e,ids,from);
+  }
   function visualRect(id:string){
     const cell=cellRects.get(id);
     if(cell){
@@ -262,20 +285,33 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     if(!block||page.locked)return;
     const container=block.layout==='row'||block.layout==='column';
     if(!window.confirm(container?'Remove this '+(column!==undefined||block.layout==='column'?'column':'row')+'? Its cards will stay on the canvas.':'Delete this item and its connections?'))return;
+    const positions=releasePositions(block,column);
+    if(save(block.layout==='row'||block.cell?{type:'remove',original:block,positions,column}:{type:'removeBoardItem',original:block,positions}))setSelected(null);
+  }
+  function releasePositions(block?:HomeBlock,column?:number){
     const positions=Object.fromEntries([...rects].map(([id,r])=>[id,{x:r.x,y:r.y}]));
-    if(block.layout==='row'){
+    if(!block||block.layout==='row'){
       const origin=world.current!.getBoundingClientRect();
       world.current!.querySelectorAll<HTMLElement>('[data-home-cell] [data-home-block]').forEach(el=>{
         const r=el.getBoundingClientRect();positions[el.dataset.homeBlock!]={x:(r.x-origin.x)/zoom,y:(r.y-origin.y)/zoom};
       });
     }
-    if(block.layout==='row'&&(rows.length>1||column!==undefined&&block.columns!>1)){
+    if(block?.layout==='row'&&(rows.length>1||column!==undefined&&block.columns!>1)){
       const children=rowContents.filter(b=>b.cell?.rowId===block.id&&(column===undefined||b.cell.column===column)).sort((a,b)=>a.cell!.column-b.cell!.column);
       const start=nextPosition('note',children.reduce((n,b)=>n+(b.extent?.w??CARD_WIDTH)+24,0));
       let x=start.x;
       for(const child of children){positions[child.id]={x,y:start.y};x+=(child.extent?.w??CARD_WIDTH)+24;}
     }
-    if(save(block.layout==='row'||block.cell?{type:'remove',original:block,positions,column}:{type:'removeBoardItem',original:block,positions}))setSelected(null);
+    return positions;
+  }
+  function deleteSelection(){
+    if(page.locked||!selection.length)return;
+    if(selection.length===1){remove(focused,columnIndex);return;}
+    const ids=new Set(selection);
+    const originals=[...page.blocks,...rowContents,...heldLines].filter(b=>ids.has(b.id));
+    if(originals.length&&window.confirm('Delete '+originals.length+' selected items and their connections?')){
+      if(save({type:'deleteItems',originals,positions:releasePositions()}))setSelected(null);
+    }
   }
   function moveRow(id:string,at:Point){
     return save({type:'moveRow',id,at,heights:[...heights]});
@@ -297,6 +333,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     const target=e.target as Element,card=target.closest<HTMLElement>('[data-board-card]'),id=card?.dataset.boardCard;
     const start=local(e.clientX,e.clientY),p=boardPoint(start);
     consumeClick.current=false;
+    const focusSurface=()=>surface.current?.focus({preventScroll:true});
     if(e.button===1 || tool==='pan'){gesture.current={kind:'pan',start,origin:pan};}
     else if(!page.locked&&tool==='line'){
       const endpoint=id??target.closest<HTMLElement>('[data-home-cell] [data-home-block]')?.dataset.homeBlock;
@@ -306,12 +343,20 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     else if(!page.locked&&tool==='select'&&target.closest('[data-row-handle]')){
       const id=target.closest<HTMLElement>('[data-row-handle]')!.dataset.rowHandle!;
       gesture.current={kind:'row',id,start,boardStart:p,origin:rowRects.get(id)!};
-      setSelected(null);
+      setSelected(id);focusSurface();
     }
-    else if(target.closest('[data-world-row]'))return;
+    else if(target.closest('[data-world-row]')){
+      if(!page.locked&&tool==='select'&&!target.closest('[data-home-cell] [data-home-block],button,a,input')){
+        const lane=target.closest<HTMLElement>('[data-home-cell]');
+        if(lane)selectLane(lane);else setSelected(target.closest<HTMLElement>('[data-world-row]')!.dataset.worldRow!);
+        focusSurface();e.preventDefault();
+      }
+      return;
+    }
     else if(!page.locked&&tool==='draw'){gesture.current={kind:'ink',start,origin:p,points:[[p.x,p.y]]};setLiveInk([[p.x,p.y]]);}
     else if(target.closest('button,a,input,audio,iframe,video,select,[data-board-edge],[data-board-edge-copy]'))return;
     else if(id&&!page.locked){
+      focusSurface();
       if(e.shiftKey||e.ctrlKey||e.metaKey){
         toggleFreeCard(id);
         e.preventDefault();return;
@@ -325,7 +370,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       gesture.current={kind:'move',start,boardStart:p,origin:rects.get(anchor)!,id:anchor,group:group?.map(b=>b.id),dockable};
     }else if(!page.locked&&tool==='select'){
       const base=e.shiftKey||e.ctrlKey||e.metaKey?selection:[];
-      gesture.current={kind:'frame',start,origin:p,base};
+      setSelectedCell(null);focusSurface();gesture.current={kind:'frame',start,origin:p,base};
     }else {setSelected(null);gesture.current={kind:'pan',start,origin:pan};}
     surface.current!.setPointerCapture(e.pointerId);e.preventDefault();
   }
@@ -389,12 +434,16 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     if(!(b.layout in toolsByKind) || b.layout==='image'&&(b.imageFrame||b.imageCutout))editClassic(b);
     else setEditor({initial:b,original:b});
   };
-  const editFocused=()=>{if(focused&&focused.layout!=='line')editBlock(focused);};
+  const editFocused=()=>{
+    if(!focused||focused.layout==='line')return;
+    if(focused.cell||focused.layout==='row')editClassic(focused);
+    else editBlock(focused);
+  };
   const resetTool=()=>{setTool('select');setFrom(null);cancelGesture();};
   const btn=(label:string,Icon:typeof Plus,fn:()=>void,pressed?:boolean)=><button type="button" title={label} aria-label={label} aria-pressed={pressed} className="cv-icon" onClick={fn}><Icon size={16}/></button>;
   return <section className="cv-board-shell flex-1" aria-label="Canvas board" aria-description={page.title}>
     <div className="cv-board-main"><header className="cv-board-head"><button type="button" className="md:hidden" aria-label="Show canvas tree" onClick={showTree}><ListTree size={16}/></button><Layers size={16}/><h2>{page.title}</h2>
-      {focused&&!page.locked&&tool==='select'&&<div className="cv-selection-tools">{focused.positionLocked&&btn('Unlock position',UnlockKeyhole,()=>batch({kind:'lock',locked:false}))}{focused.layout!=='line'&&btn('Edit selected item',Pencil,editFocused)}{btn('Remove selected item',Trash2,remove)}</div>}
+      {focused&&!page.locked&&tool==='select'&&<div className="cv-selection-tools">{focused.positionLocked&&btn('Unlock position',UnlockKeyhole,()=>batch({kind:'lock',locked:false}))}{focused.layout!=='line'&&btn('Edit selected item',Pencil,editFocused)}{btn('Remove selected item',Trash2,()=>remove(focused,columnIndex))}</div>}
       {!page.locked&&layoutActions(()=>nextPosition('note',rowWidth))}
       {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}
       <button type="button" className="lg:hidden" aria-label="Show canvas inspector" title="Show canvas inspector" onClick={showInspector}><PanelRightOpen size={16}/></button></header>
@@ -407,10 +456,18 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       if(block)setMenu({block,column:hit?.hasAttribute('data-home-cell')?Number(hit.dataset.column):undefined});
       else setMenu({at:boardPoint(local(e.clientX,e.clientY))});
     }}>
-    <div {...toolDrop.events} ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
+    <div {...toolDrop.events} onDragStart={startColumnDrag} onDragEnd={toolDrop.clear} onFocus={e=>{
+      const target=e.target as Element;
+      if(page.locked||!e.currentTarget.contains(target))return;
+      if(target.matches('[data-home-cell]'))selectLane(target as HTMLElement);
+      if(target.matches('button[data-row-handle]'))setSelected((target as HTMLElement).dataset.rowHandle!);
+    }} ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}
       onClickCapture={e=>{if(consumeClick.current){consumeClick.current=false;e.stopPropagation();e.preventDefault();}}}
       onPointerDown={startGesture} onPointerMove={track} onPointerUp={endGesture} onPointerCancel={cancelGesture} onLostPointerCapture={cancelGesture}
-      onKeyDown={e=>{if(e.key==='Escape'){resetTool();setSelected(null);}if(e.target===surface.current&&e.key==='Delete')remove();
+      onKeyDown={e=>{if(e.key==='Escape'){resetTool();setSelected(null);}if(e.key==='Delete'&&!page.locked&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&selection.length&&
+          e.currentTarget.contains(e.target as Node)&&!(e.target as Element).closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),audio,video,[role="dialog"],[role="menu"]')){
+          e.preventDefault();e.stopPropagation();deleteSelection();return;
+        }
         const handle=(e.target as HTMLElement).closest<HTMLElement>('[data-row-handle]');
         if(handle&&!page.locked&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
           e.preventDefault();const id=handle.dataset.rowHandle!,r=rowRects.get(id)!;
@@ -419,7 +476,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       <div ref={world} className="cv-world" style={{transform:'translate('+pan.x+'px,'+pan.y+'px) scale('+zoom+')'}}>
         {rows.map(row=>{
           const r=rowRects.get(row.id)!;
-          return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:movingRow?.id===row.id?movingRow.at.x:r.x,top:movingRow?.id===row.id?movingRow.at.y:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row))}</div>;
+          return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:movingRow?.id===row.id?movingRow.at.x:r.x,top:movingRow?.id===row.id?movingRow.at.y:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row),row.id===selected?columnIndex:undefined)}</div>;
         })}
         <svg className="cv-lines" aria-label="Connections" style={{zIndex:1}}>{[...page.blocks.filter(b=>b.layout==='line'),...heldLines].map(b=>{
           const a=visualRect(b.edge!.from),z=visualRect(b.edge!.to);
@@ -431,7 +488,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
           const bend=Math.max(5,Math.abs(vertical?y2-y:x2-x)*.45)*(forward?1:-1);
           const dx=vertical?0:bend,dy=vertical?bend:0;
           const d='M '+x+' '+y+' C '+(x+dx)+' '+(y+dy)+' '+(x2-dx)+' '+(y2-dy)+' '+x2+' '+y2;
-          return <g key={b.id} id={edgePrefix+b.id} data-board-edge={b.id}><path d={d} fill="none" stroke={selected===b.id?'#f2ce80':'#a98854'} strokeWidth={2}/>{!page.locked&&<path d={d} fill="none" stroke="transparent" strokeWidth={18} style={{pointerEvents:'stroke',cursor:'pointer'}} role="button" tabIndex={0} aria-label="Select connection" onClick={()=>setSelected(b.id)} onKeyDown={e=>{if(e.key==='Enter')setSelected(b.id);}}/>}<circle cx={x2} cy={y2} r={3} fill="#dbb879"/></g>;
+          return <g key={b.id} id={edgePrefix+b.id} data-board-edge={b.id}><path d={d} fill="none" stroke={selected===b.id?'#f2ce80':'#a98854'} strokeWidth={2}/>{!page.locked&&<path d={d} fill="none" stroke="transparent" strokeWidth={18} style={{pointerEvents:'stroke',cursor:'pointer'}} role="button" tabIndex={0} aria-label="Select connection" onFocus={()=>setSelected(b.id)} onClick={()=>{setSelected(b.id);surface.current?.focus({preventScroll:true});}} onKeyDown={e=>{if(e.key==='Enter')setSelected(b.id);}}/>}<circle cx={x2} cy={y2} r={3} fill="#dbb879"/></g>;
         })}</svg>
         {page.blocks.filter(b=>b.layout!=='line').map(b=>{
           const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind]??{icon:Layers,name:b.layout[0].toUpperCase()+b.layout.slice(1),color:'#c7ae83'};
@@ -452,7 +509,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
             style={{left:r.x,top:r.y,width:r.w,height:column?r.h:undefined,zIndex:move?.id===b.id&&!column&&!move.group?layers.size*2+3:(layers.get(b.columnId??b.id)??1)+(b.columnId?1:0),'--cv-accent':b.color??color} as React.CSSProperties}>
             {column&&columnEdges.has(b.id)&&<svg className="cv-column-lines" aria-hidden="true">
               <g transform={'translate('+(-r.x)+' '+(-r.y)+')'}>{columnEdges.get(b.id)!.map(id=>
-                <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked)setSelected(id);}}/>)}</g>
+                <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked){setSelected(id);surface.current?.focus({preventScroll:true});}}}/>)}</g>
             </svg>}
             {!looseInk&&<div className="cv-card-cap"><Icon size={13}/>{column?<strong>{b.title||'Column'}</strong>:<span>{name}</span>}{(column||b.positionLocked)&&<LockKeyhole size={11} aria-label="Position locked"/>}{column&&<small>{page.blocks.filter(x=>x.columnId===b.id).length}</small>}
               {!page.locked&&<button aria-label={'Edit '+(b.title||name)} type="button" onClick={()=>editBlock(b)}><Pencil size={13}/></button>}</div>}

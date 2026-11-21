@@ -11,7 +11,6 @@ import {flattenNotes} from '@/lib/kachamak/note-links';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {useKachamak} from '@/lib/kachamak/store';
 import {TABS, type Novel, type NoteNode} from '@/lib/kachamak/types';
-import {useHomepageDrag} from './useHomepageDrag';
 import {HomeArtwork} from './HomeArtwork';
 import {HomeArtworkEditor} from './HomeArtworkEditor';
 import {HomeImagePlaceholder} from './HomeImagePlaceholder';
@@ -76,7 +75,6 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const [selection,setSelection]=useState<string[]>([]);
   const selectedIds=useMemo(()=>new Set(selection),[selection]);
   const rowAnchor=useRef<string|null>(null);
-  const drag=useHomepageDrag(page.locked,(id,p)=>change(p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;manualPosition?:true;at?:HomeBlock['at'];before?:string}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
@@ -132,28 +130,33 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       setSelection(toggle?(selectedIds.has(block.id)?previous.filter(id=>id!==block.id):[...previous,block.id]):[block.id]);
     }
   }
-  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[],removeRow?:()=>void):React.ReactNode {
+  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[],removeRow?:()=>void,selectedColumn?:number):React.ReactNode {
     const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
-    const editButton={type:'button' as const,draggable:!page.locked&&!row,onDragStart:(e:React.DragEvent<HTMLButtonElement>)=>drag.start(e,block.id),onDragEnd:drag.finish,
-      'aria-label':'Edit '+name,title:row?'Edit row':'Drag within this row, or click to edit',onClick:()=>edit(block)};
+    const editButton={type:'button' as const,'aria-label':'Edit '+name,title:row?'Edit row':'Edit '+name,onClick:()=>edit(block)};
     const classic=['card','banner','image','text'].includes(block.layout);
     const emptyImage=block.layout==='image'&&!display.image;
     const bare=block.layout==='image'||Boolean(display.image&&(block.layout==='banner'||(block.image&&!display.title&&!block.text)));
     const face=<BlockFace block={block} title={display.title} image={display.image}/>;
     const frame=bare?'bg-transparent':`overflow-hidden ${block.layout==='card'?'rounded-md':'rounded-xl'} border border-border hover:border-amber-500/60 ${block.layout==='banner'?'min-h-44 justify-end bg-gradient-to-br from-muted to-background':block.layout==='text'?'bg-background':'bg-card'}`;
     const cardClass='relative flex w-full flex-col text-left focus-visible:outline-2 focus-visible:outline-amber-400 '+frame;
-    const hint=!drag.hint?.cell&&drag.hint?.targetId===block.id?drag.hint:null;
-    const selected=!!block.cell&&!page.locked&&selectedIds.has(block.id);
-    return <article key={block.id} data-fixed-selected={selected||undefined}
+    const selected=!page.locked&&selectedIds.has(block.id)&&(!!block.cell||row&&selectedColumn===undefined);
+    return <article key={block.id} data-fixed-selected={selected?true:undefined}
+      draggable={!!block.cell&&!page.locked&&!block.positionLocked}
+      tabIndex={block.cell&&!page.locked?0:undefined} aria-label={block.cell?name:undefined}
+      onFocus={e=>{if(block.cell&&!page.locked&&e.target===e.currentTarget&&e.currentTarget.matches(':focus-visible')&&!selectedIds.has(block.id))selectInColumn(block,false,false);}}
+      onKeyDown={e=>{if(block.cell&&!page.locked&&e.key==='Enter'&&(e.target===e.currentTarget||(e.target as Element).closest('[data-card-face]'))){e.preventDefault();edit(block);}}}
+      onDoubleClick={block.cell&&!page.locked?e=>{if(e.currentTarget.contains(e.target as Node)&&!(e.target as Element).closest('.home-arrange,.cv-page-grip,input,a,button:not([data-card-face])'))edit(block);}:undefined}
       onClickCapture={!block.cell||page.locked?undefined:e=>{
         const target=e.target as Element;
         if(!e.currentTarget.contains(target)||target.closest('.home-arrange'))return;
         const toggle=e.ctrlKey||e.metaKey;
-        if(toggle||e.shiftKey){e.preventDefault();e.stopPropagation();}
+        if(toggle||e.shiftKey||target.closest('[data-card-face]')){
+          e.preventDefault();e.stopPropagation();e.currentTarget.focus({preventScroll:true});
+        }
         selectInColumn(block,toggle,e.shiftKey);
-      }} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
+      }} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
       {row?<div className={'@container/row rounded-lg px-1 py-3 '+(page.locked?'':'outline outline-dashed outline-border')}>
         {(block.title||!page.locked)&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title">
           {!page.locked&&<button type="button" data-row-handle={block.id} aria-label={'Move row: '+(block.title||'Row')} title="Drag row · Arrow keys to move" className="cv-row-grip"><GripVertical size={16}/></button>}
@@ -165,8 +168,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
         <div className="grid grid-cols-1 gap-4 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {lanes.get(block.id)?.map((children,column)=>{
             const selectedSiblings=children.filter(b=>selectedIds.has(b.id));
-            const active=drag.hint?.cell?.rowId===block.id && drag.hint.cell.column===column;
-            return <div key={column} data-home-cell={block.id} data-column={column} className={`relative flex min-w-0 flex-col gap-3 rounded pb-6 ${page.locked?'':'min-h-14'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
+            const active=selectedIds.has(block.id)&&selectedColumn===column;
+            return <div key={column} data-home-cell={block.id} data-column={column} tabIndex={page.locked?undefined:0} aria-label={'Column '+(column+1)} className={`relative flex min-w-0 flex-col gap-3 rounded pb-6 ${page.locked?'':'min-h-14'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
               {children.map((child,i)=>renderBlock(child,i,children.length,release,selectedSiblings))}
               {!page.locked&&<DropdownMenu><DropdownMenuTrigger asChild>
                 <button type="button" aria-label={'Add element to column '+(column+1)} className="absolute bottom-0 left-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"><Plus className="size-3"/>Add element</button>
@@ -181,25 +184,23 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
           })}
         </div>
       </div>:emptyImage&&!page.locked?(
-        <HomeImagePlaceholder novel={novel} onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
+        <HomeImagePlaceholder novel={novel} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
       ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
         page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&block.layout!=='card'&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
-          <button {...editButton} aria-label={page.locked?name:'Edit '+name} title={page.locked?undefined:editButton.title} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
+          <button {...editButton} data-card-face aria-label={name} title={page.locked?undefined:'Select or drag · Double-click to edit'} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
       ):['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(block.layout)?<div className="cv-page-card">
         {!page.locked&&<button {...editButton} className="cv-page-grip"><GripVertical size={13}/>Edit {block.layout}</button>}
         <CanvasItemFace block={block} novel={novel} source={block.target?.kind==='note'?byId.get(block.target.id):undefined} locked={page.locked} open={openTarget} describe={describe} toggle={(index,done)=>change({type:'task',id:block.id,index,done})}/>
       </div>:<div className="relative min-w-0">
         <HomeDocumentBlock block={block} image={display.image} interactive={page.locked} describe={describe} open={openTarget}/>
-        {!page.locked?<button {...editButton} className="absolute inset-0 w-full cursor-grab rounded focus-visible:outline-2 focus-visible:outline-amber-400 active:cursor-grabbing"/>:
+        {!page.locked?<button {...editButton} data-card-face className="absolute inset-0 w-full cursor-grab rounded focus-visible:outline-2 focus-visible:outline-amber-400 active:cursor-grabbing"/>:
           block.target?.kind==='web'?<a aria-label={name} className="absolute inset-0" href={block.target.url} target="_blank" rel="noopener noreferrer"/>:
           block.target&&<button type="button" aria-label={name} className="absolute inset-0 w-full" onClick={()=>activate(block)}/>}
       </div>}
       {!page.locked&&display.image&&!row&&<Button size="icon" variant="outline" className="home-arrange pointer-events-none absolute right-2 top-2 z-[1] size-8 bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
         aria-label={'Reposition image: '+name} title="Reposition image" onClick={()=>{captureOpener();setArtwork({block,src:display.source||display.image!});}}><Crop/></Button>}
-      {hint&&<span aria-hidden="true" className={`pointer-events-none absolute z-10 rounded-full bg-amber-400 ${hint.axis==='row'
-        ? `inset-x-0 h-1 ${hint.side==='before'?'-top-2':'-bottom-2'}` : `inset-y-0 w-1 ${hint.side==='before'?'-left-2':'-right-2'}`}`}/>}
       {!page.locked&&!row&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
-        {emptyImage&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
+        {(emptyImage||classic||!['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(block.layout))&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
         <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change({type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
         <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change({type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
         {block.cell&&<Button type="button" size="icon" variant="ghost" className="size-7" aria-label={'Select '+name} aria-pressed={selected} title="Select card · Shift for range" onClick={e=>selectInColumn(block,true,e.shiftKey)}><SquareCheck/></Button>}
@@ -216,14 +217,14 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
     {roots.length>0&&<select aria-label="Row width" title="Row width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
     <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={()=>addRow(placeRow())}><Rows3 size={15}/>Add row</Button>
   </>;
-  const renderRow=(row:HomeBlock,release:(cards:HomeBlock[])=>void,removeRow:()=>void)=><div className="@container cv-fixed-section">
+  const renderRow=(row:HomeBlock,release:(cards:HomeBlock[])=>void,removeRow:()=>void,selectedColumn?:number)=><div className="@container cv-fixed-section">
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
       style={{fontFamily:style?.font,
       '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
       '--home-leading':style?.spacing,'--home-align':style?.page?.align} as CSSProperties}
       className="w-full">
-      <div {...(page.locked?{}:drag.gridEvents)} className="grid grid-cols-1 items-start">
-        {renderBlock(row,0,1,release,[],removeRow)}
+      <div className="grid grid-cols-1 items-start">
+        {renderBlock(row,0,1,release,[],removeRow,selectedColumn)}
       </div>
     </div>
   </div>;

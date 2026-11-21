@@ -187,6 +187,7 @@ export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
   | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
   | {type:'moveRow';id:string;at:Point;heights:[string,number][]}
+  | {type:'deleteItems'; originals:HomeBlock[]; positions:Record<string,Point>}
   | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
   | {type:'task'; id:string; index:number; done:boolean}
   | { type: 'lock'; locked: boolean }
@@ -228,8 +229,22 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
       return b;
     })};
   }
-  if(action.type==='dockCards'||action.type==='releaseCards'){
+  if(action.type==='moveCellCards'||action.type==='dockCards'||action.type==='releaseCards'){
     return validCell(page.blocks,action.cell)?transferCanvasCards(page,action):null;
+  }
+  if(action.type==='deleteItems'){
+    const originals=new Map(action.originals.map(b=>[b.id,b]));
+    const selected=page.blocks.filter(b=>originals.has(b.id));
+    if(!selected.length||selected.length!==action.originals.length||
+       selected.some(b=>JSON.stringify(b)!==JSON.stringify(originals.get(b.id))))return null;
+    // Removing a container releases its surviving children. Only deleted endpoints lose connections.
+    const blocks=page.blocks.filter(b=>!originals.has(b.id)&&!(b.edge&&(originals.has(b.edge.from)||originals.has(b.edge.to))))
+      .map(b=>{
+        if(!(b.cell&&originals.has(b.cell.rowId))&&!(b.columnId&&originals.has(b.columnId)))return b;
+        const at=action.positions[b.id]??b.at??{x:24,y:28};
+        return {...b,cell:undefined,columnId:undefined,at};
+      });
+    return {...page,blocks};
   }
   const {fixed,free,parked}=canvasParts(page.blocks);
   const block='original' in action?action.original:'block' in action?action.block:'id' in action?page.blocks.find(b=>b.id===action.id):undefined;
@@ -270,7 +285,7 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
-  if(action.type==='moveRow'||action.type==='info'||action.type==='appearance'||action.type==='dockCards'||action.type==='releaseCards')return null;
+  if(action.type==='deleteItems'||action.type==='moveRow'||action.type==='info'||action.type==='appearance'||action.type==='moveCellCards'||action.type==='dockCards'||action.type==='releaseCards')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
   if(action.type==='boardSelection')return applySelection(page,action);
