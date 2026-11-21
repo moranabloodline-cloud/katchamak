@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, LockKeyhole, ListTree, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, Link2, LockKeyhole, ListTree, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {HOME_ROOT, homepageEntry, homepageRows, type HomeChange, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
@@ -24,7 +24,7 @@ function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>, pages:Map<str
   const destination=target?.kind==='page' ? (pages.get(target.id) ?? 'Unavailable page') : target?.kind==='tab' ? TABS.find(t=>t.key===target.tab)?.label :
     target?.kind==='web' ? new URL(target.url).hostname : note?.title;
   return {
-    title:block.title || destination,
+    title:block.title || (block.layout==='card' ? undefined : destination),
     source:block.image || note?.image,
     image:block.imageCutout || projectImageSrc(gallery,block.image || note?.image),
     name:block.title || destination || block.text.split('\n')[0] || (target?.kind==='note'?'Unavailable note':'Image'),
@@ -32,6 +32,12 @@ function blockDisplay(block:HomeBlock, notes:Map<string,NoteNode>, pages:Map<str
 }
 
 function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:string}) {
+  if(block.layout==='card')return <>
+    {title&&<span className="w-full bg-background px-2 py-1 text-center text-sm leading-tight font-bold uppercase [overflow-wrap:anywhere]">{title}</span>}
+    {image&&<HomeArtwork src={image} frame={block.imageFrame}/>}
+    {block.text&&<span className="w-full whitespace-pre-wrap break-words p-4 text-sm leading-relaxed text-muted-foreground">{block.text}</span>}
+    {!title&&!image&&!block.text&&<Link2 aria-hidden="true" className="mx-auto my-3 size-4 text-muted-foreground"/>}
+  </>;
   const banner=block.layout==='banner';
   const caption=image && (banner || block.layout==='image') ? block.title : title;
   return <>
@@ -100,7 +106,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     const emptyImage=block.layout==='image'&&!display.image;
     const bare=block.layout==='image'||Boolean(display.image&&(block.layout==='banner'||(block.image&&!display.title&&!block.text)));
     const face=<BlockFace block={block} title={display.title} image={display.image}/>;
-    const frame=bare?'bg-transparent':`overflow-hidden rounded-xl border border-border hover:border-amber-500/60 ${block.layout==='banner'?'min-h-44 justify-end bg-gradient-to-br from-muted to-background':block.layout==='text'?'bg-background':'bg-card'}`;
+    const frame=bare?'bg-transparent':`overflow-hidden ${block.layout==='card'?'rounded-md':'rounded-xl'} border border-border hover:border-amber-500/60 ${block.layout==='banner'?'min-h-44 justify-end bg-gradient-to-br from-muted to-background':block.layout==='text'?'bg-background':'bg-card'}`;
     const cardClass='relative flex w-full flex-col text-left focus-visible:outline-2 focus-visible:outline-amber-400 '+frame;
     const hint=!drag.hint?.cell&&drag.hint?.targetId===block.id?drag.hint:null;
     return <article key={block.id} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
@@ -119,7 +125,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       </div>:emptyImage&&!page.locked?(
         <HomeImagePlaceholder novel={novel} onDragStart={editButton.onDragStart} onDragEnd={drag.finish} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
       ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
-        page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
+        page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&block.layout!=='card'&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
           <button {...editButton} aria-label={page.locked?name:'Edit '+name} title={page.locked?undefined:editButton.title} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
       ):<div className="relative min-w-0">
         <HomeDocumentBlock block={block} image={display.image} interactive={page.locked} describe={describe} open={openTarget}/>

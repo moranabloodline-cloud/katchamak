@@ -1,3 +1,5 @@
+> **2026-11-21 — Naslov Homepage kartice.** Sopstveni naslov kartice prikazuje se u uskoj traci iznad slike. Klik na zaključanoj stranici otvara povezano odredište.
+
 > **2026-11-21 — Galerija bez inspektora beleški.** Galerija koristi radnu površinu bez desnog panela Info i Details.
 
 > **2026-11-21 — Finance prikazuje samo Info.** Desni panel u prikazima Dashboard i List otvara Info za izabranu transakciju.
@@ -621,6 +623,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Homepage kartice.** Kartica sa slikom bez naslova prikazuje sliku bez potpisa odredišta. Provereni su naslov iznad slike, izmena naslova, navigacija ka belešci i podstranici, veb-link, prikaz na užem ekranu i osvežavanje.
 
 - **2026-11-21 — Galerija.** Uklonjeni su desni inspektor i njegovo dugme za otvaranje iz Galerije. Provereni su koren, folder, pregled slike, povratak na Binder i Finance i ponovno učitavanje.
 
