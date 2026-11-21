@@ -30,6 +30,14 @@ export const sampleBody=sampleParagraphs.map(paras).join('');
 function divider(style:BookStyle){return '<div class="scene" role="separator">'+escapeText(glyphs[style.divider])+'</div>';}
 function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,string>){
   const el=document.implementation.createHTMLDocument('').createElement('div');
+  if(raw.includes('gallery:')){
+    const template=document.createElement('template');
+    template.innerHTML=raw;
+    for(const img of template.content.querySelectorAll('img[src^="gallery:"]')){
+      img.setAttribute('src',projectImageSrc(book.gallery,img.getAttribute('src')??'')??'');
+    }
+    raw=template.innerHTML;
+  }
   el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','style','start','colspan','rowspan'],ALLOW_DATA_ATTR:false});
   for(const n of Array.from(el.querySelectorAll<HTMLElement>('*'))){
     const old=n.getAttribute('data-block')||n.className;
@@ -63,7 +71,7 @@ function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,st
 }
 function openingBody(html:string){
   const doc=document.createElement('div');doc.innerHTML=html;
-  const first=Array.from(doc.querySelectorAll('p')).find(p=>p.textContent?.trim());
+  const first=Array.from(doc.querySelectorAll('p')).find(p=>p.textContent?.trim()&&!p.closest('blockquote,aside,figure,table,ul,ol,pre,.letter,.verse,.aside'));
   if(first){
     first.classList.add('opening');
     const walker=document.createTreeWalker(first,NodeFilter.SHOW_TEXT);
@@ -204,7 +212,7 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
     return {...model,sections:[...fronters.map(p=>special(p,book,s,chapters)),...chapters,...back.map(p=>special(p,book,s,chapters))]};
   }
   const title='The Far Bank';
-  if (['Copyright','Dedication','Contents','About the author','Colophon'].includes(proof)) {
+  if (['Title page','Copyright','Dedication','Contents','About the author','Colophon'].includes(proof)) {
     const samples={...s,dedication:s.dedication||'For everyone who made the crossing.',biography:s.biography||'The author writes about the people who cross the river.',colophon:s.colophon||'Set and composed for this edition.'};
     const contents:Leaf[]=proof==='Contents'&&book.sections.binder?.length
       ?manuscriptEntries(book).filter(row=>row.included).map(({node},i)=>({id:'entry-'+i,title:node.title,kind:'chapter',html:''}))
@@ -212,36 +220,40 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
     return {...model,sections:[special(proof as SpecialPage,book,samples,contents)]};
   }
   const examples:Partial<Record<Proof,string>>={
-    'Title page':special('Title page',book,s,[]).html,'Chapter opening':chapterHead(title,1,s,art)+opening(sampleBody)+divider(s)+paras('By the time the post boat passed the headland, he had read the letter twice. He folded it along the old creases and slipped it into his coat. The sky was clearing over the hills. For the first time in years, the clock on the customs house was running a little slow.'),
+    'Chapter opening':chapterHead(title,1,s,art)+opening(sampleBody)+divider(s)+paras('By the time the post boat passed the headland, he had read the letter twice. He folded it along the old creases and slipped it into his coat. The sky was clearing over the hills. For the first time in years, the clock on the customs house was running a little slow.'),
     'Body text':sampleBody+sampleBody,'Scene break':paras(sampleParagraphs[0])+divider(s)+paras(sampleParagraphs[2]),
     'Special blocks':'<h2>Field notes</h2><blockquote>Every crossing begins with a promise.</blockquote><p class="letter">Dear Elin,<br/>The ferry will be waiting when you return.</p><pre class="verse">One lamp upon the water,\none star beneath the oar.</pre><aside>A note from the ferryman’s log.</aside>',
     'End matter':special('About the author',book,{...s,biography:s.biography||'The author lives near the river and writes about the people who cross it.'},[]).html
   };
   return {...model,sections:[{id:'specimen',title:proof,kind:proof==='Chapter opening'?'chapter':'special',html:examples[proof]!}]};
 }
-export function bookCss(s:BookStyle,lang:string,print:boolean){
+export function bookCss(s:BookStyle,medium:'print'|'screen'|'ebook'){
+  const print=medium==='print',reader=medium==='ebook';
+  const accent=reader?'currentColor':s.accent;
+  const metrics=reader?'':'color:'+s.ink+';font-size:'+(print?s.size+'pt':(s.size/11)+'em')+';line-height:'+s.leading+';';
   const [w,h]=trims[s.trim];
   const rules=(Object.entries({Quote:'blockquote',Subheading:'h2,h3,h4,h5,h6',Letter:'.letter',Verse:'pre,.verse',Aside:'aside,.aside'}) as [BlockName,string][]).map(([k,selector])=>{
-    const b=s.blocks[k];return selector+'{font-size:'+b.size+'em;font-style:'+(b.italic?'italic':'normal')+';text-align:'+b.align+';'+(b.rule?'border-inline-start:2px solid '+s.accent+';padding-inline-start:1em;':'')+'}';
+    const b=s.blocks[k];return selector+'{font-size:'+b.size+'em;font-style:'+(b.italic?'italic':'normal')+';text-align:'+b.align+';'+(b.rule?'border-inline-start:2px solid '+accent+';padding-inline-start:1em;':'')+'}';
   }).join('\n');
   return `
-*{box-sizing:border-box}html,body{margin:0}body{font-family:${fontStacks[s.bodyFont]};color:${s.ink};font-size:${print?s.size+'pt':(s.size/11)+'em'};line-height:${s.leading};overflow-wrap:break-word}
+*{box-sizing:border-box}html,body{margin:0}body{font-family:${fontStacks[s.bodyFont]};${metrics}overflow-wrap:break-word}
 article{display:block}p{margin:0 0 ${s.paragraphGap}em;text-indent:${s.indent}em;text-align:${s.align};hyphens:${s.hyphens?'auto':'manual'};orphans:2;widows:2}p:empty{min-height:1em}
-h1,h2,h3,h4,h5,h6{font-family:${fontStacks[s.headingFont]};color:${s.heading};line-height:1.16;break-after:avoid}
+h1,h2,h3,h4,h5,h6{font-family:${fontStacks[s.headingFont]};color:${reader?'inherit':s.heading};line-height:1.16;break-after:avoid}
 h1{margin:.45em 0 .8em;font-size:${s.headingSize/s.size}em}img{max-width:100%;height:auto;max-height:${print?(h-s.top-s.bottom-8)+'mm':'65vh'};object-fit:contain}
-a{color:inherit}table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #aaa;padding:.3em}pre,.verse{white-space:pre-wrap;font-family:inherit}blockquote,aside,.letter,pre{margin:1em}
+blockquote p,aside p,.letter p,.verse p,.aside p{text-align:inherit;text-indent:0}a{color:inherit}table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #aaa;padding:.3em}pre,.verse{white-space:pre-wrap;font-family:inherit}blockquote,aside,.letter,pre{margin:1em}
 .chapter-head{text-align:${s.chapterAlign};padding-top:${print?h*s.sink/100+'mm':s.sink/3+'em'};margin:0 0 ${s.chapterGap}em;break-inside:avoid;break-after:avoid}
-.chapter-head h1{margin:.3em 0 0}.chapter-art{max-height:5em;max-width:80%}.ornament,.scene,.number{color:${s.accent}}.number{font-size:.85em;letter-spacing:.12em}.scene{text-align:center;margin:${s.dividerGap}em 0;min-height:.35em;break-after:avoid}
+.chapter-head h1{margin:.3em 0 0}.chapter-art{max-height:5em;max-width:80%}.ornament,.scene,.number{color:${accent}}.number{font-size:.85em;letter-spacing:.12em}.scene{text-align:center;margin:${s.dividerGap}em 0;min-height:.35em;break-after:avoid}
 .opening{text-indent:${s.firstIndent?s.indent:0}em}.lead{font-variant:${s.smallCaps?'small-caps':'normal'}}
-${s.initial==='Normal'?'':'.opening::first-letter{font-family:'+fontStacks[s.headingFont]+';color:'+s.accent+';'+(s.initial==='Drop cap'?'float:left;font-size:3em;line-height:.85;margin:.07em .08em 0 0':'font-size:1.9em;line-height:.9')+'}'}
+${s.initial==='Normal'?'':'.opening::first-letter{font-family:'+fontStacks[s.headingFont]+';color:'+accent+';'+(s.initial==='Drop cap'?'float:left;font-size:3em;line-height:.85;margin:.07em .08em 0 0':'font-size:1.9em;line-height:.9')+'}'}
 .title-page{text-align:center;padding-top:${print?h*.19+'mm':'4em'}}.title-page p{text-align:center;text-indent:0}.contents p{text-indent:0;text-align:left;margin:.4em 0}.contents a{text-decoration:none}
 ${rules}
-${print?`@page{size:${w}mm ${h}mm;margin:${s.top}mm ${s.outer}mm ${s.bottom}mm ${s.inner}mm;@top-center{content:${s.running?'string(booktitle)':'none'};font:9pt ${fontStacks[s.headingFont]};color:${s.accent}}@bottom-center{content:${s.folios?'counter(page)':'none'};font:9pt ${fontStacks[s.bodyFont]}}}
+${print?`@page{size:${w}mm ${h}mm;margin:${s.top}mm ${s.outer}mm ${s.bottom}mm ${s.inner}mm;@top-center{content:${s.running?'string(booktitle)':'none'};font:9pt ${fontStacks[s.headingFont]};color:${accent}}@bottom-center{content:${s.folios?'counter(page)':'none'};font:9pt ${fontStacks[s.bodyFont]}}}
+@page titleleaf{@top-center{content:none}@bottom-center{content:none}}article#matter-title-page{page:titleleaf}
 @page:left{margin-left:${s.outer}mm;margin-right:${s.inner}mm}@page:blank{@top-center{content:none}@bottom-center{content:none}}
 article{break-before:page}article.chapter{break-before:${s.recto?'right':'page'}}article:first-child{break-before:auto}.book-name{string-set:booktitle content();height:0;overflow:hidden;line-height:0}`:'.book-name{display:none}article+article{margin-top:3em;break-before:page}'}
 `;
 }
 export const bookArticles=(b:Publication)=>b.sections.map((s,i)=>'<article class="'+s.kind+'" id="'+s.id+'">'+(i===0?'<div class="book-name" aria-hidden="true">'+escapeText(b.title)+'</div>':'')+s.html+'</article>').join('\n');
 export function htmlEdition(b:Publication,s:BookStyle){
-  return '<!doctype html><html lang="'+b.lang+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escapeText(b.title)+'</title><style>'+bookCss(s,b.lang,false)+'@media screen{body{max-width:42em;margin:auto;padding:2em}}@media print{'+bookCss(s,b.lang,true)+'}</style></head><body>'+bookArticles(b)+'</body></html>';
+  return '<!doctype html><html lang="'+b.lang+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escapeText(b.title)+'</title><style>@media screen{'+bookCss(s,'screen')+'body{max-width:42em;margin:auto;padding:2em}}@media print{'+bookCss(s,'print')+'}</style></head><body>'+bookArticles(b)+'</body></html>';
 }

@@ -16,7 +16,7 @@ export function epubEdition(book:Publication,s:BookStyle){
   const files:Zippable={mimetype:[strToU8(mime),{level:0}]};
   const file=(path:string,body:string)=>{files[path]=strToU8(body);};
   file('META-INF/container.xml','<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="Book/package.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
-  file('Book/style.css',bookCss(s,book.lang,false));
+  file('Book/style.css',bookCss(s,'ebook'));
   const images=new Map<string,string>(),manifest:string[]=[],spine:string[]=[],links:string[]=[];
   const xhtml=(title:string,body:string)=>'<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="'+book.lang+'" xml:lang="'+book.lang+'"><head><title>'+escapeText(title)+'</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body>'+body+'</body></html>';
   const ids=new Map(book.sections.map((leaf,i)=>[leaf.id,'section-'+(i+1)+'.xhtml']));

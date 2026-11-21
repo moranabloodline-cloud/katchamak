@@ -33,6 +33,7 @@ export function PublishTools({novel,name,style:s,change,save,inspect,print}:{nov
   return <div aria-label="Book style settings" className="min-w-0">
     <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3"><strong className="truncate text-sm">{name}</strong><button className={input+' shrink-0'} onClick={save}>Save as style</button></div>
     <Group title="Typography" initial>
+      {!print&&<p className="text-xs text-muted-foreground">In EPUB, the reader controls body size, line height and text color.</p>}
       <Pick label="Body font" options={fonts} value={s.bodyFont} change={v=>patch('bodyFont',v)}/>
       <Pick label="Heading font" options={fonts} value={s.headingFont} change={v=>patch('headingFont',v)}/>
       <Amount label="Body size (pt)" value={s.size} min={8} max={20} step={.5} change={v=>patch('size',v)}/>

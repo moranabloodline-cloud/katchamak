@@ -1,3 +1,5 @@
+> **2026-11-21 — Završni pregled Publish stilova.** Galerija zadržava aktivni stil za pregled i izvoz. Kartice prikazuju format, font i veličinu. EPUB prati podešavanja čitača, a njegov pregled ima svetlu i tamnu podlogu.
+
 > **2026-11-21 — Poređenje istog poglavlja u Publish galeriji.** Izbor poglavlja iz Bindera prikazuje njegov početak u svim stilovima. Klik na stil otvara celo poglavlje, a Genre samples vraća žanrovske primere.
 
 > **2026-11-21 — Primeri žanrova u Publish galeriji.** Svih 22 stila ima svoj originalan uzorak. Poetry prikazuje strofe, Comics i Graphic Novels različite ilustrovane sekvence, a Children’s Books slikovnicu. Klik na karticu otvara isti primer u većem formatu.
@@ -677,6 +679,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Publish.** Proverena su sva 22 žanrovska preloma. Naslovni list se štampa bez tekućeg naslova i broja strane. Word izdanje preslikava unutrašnju marginu na parnim stranama i čuva pasuse citata, redove stihova i nivoe podnaslova. Izbor teksta za poređenje ostaje odvojen od izdanja.
 
 - **2026-11-21 — Publish.** Izvor teksta za poređenje bira se u galeriji po putanji iz Bindera. Izabrano poglavlje dostupno je i u Print i eBook pregledu. Izvoz i dalje koristi redosled i izbor iz Manuscript panela.
 

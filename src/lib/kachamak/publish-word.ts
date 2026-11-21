@@ -4,6 +4,7 @@ import {imageBytes} from './publish-export';
 import type {Publication} from './publication';
 
 const mm=(n:number)=>Math.round(n*1440/25.4);
+const headingLevels=[HeadingLevel.HEADING_1,HeadingLevel.HEADING_2,HeadingLevel.HEADING_3,HeadingLevel.HEADING_4,HeadingLevel.HEADING_5,HeadingLevel.HEADING_6];
 const alignment={left:AlignmentType.LEFT,right:AlignmentType.RIGHT,center:AlignmentType.CENTER,justify:AlignmentType.JUSTIFIED};
 export async function wordEdition(book:Publication,s:BookStyle){
   const [width,height]=trims[s.trim],space=s.size*20,ink=s.ink.slice(1),accent=s.accent.slice(1);
@@ -22,7 +23,12 @@ export async function wordEdition(book:Publication,s:BookStyle){
     return new ImageRun({type:'png',data:img.data,transformation:{width:Math.max(1,Math.round(img.width*factor)),height:Math.max(1,Math.round(img.height*factor))},altText:{name:el.alt||'Illustration',description:el.alt||'',title:el.alt||''}});
   };
   async function inline(node:Node,format:IRunOptions={}):Promise<ParagraphChild[]>{
-    if(node.nodeType===3)return [new TextRun({...format,text:node.textContent??''})];
+    if(node.nodeType===3){
+      const text=node.textContent??'';
+      if(node.parentElement?.closest('pre,.verse'))
+        return text.split(/\r\n?|\n/).map((line,i)=>new TextRun({...format,text:line,break:i?1:undefined}));
+      return [new TextRun({...format,text})];
+    }
     if(!(node instanceof HTMLElement))return [];
     if(node.tagName==='BR')return [new TextRun({break:1})];
     if(node instanceof HTMLImageElement)return [await image(node)];
@@ -64,12 +70,12 @@ export async function wordEdition(book:Publication,s:BookStyle){
           for(const child of li.children)if(['OL','UL'].includes(child.tagName)){const wrap=document.createElement('div');wrap.append(child.cloneNode(true));result.push(...await blocks(wrap,{},level+1));}
         }continue;
       }
-      if(['ARTICLE','SECTION','FIGURE','NAV','HEADER'].includes(tag)||(tag==='DIV'&&!['ornament','number','scene'].includes(cls)&&node.querySelector('p,div,h1,ul,ol,table'))){
+      if(['ARTICLE','SECTION','FIGURE','NAV','HEADER'].includes(tag)||(['DIV','BLOCKQUOTE','ASIDE'].includes(tag)&&node.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,table,pre,blockquote'))){
         const head=cls==='chapter-head',title=cls==='title-page';
-        result.push(...await blocks(node,head||title?{alignment:title?AlignmentType.CENTER:alignment[s.chapterAlign],spacing:{before:Math.round(mm(height*(title ? .19 : s.sink/100))),after:Math.round(space*s.chapterGap)}}:opts));continue;
+        result.push(...await blocks(node,head||title?{alignment:title?AlignmentType.CENTER:alignment[s.chapterAlign]}:opts));continue;
       }
-      const h=/^H[1-6]$/.test(tag),chapter=tag==='H1',open=cls==='opening';
-      const block=tag==='BLOCKQUOTE'?s.blocks.Quote:tag==='PRE'||cls==='verse'?s.blocks.Verse:cls==='letter'?s.blocks.Letter:tag==='ASIDE'||cls==='aside'?s.blocks.Aside:h&&!chapter?s.blocks.Subheading:undefined;
+      const h=/^H[1-6]$/.test(tag),chapter=tag==='H1',open=node.classList.contains('opening');
+      const block=h&&!chapter?s.blocks.Subheading:node.closest('blockquote')?s.blocks.Quote:node.closest('pre,.verse')?s.blocks.Verse:node.closest('.letter')?s.blocks.Letter:node.closest('aside,.aside')?s.blocks.Aside:undefined;
       const decoration=['ornament','number','scene'].includes(cls);
       const format:IRunOptions={font:h?s.headingFont:s.bodyFont,color:h?s.heading.slice(1):decoration?accent:ink,bold:h,italics:block?.italic,size:Math.round(2*(chapter?s.headingSize:s.size*(block?.size??1)))};
       let lead:TextRun|undefined;
@@ -90,17 +96,20 @@ export async function wordEdition(book:Publication,s:BookStyle){
         else content.unshift(lead);
       }
       const decorated=cls==='scene';
+      const header=node.parentElement;
+      const chapterHeader=header?.classList.contains('chapter-head');
+      const titlePage=header?.classList.contains('title-page');
+      const headerStart=(chapterHeader||titlePage)&&node===header?.firstElementChild;
+      const titleEnd=chapterHeader&&node===header?.lastElementChild;
       const settings:IParagraphOptions={
-        heading:h?(chapter?HeadingLevel.HEADING_1:HeadingLevel.HEADING_2):undefined,keepNext:h,
+        heading:h?headingLevels[Number(tag[1])-1]:undefined,keepNext:h||chapterHeader,
         alignment:decorated?AlignmentType.CENTER:opts.alignment??alignment[block?.align??s.align],
-        indent:{firstLine:tag==='P'&&!opts.alignment&&(!open||s.firstIndent)?Math.round(s.indent*space):0},
-        spacing:{line:Math.round(240*s.leading),before:decorated?Math.round(space*s.dividerGap):undefined,after:Math.round(space*(decorated?s.dividerGap:s.paragraphGap)),...opts.spacing},
+        indent:{firstLine:tag==='P'&&!block&&!opts.alignment&&(!open||s.firstIndent)?Math.round(s.indent*space):0},
+        spacing:{line:Math.round(240*s.leading),before:headerStart?mm(height*(titlePage ? .19 : s.sink/100)):decorated?Math.round(space*s.dividerGap):undefined,after:Math.round(space*(titleEnd?s.chapterGap:decorated?s.dividerGap:s.paragraphGap))},
         border:block?.rule?{left:{style:BorderStyle.SINGLE,color:accent,size:8,space:6}}:undefined,
         children:content
       };
       result.push(new Paragraph(settings));
-      // Chapter sink is applied once, before the first title element.
-      if(opts.spacing)opts={...opts,spacing:{after:0}};
     }
     return result;
   }
@@ -109,9 +118,14 @@ export async function wordEdition(book:Publication,s:BookStyle){
     const root=document.createElement('article');root.innerHTML=section.html;
     const children=await blocks(root);
     children.unshift(new Paragraph({spacing:{line:1,after:0},children:[new Bookmark({id:ids.get(section.id)!,children:[new TextRun({text:'',size:2})]})]}));
-    sections.push({properties:{type:s.recto&&section.kind==='chapter'?SectionType.ODD_PAGE:SectionType.NEXT_PAGE,page:{size:{width:mm(width),height:mm(height)},margin:{top:mm(s.top),bottom:mm(s.bottom),left:mm(s.inner),right:mm(s.outer),header:mm(s.top/2),footer:mm(s.bottom/2)}}},
+    sections.push({properties:{titlePage:section.id==='matter-title-page',type:s.recto&&section.kind==='chapter'?SectionType.ODD_PAGE:SectionType.NEXT_PAGE,page:{size:{width:mm(width),height:mm(height)},margin:{top:mm(s.top),bottom:mm(s.bottom),left:mm(s.inner),right:mm(s.outer),header:mm(s.top/2),footer:mm(s.bottom/2)}}},
       headers:s.running?{default:new Header({children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:book.title,size:18,color:accent})]})]})}:undefined,
       footers:s.folios?{default:new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({children:[PageNumber.CURRENT],size:18})]})]})}:undefined,children});
   }
-  return Packer.toBlob(new Document({hyphenation:{autoHyphenation:s.hyphens},title:book.title,creator:book.author,styles:{default:{document:{run:{font:s.bodyFont,size:Math.round(s.size*2),color:ink,language:{value:book.lang}}}}},numbering:{config:['ordered','bullets'].map(reference=>({reference,levels:Array.from({length:9},(_,level)=>({level,format:reference==='ordered'?LevelFormat.DECIMAL:LevelFormat.BULLET,text:reference==='ordered'?'%'+(level+1)+'.':'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:360*(level+1),hanging:180}}}}))}))},sections}));
+  const documentFile=new Document({title:book.title,creator:book.author,styles:{default:{document:{run:{font:s.bodyFont,size:Math.round(s.size*2),color:ink,language:{value:book.lang}}}}},numbering:{config:['ordered','bullets'].map(reference=>({reference,levels:Array.from({length:9},(_,level)=>({level,format:reference==='ordered'?LevelFormat.DECIMAL:LevelFormat.BULLET,text:reference==='ordered'?'%'+(level+1)+'.':'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:360*(level+1),hanging:180}}}}))}))},sections});
+  // The packer's section API exposes left/right margins. Word uses this document setting to mirror them at the spine.
+  const settings='<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:displayBackgroundShape/><w:mirrorMargins/><w:defaultTabStop w:val="720"/>'+
+    '<w:autoHyphenation w:val="'+s.hyphens+'"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>';
+  return Packer.toBlob(documentFile,false,[{path:'word/settings.xml',data:settings}]);
 }

@@ -74,7 +74,38 @@ assert.match(strFromU8(epub['Book/section-3.xhtml']),/href="section-4.xhtml#entr
 const word=unzipSync(new Uint8Array(await (await wordEdition(model,style)).arrayBuffer()));
 const w=xml(strFromU8(word['word/document.xml']));assert(w.documentElement.textContent.includes('Last line.'));
 assert.equal(w.getElementsByTagName('w:pgSz')[0].getAttribute('w:w'),String(Math.round(148*1440/25.4)));
+assert.equal(publication(book(),style,'Title page').sections[0].id,'matter-title-page');
+assert.equal(w.getElementsByTagName('w:sectPr')[0].getElementsByTagName('w:titlePg').length,1);
 assert.equal(JSON.stringify(book().sections.binder),original);
+// Reflow typography follows the reading system, while print and DOCX keep publisher metrics.
+{
+  const src='data:image/png;base64,iVBORw0KGgo=';
+  const passage={...book().sections.binder[0],content:'<blockquote><p>First quote.</p><p>Second quote.</p></blockquote><p>Ordinary prose.</p><h3>Subsection</h3><pre class="verse">One line\nSecond line</pre><img src="gallery:figure" alt="Map">'};
+  const fixture={...book(),gallery:[{id:'figure',kind:'image',name:'Map',parentId:null,image:src}],sections:{binder:[passage]}};
+  const edition=publication(fixture,style);
+  const rich=edition.sections.find(s=>s.kind==='chapter');
+  const doc=new JSDOM(rich.html).window.document;
+  assert.equal(doc.querySelector('img').getAttribute('src'),src);
+  assert.equal(doc.querySelector('p.opening').textContent,'Ordinary prose.');
+  const archive=unzipSync(new Uint8Array(await epubEdition(edition,style).arrayBuffer()));
+  const reflow=strFromU8(archive['Book/style.css']);
+  assert(!reflow.includes(style.ink)&&!reflow.match(/body\{[^}]*?(?:font-size|line-height|color):/));
+  assert(Object.keys(archive).some(name=>name.endsWith('.png')));
+  const wordModel={...edition,sections:[{...rich,html:rich.html.replace(/<img[^>]*>/g,'')}]};
+  const pkg=unzipSync(new Uint8Array(await (await wordEdition(wordModel,style)).arrayBuffer()));
+  const settings=xml(strFromU8(pkg['word/settings.xml']));
+  assert.equal(settings.getElementsByTagName('w:mirrorMargins').length,1);
+  const wordDoc=xml(strFromU8(pkg['word/document.xml']));
+  const paragraphs=Array.from(wordDoc.getElementsByTagName('w:p'));
+  assert(paragraphs.some(p=>p.textContent==='First quote.'));
+  assert(paragraphs.some(p=>p.textContent==='Second quote.'));
+  const verse=paragraphs.find(p=>p.textContent.includes('Second line'));
+  assert.equal(verse.getElementsByTagName('w:br').length,1);
+  const styleName=p=>p.getElementsByTagName('w:pStyle')[0]?.getAttribute('w:val');
+  assert.equal(styleName(paragraphs.find(p=>p.textContent==='Subsection')),'Heading3');
+  const gap=p=>p.getElementsByTagName('w:spacing')[0]?.getAttribute('w:after');
+  assert.equal(gap(paragraphs.find(p=>p.textContent===rich.title)),String(Math.round(style.size*20*style.chapterGap)));
+}
 const {manuscriptEntries}=await import('../src/lib/kachamak/publish-manuscript.ts');
 const {stepWorkspaceHistory}=await import('../src/lib/kachamak/store.ts');
 const {setHistoryOwner}=await import('../src/lib/kachamak/workspace-history.ts');

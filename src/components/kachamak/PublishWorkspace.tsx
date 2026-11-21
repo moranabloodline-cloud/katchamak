@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import {BookOpen,Check,Download,FolderTree,Grid2X2,Settings2} from 'lucide-react';
+import {BookOpen,Check,Download,FolderTree,Grid2X2,Moon,Settings2,Sun} from 'lucide-react';
 import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
@@ -33,12 +33,13 @@ function Miniature({book,entry,comparison,selected,choose}:{book:Novel;entry:Sty
     const paper='html{background:white;overflow:hidden}body{padding:'+padding+'}.book-name{display:none}';
     // Flow overflow into clipped columns so the first sheet ends on a whole line above its bottom margin.
     const firstSheet=comparison?'body{height:100vh}main{height:100%;columns:1;column-fill:auto;overflow:hidden}':'';
-    return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,sample.lang,true)+paper+firstSheet+'</style><body><main>'+bookArticles(sample)+'</main></body></html>';
+    return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,'print')+paper+firstSheet+'</style><body><main>'+bookArticles(sample)+'</main></body></html>';
   },[book,s,comparison]);
-  return <button type="button" aria-label={'Preview '+entry.name} aria-pressed={selected} onClick={choose} className={'group min-w-0 rounded-lg border p-2 text-left transition-colors '+(selected?'border-amber-400/70 bg-amber-400/5':'border-white/10 bg-white/[.025] hover:border-amber-300/40')}>
+  return <button type="button" aria-label={'Preview '+entry.name} aria-pressed={selected} onClick={choose} className={'group flex min-w-0 flex-col rounded-lg border p-2 text-left transition-colors '+(selected?'border-amber-400/70 bg-amber-400/5':'border-white/10 bg-white/[.025] hover:border-amber-300/40')}>
     <div ref={holder} className="pointer-events-none relative w-full overflow-hidden rounded-sm bg-white" style={{aspectRatio:w+'/'+h}}>
       <iframe title={entry.name+' specimen'} tabIndex={-1} sandbox="allow-same-origin" scrolling="no" loading="lazy" srcDoc={source} className="absolute left-0 top-0 origin-top-left border-0" style={{width:sheet,height:h*96/25.4,transformOrigin:'top left',transform:'scale('+width/sheet+')'}}/>
-    </div><div className="flex items-center justify-between gap-2 px-1 pb-0.5 pt-2"><span className="truncate font-semibold">{entry.name}</span>{selected&&<Check className="size-3.5 shrink-0 text-amber-300"/>}</div>
+    </div><div className="mt-auto flex w-full items-center justify-between gap-2 px-1 pt-2"><span className="truncate font-semibold">{entry.name}</span>{selected&&<Check className="size-3.5 shrink-0 text-amber-300"/>}</div>
+    <span className="w-full truncate px-1 pb-0.5 text-xs text-muted-foreground">{s.trim} · {s.bodyFont} · {s.size} pt</span>
   </button>;
 }
 function treeOptions(nodes:NoteNode[],depth=0):{id:string;label:string}[]{return nodes.filter(n=>n.kind==='folder').flatMap(n=>[{id:n.id,label:'  '.repeat(depth)+n.title},...treeOptions(n.children,depth+1)]);}
@@ -67,19 +68,22 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   const [focusNote,setFocusNote]=useState<string|null>(null);
   const focusIndex=includedRows.findIndex(row=>row.node.id===focusNote);
   const anchor=inspector==='manuscript'&&focusIndex>=0?'entry-'+focusIndex:undefined;
-  const [gallery,setGallery]=useState(!selected?.bookStyle),[print,setPrint]=useState(true),[proof,setProof]=useState<Proof>(rows.length?'Manuscript':'Chapter opening');
+  const [gallery,setGallery]=useState(!selected?.bookStyle),[print,setPrint]=useState(true),[proof,setProof]=useState<Proof>(!selected?.bookStyle&&rows.length?'Manuscript':'Chapter opening');
   useEffect(()=>{if(inspector==='manuscript'){setGallery(false);setProof('Manuscript');}},[inspector]);
+  const [darkReader,setDarkReader]=useState(false);
   const [saving,setSaving]=useState(false),[styleName,setStyleName]=useState(''),[destination,setDestination]=useState('');
   const [busy,setBusy]=useState(false),[wantPdf,setWantPdf]=useState(false),[ready,setReady]=useState(false),frame=useRef<HTMLIFrameElement>(null);
   const prev=useRef(selected?.id);
   const roots=novel.sections.publish??[];
+  const [galleryStyleId,setGalleryStyleId]=useState<string>();
   const saved=selected?.bookStyle;
   const loc=selected?locateNode(roots,selected.id):null;
   const folderId=selected?(selected.kind==='folder'?selected.id:loc?.parentId??null):rootId??null;
   const folder=folderId?findNode(roots,folderId):null;
   const savedCards=styleCards(folder?folder.children:roots);
-  const entry=saved&&selected?{name:selected.title,style:saved,node:selected}:savedCards[0]??styleCards(roots)[0];
+  const entry=saved&&selected?{name:selected.title,style:saved,node:selected}:savedCards.find(card=>card.node.id===galleryStyleId)??savedCards[0];
   const s=entry?.style??baseStyle;
+  const hasStyle=!!entry;
   useEffect(()=>{if(selected?.id!==prev.current){
     if(selected){
       if(gallery&&selected.bookStyle&&(comparison||selected.bookStyle.sampleGenre))setProof('Chapter opening');
@@ -89,10 +93,10 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   }},[selected,gallery,comparison]);
   const options=treeOptions(roots);
   const source=useMemo(()=>{
-    if(gallery)return '';
+    if(gallery||!hasStyle)return '';
     const book=proof==='Chapter opening'&&comparison?chapterSpecimen(novel,s,comparison,false):publication(novel,s,proof);
     return proofDocument(book,s,print);
-  },[novel,s,proof,print,gallery,comparison]);
+  },[novel,s,proof,print,gallery,comparison,hasStyle]);
   const compare=(id:string)=>{
     setComparisonId(id);setProof('Chapter opening');setWantPdf(false);
   };
@@ -107,12 +111,13 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     if(!entry)return;
     state.updateNode('publish',entry.node.id,{bookStyle:next});
     if(!saved)state.select(entry.node.id);
-    if(gallery&&comparison)setProof('Chapter opening');
+    if(gallery){setPrint(true);setProof('Chapter opening');}
     setGallery(false);
   };
   const saveAs=()=>{setDestination(folder?.id??'');setStyleName(entry?entry.name+' copy':'New style');setSaving(true);};
   const inspect=(v:Proof)=>{setWantPdf(false);setProof(v);setGallery(false);};
   const download=async(format:'PDF'|'EPUB'|'DOCX'|'HTML')=>{
+    if(!entry)return;
     if(!hasContents){toast.error('Select at least one Binder item in Manuscript.');return;}
     if(format==='PDF'){
       if(!gallery&&print&&proof==='Manuscript'&&ready&&frame.current?.contentDocument?.documentElement.dataset.ready==='yes'){frame.current.contentWindow?.print();return;}
@@ -126,34 +131,36 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   useEffect(()=>{if(!wantPdf||!ready||!print||gallery||proof!=='Manuscript'||frame.current?.contentDocument?.documentElement.dataset.ready!=='yes')return;
     setWantPdf(false);frame.current.contentWindow?.print();
   },[wantPdf,ready,print,gallery,proof]);
-  const group=(items:StyleCard[])=>items.length>0&&<section className="mb-7"><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node.id} book={novel} entry={card} comparison={comparison} selected={card.node.id===selected?.id} choose={()=>open(card)}/>)}</div></section>;
+  const group=(items:StyleCard[])=>items.length>0&&<section className="mb-7"><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node.id} book={novel} entry={card} comparison={comparison} selected={card.node.id===entry?.node.id} choose={()=>open(card)}/>)}</div></section>;
   return <>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2">
         <button className={btn+' md:hidden'} onClick={onShowTree} aria-label="Style folders"><FolderTree className="size-4"/></button>
-        <button className={btn+(gallery?active:'')} onClick={()=>{setWantPdf(false);onInspect('tools');useKachamak.getState().select(folder?.id??null);setGallery(true);}}><Grid2X2 className="size-3.5"/>Styles</button>
-        <button className={btn+(!gallery?active:'')} onClick={()=>{if(gallery&&comparison)setProof('Chapter opening');setGallery(false);}}><BookOpen className="size-3.5"/>Proof</button>
-        {(gallery||proof==='Chapter opening')&&<div role="group" aria-label="Style samples" className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 border-l border-white/10 pl-2">
+        <button className={btn+(gallery?active:'')} onClick={()=>{setWantPdf(false);setGalleryStyleId(entry?.node.id);onInspect('tools');useKachamak.getState().select(folder?.id??null);setGallery(true);}}><Grid2X2 className="size-3.5"/>Styles</button>
+        <button disabled={!entry} className={btn+(!gallery?active:'')} onClick={()=>{if(gallery){setProof('Chapter opening');if(entry)useKachamak.getState().select(entry.node.id);}setGallery(false);}}><BookOpen className="size-3.5"/>Proof</button>
+        {(gallery||proof==='Chapter opening')&&<div role="group" aria-label="Style samples" className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 border-l border-white/10 pl-2 max-sm:order-last max-sm:w-full max-sm:border-0 max-sm:pl-0">
           <select aria-label="Compare Binder chapter" className={btn+' min-w-0 max-w-full shrink bg-background sm:max-w-64'} disabled={!chapterChoices.length} value={selectedChapter?.node.id??''} onChange={e=>compare(e.target.value)}>
             <option disabled value="">{chapterChoices.length?'Compare Binder chapter…':'No Binder chapters'}</option>
             {chapterChoices.map(({node,path})=><option key={node.id} value={node.id}>{path}</option>)}
           </select>
           <button type="button" aria-pressed={!comparison} className={btn+(!comparison?active:'')} onClick={()=>compare('')}>Genre samples</button>
         </div>}
+        {comparison&&!comparison.full&&(gallery||proof==='Chapter opening')&&<span role="status" className="text-xs text-muted-foreground">This chapter has no text yet.</span>}
         <span className="min-w-1 flex-1"/>
         <button className={btn+' lg:hidden'} onClick={onShowTools} aria-label="Show style tools"><Settings2 className="size-4"/></button>
-        <DropdownMenu><DropdownMenuTrigger asChild><button disabled={busy||!hasContents} title={!hasContents?'Select at least one Binder item in Manuscript':undefined} className={btn}>{busy?'Exporting…':'Export book'}<Download className="size-3.5"/></button></DropdownMenuTrigger>
+        <DropdownMenu><DropdownMenuTrigger asChild><button disabled={busy||!hasContents||!entry} title={!entry?'Choose a book style':!hasContents?'Select at least one Binder item in Manuscript':undefined} className={btn}>{busy?'Exporting…':'Export book'}<Download className="size-3.5"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">{(['PDF','EPUB','DOCX','HTML'] as const).map(f=><DropdownMenuItem key={f} onSelect={()=>void download(f)}>{f==='PDF'?'Print / Save PDF':f}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
       </div>
       {gallery?<div className="kachamak-scroll min-h-0 flex-1 overflow-auto p-5" style={{zoom}}><div className="mb-5 flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">{folder?.title??'Book styles'}</h1><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>{useKachamak.getState().addNode('publish',folder?.id??null,'folder','New folder');}}>New folder</button>{otherStyles.length>0&&<button className={btn} onClick={()=>setImporting(true)}>Use style from another book</button>}</div></div>
-        {group(savedCards)}
+        {savedCards.length?group(savedCards):<button className={btn} onClick={saveAs}>Create a style in this folder</button>}
       </div>:<>
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
           <strong className="mr-auto truncate">{entry?.name??"Book proof"}</strong>
           <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'&&s.sampleGenre?'Style sample':v}</option>)}</select>
           <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setWantPdf(false);setPrint(m==='Print');}}>{m}</button>)}</div>
+          {!print&&<button type="button" className={btn} aria-pressed={darkReader} aria-label="Dark reader preview" title={darkReader?'Use light reader background':'Use dark reader background'} onClick={()=>setDarkReader(!darkReader)}>{darkReader?<Sun className="size-3.5"/>:<Moon className="size-3.5"/>}</button>}
         </div>
-        {proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:<PublishProof key={source} anchor={anchor} source={source} print={print} frameRef={frame} onReady={onReady} zoom={zoom}/>}
+        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:<PublishProof key={source} anchor={anchor} source={source} print={print} darkReader={darkReader} frameRef={frame} onReady={onReady} zoom={zoom}/>}
       </>}
     </div>
     {toolsHost&&createPortal(inspector==='manuscript'?<PublishManuscript book={novel} rows={rows} change={action=>{
@@ -163,7 +170,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         setFocusNote((includedRows[index+1]??includedRows[index-1])?.node.id??null);
       }else setFocusNote(null);
       inspect('Manuscript');useKachamak.getState().changePublishManuscript(novel.id,action);
-    }}/>:entry?<PublishTools novel={novel} name={entry.name} style={s} change={change} save={saveAs} inspect={inspect} print={print}/>:<button className={btn} onClick={saveAs}>Create style</button>,toolsHost)}
+    }}/>:entry?<PublishTools novel={novel} name={entry.name} style={s} change={change} save={saveAs} inspect={inspect} print={gallery||print}/>:<button className={btn} onClick={saveAs}>Create style</button>,toolsHost)}
     <Dialog open={importing} onOpenChange={setImporting}><DialogContent aria-describedby={undefined}><DialogHeader><DialogTitle>Use style from another book</DialogTitle></DialogHeader>
       <div className="grid max-h-[60vh] gap-2 overflow-y-auto">{otherStyles.map(item=><button key={item.book.id+':'+item.node.id} className={btn+' justify-start text-left'} onClick={()=>{
         const style={...withGenreSample(item.node.bookStyle!,item.node.title)};
