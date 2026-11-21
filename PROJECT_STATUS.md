@@ -1,3 +1,5 @@
+> **2026-11-21 — Grupni izbor na Canvas tabli.** Prevlačenje okvira u režimu Select otvara alate za odabrane kartice i kolone.
+
 > **2026-11-21 — Mreža na Canvas tabli.** Dugme pored zuma prikazuje ili skriva tačkastu mrežu. Pregledač pamti izbor za svaku tablu posebno.
 
 > **2026-11-21 — Canvas.** Postojeće Homepage stranice zadržavaju raspored i veze. Stablo podržava imenovane stranice i slobodne table sa kolonama, karticama, vezama i crtanjem.
@@ -641,6 +643,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Canvas okvir i grupne komande.** Dodati su boja, poravnanje, ravnomeran razmak, linije, zaključavanje položaja i redosled slojeva. Pretvaranje izbora u podtablu čuva sadržaj kolona i povezuje spoljne veze sa karticom koja otvara novu tablu.
 
 - **2026-11-21 — Hide grid / Show grid.** Kontrola radi i na zaključanoj tabli. Promena vidljivosti mreže zadržava poziciju kartica i zum.
 

@@ -1,6 +1,7 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
+import {applySelection,type BoardSelectionChange} from './canvas-selection';
 import {validCanvasFields,validBoard,moveOnBoard,type CanvasFields,type BoardMove} from './canvas-board';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
@@ -172,7 +173,7 @@ export function validHomepage(value: unknown): boolean {
 
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
-export type HomeChange = BoardMove
+export type HomeChange = BoardMove | BoardSelectionChange
   | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
   | {type:'task'; id:string; index:number; done:boolean}
   | { type: 'lock'; locked: boolean }
@@ -191,6 +192,7 @@ export function changeHomepage(page: Homepage, action: HomeChange): Homepage | n
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
+  if(action.type==='boardSelection')return applySelection(page,action);
   if(action.type==='boardMove')return page.mode==='board'?moveOnBoard(page,action):null;
   if(action.type==='removeBoardItem'){
     const original=page.blocks.find(b=>b.id===action.original.id);

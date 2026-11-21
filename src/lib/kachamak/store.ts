@@ -31,6 +31,7 @@ import {relationshipKey,validKind} from './kinship';
 import {availableProjectImage, validProjectImage, galleryImageRef, projectImageRefs} from './project-image';
 import { changeGallery, type GalleryChange } from './gallery';
 import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} from './tree-move';
+import {extractBoard} from './canvas-selection';
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
@@ -138,6 +139,7 @@ interface KachamakState {
   activeHomePageId: string;
   openHomePage: (projectId: string, pageId: string) => boolean;
   moveHomePages: (bookId:string,sources:BranchSource[],parentId:string|null)=>void;
+  convertBoardSelection: (projectId:string,pageId:string,ids:string[],title:string,heights:[string,number][])=>boolean;
   createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board') => boolean;
   renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
 
@@ -659,6 +661,18 @@ export const useKachamak = create<KachamakState>()(
           activeHomePageId: page.id, view:'homepage'});
         return true;
       },
+      convertBoardSelection: (projectId,pageId,ids,title,heights) => {
+        const state=get(),novel=state.novels.find(n=>n.id===projectId);
+        if(!novel || state.activeNovelId!==projectId || state.activeHomePageId!==pageId)return false;
+        const page=homepageEntry(novel,pageId);
+        const result=page && extractBoard(page,ids,title,uid(),uid(),heights);
+        if(!result)return false;
+        const pages=novel.homePages??[];
+        const updated=pageId===HOME_ROOT?{...novel,homepage:result.parent,homePages:[...pages,result.child]}:
+          {...novel,homePages:[...pages.map(p=>p.id===pageId?result.parent:p),result.child]};
+        set({novels:state.novels.map(n=>n===novel?touch(updated):n),activeHomePageId:result.child.id});
+        return true;
+      },
       renameHomePage: (projectId, pageId, title) => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (state.activeNovelId !== projectId || !title.trim() || !novel || !homepageEntry(novel,pageId)) return false;
@@ -1011,7 +1025,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 56,
+      version: 57,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1024,6 +1038,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<57){ /* Missing positionLocked and stack preserve the board's original movable items and layer order. */ }
         // Old Homepage records use the default page mode. Keep their saved blocks intact.
         if (version < 56 && !s.activeHomePageId) s.activeHomePageId = HOME_ROOT;
         if (version < 55) delete (s as {rulerVisible?: boolean}).rulerVisible;

@@ -5,6 +5,7 @@ export type Stroke = [number, number][];
 export const CANVAS_TOOLS = ['note','link','todo','line','column','heading','image','video','map','audio','color','table','comment','sketch','draw'] as const;
 export type CanvasTool = typeof CANVAS_TOOLS[number];
 export type CanvasFields = {
+  positionLocked?:boolean; stack?:number;
   at?: Point; columnId?: string; edge?: {from:string; to:string};
   color?: string; tasks?: {text:string; done:boolean}[]; cells?: string[][];
   audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
@@ -13,6 +14,7 @@ export const isPoint=(p:Point|undefined):p is Point=>!!p && Number.isFinite(p.x)
 export const isInk=(ink:Stroke[]|undefined)=>Array.isArray(ink) && ink.length>0 && ink.every(stroke=>
   Array.isArray(stroke) && stroke.length>0 && stroke.every(p=>Array.isArray(p) && p.length===2 && p.every(Number.isFinite)));
 export function validCanvasFields(b:HomeBlock) {
+  if (b.positionLocked!==undefined && typeof b.positionLocked!=='boolean' || b.stack!==undefined && !Number.isSafeInteger(b.stack))return false;
   if (b.at!==undefined && !isPoint(b.at) || b.columnId!==undefined && typeof b.columnId!=='string' ||
       b.color!==undefined && !/^#[0-9a-f]{6}$/i.test(b.color)) return false;
   if (b.extent!==undefined && (!b.extent || ![b.extent.w,b.extent.h].every(n=>Number.isFinite(n)&&n>0))) return false;
@@ -61,7 +63,8 @@ export function boardRects(blocks:HomeBlock[], heights:ReadonlyMap<string,number
 export type BoardMove = {type:'boardMove';id:string;at:Point;columnId?:string;before?:string};
 export function moveOnBoard(page:Homepage, action:BoardMove):Homepage|null {
   const b=page.blocks.find(item=>item.id===action.id);
-  if(!b || b.layout==='line' || !isPoint(action.at) || action.columnId &&
+  if(!b || b.positionLocked || page.blocks.some(col=>col.positionLocked && (col.id===b.columnId || col.id===action.columnId)) ||
+     b.layout==='line' || !isPoint(action.at) || action.columnId &&
      (b.layout==='column' || !page.blocks.some(item=>item.id===action.columnId && item.layout==='column')))return null;
   const blocks=page.blocks.filter(item=>item.id!==b.id);
   const before=action.before?blocks.findIndex(item=>item.id===action.before && item.columnId===action.columnId):-1;
