@@ -24,7 +24,8 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
-import {editorForRange,selectionBlock,applyBlockStyle,applyEditorHistory,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
+import {editorForRange,selectionBlock,applyBlockStyle,applyEditorIndent,applyEditorColour,applyEditorTypography} from "@/lib/kachamak/editor-blocks";
+import {useWorkspaceHistory} from './useWorkspaceHistory';
 import {activeWritingEditor} from './WorkspaceNavigation';
 import {PageSurface,useNoteAppearance} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
@@ -87,6 +88,7 @@ function ToolBtn({
 /* One fixed text toolbar, shared by Split panes. It formats its saved selection;
    the separate Format menu owns the page defaults used as fallback values. */
 export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
+  const history=useWorkspaceHistory();
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const setSpellCheck=useKachamak(state=>state.setEditorSpellCheck);
   const {font,size}=useNoteAppearance(node);
@@ -142,8 +144,8 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
 
   return (
     <div data-editor-toolbar role="toolbar" aria-label="Text formatting" className="col-start-1 row-start-1 flex h-10 min-w-0 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
-      <ToolBtn title="Undo (Ctrl+Z)" disabled={!node} onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'undo')}><Undo2 className="h-4 w-4" /></ToolBtn>
-      <ToolBtn title="Redo (Ctrl+Y)" disabled={!node} onClick={()=>applyEditorHistory(ownedRange(savedRange.current),'redo')}><Redo2 className="h-4 w-4" /></ToolBtn>
+      <ToolBtn title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={()=>history.run('undo')}><Undo2 className="h-4 w-4" /></ToolBtn>
+      <ToolBtn title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={()=>history.run('redo')}><Redo2 className="h-4 w-4" /></ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
       <fieldset aria-label="Format selected text" title={hasSelection?undefined:'Select text to format it'} disabled={!node || !hasSelection} className="contents [&>*]:shrink-0 disabled:[&>button]:opacity-50 disabled:[&>select]:opacity-50">
       <select

@@ -1,3 +1,4 @@
+import {runWorkspaceAction} from './workspace-history';
 import {useKachamak} from './store';
 import {availableProjectImage} from './project-image';
 import {GREGORIAN,validCalendar,validEvent,type StoryCalendar} from './story-calendar';
@@ -25,7 +26,7 @@ export function importTimeline(projectId:string,json:string) {
     return {id:uid(),title:n.title.trim(),kind:'doc',content:typeof n.content==='string'?n.content:'',synopsis:typeof n.synopsis==='string'?n.synopsis:'',notes:typeof n.notes==='string'?n.notes:'',status:'',label:'',createdAt:now,updatedAt:now,children:n.children.map(child=>read(child,depth+1)),event,timelineKind:n.timelineKind as NoteNode['timelineKind'],collapsed:n.collapsed===true,...(typeof n.color==='string'&&/^#[a-f0-9]{6}$/i.test(n.color)?{color:n.color}:{}),...(typeof n.icon==='string'?{icon:n.icon}:{})};
   };
   const roots=file.notes.map((node:unknown)=>read(node,0));
-  useKachamak.setState(s=>({novels:s.novels.map(n=>n.id===projectId?{...n,updatedAt:now,sections:{...n.sections,timeline:[...n.sections.timeline,...roots]},timeline:{rootId:null,detail:'synopsis',compact:false,...n.timeline,display:'axis'}}:n)}));
+  runWorkspaceAction(useKachamak.getState,'importTimeline',[],()=>useKachamak.setState(s=>({novels:s.novels.map(n=>n.id===projectId?{...n,updatedAt:now,sections:{...n.sections,timeline:[...n.sections.timeline,...roots]},timeline:{rootId:null,detail:'synopsis',compact:false,...n.timeline,display:'axis'}}:n)})));
   state.setTab('timeline');state.select(roots[0].id);
   return {count,rootId:roots[0].id};
 }

@@ -16,6 +16,7 @@ import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
 import { requestJson } from './request-json';
 import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
+import {runWorkspaceAction} from './workspace-history';
 import { cloneWorkspaceTab } from './clone-workspace-tab';
 import { cloneLayout, withExistingTexts } from './clone-text-recovery';
 
@@ -308,7 +309,8 @@ export function saveWorkspaceClone(source: Novel, sourceTab: TabKey, destination
   // A scoped retry is safe only when this clone accounts for all unsaved project data.
   const clean = projectPayload(snapshot()) === projectPayload(saved);
   const result = cloneWorkspaceTab(source, sourceTab, destination, destinationTab, clean);
-  useKachamak.setState(s => ({novels: s.novels.map(n => n.id === destination.id ? result.novel : n)}));
+  runWorkspaceAction(useKachamak.getState,'cloneTab',[],()=>
+    useKachamak.setState(s => ({novels: s.novels.map(n => n.id === destination.id ? result.novel : n)})));
   void checkpointLocalDraft(clean ? {key, base: destination} : undefined);
   return {count: result.count, saving: flushWebLibrary()};
 }

@@ -2,6 +2,7 @@
 import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
 import { projectStorage, isWebSession, folderSaved } from "./session-storage";
 
+import {trackWorkspaceActions,historyStoreChanged,stepBookHistory,type HistoryDirection} from './workspace-history';
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
@@ -352,7 +353,7 @@ const STORAGE_KEY = "kachamak-store-v1";
 
 export const useKachamak = create<KachamakState>()(
   persist(
-    (set, get) => ({
+    (set, get) => trackWorkspaceActions<KachamakState>({
       novels: [],
       activeNovelId: null,
       activeHomePageId: HOME_ROOT,
@@ -1063,7 +1064,7 @@ export const useKachamak = create<KachamakState>()(
         }));
         return true;
       },
-    }),
+    },get),
     {
       name: STORAGE_KEY,
       version: 62,
@@ -1224,6 +1225,10 @@ export const useKachamak = create<KachamakState>()(
     }
   )
 );
+
+useKachamak.subscribe(historyStoreChanged);
+export const stepWorkspaceHistory=(direction:HistoryDirection)=>
+  stepBookHistory(direction,useKachamak.getState(),update=>useKachamak.setState(update));
 
 /** Check that all current project data actually matches browser storage. */
 export function projectsSavedLocally(): boolean {

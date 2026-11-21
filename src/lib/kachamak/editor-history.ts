@@ -1,6 +1,16 @@
+import {usableHistoryGroup} from './workspace-history';
 type Point={path:number[];offset:number};
 type Bookmark={start:Point;end:Point}|null;
-type Frame={html:string;selection:Bookmark};
+type Frame={html:string;selection:Bookmark;group:object};
+const owners=new WeakMap<object,WeakRef<HTMLElement>>();
+export function otherMountedEditor(group:object|undefined,editor:HTMLElement){
+  const owner=group&&owners.get(group)?.deref();
+  return !!owner?.isConnected&&owner!==editor;
+}
+const mounted=new WeakMap<HTMLElement,EditorHistory>();
+export function editorCanStep(editor:HTMLElement,direction:'undo'|'redo'){
+  return !!mounted.get(editor)?.groupFor(direction);
+}
 function bookmark(editor:HTMLElement):Bookmark {
   const selection=window.getSelection();if(!selection?.rangeCount)return null;
   const range=selection.getRangeAt(0);
@@ -18,14 +28,20 @@ function restore(editor:HTMLElement,selection:Bookmark) {
 /** Private to one mounted editor. Nothing is written to browser storage or project data. */
 export class EditorHistory {
   private frames:Frame[]=[];private index=0;private lastType='';private lastTime=0;
-  reset(editor:HTMLElement){this.frames=[{html:editor.innerHTML,selection:bookmark(editor)}];this.index=0;this.lastType='';}
+  get group(){return this.frames[this.index]?.group;}
+  groupFor(direction:'undo'|'redo'){
+    const group=direction==='undo'?(this.index>0?this.group:undefined):this.frames[this.index+1]?.group;
+    return usableHistoryGroup(group)?group:undefined;
+  }
+  reset(editor:HTMLElement){mounted.set(editor,this);this.frames=[{html:editor.innerHTML,selection:bookmark(editor),group:{}}];this.index=0;this.lastType='';}
   before(editor:HTMLElement){if(this.frames[this.index])this.frames[this.index].selection=bookmark(editor);}
   record(editor:HTMLElement,type='',data:string|null=null){
     if(!this.frames.length)this.reset(editor);
     if(this.frames[this.index].html===editor.innerHTML)return;
     const now=Date.now(),merge=type==='insertText'&&this.lastType===type&&now-this.lastTime<750&&!!data&&!/\s/.test(data)&&this.index===this.frames.length-1&&this.index>0;
     this.frames.splice(this.index+1);
-    const frame={html:editor.innerHTML,selection:bookmark(editor)};
+    const frame={html:editor.innerHTML,selection:bookmark(editor),group:merge?this.group:{}};
+    owners.set(frame.group,new WeakRef(editor));
     if(merge)this.frames[this.index]=frame;else{this.frames.push(frame);this.index++;}
     if(this.frames.length>100){this.frames.shift();this.index--;}
     this.lastType=type;this.lastTime=now;

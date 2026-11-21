@@ -10,6 +10,7 @@ import {noteAnchorStyles} from '@/lib/kachamak/note-links';
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
 import {repairListWrappers,backspaceListMarker} from '@/lib/kachamak/editor-lists';
+import {normalizeEditorContent,onHistoryReset,withEditSource} from '@/lib/kachamak/workspace-history';
 import {EditorHistory} from '@/lib/kachamak/editor-history';
 import {insertTypedDivider} from '@/lib/kachamak/editor-divider';
 import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
@@ -60,11 +61,14 @@ export function RichEditor({
       const paragraphs=wrapRootParagraphs(el);
       lastHtml.current = el.innerHTML;
       history.current.reset(el);
-      if(repaired||paragraphs)onChange(lastHtml.current);
+      if(repaired||paragraphs)normalizeEditorContent(()=>onChange(lastHtml.current));
     }
   }, [html]);
 
-  useEffect(()=>{if(ref.current)history.current.reset(ref.current);},[]);
+  useEffect(()=>{
+    const reset=()=>{if(ref.current)history.current.reset(ref.current);};
+    reset();return onHistoryReset(reset);
+  },[]);
 
   const handleInput = (event?: {nativeEvent?: Event}) => {
     if (!ref.current) return;
@@ -79,14 +83,15 @@ export function RichEditor({
     }
     history.current.record(ref.current,input?.inputType,input?.data);
     lastHtml.current = ref.current.innerHTML;
-    onChange(lastHtml.current);
+    withEditSource({group:history.current.group},()=>onChange(lastHtml.current));
   };
 
   useEffect(()=>{
     const editor=ref.current;if(!editor)return;
     const step=(direction:'undo'|'redo')=>{
-      if(!history.current.step(editor,direction))return false;
-      lastHtml.current=editor.innerHTML;onChange(lastHtml.current);
+      const group=history.current.groupFor(direction);
+      if(!group||!history.current.step(editor,direction))return false;
+      lastHtml.current=editor.innerHTML;withEditSource({group,direction},()=>onChange(lastHtml.current));
       editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));return true;
     };
     const command=(event:Event)=>{const detail=(event as CustomEvent<{direction:'undo'|'redo';applied:boolean}>).detail;if(detail?.direction==='undo'||detail?.direction==='redo')detail.applied=step(detail.direction);};

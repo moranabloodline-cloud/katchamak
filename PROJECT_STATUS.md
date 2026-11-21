@@ -1,3 +1,5 @@
+> **2026-11-21 — Undo i Redo u svim tabovima.** Strelice u zajedničkoj traci i prečice vraćaju izmene u otvorenoj knjizi. U Split prikazu svaka beleška ima svoju istoriju kucanja.
+
 > **2026-11-21 — Canvas: premeštanje kartica između kolona i brisanje selekcije.** Kartice se mogu prevući unutar reda ili u drugi red. Zlatna crta označava mesto umetanja. Del briše izabrane elemente uz potvrdu.
 
 > **2026-11-21 — Canvas · prevlačenje iz Tools panela.** Kartice se puštaju na tačnu poziciju na platnu ili na označeno mesto između kartica u koloni reda.
@@ -659,6 +661,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **Undo i Redo (21.11.2026).** Uređivanje beležaka i stabla, Canvas, Gallery, Timeline, Relationships i Finance dele istoriju izmena knjige. Ctrl/Cmd+Z vraća izmenu. Ctrl/Cmd+Shift+Z ili Ctrl+Y je ponavlja. Nova izmena posle Undo započinje novu granu. Promena knjige, učitavanje spoljne verzije i trajno brisanje iz korpe zatvaraju prethodnu istoriju.
 
 - **Canvas — kolone i Del (21.11.2026).** Prevlačenje čuva identitet, redosled izabrane grupe i krajeve veza. Del radi za kartice, crteže, veze, kolone i redove. Uklanjanje kontejnera oslobađa preostale kartice na platnu.
 
