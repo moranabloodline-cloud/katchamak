@@ -17,6 +17,18 @@ assert.throws(()=>changeGallery(entries,{type:'add',entries:[image]}));
 assert.equal(validGallery([{...maps,parentId:'missing'}]),false);
 assert.equal(validGallery([maps,city,{...image,image:'invalid'}]),false);
 assert.equal(validGallery([image,{...city,parentId:'map'}]),false);
+const district={kind:'folder',id:'district',parentId:'city',name:'District'};
+const region={kind:'folder',id:'region',parentId:null,name:'Region'};
+const branch=[maps,city,district,region,{...image,parentId:district.id}];
+const moveFolder={type:'move',id:maps.id,from:null,parentId:region.id};
+const relocated=changeGallery(branch,moveFolder);
+assert.deepEqual(galleryPath(relocated,district.id).map(entry=>entry.id),['region','maps','city','district']);
+assert.deepEqual(relocated,[{...maps,parentId:region.id},...branch.slice(1)]);
+assert.throws(()=>changeGallery(relocated,{...moveFolder,parentId:null}));
+for(const id of [maps.id,city.id,district.id,image.id,'missing']) {
+  assert.throws(()=>changeGallery(branch,{...moveFolder,parentId:id}));
+}
+assert.deepEqual(changeGallery(relocated,{type:'move',id:maps.id,from:region.id,parentId:null}),branch);
 entries=changeGallery(entries,{type:'rename',id:'city',name:'Capital'});
 entries=changeGallery(entries,{type:'move',id:'map',parentId:'maps'});
 entries=changeGallery(entries,{type:'remove',id:'city'});

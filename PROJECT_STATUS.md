@@ -1,3 +1,5 @@
+> **2026-11-21 — Prevlačenje foldera u stablu Galerije.** Folder sa celim sadržajem može da se premesti u drugi folder ili na Gallery za povratak u koren.
+
 > **2026-11-21 — Grupno premeštanje slika u Galeriji.** Ctrl ili Cmd bira pojedinačne slike, a Shift označava raspon u trenutnom folderu. Prevlačenje označene slike premešta ceo izbor.
 
 > **2026-11-21 — Prevlačenje slika u Galeriji.** Slika se iz radne površine premešta na folder, podfolder ili koren Galerije u levom stablu.
@@ -605,6 +607,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Premeštanje grane Galerije mišem.** Otvoren podfolder prati novu putanju. Sopstvena grana je isključena iz odredišta. Provera u Chromeu obuhvatila je premeštanje foldera sa dva nivoa podfoldera, povratak u koren, otkazivanje i ponovno učitavanje posle oba poteza. Slike i njihove veze bile su očuvane, a grupno prevlačenje slika prošlo je regresionu proveru.
 
 - **2026-11-21 — Višestruki izbor u Galeriji.** Označene slike imaju okvir, kvačicu i zajednički brojač. Jedna izmena proverava i premešta izabrane slike, čuvajući njihove veze. Provera u Chromeu obuhvatila je izbor raspona unazad, dodatni izbor, otkazivanje, prevlačenje u podfolder i koren, kao i čuvanje i ponovno otvaranje bez duplikata.
 

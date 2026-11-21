@@ -8,7 +8,7 @@ import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
-import {GalleryCanvas, GalleryTree, type GalleryImageDrag} from './Gallery';
+import {GalleryCanvas, GalleryTree, type GalleryDrag} from './Gallery';
 import {galleryPath} from '@/lib/kachamak/gallery';
 import {ProjectHomepage} from './ProjectHomepage';
 import {HomepageTree} from './HomepageTree';
@@ -287,7 +287,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
 
   const wideCanvas = view==='homepage' || view==='gallery';
   const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();
-  const [galleryImageDrag,setGalleryImageDrag]=useState<GalleryImageDrag|null>(null);
+  const [galleryDrag,setGalleryDrag]=useState<GalleryDrag|null>(null);
   const [closedFolders,setClosedFolders]=useState<Set<string>>(new Set());
   const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);
@@ -365,7 +365,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
           >
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
-              {view==='gallery' && novel ? <GalleryTree key={novel.id} novel={novel} imageDrag={galleryImageDrag} setImageDrag={setGalleryImageDrag} folderId={folderId} openFolder={openFolder} collapsed={closedFolders} setCollapsed={setClosedFolders}/> : view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
+              {view==='gallery' && novel ? <GalleryTree key={novel.id} novel={novel} drag={galleryDrag} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder} collapsed={closedFolders} setCollapsed={setClosedFolders}/> : view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
                 <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />}
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
@@ -416,7 +416,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
       <div className={wideCanvas ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
       <main ref={mainRef} tabIndex={-1} className={wideCanvas ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
-        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setImageDrag={setGalleryImageDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
+        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}

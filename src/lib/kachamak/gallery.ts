@@ -5,7 +5,7 @@ export type GalleryEntry = Item & ({kind:'folder'} | {kind:'image'; image:string
 export type GalleryChange =
   | {type:'add'; entries:GalleryEntry[]}
   | {type:'rename'; id:string; name:string}
-  | {type:'move'; id:string; parentId:string|null}
+  | {type:'move'; id:string; parentId:string|null; from?:string|null}
   | {type:'moveImages'; ids:string[]; from:string|null; parentId:string|null}
   | {type:'remove'; id:string};
 
@@ -78,6 +78,7 @@ export function changeGallery(entries:GalleryEntry[], change:GalleryChange):Gall
     if (!name || name.length > 255) throw new Error('Enter a name of up to 255 characters.');
     return entries.map(entry => entry === item ? {...entry,name} : entry);
   }
+  if (change.from !== undefined && item.parentId !== change.from) throw new Error('This item has moved. Drag it again.');
   if (change.parentId !== null && (!entries.some(entry => entry.id === change.parentId && entry.kind === 'folder') ||
       galleryPath(entries,change.parentId).some(ancestor => ancestor.id === item.id))) {
     throw new Error('Choose a folder outside this branch.');
