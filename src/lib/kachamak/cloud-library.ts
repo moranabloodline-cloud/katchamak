@@ -16,7 +16,7 @@ import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
 import { requestJson } from './request-json';
 import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
-import {runWorkspaceAction} from './workspace-history';
+import {runWorkspaceAction,setHistoryOwner,historyStoreChanged,flushBookHistories,discardBookHistory} from './workspace-history';
 import { cloneWorkspaceTab } from './clone-workspace-tab';
 import { cloneLayout, withExistingTexts } from './clone-text-recovery';
 
@@ -82,6 +82,7 @@ export function checkpointLocalDraft(clone?: { key: string; base: Novel }) {
   return localWrites;
 }
 function lockAccount() {
+  setHistoryOwner(null);
   void checkpointLocalDraft();
   accountEpoch++;
   if (timer) { clearTimeout(timer); timer = null; }
@@ -237,6 +238,8 @@ export async function initializeWebLibrary() {
     useKachamak.setState({ defaultAuthor: account.displayName || '' });
     // Reauthenticating the same window must not replace its pending prose with the last cloud copy.
     if (resumePending) {
+      setHistoryOwner(account.id);
+      historyStoreChanged(useKachamak.getState());
       // Reauthentication retains this window's text, but never silently uploads it.
       useWebLibrary.setState({ready:true,busy:false,conflict:true,error:'Unsaved changes were kept after sign-in. Choose Retry save to save them, or export backups.'});
       return;
@@ -258,6 +261,7 @@ export async function initializeWebLibrary() {
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
       useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
     }
+    setHistoryOwner(account.id);
     apply(confirmed);
     writeWorkspaceRoute();
     if (useLocalRecovery.getState().drafts.some(d => d.retryClone)) await loadLocalDrafts(confirmed);
@@ -276,7 +280,8 @@ export async function flushWebLibrary() {
     if(useWebLibrary.getState().conflict)await reconcileRevision();
     while (true) {
       const value = snapshot();
-      if(value===saved)break;
+      await flushBookHistories();
+      if(value===saved){if(snapshot()===value)break;continue;}
       await checkpointLocalDraft();
       const checkpoint = activeDraft;
       if (!useWebLibrary.getState().ready) throw new Error('Sign in again before saving.');
@@ -549,6 +554,8 @@ export async function removeWebProject(id:string) {
     useCollections.setState(s=>({collections:s.collections.map(c=>memberships.includes(c.id)?{...c,projectIds:[...new Set([...c.projectIds,id])]}:c)}));
     throw error;
   }
+  discardBookHistory(id);
+  await flushBookHistories();
 }
 
 export async function publishDemoProject(projectId:string) {

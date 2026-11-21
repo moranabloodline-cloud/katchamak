@@ -83,7 +83,7 @@ export function RichEditor({
     }
     history.current.record(ref.current,input?.inputType,input?.data);
     lastHtml.current = ref.current.innerHTML;
-    withEditSource({group:history.current.group},()=>onChange(lastHtml.current));
+    withEditSource({group:history.current.group,noteId},()=>onChange(lastHtml.current));
   };
 
   useEffect(()=>{
@@ -91,14 +91,14 @@ export function RichEditor({
     const step=(direction:'undo'|'redo')=>{
       const group=history.current.groupFor(direction);
       if(!group||!history.current.step(editor,direction))return false;
-      lastHtml.current=editor.innerHTML;withEditSource({group,direction},()=>onChange(lastHtml.current));
+      lastHtml.current=editor.innerHTML;withEditSource({group,direction,noteId},()=>onChange(lastHtml.current));
       editor.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('selectionchange'));return true;
     };
     const command=(event:Event)=>{const detail=(event as CustomEvent<{direction:'undo'|'redo';applied:boolean}>).detail;if(detail?.direction==='undo'||detail?.direction==='redo')detail.applied=step(detail.direction);};
     const before=(event:Event)=>{const input=event as InputEvent;if(input.inputType==='historyUndo'||input.inputType==='historyRedo'){if(input.cancelable){input.preventDefault();step(input.inputType==='historyUndo'?'undo':'redo');}}else history.current.before(editor);};
     editor.addEventListener('kachamak-history',command);editor.addEventListener('beforeinput',before);
     return()=>{editor.removeEventListener('kachamak-history',command);editor.removeEventListener('beforeinput',before);};
-  },[onChange]);
+  },[onChange,noteId]);
 
   return (
     <div className="relative flex-1 min-h-0">

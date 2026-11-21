@@ -26,7 +26,8 @@ export function useWorkspaceHistory(){
   function permitted(direction:HistoryDirection,editor:HTMLElement|null){
     if(editor?.matches(nativeText)&&nativeHistory(direction,editor))return true;
     if(editor&&editorCanStep(editor,direction))return true;
-    return historyAvailable(direction)&&!(editor&&otherMountedEditor(historyGroup(direction),editor));
+    const noteId=editor?.dataset.noteId;
+    return historyAvailable(direction,noteId)&&!(editor&&otherMountedEditor(historyGroup(direction,noteId),editor));
   }
   function run(direction:HistoryDirection){
     const editor=field();
@@ -39,7 +40,7 @@ export function useWorkspaceHistory(){
       editor.dispatchEvent(new CustomEvent('kachamak-history',{detail}));
       if(detail.applied)return;
     }
-    stepWorkspaceHistory(direction);
+    stepWorkspaceHistory(direction,editor?.dataset.noteId);
   }
   const available=useSyncExternalStore(observe,()=>{
     const editor=field();

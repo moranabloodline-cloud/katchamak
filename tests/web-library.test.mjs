@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { Window } from 'happy-dom';
+import {indexedDB as testDatabases,IDBKeyRange} from 'fake-indexeddb';
 const dom = new Window({ url: 'https://kachamak.test' });
 globalThis.window = dom; globalThis.document = dom.document; globalThis.DOMParser = dom.DOMParser;
 globalThis.localStorage = dom.localStorage;
@@ -10,7 +11,9 @@ let identity = 'user-a';
 globalThis.fetch = async () => identity ? Response.json({ id: identity, email: identity + '@test.local' }) : Response.json({}, { status: 401 });
 const records = new Map();
 // IndexedDB stores opaque handles; this adapter keeps the test's native disk handles usable.
-globalThis.indexedDB = { open() {
+globalThis.IDBKeyRange=IDBKeyRange;
+globalThis.indexedDB = { open(name,version) {
+  if(name!=='katchamak-folder-locations')return testDatabases.open(name,version);
   const req = {};
   req.result = { createObjectStore() {}, close() {}, transaction() {
     const tx = { objectStore: () => ({

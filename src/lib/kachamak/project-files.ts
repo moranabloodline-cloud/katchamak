@@ -1,6 +1,7 @@
 "use client";
 
 import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
+import {setHistoryOwner,flushBookHistories} from "./workspace-history";
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { useKachamak, isUsableBackup, normalizeNovelSections, saveProjectsLocally } from "./store";
@@ -46,6 +47,7 @@ function install(loaded: Loaded, open = false) {
 export async function initializeProjectFiles() {
   if (!isDesktop()) { useProjectFiles.setState({ ready: true }); return; }
   if (initializing) return initializing;
+  setHistoryOwner("desktop-local");
   initializing = (async () => {
     useProjectFiles.setState({ busy: true, error: null });
     const cached = useKachamak.getState().novels;
@@ -83,6 +85,7 @@ export async function flushProjectFiles(): Promise<void> {
   if (running) { await running; return flushProjectFiles(); }
   if (useProjectFiles.getState().legacyIds.length) throw new Error("Choose a folder for your existing projects first.");
   running = (async () => {
+    await flushBookHistories();
     useProjectFiles.setState({ busy: true });
     for (const novel of useKachamak.getState().novels) {
       const file = documents.get(novel.id);

@@ -1227,8 +1227,8 @@ export const useKachamak = create<KachamakState>()(
 );
 
 useKachamak.subscribe(historyStoreChanged);
-export const stepWorkspaceHistory=(direction:HistoryDirection)=>
-  stepBookHistory(direction,useKachamak.getState(),update=>useKachamak.setState(update));
+export const stepWorkspaceHistory=(direction:HistoryDirection,noteId?:string)=>
+  stepBookHistory(direction,useKachamak.getState(),update=>useKachamak.setState(update),noteId);
 
 /** Check that all current project data actually matches browser storage. */
 export function projectsSavedLocally(): boolean {

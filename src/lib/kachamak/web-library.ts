@@ -12,6 +12,7 @@ import { useCollections, type Collection } from './collections-store';
 import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
 import { DEFAULT_NOTE_ICON, SECTION_KEYS, type Novel, type NoteNode } from './types';
+import {setHistoryOwner,flushBookHistories} from './workspace-history';
 import { registerFolderStorage } from './session-storage';
 import { directory, readText, writeText, copyFolder, archiveFolder, folderName, type DiskFolder } from './folder-files';
 
@@ -101,7 +102,7 @@ async function vaultRoots(): Promise<Root[]> {
   }
   return result;
 }
-async function loadAll(unchanged?: string) {
+async function loadAll(unchanged?: string,preview=useWebLibrary.getState().preview) {
   const priorRoots = roots, priorExpected = expected;
   try {
   roots = await vaultRoots();
@@ -128,6 +129,7 @@ async function loadAll(unchanged?: string) {
   // A user may type while the drive is being read. Never replace those edits.
   if (unchanged !== undefined && snapshot() !== unchanged) { roots = priorRoots; expected = priorExpected; return; }
   const current = useKachamak.getState(), prefs = useLibraryPreferences.getState();
+  setHistoryOwner(preview?null:account().id);
   applying = true;
   try {
     useKachamak.setState(unchanged === undefined ? { ...initialState, novels, defaultAuthor: account().author ?? '', activeNovelId: null } : { novels, activeNovelId: novels.some(n => n.id === current.activeNovelId) ? current.activeNovelId : null });
@@ -149,7 +151,7 @@ export async function initializeWebLibrary(reconnect = false) {
   initializing = (async () => {
     useWebLibrary.setState({ ready: false, busy: true, error: null });
     const {response,data:identity} = await requestJson('/api/account');
-    if (!response.ok) { signedInId = null; throw new Error(identity.error || 'Sign in to open your library.'); }
+    if (!response.ok) { signedInId = null; setHistoryOwner(null); throw new Error(identity.error || 'Sign in to open your library.'); }
     if (typeof identity.id !== 'string' || !identity.id) throw new Error('Sign in to open your library.');
     signedInId = identity.id;
     if (!localStorage.getItem(accountKey()) && identity.displayName) localStorage.setItem(accountKey(), JSON.stringify({ author: identity.displayName }));
@@ -220,7 +222,7 @@ export async function loadPreviewLibrary(files: File[]) {
   if (timer) { clearTimeout(timer); timer = null; }
   const previous = { vault, roots, locations, expected, savedSnapshot };
   vault = await previewFolder(files);
-  try { await loadAll(); useWebLibrary.setState({ preview: true, previewDirty: false, rootName: vault.name }); }
+  try { await loadAll(undefined,true); useWebLibrary.setState({ preview: true, previewDirty: false, rootName: vault.name }); }
   catch (error) { vault = previous.vault; roots = previous.roots; locations = previous.locations; expected = previous.expected; savedSnapshot = previous.savedSnapshot; throw error; }
 }
 export function exportPreviewChanges() {
@@ -241,12 +243,13 @@ export async function chooseWebLibraryRoot(choose = true, signal?: AbortSignal) 
   if (signal?.aborted) throw new DOMException('Folder selection cancelled', 'AbortError');
   vault = handle;
   try {
-    await loadAll();
+    await loadAll(undefined,false);
     if (signal?.aborted) throw new DOMException('Folder selection cancelled', 'AbortError');
     await rememberedFolder(selectingAccount, handle);
     useWebLibrary.setState({ rootName: handle.name, preview: false, previewDirty: false });
   } catch (error) {
     vault = previous.vault; roots = previous.roots; locations = previous.locations; expected = previous.expected; savedSnapshot = previous.savedSnapshot;
+    setHistoryOwner(useWebLibrary.getState().preview?null:selectingAccount);
     applying = true; useKachamak.setState(previous.state); useCollections.setState(previous.collections); applying = false;
     throw error;
   }
@@ -269,6 +272,7 @@ export async function saveWebLibrary(): Promise<void> {
 }
 
 export async function flushWebLibrary(): Promise<void> {
+  await flushBookHistories();
   if (refreshing) await refreshing;
   if (!useWebLibrary.getState().ready) throw new Error('Reconnect your library folders first.');
   if (timer) { clearTimeout(timer); timer = null; }
