@@ -21,7 +21,7 @@ export type PageFormat={indent:0|1|1.5|2;chicago:boolean;paragraphGap:0|0.5|1|1.
 export const DEFAULT_PAGE_FORMAT:PageFormat={indent:0,chicago:true,paragraphGap:null,width:48,align:'left',divider:'line',layout:'centered',colorizeAnnotations:true};
 export type EditorAppearance={font:string;size:number;spacing:string;page:PageFormat;spellCheck?:boolean};
 export const DEFAULT_EDITOR_APPEARANCE:EditorAppearance={font:'Segoe UI',size:16,spacing:'1.5',page:DEFAULT_PAGE_FORMAT,spellCheck:true};
-export type FormatTab = Exclude<TabKey,'trash'> | 'homepage';
+export type FormatTab = Exclude<TabKey,'trash'|'gallery'> | 'homepage';
 export type TabPageSettings = {font?:string;size?:number;spacing?:string;page?:Partial<PageFormat>};
 
 export function validTabPageSettings(value:unknown):value is TabPageSettings {

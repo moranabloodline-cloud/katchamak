@@ -8,6 +8,8 @@ import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
 import { EditorToolbar, WriteArea } from "./WriteArea";
+import {GalleryCanvas, GalleryTree} from './Gallery';
+import {galleryPath} from '@/lib/kachamak/gallery';
 import {ProjectHomepage} from './ProjectHomepage';
 import {HomepageTree} from './HomepageTree';
 import {HOME_ROOT, homepageEntry} from '@/lib/kachamak/homepage';
@@ -275,14 +277,17 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
   );
 }
 
-export function NotesSection({ section, rootId, revealSearch, trash = false }: { section: SectionKey; rootId?: string; revealSearch?: boolean; trash?: boolean }) {
+export function NotesSection({ section, rootId, revealSearch, trash = false, gallery = false }: { section: SectionKey; rootId?: string; revealSearch?: boolean; trash?: boolean; gallery?: boolean }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
-  const view = trash ? 'trash' : storedView==='family' && section!=='family' ? 'write' : storedView;
+  const view = trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
 
+  const wideCanvas = view==='homepage' || view==='gallery';
+  const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();
+  const [closedFolders,setClosedFolders]=useState<Set<string>>(new Set());
   const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);
   useEffect(()=>setCompactFamily(false),[activeNovelId,section,selectedNodeId]);
@@ -314,7 +319,18 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
      matičnu sekciju note (selectedSection), ne u tekući tab. */
   const hit =
     selectedNodeId && novel ? findNodeInNovel(novel, selectedNodeId) : null;
-  const selected = view==='homepage' || view==='trash' ? null : ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
+  const folderId=novel && galleryFolder?.book===novel.id && novel.gallery?.some(item=>item.id===galleryFolder.id && item.kind==='folder') ? galleryFolder.id : null;
+  const openFolder=(id:string|null)=>{
+    if(!novel)return;
+    setGalleryFolder({book:novel.id,id});
+    const ancestors=galleryPath(novel.gallery??[],id);
+    setClosedFolders(previous=>{
+      const next=new Set(previous);
+      for(const item of ancestors)next.delete(item.id);
+      return next;
+    });
+  };
+  const selected = wideCanvas || view==='trash' ? null : ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
   const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
@@ -328,7 +344,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
   const homeId = view==='homepage' && novel && homepageEntry(novel,homeSelection) ? homeSelection : HOME_ROOT;
   const [collapsedPages,setCollapsedPages]=useState<Set<string>>(new Set());
   const [mobilePages,setMobilePages]=useState(false);
-  useEffect(()=>{setCollapsedPages(new Set());setMobilePages(false);},[activeNovelId]);
+  useEffect(()=>{setClosedFolders(new Set());setCollapsedPages(new Set());setMobilePages(false);},[activeNovelId]);
   useEffect(()=>{if(view!=='homepage')setMobilePages(false);},[view]);
 
   const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
@@ -348,7 +364,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
           >
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
-              {view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
+              {view==='gallery' && novel ? <GalleryTree entries={novel.gallery??[]} folderId={folderId} openFolder={openFolder} collapsed={closedFolders} setCollapsed={setClosedFolders}/> : view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
                 <NoteTree section={section} rootId={rootId} reveal={reveal} onDismissReveal={() => setTreeReveal(undefined)} />}
             </div>
             {/* dno levog panela: ⓘ levo (ostaje left align), Expand i
@@ -358,14 +374,14 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
               <span className="ml-auto" />
               <button
                 type="button"
-                onClick={() => view==='homepage'?setCollapsedPages(new Set()):setAllNodesCollapsed(section, false)}
+                onClick={() => view==='gallery'?setClosedFolders(new Set()):view==='homepage'?setCollapsedPages(new Set()):setAllNodesCollapsed(section, false)}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 Expand
               </button>
               <button
                 type="button"
-                onClick={() => { if(view==='homepage'){setCollapsedPages(new Set([HOME_ROOT,...(novel?.homePages??[]).map(p=>p.id)]));return;} setTreeReveal(undefined); setAllNodesCollapsed(section, true); }}
+                onClick={() => { if(view==='gallery'){setClosedFolders(new Set(novel?.gallery?.filter(item=>item.kind==='folder').map(item=>item.id)));return;} if(view==='homepage'){setCollapsedPages(new Set([HOME_ROOT,...(novel?.homePages??[]).map(p=>p.id)]));return;} setTreeReveal(undefined); setAllNodesCollapsed(section, true); }}
                 className="shrink-0 rounded border border-white/15 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 Collapse
@@ -396,10 +412,10 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
       )}
 
       {/* Homepage spans the editor and inspector columns below the shared toolbar. */}
-      <div className={view==='homepage' ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
-      <main ref={mainRef} tabIndex={-1} className={view==='homepage' ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
+      <div className={wideCanvas ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
+      <main ref={mainRef} tabIndex={-1} className={wideCanvas ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
-        {trash ? <TrashView key={activeNovelId}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
+        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
@@ -478,7 +494,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
             {novel && <div className="min-h-0 flex-1">
               <RightPanel key={familySettings?`${novel.id}:family:${editFamily}`:novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings}
-                headerOnly={view==='homepage'} emptyInfo={trash ? <TrashInfo/> : undefined}
+                headerOnly={wideCanvas} emptyInfo={trash ? <TrashInfo/> : undefined}
                 onHide={()=>{
                   setCompactFamily(false);
                   if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();
@@ -491,7 +507,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false }: {
                   : undefined}
               />
             </div>}
-            {view!=='homepage' && !trash && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
+            {!wideCanvas && !trash && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
           </aside>
         </>
       ) : (

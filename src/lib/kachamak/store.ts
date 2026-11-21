@@ -25,6 +25,7 @@ import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspace
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
+import { changeGallery, type GalleryChange } from './gallery';
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
@@ -122,6 +123,7 @@ interface KachamakState {
   moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
   hideTab: (projectId:string,tab:TabKey) => void;
   setInspectorTabHidden: (projectId:string,tab:InspectorTabKey,hidden:boolean) => void;
+  editGallery: (projectId:string, change:GalleryChange) => void;
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
   changeFamilyRelationship: (projectId:string, treeId:string, relation:FamilyRelationship, remove?:boolean) => string | null;
@@ -567,8 +569,14 @@ export const useKachamak = create<KachamakState>()(
         return {novels:s.novels.map(n=>n===novel?updated:n),
           ...(s.activeTab===tab?{...visibleTabLocation(updated,tab,s.view),renamingNodeId:null}:{})};
       }),
+      editGallery: (projectId,change) => set(state => {
+        const book=state.novels.find(n=>n.id===projectId);
+        if (!book || state.activeNovelId!==projectId) throw new Error('Reopen the project to change its gallery.');
+        const gallery=changeGallery(book.gallery??[],change);
+        return {novels:state.novels.map(n=>n===book?touch({...book,gallery}):n)};
+      }),
       closeTab: (tab) => {
-        if(['binder','codex','timeline','trash'].includes(tab)) return;
+        if(['binder','codex','timeline','gallery','trash'].includes(tab)) return;
         set(s=>({novels:s.novels.map(n=>n.id===s.activeNovelId?touch({...n,...(tab.startsWith('note:')?{openNoteTabs:(n.openNoteTabs||[]).filter(id=>id!==tab.slice(5))}:{hiddenSections:[...new Set([...(n.hiddenSections||[]),tab as SectionKey])]})}):n),activeTab:s.activeTab===tab?'binder':s.activeTab}));
       },
       showSection: (section) => set(s=>({...(section==='family'?{view:'family' as const,selectedNodeId:s.novels.find(n=>n.id===s.activeNovelId)?.sections.family?.find(n=>!n.hidden)?.id??null}:{}),novels:s.novels.map(n=>n.id===s.activeNovelId?touch(revealWorkspaceTab(n,section)):n),activeTab:section})),
@@ -965,7 +973,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 48,
+      version: 49,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -978,6 +986,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<49){ /* An absent gallery is an empty project gallery. */ }
         if(version<48) s.activeHomePageId=HOME_ROOT;
         if(version<47){ /* Optional tab defaults leave existing notes and their formatting intact. */ }
         if(version<46){ /* Homepage artwork without a frame or cutout renders its original image. */ }

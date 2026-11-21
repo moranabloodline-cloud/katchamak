@@ -1,3 +1,5 @@
+> **2026-11-21 — Gallery.** Svaka knjiga ima galeriju slika sa sopstvenim stablom foldera i podfoldera. Slike i raspored foldera čuvaju se uz knjigu i ulaze u JSON rezervnu kopiju.
+
 > **2026-11-21 — Zumiranje u Split prikazu.** Ctrl + točkić menja veličinu teksta i lenjira samo u belešci ispod miša, i kada druga beleška ima fokus. Bočni paneli i obe gornje trake zadržavaju svoje dimenzije.
 
 > **2026-11-21 — Skrolovanje u Split prikazu.** Točkić pomera samo belešku ispod pokazivača. Druga beleška, bočni paneli i obe gornje trake zadržavaju položaj i kada druga beleška ima fokus.
@@ -595,6 +597,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Galerija slika.** U radnu traku dodat je Gallery. U levom panelu je stablo foldera, a u radnoj površini pregled sadržaja, putanja i komande New folder i Upload images. Slike i folderi mogu da se preimenuju i premeste. U Chromeu su na dve probne knjige provereni kreiranje podfoldera, dodavanje i pregled PNG slike, premeštanje, čuvanje, ponovno učitavanje i navigacija u uskom prozoru. Automatski test pokriva i validaciju uvoza, kružnih putanja i brisanja popunjenog foldera.
 
 - **2026-11-21 — Ctrl + točkić u Splitu, verzija 404.** Lokalni test objavljenog paketa u Chromeu sa dve duge probne beleške. Leva je uvećana na 130%, zatim desna na 120% i smanjena na 80%. Merene su širine reči, visine lenjira i razmaci oznaka. Pri svakom koraku proveren je i prikaz suprotne beleške, levog stabla, desnog panela Details, obe gornje trake, razdelnika i prozora. Prošlo na širinama od 1550 i 1200 px, sa jednakim i različitim širinama beležaka. Obe beleške su vraćene na 100% i proveren je običan skrol posle otpuštanja Ctrl.
 

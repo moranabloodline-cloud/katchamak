@@ -16,7 +16,7 @@ export function validCloudLibrary(value) {
     try { if (!isReadableProject(n)) return false; } catch { return false; }
     const eras=n?.timeline?.calendar?.eras;
     if(eras!==undefined&&(!Array.isArray(eras)||eras.some(era=>era?.color!==undefined&&(typeof era.color!=='string'||!/^#[a-f0-9]{6}$/i.test(era.color)))))return false;
-    if(n?.tabOrder!==undefined&&(!Array.isArray(n.tabOrder)||n.tabOrder.length>10000||new Set(n.tabOrder).size!==n.tabOrder.length||!n.tabOrder.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)))))return false;
+    if(n?.tabOrder!==undefined&&(!Array.isArray(n.tabOrder)||n.tabOrder.length>10000||new Set(n.tabOrder).size!==n.tabOrder.length||!n.tabOrder.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family|gallery)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)))))return false;
     if (!n || !validId(n.id) || ids.has(n.id) || typeof n.title !== 'string' || typeof n.author !== 'string' || !n.sections) return false;
     if ((n.series !== undefined && (typeof n.series !== 'string' || n.series.length > 200)) || (n.seriesIndex !== undefined && (typeof n.seriesIndex !== 'string' || n.seriesIndex.length > 100)) || (n.archived !== undefined && typeof n.archived !== 'boolean')) return false;
     if((n.targetAudience!==undefined&&(typeof n.targetAudience!=='string'||n.targetAudience.length>2000))||(n.explicitContent!==undefined&&typeof n.explicitContent!=='boolean')||!metadataLabels(n.tones,8)||!metadataLabels(n.writingStyles,12)||!metadataLabels(n.plotTechniques,12)||!metadataLabels(n.sellingPoints,12))return false;

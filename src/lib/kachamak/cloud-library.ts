@@ -9,7 +9,7 @@ import { findNode, findNodeInNovel } from './utils';
 import { useLibraryPreferences } from './library-preferences';
 import { newNovel } from './seed';
 import type { Novel, ViewMode, TabKey } from './types';
-import { registerFolderStorage } from './session-storage';
+import { isWebSession, registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
@@ -41,6 +41,12 @@ const snapshot = () => {
   snapshotDirty=false;
   return cachedSnapshot;
 };
+// Check a whole upload before changing the book, including the other books in its cloud save.
+export function checkGalleryUploadSize(entries:import('./gallery').GalleryEntry[]) {
+  if (!isWebSession()) return;
+  const bytes = new Blob([snapshot(),JSON.stringify(entries)]).size;
+  if (bytes + 128 > 20 * 1024 * 1024) throw new Error('These images would exceed the 20 MB library save limit. Choose fewer or smaller images.');
+}
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
 // Recovery protects project/collection data, not transient navigation or account preferences.
 const projectPayload = (value: string) => { const data = JSON.parse(value); return JSON.stringify({ novels: data.novels, collections: data.collections }); };
@@ -173,7 +179,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
     const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
-    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
+    navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','gallery','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
     const homeId = 'activeHomePageId' in saved ? saved.activeHomePageId : undefined;
     navigation.activeHomePageId = novel && typeof homeId === 'string' && homepageEntry(novel,homeId) ? homeId : HOME_ROOT;
     navigation.selectedNodeId = note(saved.selectedNodeId);

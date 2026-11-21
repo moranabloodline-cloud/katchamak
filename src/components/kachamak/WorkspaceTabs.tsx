@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { House, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
+import { Images, House, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
 import { useKachamak } from '@/lib/kachamak/store';
 import { type Novel, type TabKey } from '@/lib/kachamak/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -15,6 +15,7 @@ import {cloneableWorkspaceTabs} from '@/lib/kachamak/clone-workspace-tab';
 import {CloneWorkspaceTabDialog} from './CloneWorkspaceTabDialog';
 
 const tabStyles = {
+  gallery: { icon: Images, color: '#79c6b5' },
   binder: { icon: BookOpen, color: '#ecb66b' },
   codex: { icon: LibraryBig, color: '#56c8b5' },
   timeline: { icon: CalendarRange, color: '#6db8eb' },
@@ -34,7 +35,7 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
   const {attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:tab.key});
   const {icon: Icon, color} = tabStyle(tab.key);
   const button=<button ref={setNodeRef} {...attributes} {...listeners} type="button" onClick={onOpen} aria-current={active?'page':undefined} title={tab.label} style={{transform:CSS.Transform.toString(transform),transition,position:'relative',zIndex:isDragging?10:undefined}} className={`workspace-ribbon-tile cursor-grab touch-none select-none active:cursor-grabbing ${isDragging?'bg-background shadow-lg ring-1 ring-amber-400/40':''}`}><Icon aria-hidden="true" style={{color}}/><span className="max-w-full truncate" style={{color:tab.color || undefined}}>{tab.label}</span></button>;
-  const canDelete = !['binder','codex','timeline'].includes(tab.key);
+  const canDelete = !['binder','codex','timeline','gallery'].includes(tab.key);
   return <ContextMenu modal={false}><ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
     <ContextMenuContent aria-label={`${tab.label} tab actions`} className="min-w-36 border-white/15 bg-[#1b1b1b]">
       <ContextMenuItem onSelect={onHide}>Hide tab</ContextMenuItem>
@@ -47,11 +48,13 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
 export function useOpenWorkspaceTab(novel: Novel | undefined) {
   const setTab=useKachamak(s=>s.setTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
-  const specialView=view==='timeline'||view==='family'||view==='homepage';
+  const inGallery=useKachamak(s=>s.activeTab==='gallery');
+  const specialView=inGallery||view==='timeline'||view==='family'||view==='homepage';
   const lastNoteView=useRef(specialView?'write':view);
   useEffect(()=>{if(!specialView)lastNoteView.current=view;},[view,specialView]);
   return (key:TabKey)=>{
     if(!novel)return;
+    if(key==='gallery'){setTab(key);setView('write');return;}
     if(key==='family'){
       const state=useKachamak.getState(), roots=novel.sections.family;
       const tree=state.selectedNodeId && findNode(roots,state.selectedNodeId);
@@ -68,6 +71,16 @@ export function useOpenWorkspaceTab(novel: Novel | undefined) {
 
 export function WorkspaceTabs({novel,openTab}:{novel:Novel;openTab:(key:TabKey)=>void}) {
   const active=useKachamak(s=>s.activeTab), view=useKachamak(s=>s.view), closeTab=useKachamak(s=>s.closeTab);
+  const ribbon=useRef<HTMLElement>(null);
+  useEffect(()=>{
+    // A restored or newly revealed tab may start beyond the visible ribbon.
+    const nav=ribbon.current;
+    const current=nav?.querySelector<HTMLElement>('button[aria-current="page"]');
+    if(!nav || !current)return;
+    const tab=current.getBoundingClientRect(), viewport=nav.getBoundingClientRect();
+    if(tab.right>viewport.right)nav.scrollLeft+=tab.right-viewport.right;
+    else if(tab.left<viewport.left)nav.scrollLeft-=viewport.left-tab.left;
+  },[active,view,novel.id]);
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const [pendingDelete,setPendingDelete]=useState<{key:TabKey;label:string;projectId:string}|null>(null);
   const [pendingClone,setPendingClone]=useState<typeof pendingDelete>(null);
@@ -82,7 +95,7 @@ export function WorkspaceTabs({novel,openTab}:{novel:Novel;openTab:(key:TabKey)=
   const cloneable = new Set(cloneableWorkspaceTabs(novel).map(tab => tab.key));
   const tabLabel=(id:unknown)=>tabs.find(tab=>tab.key===id)?.label??'tab';
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}),useSensor(KeyboardSensor,{coordinateGetter:sortableKeyboardCoordinates,keyboardCodes:{start:['Space'],cancel:['Escape'],end:['Space']}}));
-  return <><nav aria-label="Workspace sections" className="workspace-ribbon">
+  return <><nav ref={ribbon} aria-label="Workspace sections" className="workspace-ribbon">
     <div className="workspace-ribbon-grid">
       <button type="button" className="workspace-ribbon-tile" title="Homepage" aria-current={view==='homepage'?'page':undefined} onClick={()=>useKachamak.getState().setView('homepage')}>
         <House aria-hidden="true" className="text-amber-300"/><span>Homepage</span>

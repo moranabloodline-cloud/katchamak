@@ -23,7 +23,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "family",
 ];
 
-export type TabKey = SectionKey | "trash" | `note:${string}`;
+export type TabKey = SectionKey | "gallery" | "trash" | `note:${string}`;
 
 export const INSPECTOR_TABS = [
   { key: 'info', label: 'Info' },
@@ -113,6 +113,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
+  gallery?: import('./gallery').GalleryEntry[];
   homepage?: import('./homepage').Homepage;
   homePages?: import('./homepage').HomePageEntry[];
   familyRelationships?: FamilyRelationship[];

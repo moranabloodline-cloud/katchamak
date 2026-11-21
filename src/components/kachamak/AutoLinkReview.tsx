@@ -43,14 +43,14 @@ export function AutoLinkReview() {
       manualContext.current={projectId,noteId};preparing.current=attempt;
       useSaveReviewState.setState({phase:'preparing'});
       toast.loading('Saving…',{id:SAVE_TOAST});
-      const canReview=before.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]');
+      const canReview=before.activeTab!=='trash'&&before.activeTab!=='gallery'&&!sessionRef.current&&!document.querySelector('[role=dialog]');
       let failed=false,found=false,reviewed=false,unavailable=0;
       // Paint acknowledgement before serialization/detection. Local review then
       // runs independently of autosave, refresh and the durable network write.
       const painted=afterPaint();
       const persisted=painted.then(()=>{
         const state=useKachamak.getState();
-        if(!disposed&&attempt===manualAttempt.current&&canReview&&state.activeNovelId===projectId&&state.selectedNodeId===noteId&&state.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]')){
+        if(!disposed&&attempt===manualAttempt.current&&canReview&&state.activeNovelId===projectId&&state.selectedNodeId===noteId&&state.activeTab!=='trash'&&state.activeTab!=='gallery'&&!sessionRef.current&&!document.querySelector('[role=dialog]')){
           const novel=state.novels.find(n=>n.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
           if(novel&&hit){
             const prepared=prepareLinkReview(novel,hit.node);unavailable=prepared.unavailable;
@@ -62,7 +62,7 @@ export function AutoLinkReview() {
       try {
         await painted;
         const state=useKachamak.getState();
-        if(!disposed&&attempt===manualAttempt.current&&!failed&&canReview&&state.activeNovelId===projectId&&state.selectedNodeId===noteId&&state.activeTab!=='trash'&&!sessionRef.current&&!document.querySelector('[role=dialog]')){
+        if(!disposed&&attempt===manualAttempt.current&&!failed&&canReview&&state.activeNovelId===projectId&&state.selectedNodeId===noteId&&state.activeTab!=='trash'&&state.activeTab!=='gallery'&&!sessionRef.current&&!document.querySelector('[role=dialog]')){
           const novel=state.novels.find(novel=>novel.id===projectId),hit=novel&&noteId?findNodeInNovel(novel,noteId):null;
           const matches=novel&&hit?pendingLinkReview(novel,hit.node):[];
           reviewed=true;found=matches.length>0;

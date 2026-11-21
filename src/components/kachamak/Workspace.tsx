@@ -76,6 +76,7 @@ export function Workspace() {
 
   const novel = novels.find((n) => n.id === activeNovelId);
   const pageView = useKachamak(s=>s.view);
+  const galleryOpen = activeTab==='gallery' && pageView!=='homepage';
   const trashOpen = activeTab==='trash' && pageView!=='homepage';
 
   const openTab = useOpenWorkspaceTab(novel);
@@ -130,7 +131,7 @@ export function Workspace() {
             onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
             <EyeOff aria-hidden="true"/>
           </button>
-          <PageFormatMenu key={novel.id+':'+formatTab} projectId={novel.id} tab={formatTab==='trash'?null:formatTab} label={formatLabel}/>
+          <PageFormatMenu key={novel.id+':'+formatTab} projectId={novel.id} tab={formatTab==='trash'||formatTab==='gallery'?null:formatTab} label={formatLabel}/>
           <button type="button" aria-label="Trash" title="Trash" aria-current={trashOpen?'page':undefined}
             onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
             <Trash2 aria-hidden="true"/>
@@ -146,8 +147,8 @@ export function Workspace() {
         </div>
       </header>
 
-      <NotesSection section={folder?.section ?? (activeTab==="trash" || activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)}
-        rootId={folder?.node.id} revealSearch={searchShortcut} trash={trashOpen}/>
+      <NotesSection section={folder?.section ?? (activeTab==="trash" || activeTab==="gallery" || activeTab.startsWith("note:") ? "binder" : activeTab as SectionKey)}
+        rootId={folder?.node.id} revealSearch={searchShortcut} trash={trashOpen} gallery={galleryOpen}/>
 
       <AutoLinkReview />
       <NoteLinkDialog />

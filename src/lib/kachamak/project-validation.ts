@@ -4,6 +4,7 @@ import { validNovelMetadata, validCoverImage } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validNoteFontSize, validNotePageSettings, validTabPageSettings } from './page-format';
+import { validGallery } from './gallery';
 import { validHomepage, validHomePages } from './homepage';
 import { validDocumentTarget } from './document-target';
 import {validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -51,7 +52,7 @@ export function isReadableProject(value: unknown): boolean {
   if(n.tabFormats!==undefined && (!n.tabFormats || typeof n.tabFormats!=='object' || Array.isArray(n.tabFormats) ||
     !Object.entries(n.tabFormats).every(([tab,settings])=>
       (tab==='homepage' || SECTION_KEYS.includes(tab as SectionKey) || (tab.startsWith('note:') && tab.length>5)) && validTabPageSettings(settings))))return false;
-  if(!validHomepage(n.homepage) || !validHomePages(n.homePages))return false;
+  if(!validGallery(n.gallery) || !validHomepage(n.homepage) || !validHomePages(n.homePages))return false;
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && (!Array.isArray(n.hiddenInspectorTabs) ||
       n.hiddenInspectorTabs.length > INSPECTOR_TABS.length || new Set(n.hiddenInspectorTabs).size !== n.hiddenInspectorTabs.length ||
