@@ -124,6 +124,12 @@ for(const label of ['Timeline','Relationships','Homepage','Trash','Binder']){
   assert.equal(document.querySelectorAll('[data-editor-toolbar]').length,1);
   assert.equal(document.querySelector('[data-editor-toolbar]'),toolbar,label+' keeps the same toolbar');
   assert.ok(document.querySelector('[data-project-search]') && document.querySelector('[aria-label="Note inspector"]'));
+  if(label==='Homepage'){
+    const inspector=document.querySelector('[aria-label="Note inspector"]');
+    assert.equal(inspector.querySelectorAll('[role=tab]:disabled').length,4);
+    assert.equal(inspector.querySelector('[aria-selected="true"]'),null);
+    assert.equal(document.querySelector('[aria-label="Show hidden inspector tabs"]'),null);
+  }
   if(label!=='Binder')assert.ok(toolbar.querySelector('[aria-label="Format selected text"]').disabled);
 }
 await React.act(async()=>actions.select(id));

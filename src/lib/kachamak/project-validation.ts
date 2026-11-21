@@ -1,6 +1,7 @@
 import {validCurrency,validTransaction} from './finance';
 import type { Novel, SectionKey } from './types';
-import { INSPECTOR_TABS, SECTION_KEYS } from './types';
+import { validHiddenInspectorTabs, validInspectorByTab } from './inspector-tabs';
+import { SECTION_KEYS } from './types';
 import { validNovelMetadata } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
 import { validWorkspaceTabOrder } from './workspace-tabs';
@@ -57,9 +58,8 @@ export function isReadableProject(value: unknown): boolean {
       (tab==='homepage' || SECTION_KEYS.includes(tab as SectionKey) || (tab.startsWith('note:') && tab.length>5)) && validTabPageSettings(settings))))return false;
   if(!validGallery(n.gallery) || !validHomepage(n.homepage) || !validHomePages(n.homePages))return false;
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
-  if (n.hiddenInspectorTabs !== undefined && (!Array.isArray(n.hiddenInspectorTabs) ||
-      n.hiddenInspectorTabs.length > INSPECTOR_TABS.length || new Set(n.hiddenInspectorTabs).size !== n.hiddenInspectorTabs.length ||
-      !n.hiddenInspectorTabs.every(key => INSPECTOR_TABS.some(tab => tab.key === key)))) return false;
+  if (n.hiddenInspectorTabs !== undefined && !validHiddenInspectorTabs(n.hiddenInspectorTabs)) return false;
+  if (!validInspectorByTab(n.inspectorByTab)) return false;
   if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];

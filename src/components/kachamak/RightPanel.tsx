@@ -21,6 +21,7 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { finishTimelineAdd, usesTimelineDialog, useTimelineAddRequest } from "@/lib/kachamak/timeline-actions";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { inspectorSettings, selectedInspectorTab } from "@/lib/kachamak/inspector-tabs";
 import { INSPECTOR_TABS, type InspectorTabKey, type Novel, type NoteNode, type SectionKey } from "@/lib/kachamak/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -104,19 +105,17 @@ export function RightPanel({
   const rightZoom = usePanelZoom("right");
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
-  const [tab, setTab] = useState<string|null>(null);
-  const visibleTabs = INSPECTOR_TABS.filter(t=>infoOnly ? t.key==='info' : !novel.hiddenInspectorTabs?.includes(t.key));
-  const hiddenTabs = INSPECTOR_TABS.filter(t=>novel.hiddenInspectorTabs?.includes(t.key));
-  const preferred = tab ?? (familySettings?'family':timelineSettings?'details':'info');
-  const activeTab = visibleTabs.find(t=>t.key===preferred)?.key ?? visibleTabs[0]?.key ?? '';
-  const setInspectorTabHidden = useKachamak(s=>s.setInspectorTabHidden);
+  const workspace = useKachamak(s => s.activeTab);
+  const settings = inspectorSettings(novel, workspace);
+  const configurable = !headerOnly && !infoOnly;
+  const visibleTabs = INSPECTOR_TABS.filter(t => headerOnly || (infoOnly ? t.key === 'info' : !settings.hidden.includes(t.key)));
+  const hiddenTabs = INSPECTOR_TABS.filter(t => settings.hidden.includes(t.key));
+  const activeTab = headerOnly ? '' : infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
+  const setInspectorTabHidden = useKachamak(s => s.setInspectorTabHidden);
+  const selectInspectorTab = useKachamak(s => s.selectInspectorTab);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const restoringTab = useRef(false);
   const hideTab = (key:InspectorTabKey) => {
-    if(key===activeTab){
-      const index=visibleTabs.findIndex(t=>t.key===key);
-      setTab(visibleTabs[index+1]?.key ?? visibleTabs[index-1]?.key ?? null);
-    }
     setInspectorTabHidden(novel.id,key,true);
     requestAnimationFrame(()=>toolbarRef.current?.querySelector<HTMLButtonElement>(
       '[role="tab"][aria-selected="true"], button[aria-label="Show hidden inspector tabs"]'
@@ -129,10 +128,10 @@ export function RightPanel({
   useEffect(() => {
     if (!hasTimelineSettings || !addRequest || addRequest.novelId !== activeNovelId || addRequest.section !== section
       || addRequest.noteId !== node?.id || usesTimelineDialog()) return;
-    if(activeTab!=='details'){setTab('details');return;}
+    if(activeTab!=='details'){selectInspectorTab(novel.id, 'details');return;}
     detailsRef.current?.querySelector('[aria-label="Timeline block"]')?.scrollIntoView?.({block:"nearest"});
     finishTimelineAdd(addRequest);
-  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node?.id, section]);
+  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node?.id, section, novel.id, selectInspectorTab]);
 
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
@@ -143,14 +142,14 @@ export function RightPanel({
     "h-8 flex-none rounded-md border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors aria-selected:border-[#ad7e2e]/70 aria-selected:bg-[#3a2c18] aria-selected:text-[#fbe4a6] dark:aria-selected:text-[#fbe4a6]";
 
   return (
-    <Tabs value={activeTab} onValueChange={setTab} className="flex h-full flex-col gap-0">
+    <Tabs value={activeTab} onValueChange={value => {if (configurable) selectInspectorTab(novel.id, value as InspectorTabKey);}} className="flex h-full flex-col gap-0">
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
       <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
         <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
           {visibleTabs.map(t=>{
             const trigger=<TabsTrigger key={t.key} value={t.key} disabled={headerOnly} className={tabCls}>{t.label}</TabsTrigger>;
-            if(infoOnly) return trigger;
+            if(!configurable) return trigger;
             return <ContextMenu key={t.key}>
               <ContextMenuTrigger asChild>{trigger}</ContextMenuTrigger>
               <ContextMenuContent aria-label={t.label+' tab actions'}>
@@ -159,7 +158,7 @@ export function RightPanel({
             </ContextMenu>;
           })}
         </TabsList>
-        {!infoOnly && <DropdownMenu>
+        {configurable && <DropdownMenu>
           <DropdownMenuTrigger asChild><button type="button" disabled={!hiddenTabs.length} aria-label="Show hidden inspector tabs" title={hiddenTabs.length?'Show hidden tabs':'All tabs are visible'} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-white/10 disabled:opacity-40"><Plus className="size-4"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" aria-label="Hidden inspector tabs" onCloseAutoFocus={event=>{
             if(!restoringTab.current)return;
@@ -170,11 +169,10 @@ export function RightPanel({
             {hiddenTabs.map(t=><DropdownMenuItem key={t.key} onSelect={()=>{
               restoringTab.current=true;
               setInspectorTabHidden(novel.id,t.key,false);
-              setTab(t.key);
             }}>Show {t.label}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>}
-        {onHide && (
+        {onHide && !headerOnly && (
           <button
             type="button"
             aria-label="Hide panel"

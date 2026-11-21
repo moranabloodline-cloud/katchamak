@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
+import {changeInspectorTab} from './inspector-tabs';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -128,6 +129,7 @@ interface KachamakState {
   moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
   hideTab: (projectId:string,tab:TabKey) => void;
   setInspectorTabHidden: (projectId:string,tab:InspectorTabKey,hidden:boolean) => void;
+  selectInspectorTab: (projectId:string,tab:InspectorTabKey) => void;
   editGallery: (projectId:string, change:GalleryChange) => void;
   closeTab: (tab: TabKey) => void;
   showSection: (section: SectionKey) => void;
@@ -301,6 +303,17 @@ function removeFromNodes(
 
 function touch(novel: Novel): Novel {
   return { ...novel, updatedAt: Date.now() };
+}
+
+function updateInspectorTab(s: KachamakState, projectId: string, tab: InspectorTabKey, action: 'hide' | 'show' | 'select') {
+  const workspace = s.activeTab;
+  if (s.activeNovelId !== projectId || s.view === 'homepage' || workspace === 'gallery' || workspace === 'finance') return s;
+  const book = s.novels.find(n => n.id === projectId);
+  if (!book) return s;
+  const settings = changeInspectorTab(book, workspace, tab, action);
+  if (!settings) return s;
+  const updated = touch({...book, inspectorByTab: {...book.inspectorByTab, [workspace]: settings}});
+  return {novels: s.novels.map(n => n === book ? updated : n)};
 }
 
 function resolveChoices(node: NoteNode) {
@@ -552,14 +565,8 @@ export const useKachamak = create<KachamakState>()(
         const tabOrder=moveWorkspaceTabOrder(novel,from,to);if(!tabOrder)return s;
         return {novels:s.novels.map(n=>n.id===projectId?touch({...n,tabOrder}):n)};
       }),
-      setInspectorTabHidden: (projectId,tab,hidden) => set(s=>{
-        const novel=s.novels.find(n=>n.id===projectId);
-        if(!novel || s.activeNovelId!==projectId)return s;
-        const current=novel.hiddenInspectorTabs??[];
-        if(current.includes(tab)===hidden)return s;
-        const hiddenInspectorTabs=hidden?[...current,tab]:current.filter(key=>key!==tab);
-        return {novels:s.novels.map(n=>n===novel?touch({...n,hiddenInspectorTabs}):n)};
-      }),
+      setInspectorTabHidden: (projectId,tab,hidden) => set(s => updateInspectorTab(s, projectId, tab, hidden ? 'hide' : 'show')),
+      selectInspectorTab: (projectId,tab) => set(s => updateInspectorTab(s, projectId, tab, 'select')),
       hideTab: (projectId,tab) => set(s=>{
         const novel=s.novels.find(n=>n.id===projectId);
         if(projectId!==s.activeNovelId||!novel||!workspaceTabs(novel).some(t=>t.key===tab))return s;
@@ -1001,7 +1008,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 52,
+      version: 53,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1014,6 +1021,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<53){ /* Untouched tabs inherit the book's legacy hidden inspector list. */ }
         if(version<52) for(const novel of s.novels??[]) if(novel.sections && novel.sections.finance===undefined) novel.sections.finance=[];
         if(version<51 && s.novels) s.novels=migrateLibraryArtwork(s.novels);
         if(version<50){ /* Previously embedded artwork remains readable alongside book-local gallery references. */ }

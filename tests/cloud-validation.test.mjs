@@ -46,6 +46,7 @@ modern.sections.timeline = [node('period', {timelineKind: 'period', event: {type
 modern.timeline = { rootId: null, detail: 'synopsis', compact: false, calendar: calendarPreset('gregorian') };
 modern.trash = [{ id: 'trash', section: 'binder', node: node('deleted', {children: [node('deleted-child')]}), deletedAt: 1 }];
 modern.hiddenInspectorTabs = ['info','details','mentions','family'];
+modern.inspectorByTab = {binder:{hidden:['mentions'],selected:'details'},'note:chapter':{hidden:[],selected:'mentions'}};
 modern.hiddenSections = ['planning']; modern.openNoteTabs = ['chapter']; modern.extension = { retained: true };
 const wrap = novel => ({ novels: [novel], collections: [] });
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -71,6 +72,10 @@ const invalidCases = [
   ['hidden sections', n => n.hiddenSections = ['binder']],
   ['unknown inspector tab', n => n.hiddenInspectorTabs = ['timeline']],
   ['duplicate inspector tab', n => n.hiddenInspectorTabs = ['info','info']],
+  ['invalid inspector scope', n => n.inspectorByTab.homepage = {hidden:[]}],
+  ['invalid inspector selection', n => n.inspectorByTab.binder.selected = 'timeline'],
+  ['hidden inspector selection', n => n.inspectorByTab.binder.selected = 'mentions'],
+  ['invalid inspector visibility', n => n.inspectorByTab.binder.hidden = ['details','details']],
   ['timeline shape', n => n.timeline = null],
   ['timeline root', n => n.timeline.rootId = 3],
   ['timeline detail', n => n.timeline.detail = 'invalid'],
@@ -105,7 +110,7 @@ for (const [label, mutate] of invalidCases) {
 }
 
 const legacy = clone(modern);
-for (const key of ['timeline','trash','statuses','labels','openNoteTabs','hiddenSections','hiddenInspectorTabs']) delete legacy[key];
+for (const key of ['timeline','trash','statuses','labels','openNoteTabs','hiddenSections','hiddenInspectorTabs','inspectorByTab']) delete legacy[key];
 delete legacy.sections.timeline;
 legacy.sections.binder[0].kind = 'scene'; // Historical note kinds remain legal.
 const custom = clone(modern);

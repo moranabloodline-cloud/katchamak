@@ -9,6 +9,7 @@ import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {iconForNote} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
+import {inspectorSettings,selectedInspectorTab} from '@/lib/kachamak/inspector-tabs';
 import {registerZoomReset,saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
@@ -134,10 +135,12 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const lineTypes=new Set(paths.map(path=>path.style));
   const {width:w,height:h}=familyCard;
   const rightOpen=useKachamak(s=>s.rightPanelOpen);
+  const workspace=useKachamak(s=>s.activeTab);
+  const familyInspectorOpen=rightOpen && selectedInspectorTab(inspectorSettings(novel,workspace),workspace)==='family';
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">
     <header className="grid shrink-0 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-border px-5 py-3">
       <h2 className="relative col-start-2 min-w-0 px-6 text-center text-lg font-semibold"><Network aria-hidden="true" className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/><span className="block truncate" title={tree?.title} style={{color:tree?.color || undefined}}>{tree?.title||'Family Tree'}</span></h2>
-      {tree && <button type="button" onClick={onEdit} className={action+' col-start-3 justify-self-end whitespace-nowrap'+(rightOpen && !novel.hiddenInspectorTabs?.includes('family')?' lg:hidden':'')}>Edit tree</button>}
+      {tree && <button type="button" onClick={onEdit} className={action+' col-start-3 justify-self-end whitespace-nowrap'+(familyInspectorOpen?' lg:hidden':'')}>Edit tree</button>}
     </header>
     {people.length===0 ? <div className="m-auto max-w-sm px-5 py-12 text-center">
       <Network aria-hidden="true" className="mx-auto mb-4 size-8 text-amber-400/70"/>

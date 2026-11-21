@@ -291,7 +291,6 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();
   const [galleryDrag,setGalleryDrag]=useState<GalleryDrag|null>(null);
   const [closedFolders,setClosedFolders]=useState<Set<string>>(new Set());
-  const [editFamily,setEditFamily]=useState(0);
   const [compactFamily,setCompactFamily]=useState(false);
   useEffect(()=>setCompactFamily(false),[activeNovelId,section,selectedNodeId]);
   const activePane = useKachamak((s) => s.activePane);
@@ -340,7 +339,6 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const openFamilyInspector=()=>{
     if(novel)useKachamak.getState().setInspectorTabHidden(novel.id,'family',false);
     if(!rightPanelOpen)toggleRightPanel();
-    setEditFamily(n=>n+1);
     setCompactFamily(true);
   };
   const selectedSection = hit?.section ?? section;
@@ -483,21 +481,21 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </>}
       </main>
 
-      {view !== 'gallery' && (rightPanelOpen ? (
+      {view !== 'gallery' && (rightPanelOpen || view==='homepage' ? (
         <>
-          <Resizer
+          {!wideCanvas && <Resizer
             side="right"
             onMove={(dx) => setRightPanelWidth(useKachamak.getState().rightPanelWidth - dx)}
-          />
+          />}
           <aside
             data-workspace-chrome
             ref={rightPanelRef}
             style={{ width: rightPanelWidth }}
             className={view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
           >
-            <CtrlZoom panel="right" targetRef={rightPanelRef} />
+            {!wideCanvas && <CtrlZoom panel="right" targetRef={rightPanelRef} />}
             {novel && <div className="min-h-0 flex-1">
-              <RightPanel key={finance?'finance:'+novel.id+':'+(selected?.id??''):familySettings?`${novel.id}:family:${editFamily}`:novel.id}
+              <RightPanel key={finance?'finance:'+novel.id+':'+(selected?.id??''):novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings} infoOnly={finance}
                 infoEditor={finance && selected?.transaction ? <FinanceEditor key={selected.id} node={selected} currency={novel.financeCurrency??'EUR'}/> : undefined}
                 headerOnly={wideCanvas} emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}

@@ -101,7 +101,18 @@ await click(tab('Details'));assert.match(document.body.textContent,/Created/);aw
 assert.equal(JSON.stringify(b),untouchedB,'All edits stay in one book');
 await React.act(async()=>useKachamak.setState({view:'write'}));await click(tab('Details'));assert.equal(field('Event title').value,'A event','Timeline notes keep their Timeline block in Write mode too');
 await React.act(async()=>{useKachamak.setState({activeTab:'codex',selectedNodeId:'link',paneAId:'link'});root.render(React.createElement(NotesSection,{section:'codex'}));});
-assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions','Family']);assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Details');assert.equal(field('Timeline block'),null);
+assert.deepEqual([...inspector().querySelectorAll('[role="tab"]')].map(el=>el.textContent),['Info','Details','Mentions','Family']);assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Info');assert.equal(field('Timeline block'),null);
+await click(tab('Family'));
+await React.act(async()=>settings.setInspectorTabHidden(a.id,'mentions',true));
+await React.act(async()=>settings.select(null));
+assert.equal(tab('Mentions'),undefined);
+assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Family');
+await React.act(async()=>{useKachamak.setState({activeTab:'timeline',selectedNodeId:'period'});root.render(React.createElement(NotesSection,{section:'timeline'}));});
+assert.ok(tab('Mentions'));
+assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Details');
+await React.act(async()=>{useKachamak.setState({activeTab:'codex',selectedNodeId:'link'});root.render(React.createElement(NotesSection,{section:'codex'}));});
+assert.equal(tab('Mentions'),undefined);
+assert.equal(inspector().querySelector('[aria-selected="true"]').textContent,'Family');
 // Switching the existing-note chooser must not carry another note's dates/group.
 const {TimelineEventEditor}=await import('../src/components/kachamak/TimelineEventEditor.tsx');
 await React.act(async()=>{useKachamak.getState().updateNode('timeline','event',{event:{...event.event,groupId:'group'}});root.render(React.createElement(TimelineEventEditor,{novel:a,calendar:GREGORIAN,section:'timeline',start:tick(1920),onClose(){},onSaved(){}}));});

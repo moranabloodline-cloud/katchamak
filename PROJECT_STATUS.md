@@ -1,3 +1,5 @@
+> **2026-11-21 — Desni panel po tabu.** Svaki radni tab knjige pamti skrivene i poslednju izabranu karticu inspektora. Kartice inspektora na Homepage-u su trajno isključene.
+
 > **2026-11-21 — Ctrl + 0 vraća zum panela ispod miša na 100%.** U Splitu se resetuje samo beleška ispod miša, čak i kada je fokus u drugoj belešci.
 
 > **2026-11-21 — Zaseban zum za svaki tab i panel.** Ctrl + skrol menja zum sadržaja ispod miša. Pregledač pamti veličinu levog stabla, radne površine, desnog panela i obe Split površine za svaku knjigu i tab.
@@ -629,6 +631,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Podešavanja inspektora.** Raniji spisak skrivenih kartica je početna postavka za svaki tab. Provereni su menjanje beleške, korisnički tab, povratak posle osvežavanja, vraćanje preko dugmeta + i zaključan Homepage.
 
 - **2026-11-21 — Lokalni reset zuma.** Provereni gornja i numerička nula, oba smera u Splitu, bočni paneli, Galerija, graf odnosa, vremenska osa i pamćenje posle osvežavanja.
 
