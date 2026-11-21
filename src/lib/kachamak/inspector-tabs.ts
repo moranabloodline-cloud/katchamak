@@ -1,6 +1,8 @@
 import { INSPECTOR_TABS, SECTION_KEYS, type InspectorTabKey, type Novel, type SectionKey, type TabKey, type ViewMode } from './types';
 
 export type InspectorSettings = {hidden: InspectorTabKey[]; selected?: InspectorTabKey; width?: number; open?: boolean};
+export type CanvasInspectorTab = 'info' | 'tools';
+export type CanvasInspectorSettings = {selected?: CanvasInspectorTab; width?:number; open?:boolean};
 type InspectorBook = Pick<Novel, 'inspectorByTab' | 'hiddenInspectorTabs'>;
 
 export function inspectorSettings(book: InspectorBook, workspace: TabKey): InspectorSettings {
@@ -19,8 +21,8 @@ export function clampInspectorWidth(px: number) {
 }
 
 function currentSettings(state: PanelState) {
-  if (state.view === 'homepage' || state.activeTab === 'gallery') return undefined;
-  return state.novels.find(book => book.id === state.activeNovelId)?.inspectorByTab?.[state.activeTab];
+  const book = state.novels.find(book => book.id === state.activeNovelId);
+  return book?.inspectorByTab?.[state.view === 'homepage' ? 'homepage' : state.activeTab];
 }
 
 export function inspectorWidth(state: PanelState) {
@@ -28,14 +30,17 @@ export function inspectorWidth(state: PanelState) {
 }
 
 export function inspectorOpen(state: PanelState) {
-  if (state.view === 'homepage' || state.activeTab === 'gallery') return false;
+  if (state.activeTab === 'gallery' && state.view !== 'homepage') return false;
   return currentSettings(state)?.open ?? state.rightPanelOpen;
 }
 
 export function withInspectorLayout(book: Novel, state: PanelState, layout: {width: number} | {open: boolean}) {
-  if (book.id !== state.activeNovelId || state.view === 'homepage' || state.activeTab === 'gallery') return book;
+  if (book.id !== state.activeNovelId || (state.activeTab === 'gallery' && state.view !== 'homepage')) return book;
   if ('width' in layout ? layout.width === inspectorWidth(state) : layout.open === inspectorOpen(state)) return book;
 
+  if (state.view === 'homepage') {
+    return {...book, inspectorByTab: {...book.inspectorByTab, homepage: {...book.inspectorByTab?.homepage, ...layout}}};
+  }
   const tab = state.activeTab;
   const settings = {...inspectorSettings(book, tab), ...layout};
   return {...book, inspectorByTab: {...book.inspectorByTab, [tab]: settings}};
@@ -76,10 +81,12 @@ export function validInspectorByTab(value: unknown) {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.entries(value).every(([tab, settings]) =>
-    (SECTION_KEYS.includes(tab as SectionKey) || tab === 'trash' || (tab.startsWith('note:') && tab.length > 5)) &&
     settings && typeof settings === 'object' && !Array.isArray(settings) &&
     (settings.width === undefined || Number.isInteger(settings.width) && settings.width >= MIN_WIDTH && settings.width <= MAX_WIDTH) &&
     (settings.open === undefined || typeof settings.open === 'boolean') &&
-    validHiddenInspectorTabs(settings.hidden) && (settings.selected === undefined ||
-      (isInspectorKey(settings.selected) && !settings.hidden.includes(settings.selected))));
+    (tab === 'homepage'
+      ? settings.hidden === undefined && (settings.selected === undefined || settings.selected === 'info' || settings.selected === 'tools')
+      : (SECTION_KEYS.includes(tab as SectionKey) || tab === 'trash' || (tab.startsWith('note:') && tab.length > 5)) &&
+        validHiddenInspectorTabs(settings.hidden) && (settings.selected === undefined ||
+          (isInspectorKey(settings.selected) && !settings.hidden.includes(settings.selected)))));
 }

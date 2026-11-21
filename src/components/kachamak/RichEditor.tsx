@@ -22,6 +22,7 @@ interface RichEditorProps {
   onChange: (html: string) => void;
   className?: string;
   placeholder?: string;
+  ariaLabel?: string;
   noteId?: string;
   onFocusPlaceholderHide?: boolean;
   colorizeAnnotations?:boolean;
@@ -36,6 +37,7 @@ export function RichEditor({
   onChange,
   className,
   placeholder,
+  ariaLabel,
   noteId,
   colorizeAnnotations=true,
 }: RichEditorProps) {
@@ -103,7 +105,7 @@ export function RichEditor({
         contentEditable
         data-note-id={noteId}
         role="textbox"
-        aria-label={noteId ? "Note content" : placeholder || "Text"}
+        aria-label={ariaLabel ?? (noteId ? "Note content" : placeholder || "Text")}
         aria-multiline="true"
         suppressContentEditableWarning
         onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection(ref.current);}}

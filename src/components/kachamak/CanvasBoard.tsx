@@ -1,7 +1,8 @@
 'use client';
 
 import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode,type PointerEvent as PEvent} from 'react';
-import {Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
+import {createPortal} from 'react-dom';
+import {PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
@@ -22,13 +23,13 @@ type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:H
   selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
   rows:HomeBlock[];rowContents:HomeBlock[];heldLines:HomeBlock[];
   renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
-  open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void};
+  open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void;toolsHost?:HTMLDivElement|null;showInspector?:()=>void;onToolPicked?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Point{
   try{const p=JSON.parse(sessionStorage.getItem(key)??'null');if(Number.isFinite(p?.x)&&Number.isFinite(p?.y))return p;}catch{}
   return first?{x:32-(first.at?.x??originX)*zoom,y:36-(first.at?.y??0)*zoom}:{x:32,y:36};
 }
-export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selection,setSelection,rows,rowContents,heldLines,renderRow,layoutActions,addRow,editClassic,renderClassic,addClassic}:Props){
+export function CanvasBoard({novel,page,byId,change,open,describe,showTree,toolsHost,showInspector,onToolPicked,selection,setSelection,rows,rowContents,heldLines,renderRow,layoutActions,addRow,editClassic,renderClassic,addClassic}:Props){
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
   const positionKey='kachamak-board:'+novel.id+':'+page.id;
   const cameraKey=positionKey+':world';
@@ -380,11 +381,12 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
   const editFocused=()=>{if(focused&&focused.layout!=='line')editBlock(focused);};
   const resetTool=()=>{setTool('select');setFrom(null);cancelGesture();};
   const btn=(label:string,Icon:typeof Plus,fn:()=>void,pressed?:boolean)=><button type="button" title={label} aria-label={label} aria-pressed={pressed} className="cv-icon" onClick={fn}><Icon size={16}/></button>;
-  return <section className="cv-board-shell col-span-full row-start-2" aria-label="Canvas board" aria-description={page.title}>
+  return <section className="cv-board-shell flex-1" aria-label="Canvas board" aria-description={page.title}>
     <div className="cv-board-main"><header className="cv-board-head"><button type="button" className="md:hidden" aria-label="Show canvas tree" onClick={showTree}><ListTree size={16}/></button><Layers size={16}/><h2>{page.title}</h2>
       {focused&&!page.locked&&tool==='select'&&<div className="cv-selection-tools">{focused.positionLocked&&btn('Unlock position',UnlockKeyhole,()=>batch({kind:'lock',locked:false}))}{focused.layout!=='line'&&btn('Edit selected item',Pencil,editFocused)}{btn('Remove selected item',Trash2,remove)}</div>}
       {!page.locked&&layoutActions(()=>nextPosition('note',rowWidth))}
-      {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}</header>
+      {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}
+      <button type="button" className="lg:hidden" aria-label="Show canvas inspector" title="Show canvas inspector" onClick={showInspector}><PanelRightOpen size={16}/></button></header>
     <div className="cv-viewport">
     <ContextMenu><ContextMenuTrigger asChild onContextMenu={e=>{
       const hit=(e.target as Element).closest<HTMLElement>('[data-board-edge-copy],[data-board-edge],[data-board-card],[data-home-block],[data-home-cell]');
@@ -469,8 +471,12 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,selec
       {btn(showGrid?'Hide grid':'Show grid',showGrid?Grid2X2:Grid2X2X,()=>saveZoomSetting(positionKey,'grid',showGrid?'hidden':'visible'))}
     </div>
     {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}{tool==='draw'&&<input aria-label="Drawing color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/>}<button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
-    </div></div>{!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'?<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}
-      convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>:!page.locked&&<CanvasTools onPick={pick} onClassic={()=>addClassic(nextPosition('note'))} active={tool==='draw'||tool==='line'?tool:null}/>}
+    </div></div>
+    {toolsHost && createPortal(<>
+      {!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'&&<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}
+      convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>}
+      <CanvasTools disabled={page.locked} onPick={kind=>{pick(kind);onToolPicked?.();}} onClassic={()=>{addClassic(nextPosition('note'));onToolPicked?.();}} active={tool==='draw'||tool==='line'?tool:null}/>
+    </>,toolsHost)}
     {editor&&!page.locked&&<CanvasItemEditor novel={novel} initial={editor.initial} creating={!editor.original} onClose={()=>setEditor(null)} onSave={block=>{
       const ok=save(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block});if(ok){setSelected(block.id);
         if(!editor.original&&!editor.exact&&!block.columnId&&block.at){const r=surface.current!.getBoundingClientRect();

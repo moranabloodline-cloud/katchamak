@@ -150,7 +150,7 @@ export interface Novel {
   hiddenSections?: SectionKey[];
   hiddenTabs?: TabKey[];
   hiddenInspectorTabs?: InspectorTabKey[];
-  inspectorByTab?: Partial<Record<TabKey, import('./inspector-tabs').InspectorSettings>>;
+  inspectorByTab?: Partial<Record<TabKey, import('./inspector-tabs').InspectorSettings>> & {homepage?: import('./inspector-tabs').CanvasInspectorSettings};
   timeline?: TimelinePreferences;
   createdAt: number;
   updatedAt: number;

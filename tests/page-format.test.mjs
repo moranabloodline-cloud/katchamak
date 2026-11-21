@@ -127,8 +127,10 @@ for(const label of ['Timeline','Relationships','Canvas','Trash','Binder']){
   assert.ok(document.querySelector('[data-project-search]'));
   if(label==='Canvas'){
     for(let i=0;i<2;i++){
-      assert.equal(inspectorOpen(useKachamak.getState()),false);
-      assert.equal(document.querySelector('[aria-label="Note inspector"], [aria-label="Resize right panel"], [aria-label="Show hidden inspector tabs"]'),null);
+      assert.equal(inspectorOpen(useKachamak.getState()),true);
+      assert.deepEqual([...document.querySelectorAll('[aria-label="Canvas inspector"] [role="tab"]')].map(t=>t.textContent),['Info','Tools']);
+      assert.ok(document.querySelector('[role="textbox"][aria-label="Synopsis"]'));
+      assert.ok(document.querySelector('[role="textbox"][aria-label="Notes"]'));
       await React.act(async()=>document.querySelector('[aria-label="Canvas board"] button:is([aria-label="Unlock canvas"],[aria-label="Lock canvas"])').click());
     }
   }else{

@@ -1,10 +1,9 @@
 'use client';
-import {useRef,useState} from 'react';
+import {useState} from 'react';
 import {AlignStartVertical,AlignCenterVertical,AlignEndVertical,AlignStartHorizontal,AlignCenterHorizontal,AlignEndHorizontal,ArrowDownToLine,ArrowUpToLine,Columns3,Rows3,Layers,Link2,LockKeyhole,UnlockKeyhole,X} from 'lucide-react';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
-import {CtrlZoom,usePanelZoom} from './CtrlZoom';
 import type {Alignment,SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import type {HomeBlock} from '@/lib/kachamak/homepage';
 
@@ -16,12 +15,11 @@ const colors=['#e4b56c','#e18d89','#b4a1dc','#79b9dd','#79bfaa','#c2ce88'];
 type Props={items:HomeBlock[];fixed:boolean;clear:()=>void;run:(command:SelectionCommand)=>void;convert:(title:string)=>boolean};
 
 export function CanvasSelectionTools({items,fixed,clear,run,convert}:Props){
-  const ref=useRef<HTMLElement>(null),zoom=usePanelZoom('right');
   const [naming,setNaming]=useState(false),[title,setTitle]=useState(''),[error,setError]=useState('');
   const loose=items.every(b=>!b.columnId), allLocked=items.every(b=>b.positionLocked);
   const align=(value:Alignment)=>run({kind:'align',alignment:value});
-  return <aside ref={ref} className="cv-tools cv-batch" aria-label="Selection tools"><CtrlZoom panel="right" targetRef={ref}/>
-    <div style={{zoom}}>
+  return <section className="cv-batch" aria-label="Selection tools">
+    <div>
       <div className="cv-tools-head"><strong>{items.length} selected</strong><button type="button" title="Clear selection" aria-label="Clear selection" onClick={clear}><X size={15}/></button></div>
       <fieldset><legend>Color</legend><div className="cv-batch-swatches">
         {colors.map(c=><button key={c} type="button" style={{background:c}} aria-label={'Set color '+c} aria-pressed={items.every(b=>b.color===c)} onClick={()=>run({kind:'color',color:c})}/>)}
@@ -48,5 +46,5 @@ export function CanvasSelectionTools({items,fixed,clear,run,convert}:Props){
         {error&&<p role="alert">{error}</p>}<Button disabled={!title.trim()} type="submit">Create canvas</Button>
       </form>
     </DialogContent></Dialog>
-  </aside>;
+  </section>;
 }

@@ -322,6 +322,9 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();
   const [galleryDrag,setGalleryDrag]=useState<GalleryDrag|null>(null);
   const [closedFolders,setClosedFolders]=useState<Set<string>>(new Set());
+  const [canvasToolsHost,setCanvasToolsHost]=useState<HTMLDivElement|null>(null);
+  const [compactCanvas,setCompactCanvas]=useState(false);
+  useEffect(()=>setCompactCanvas(false),[activeNovelId,view]);
   const [compactFamily,setCompactFamily]=useState(false);
   useEffect(()=>setCompactFamily(false),[activeNovelId,section,selectedNodeId]);
   const activePane = useKachamak((s) => s.activePane);
@@ -375,7 +378,8 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   };
   const selectedSection = hit?.section ?? section;
   const homeSelection = useKachamak(s=>s.activeHomePageId);
-  const homeId = view==='homepage' && novel && homepageEntry(novel,homeSelection) ? homeSelection : HOME_ROOT;
+  const homePage = view==='homepage' && novel ? homepageEntry(novel,homeSelection) ?? homepageEntry(novel,HOME_ROOT) : undefined;
+  const homeId = homePage?.id ?? HOME_ROOT;
   const [collapsedPages,setCollapsedPages]=useState<Set<string>>(new Set());
   const [mobilePages,setMobilePages]=useState(false);
   useEffect(()=>{setClosedFolders(new Set());setCollapsedPages(new Set());setMobilePages(false);},[activeNovelId]);
@@ -445,11 +449,12 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </div>
       )}
 
-      <div className={wideCanvas ? 'grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
-      <main ref={mainRef} tabIndex={-1} style={{"--workspace-canvas-zoom":canvasZoom} as CSSProperties} className={wideCanvas ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
+      <div className={view==='gallery' ? 'grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
+      <main ref={mainRef} tabIndex={-1} style={{"--workspace-canvas-zoom":canvasZoom} as CSSProperties} className={view==='gallery' ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
-        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
+        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} toolsHost={canvasToolsHost}
+          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : <>
         <div style={{zoom:view==="split"?undefined:canvasZoom}} className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {finance && novel && <FinanceWorkspace key={treeScopeKey} novel={novel} rootId={rootId} selected={selected} list={view==='finance-list'}/>}
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
@@ -508,25 +513,26 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </>}
       </main>
 
-      {!wideCanvas && (rightPanelOpen ? (
+      {view!=='gallery' && (rightPanelOpen ? (
         <>
           <Resizer
-            key={JSON.stringify([activeNovelId, workspaceTab])}
+            key={JSON.stringify([activeNovelId, homePage?'homepage':workspaceTab])}
             side="right" width={rightPanelWidth} onResize={setRightPanelWidth}
           />
           <aside
             data-workspace-chrome
             ref={rightPanelRef}
             style={{width: `var(--inspector-drag-width, ${rightPanelWidth}px)`}}
-            className={view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
+            className={homePage && compactCanvas || view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
           >
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {novel && <div className="min-h-0 flex-1">
-              <RightPanel key={finance?'finance:'+novel.id+':'+(selected?.id??''):novel.id}
+              <RightPanel canvas={homePage?{page:homePage,toolsRef:setCanvasToolsHost}:undefined} key={homePage?'canvas:'+novel.id+':'+homeId:finance?'finance:'+novel.id+':'+(selected?.id??''):novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings} infoOnly={finance}
                 infoEditor={finance && selected?.transaction ? <FinanceEditor key={selected.id} node={selected} currency={novel.financeCurrency??'EUR'}/> : undefined}
                 emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}
                 onHide={()=>{
+                  if(homePage && !window.matchMedia('(min-width:64rem)').matches){setCompactCanvas(false);return;}
                   setCompactFamily(false);
                   if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();
                 }}
@@ -538,7 +544,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
                   : undefined}
               />
             </div>}
-            {!trash && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
+            {!trash && !homePage && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
           </aside>
         </>
       ) : (

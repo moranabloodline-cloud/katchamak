@@ -20,8 +20,8 @@
 .cv-board-head>svg { color:#c0a173; }
 .cv-board-head h2 { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font:600 15px/1.25 Georgia,serif; }
 .cv-selection-tools,.cv-board-dock,.cv-mode-message { display:flex; align-items:center; gap:3px; }
-.cv-icon,.cv-zoom-level,.cv-tools-toggle,.cv-mode-message button { display:inline-grid; place-items:center; border-radius:5px; min-width:29px; height:29px; color:var(--muted-foreground); }
-.cv-icon:hover,.cv-zoom-level:hover,.cv-icon[aria-pressed=true],.cv-tools button:hover,.cv-tools-grid button[aria-pressed=true] { color:var(--foreground); background:var(--muted); }
+.cv-icon,.cv-zoom-level,.cv-mode-message button { display:inline-grid; place-items:center; border-radius:5px; min-width:29px; height:29px; color:var(--muted-foreground); }
+.cv-icon:hover,.cv-zoom-level:hover,.cv-icon[aria-pressed=true],.cv-tools button:hover:enabled,.cv-tools-grid button[aria-pressed=true] { color:var(--foreground); background:var(--muted); }
 .cv-surface { position:relative; flex:1; overflow:hidden; touch-action:none; isolation:isolate; outline-offset:-2px; background-color:var(--background); background-image:radial-gradient(circle,color-mix(in srgb,var(--foreground) 15%,transparent) .9px,transparent 1px); }
 .cv-mode-select { cursor:default; }
 .cv-mode-pan { cursor:grab; }
@@ -75,12 +75,13 @@
 .cv-zoom-level { min-width:43px; color:var(--foreground); font:12px system-ui,sans-serif; }
 .cv-mode-message { position:absolute; top:54px; left:50%; transform:translateX(-50%); padding:4px 8px 4px 12px; font-size:13px; }
 .cv-first { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; align-items:center; gap:8px; padding:10px 16px; cursor:pointer; font-size:14px; }
-.cv-tools { flex:0 0 154px; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:10px; border-left:1px solid var(--border); background:var(--background); }
+.cv-tools { min-inline-size:0; margin:0; padding:0; border:0; }
 .cv-tools-head { display:flex; justify-content:space-between; align-items:center; margin:0 2px 12px; height:22px; font-size:14px; }
-.cv-tools-head button,.cv-more { color:var(--muted-foreground); }
-.cv-tools-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; }
+.cv-tools-head button { color:var(--muted-foreground); }
+.cv-tools-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(76px,100%),1fr)); gap:6px; }
 .cv-tools-grid button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-height:51px; border:1px solid var(--border); border-radius:6px; background:var(--card); font:12px/1.25 system-ui,sans-serif; }
-.cv-more { display:flex; align-items:center; justify-content:space-between; width:100%; padding:10px 2px; margin-top:6px; border-top:1px solid var(--border); font-size:12px; }
+.cv-tools:disabled button { opacity:.5; cursor:default; }
+.cv-batch { margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 .cv-batch fieldset { min-width:0; margin:0 0 11px; padding:0; border:0; }
 .cv-batch legend { margin-bottom:5px; color:var(--muted-foreground); font:12px/1.35 system-ui,sans-serif; }
 .cv-batch-swatches,.cv-batch-icons { display:grid; gap:4px; }
@@ -94,11 +95,8 @@
 .cv-batch-actions svg { width:15px; height:15px; flex:none; }
 .cv-batch button:hover:enabled { background-color:var(--muted); }
 .cv-batch :disabled { opacity:.48; cursor:default; }
-@media (max-width:850px) { .cv-batch { flex-basis:118px; } }
-.cv-tools-toggle { flex:none; align-self:flex-start; margin:6px; border:1px solid var(--border); }
 .cv-page-card { border-radius:8px; border:1px solid var(--border); background:var(--card); }
 .cv-page-grip { padding:6px 10px; cursor:grab; }
 .cv-dialog form>label { display:grid; gap:6px; font-size:14px; }
 .cv-sketchpad { display:block; width:100%; border:1px solid var(--border); border-radius:6px; background:var(--muted); touch-action:none; cursor:crosshair; }
-@media (max-width:850px) { .cv-tools { flex-basis:82px; padding:6px; } .cv-tools-grid { grid-template-columns:1fr; } .cv-tools-grid button { min-height:43px; } }
 @media (hover:none) { .cv-card-cap button { opacity:1; } }

@@ -46,7 +46,9 @@ modern.sections.timeline = [node('period', {timelineKind: 'period', event: {type
 modern.timeline = { rootId: null, detail: 'synopsis', compact: false, calendar: calendarPreset('gregorian') };
 modern.trash = [{ id: 'trash', section: 'binder', node: node('deleted', {children: [node('deleted-child')]}), deletedAt: 1 }];
 modern.hiddenInspectorTabs = ['info','details','mentions','family'];
-modern.inspectorByTab = {binder:{hidden:['mentions'],selected:'details',width:415,open:false},'note:chapter':{hidden:[],selected:'mentions'}};
+modern.homepage = {locked:true,blocks:[],synopsis:'<p>Book map</p>',notes:'<p>Root notes</p>'};
+modern.homePages = [{id:'child',parentId:'home',title:'Second act',locked:false,blocks:[],notes:'<p>Child notes</p>'}];
+modern.inspectorByTab = {homepage:{selected:'tools',open:true,width:295},binder:{hidden:['mentions'],selected:'details',width:415,open:false},'note:chapter':{hidden:[],selected:'mentions'}};
 modern.hiddenSections = ['planning']; modern.openNoteTabs = ['chapter']; modern.extension = { retained: true };
 const wrap = novel => ({ novels: [novel], collections: [] });
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -72,7 +74,11 @@ const invalidCases = [
   ['hidden sections', n => n.hiddenSections = ['binder']],
   ['unknown inspector tab', n => n.hiddenInspectorTabs = ['timeline']],
   ['duplicate inspector tab', n => n.hiddenInspectorTabs = ['info','info']],
-  ['invalid inspector scope', n => n.inspectorByTab.homepage = {hidden:[]}],
+  ['invalid canvas synopsis', n => n.homepage.synopsis = 42],
+  ['invalid nested canvas notes', n => n.homePages[0].notes = {}],
+  ['unknown inspector scope', n => n.inspectorByTab.unknown = {hidden:[]}],
+  ['invalid canvas inspector tab', n => n.inspectorByTab.homepage.selected = 'details'],
+  ['fixed canvas inspector tabs', n => n.inspectorByTab.homepage.hidden = ['info']],
   ['invalid inspector selection', n => n.inspectorByTab.binder.selected = 'timeline'],
   ['hidden inspector selection', n => n.inspectorByTab.binder.selected = 'mentions'],
   ['invalid inspector width', n => n.inspectorByTab.binder.width = 750],

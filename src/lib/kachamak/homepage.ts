@@ -46,7 +46,7 @@ export interface HomeBlock extends CanvasFields {
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { synopsis?:string; notes?:string; icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -173,7 +173,7 @@ export function validHomepage(value: unknown): boolean {
   const page = value as Homepage;
   if(page.icon!==undefined&&!validAppearance('icon',page.icon) || page.color!==undefined&&!validAppearance('color',page.color))return false;
   if(page.legacyRowX!==undefined && !Number.isFinite(page.legacyRowX))return false;
-  if(page.title!==undefined && typeof page.title!=='string')return false;
+  if([page.title,page.synopsis,page.notes].some(field=>field!==undefined && typeof field!=='string'))return false;
   if(typeof page.locked!=='boolean' || !Array.isArray(page.blocks) || !page.blocks.every(validBlock))return false;
   const rows=new Map(page.blocks.filter(b=>b.layout==='row').map(b=>[b.id,b.columns]));
   return validBoard(page) && (page.width===undefined || page.width==='wide' || page.width==='reading')
@@ -184,6 +184,7 @@ export function validHomepage(value: unknown): boolean {
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
 export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
+  | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
   | {type:'moveRow';id:string;at:Point;heights:[string,number][]}
   | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
@@ -198,6 +199,10 @@ export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
   | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  if(action.type==='info'){
+    if(!['synopsis','notes'].includes(action.field)||typeof action.value!=='string'||action.value===(page[action.field]??''))return null;
+    return {...page,[action.field]:action.value};
+  }
   if(action.type==='appearance')return action.value===''||validAppearance(action.field,action.value)?{...page,[action.field]:action.value||undefined}:null;
   if(page.mode==='canvas')return changeUnifiedCanvas(page,action);
   const next=applyHomeChange(page,action);
@@ -265,7 +270,7 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
-  if(action.type==='moveRow'||action.type==='appearance'||action.type==='dockCards'||action.type==='releaseCards')return null;
+  if(action.type==='moveRow'||action.type==='info'||action.type==='appearance'||action.type==='dockCards'||action.type==='releaseCards')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
   if(action.type==='boardSelection')return applySelection(page,action);

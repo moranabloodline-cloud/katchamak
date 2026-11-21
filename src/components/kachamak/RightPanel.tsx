@@ -21,6 +21,7 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { finishTimelineAdd, usesTimelineDialog, useTimelineAddRequest } from "@/lib/kachamak/timeline-actions";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import type {HomePageEntry} from '@/lib/kachamak/homepage';
 import { inspectorSettings, selectedInspectorTab } from "@/lib/kachamak/inspector-tabs";
 import { INSPECTOR_TABS, type InspectorTabKey, type Novel, type NoteNode, type SectionKey } from "@/lib/kachamak/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -86,6 +87,7 @@ export function RightPanel({
   emptyInfo,
   infoEditor,
   infoOnly = false,
+  canvas,
 }: {
   novel: Novel;
   node: NoteNode | null;
@@ -96,6 +98,7 @@ export function RightPanel({
   emptyInfo?: ReactNode;
   infoEditor?: ReactNode;
   infoOnly?: boolean;
+  canvas?: {page:HomePageEntry; toolsRef:(host:HTMLDivElement|null)=>void};
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const {font,size,spacing}=useNoteAppearance(node);
@@ -107,7 +110,14 @@ export function RightPanel({
   const settings = inspectorSettings(novel, workspace);
   const visibleTabs = INSPECTOR_TABS.filter(t => infoOnly ? t.key === 'info' : !settings.hidden.includes(t.key));
   const hiddenTabs = INSPECTOR_TABS.filter(t => settings.hidden.includes(t.key));
-  const activeTab = infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
+  const selectCanvasTab = useKachamak(s=>s.selectCanvasInspectorTab);
+  const changeHomepage = useKachamak(s=>s.changeHomepage);
+  const info = canvas?.page ?? node;
+  const writeInfo = (field:'synopsis'|'notes', html:string) => {
+    if(canvas)changeHomepage(novel.id,{type:'info',field,value:html},canvas.page.id);
+    else if(node)updateNode(section,node.id,{[field]:html});
+  };
+  const activeTab = canvas ? novel.inspectorByTab?.homepage?.selected ?? 'info' : infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
   const setInspectorTabHidden = useKachamak(s => s.setInspectorTabHidden);
   const selectInspectorTab = useKachamak(s => s.selectInspectorTab);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -139,12 +149,18 @@ export function RightPanel({
     "h-8 flex-none rounded-md border border-transparent bg-transparent px-3 text-sm font-normal text-muted-foreground shadow-none transition-colors aria-selected:border-[#ad7e2e]/70 aria-selected:bg-[#3a2c18] aria-selected:text-[#fbe4a6] dark:aria-selected:text-[#fbe4a6]";
 
   return (
-    <Tabs value={activeTab} onValueChange={value => {if (!infoOnly) selectInspectorTab(novel.id, value as InspectorTabKey);}} className="flex h-full flex-col gap-0">
+    <Tabs value={activeTab} onValueChange={value => {
+      if(canvas){if(value==='info'||value==='tools')selectCanvasTab(novel.id,value);}
+      else if (!infoOnly)selectInspectorTab(novel.id,value as InspectorTabKey);
+    }} className="flex h-full flex-col gap-0">
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
       <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
-        <TabsList aria-label="Note inspector" className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
-          {visibleTabs.map(t=>{
+        <TabsList aria-label={canvas?"Canvas inspector":"Note inspector"} className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${!canvas && visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
+          {canvas ? <>
+            <TabsTrigger value="info" className={tabCls}>Info</TabsTrigger>
+            <TabsTrigger value="tools" className={tabCls}>Tools</TabsTrigger>
+          </> : visibleTabs.map(t=>{
             const trigger=<TabsTrigger key={t.key} value={t.key} className={tabCls}>{t.label}</TabsTrigger>;
             if(infoOnly) return trigger;
             return <ContextMenu key={t.key}>
@@ -155,7 +171,7 @@ export function RightPanel({
             </ContextMenu>;
           })}
         </TabsList>
-        {!infoOnly && <DropdownMenu>
+        {!canvas && !infoOnly && <DropdownMenu>
           <DropdownMenuTrigger asChild><button type="button" disabled={!hiddenTabs.length} aria-label="Show hidden inspector tabs" title={hiddenTabs.length?'Show hidden tabs':'All tabs are visible'} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-white/10 disabled:opacity-40"><Plus className="size-4"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" aria-label="Hidden inspector tabs" onCloseAutoFocus={event=>{
             if(!restoringTab.current)return;
@@ -190,8 +206,7 @@ export function RightPanel({
       >
         {/* Info — Synopsis i Notes vertikalno; razdelnik između njih se vuče
             (arhitektura §11), svako polje skroluje svoj sadržaj nezavisno */}
-        {node ? <>
-        <TabsContent value="info" className="mt-0 h-full">
+        {info && <TabsContent value="info" className="mt-0 h-full">
           {infoEditor ?? <div ref={infoBoxRef} className="flex h-full min-h-0 flex-col">
             <div
               className="flex min-h-0 shrink-0 flex-col"
@@ -202,10 +217,8 @@ export function RightPanel({
               </Label>
               <div style={proseStyle} className="note-prose mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5">
                 <RichEditor
-                  html={node.synopsis}
-                  onChange={(html) =>
-                    updateNode(section, node.id, { synopsis: html })
-                  }
+                  ariaLabel="Synopsis" html={info.synopsis??''}
+                  onChange={html=>writeInfo('synopsis',html)}
                   placeholder="Write here..."
                 />
               </div>
@@ -223,15 +236,17 @@ export function RightPanel({
               </Label>
               <div style={proseStyle} className="note-prose mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5">
                 <RichEditor
-                  html={node.notes}
-                  onChange={(html) => updateNode(section, node.id, { notes: html })}
+                  ariaLabel="Notes" html={info.notes??''}
+                  onChange={html=>writeInfo('notes',html)}
                   placeholder="Write here..."
                 />
               </div>
             </div>
           </div>}
-        </TabsContent>
+        </TabsContent>}
+        {canvas && <TabsContent value="tools" className="mt-0"><div ref={canvas.toolsRef}/></TabsContent>}
 
+        {node && <>
         {/* Details — postojeće veze, aliasi i podaci note
             (arhitektura §11); osnovni podaci note ostaju ispod */}
         <TabsContent ref={detailsRef} value="details" forceMount={timelineSettings?true:undefined} hidden={activeTab!=='details'} className="mt-0 h-full min-h-0 flex-col gap-1 data-[state=active]:flex data-[state=inactive]:hidden">
@@ -257,10 +272,11 @@ export function RightPanel({
         <TabsContent value="mentions" className="mt-0">
           <NoteConnections node={node} section={section} mode="mentions" />
         </TabsContent>
-        </> : activeTab && activeTab!=='family' && <TabsContent value={activeTab} className="mt-0 text-xs text-muted-foreground">{activeTab==='info' && emptyInfo ? emptyInfo : <>Select a note to see its {activeTab==='info'?'synopsis and notes':activeTab}.</>}</TabsContent>}
-        <TabsContent value="family" forceMount={familySettings?true:undefined} hidden={activeTab!=='family'} className="mt-0 data-[state=inactive]:hidden">
+        </>}
+        {!info && activeTab && activeTab!=='family' && <TabsContent value={activeTab} className="mt-0 text-xs text-muted-foreground">{activeTab==='info' && emptyInfo ? emptyInfo : <>Select a note to see its {activeTab==='info'?'synopsis and notes':activeTab}.</>}</TabsContent>}
+        {!canvas && <TabsContent value="family" forceMount={familySettings?true:undefined} hidden={activeTab!=='family'} className="mt-0 data-[state=inactive]:hidden">
           {familySettings ?? <p className="text-xs text-muted-foreground">Select a Family Tree note to edit its members and relationships.</p>}
-        </TabsContent>
+        </TabsContent>}
       </div>
     </Tabs>
   );

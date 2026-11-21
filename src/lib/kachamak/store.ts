@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
-import {changeInspectorTab, clampInspectorWidth, inspectorOpen, withInspectorLayout} from './inspector-tabs';
+import {type CanvasInspectorTab, changeInspectorTab, clampInspectorWidth, inspectorOpen, withInspectorLayout} from './inspector-tabs';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -126,6 +126,7 @@ interface KachamakState {
   moveWorkspaceTab: (projectId:string,from:TabKey,to:TabKey) => void;
   hideTab: (projectId:string,tab:TabKey) => void;
   setInspectorTabHidden: (projectId:string,tab:InspectorTabKey,hidden:boolean) => void;
+  selectCanvasInspectorTab: (projectId:string,tab:CanvasInspectorTab) => void;
   selectInspectorTab: (projectId:string,tab:InspectorTabKey) => void;
   editGallery: (projectId:string, change:GalleryChange) => void;
   closeTab: (tab: TabKey) => void;
@@ -570,6 +571,13 @@ export const useKachamak = create<KachamakState>()(
         return {novels:s.novels.map(n=>n.id===projectId?touch({...n,tabOrder}):n)};
       }),
       setInspectorTabHidden: (projectId,tab,hidden) => set(s => updateInspectorTab(s, projectId, tab, hidden ? 'hide' : 'show')),
+      selectCanvasInspectorTab: (projectId,tab) => set(s => {
+        if(s.activeNovelId!==projectId || s.view!=='homepage')return s;
+        const book=s.novels.find(n=>n.id===projectId);
+        if(!book || (book.inspectorByTab?.homepage?.selected??'info')===tab)return s;
+        const homepage={...book.inspectorByTab?.homepage,selected:tab};
+        return {novels:s.novels.map(n=>n===book?touch({...book,inspectorByTab:{...book.inspectorByTab,homepage}}):n)};
+      }),
       selectInspectorTab: (projectId,tab) => set(s => updateInspectorTab(s, projectId, tab, 'select')),
       hideTab: (projectId,tab) => set(s=>{
         const novel=s.novels.find(n=>n.id===projectId);
@@ -1058,7 +1066,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 61,
+      version: 62,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1071,6 +1079,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<62){ /* Canvas Info fields and its inspector preferences are optional. */ }
         if(version<61){ /* Canvas appearance and manually placed rows are optional on older books. */ }
         if(version<60){ /* Rows without a world position keep their original reading order. */ }
         if(version<59){ /* Existing connections already use stable card IDs. A row can now temporarily hold either endpoint. */ }

@@ -58,7 +58,7 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
   </>;
 }
 
-export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Novel;pageId?:string;onShowPages?:()=>void}) {
+export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,onShowInspector,onToolPicked}:{novel:Novel;pageId?:string;onShowPages?:()=>void;toolsHost?:HTMLDivElement|null;onShowInspector?:()=>void;onToolPicked?:()=>void}) {
   const entry=useMemo(()=>homepageEntry(novel,pageId) ?? homepageEntry(novel,HOME_ROOT)!,[novel,pageId]);
   const page=useMemo(()=>unifiedCanvas(entry),[entry]);
   const parts=useMemo(()=>canvasParts(page.blocks),[page]);
@@ -242,7 +242,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       : <button type="button" className="absolute inset-0 w-full" aria-label={display.name} onClick={()=>activate(b)}/>}</div>;
   };
   return <>
-    <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages}
+    <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={at=>{captureOpener();setEditor({});classicPosition.current=at;}}/>
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
