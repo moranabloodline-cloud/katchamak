@@ -2,7 +2,7 @@ import {TABS,type Novel,type TabKey,type SectionKey,type ViewMode} from './types
 import {findNodeInNovel} from './utils';
 
 export function validWorkspaceTabOrder(value:unknown):value is TabKey[]|undefined {
-  return value===undefined||Array.isArray(value)&&value.length<=10000&&new Set(value).size===value.length&&value.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family|finance|kanban|gallery)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)));
+  return value===undefined||Array.isArray(value)&&value.length<=10000&&new Set(value).size===value.length&&value.every(key=>typeof key==='string'&&(/^(binder|codex|planning|research|templates|prompts|timeline|family|finance|kanban|publish|gallery)$/.test(key)||/^note:[a-zA-Z0-9_-]{1,128}$/.test(key)));
 }
 function availableTabs(novel:Novel): {key:TabKey;label:string;color?:string}[] {
   return [...TABS.filter(tab=>tab.key!=='trash'&&tab.key!=='timeline'&&tab.key!=='family'),...(novel.openNoteTabs??[]).flatMap(id=>{
@@ -13,7 +13,7 @@ function rememberedOrder(novel:Novel,tabs=availableTabs(novel)) {
   return [...new Set([...(validWorkspaceTabOrder(novel.tabOrder)?novel.tabOrder??[]:[]),...tabs.map(tab=>tab.key)])];
 }
 export function isWorkspaceTabHidden(novel:Novel,key:TabKey) {
-  return (key==='finance' && !novel.financeCurrency && !novel.sections.finance?.length) || !!(novel.hiddenTabs?.includes(key) || novel.hiddenSections?.includes(key as SectionKey));
+  return (key==='publish' && !novel.publishEnabled && !novel.sections.publish?.length) || (key==='finance' && !novel.financeCurrency && !novel.sections.finance?.length) || !!(novel.hiddenTabs?.includes(key) || novel.hiddenSections?.includes(key as SectionKey));
 }
 function orderedTabs(novel:Novel) {
   const tabs=availableTabs(novel), byKey=new Map(tabs.map(tab=>[tab.key,tab]));
@@ -25,6 +25,7 @@ export function workspaceTabs(novel:Novel,hidden=false) {
 export function revealWorkspaceTab(novel:Novel,key:TabKey):Novel {
   if(!isWorkspaceTabHidden(novel,key))return novel;
   return {...novel,
+    ...(key==='publish'?{publishEnabled:true,sections:{...novel.sections,publish:novel.sections.publish??[]}}:{}),
     ...(key==='finance' && !novel.financeCurrency?{financeCurrency:'EUR' as const}:{}),
     ...(key==='finance' && !novel.sections.finance?{sections:{...novel.sections,finance:[]}}:{}),
     ...(novel.hiddenTabs?.includes(key)?{hiddenTabs:novel.hiddenTabs.filter(tab=>tab!==key)}:{}),
@@ -39,7 +40,7 @@ export function visibleTabLocation(novel:Novel,key:TabKey,view:ViewMode) {
   // With every tab hidden the current document stays open and + remains available.
   if(!next)return null;
   if(next==='kanban') return {activeTab:next,view:'write' as const,selectedNodeId:novel.sections.kanban?.find(n=>!n.hidden)?.id??null};
-  if(next==='finance')return {activeTab:next,view:'write' as const,selectedNodeId:null};
+  if(next==='finance' || next==='publish')return {activeTab:next,view:'write' as const,selectedNodeId:null};
   if(next==='family')return {activeTab:next,view:'family' as const,selectedNodeId:novel.sections.family?.find(n=>!n.hidden)?.id??null};
   if(next==='timeline')return {activeTab:next,view:'timeline' as const,selectedNodeId:null};
   return {activeTab:next,view:view==='family'||view==='timeline'?'write' as const:view};

@@ -32,6 +32,7 @@ const SECTION_NAMES: Record<SectionKey, string> = {
   timeline: "Timeline",
   family: "Family Tree",
   finance: "Finance",
+  publish: "Publish",
   kanban: "Kanban",
 };
 

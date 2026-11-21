@@ -1,0 +1,131 @@
+'use client';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
+import {BookOpen,Check,Download,FolderTree,Grid2X2,Settings2} from 'lucide-react';
+import {toast} from 'sonner';
+import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
+import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
+import {houseStyles,trims,type BookStyle} from '@/lib/kachamak/book-style';
+import {bookArticles,bookCss,proofs,publication,type Proof} from '@/lib/kachamak/publication';
+import {galleryImage,galleryImageRef} from '@/lib/kachamak/project-image';
+import {findNode,locateNode} from '@/lib/kachamak/utils';
+import {useKachamak} from '@/lib/kachamak/store';
+import type {NoteNode,Novel} from '@/lib/kachamak/types';
+import {PublishTools} from './PublishTools';
+import {proofDocument,PublishProof} from './PublishProof';
+
+const btn='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/5 disabled:opacity-40';
+const active=' border-amber-400/60 bg-amber-400/10 text-amber-200';
+type StyleCard={name:string;style:BookStyle;node?:NoteNode};
+function Miniature({book,entry,selected,choose}:{book:Novel;entry:StyleCard;selected:boolean;choose:()=>void}){
+  const holder=useRef<HTMLDivElement>(null),[width,setWidth]=useState(160);
+  useEffect(()=>{if(!holder.current)return;const observer=new ResizeObserver(([r])=>setWidth(r.contentRect.width));observer.observe(holder.current);return()=>observer.disconnect();},[]);
+  const s=entry.style,[w,h]=trims[s.trim],sheet=w*96/25.4;
+  const source=useMemo(()=>{const sample=publication(book,s,'Chapter opening');return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,sample.lang,true)+'html{background:white;overflow:hidden}body{padding:'+s.top+'mm '+s.outer+'mm '+s.bottom+'mm '+s.inner+'mm}.book-name{display:none}</style><body>'+bookArticles(sample)+'</body></html>';},[book,s]);
+  return <button type="button" aria-label={'Preview '+entry.name} aria-pressed={selected} onClick={choose} className={'group min-w-0 rounded-lg border p-2 text-left transition-colors '+(selected?'border-amber-400/70 bg-amber-400/5':'border-white/10 bg-white/[.025] hover:border-amber-300/40')}>
+    <div ref={holder} className="pointer-events-none relative w-full overflow-hidden rounded-sm bg-white" style={{aspectRatio:w+'/'+h}}>
+      <iframe title={entry.name+' specimen'} tabIndex={-1} sandbox="" scrolling="no" loading="lazy" srcDoc={source} className="absolute left-0 top-0 origin-top-left border-0" style={{width:sheet,height:h*96/25.4,transformOrigin:'top left',transform:'scale('+width/sheet+')'}}/>
+    </div><div className="flex items-center justify-between gap-2 px-1 pb-0.5 pt-2"><span className="truncate font-semibold">{entry.name}</span>{selected&&<Check className="size-3.5 shrink-0 text-amber-300"/>}</div>
+  </button>;
+}
+function treeOptions(nodes:NoteNode[],depth=0):{id:string;label:string}[]{return nodes.filter(n=>n.kind==='folder').flatMap(n=>[{id:n.id,label:'  '.repeat(depth)+n.title},...treeOptions(n.children,depth+1)]);}
+export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,onShowTools,onShowTree}:{novel:Novel;selected:NoteNode|null;rootId?:string|null;zoom:number;toolsHost:HTMLDivElement|null;onShowTools:()=>void;onShowTree:()=>void}){
+  const books=useKachamak(state=>state.novels);
+  const [importing,setImporting]=useState(false);
+  const otherStyles=useMemo(()=>{
+    const choices:{book:Novel;node:NoteNode;path:string}[]=[];
+    function visit(book:Novel,nodes:NoteNode[],prefix:string){for(const n of nodes){
+      const path=prefix+' / '+n.title;
+      if(n.bookStyle)choices.push({book,node:n,path});
+      visit(book,n.children,path);
+    }}
+    for(const b of books)if(b.id!==novel.id)visit(b,b.sections.publish??[],b.title);
+    return choices;
+  },[books,novel.id]);
+  const [house,setHouse]=useState(0),[gallery,setGallery]=useState(!selected?.bookStyle),[print,setPrint]=useState(true),[proof,setProof]=useState<Proof>('Chapter opening');
+  const [drafts,setDrafts]=useState<Record<number,BookStyle>>({});
+  const [saving,setSaving]=useState(false),[styleName,setStyleName]=useState(''),[destination,setDestination]=useState('');
+  const [busy,setBusy]=useState(false),[wantPdf,setWantPdf]=useState(false),[ready,setReady]=useState(false),frame=useRef<HTMLIFrameElement>(null);
+  const prev=useRef(selected?.id),contextFolder=useRef<string|null>(null);
+  const roots=novel.sections.publish??[],saved=selected?.bookStyle,entry=saved&&selected?{name:selected.title,style:saved}:houseStyles[house];
+  const s=saved??drafts[house]??entry.style;
+  useEffect(()=>{if(selected?.id!==prev.current){
+    if(selected)setGallery(!selected.bookStyle);
+    prev.current=selected?.id;
+  }},[selected,selected?.id]);
+  const loc=selected?locateNode(roots,selected.id):null;
+  const folderId=selected?(selected.kind==='folder'?selected.id:loc?.parentId??null):contextFolder.current??rootId??null;
+  const folder=folderId?findNode(roots,folderId):undefined;
+  const options=treeOptions(roots);
+  const savedCards:StyleCard[]=(folder?folder.children:roots).filter(n=>n.bookStyle&&!n.hidden).map(node=>({name:node.title,style:node.bookStyle!,node}));
+  const source=useMemo(()=>gallery?'':proofDocument(publication(novel,s,proof),s,print),[novel,s,proof,print,gallery]);
+  const open=(card:StyleCard)=>{
+    contextFolder.current=folderId;
+    const state=useKachamak.getState();state.select(card.node?.id??null);
+    if(!card.node)setHouse(houseStyles.findIndex(h=>h.name===card.name));setGallery(false);
+  };
+  const change=(next:BookStyle)=>{
+    const state=useKachamak.getState();
+    if(saved&&selected)state.updateNode('publish',selected.id,{bookStyle:next});
+    else setDrafts(existing=>({...existing,[house]:next}));
+    setGallery(false);
+  };
+  const saveAs=()=>{setDestination(folder?.id??'');setStyleName(entry.name+(saved?' copy':' edition'));setSaving(true);};
+  const inspect=(v:Proof)=>{setWantPdf(false);setProof(v);setGallery(false);};
+  const download=async(format:'PDF'|'EPUB'|'DOCX'|'HTML')=>{
+    if(!novel.sections.binder?.length){toast.error('Add manuscript notes to Binder before exporting.');return;}
+    if(format==='PDF'){
+      if(!gallery&&print&&proof==='Manuscript'&&ready&&frame.current?.contentDocument?.documentElement.dataset.ready==='yes'){frame.current.contentWindow?.print();return;}
+      setReady(false);setPrint(true);setProof('Manuscript');setGallery(false);setWantPdf(true);return;
+    }
+    setBusy(true);
+    try{await (await import('@/lib/kachamak/publish-export')).exportEdition(format,publication(novel,s),s);}
+    catch{toast.error('The edition could not be exported. Please try again.');}finally{setBusy(false);}
+  };
+  const onReady=useCallback((v:boolean)=>setReady(v),[]);
+  useEffect(()=>{if(!wantPdf||!ready||!print||gallery||proof!=='Manuscript'||frame.current?.contentDocument?.documentElement.dataset.ready!=='yes')return;
+    setWantPdf(false);frame.current.contentWindow?.print();
+  },[wantPdf,ready,print,gallery,proof]);
+  const group=(title:string,items:StyleCard[])=>items.length>0&&<section className="mb-7"><h2 className="mb-3 text-sm font-semibold text-muted-foreground">{title}</h2><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node?.id??card.name} book={novel} entry={card} selected={saved?card.node?.id===selected?.id:!card.node&&card.name===entry.name} choose={()=>open(card)}/>)}</div></section>;
+  return <>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2">
+        <button className={btn+' md:hidden'} onClick={onShowTree} aria-label="Style folders"><FolderTree className="size-4"/></button>
+        <button className={btn+(gallery?active:'')} onClick={()=>{setWantPdf(false);setGallery(true);}}><Grid2X2 className="size-3.5"/>Styles</button>
+        <button className={btn+(!gallery?active:'')} onClick={()=>setGallery(false)}><BookOpen className="size-3.5"/>Proof</button>
+        <span className="min-w-1 flex-1"/>
+        <button className={btn+' lg:hidden'} onClick={onShowTools} aria-label="Show style tools"><Settings2 className="size-4"/></button>
+        <DropdownMenu><DropdownMenuTrigger asChild><button disabled={busy} className={btn}>{busy?'Exporting…':'Export book'}<Download className="size-3.5"/></button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">{(['PDF','EPUB','DOCX','HTML'] as const).map(f=><DropdownMenuItem key={f} onSelect={()=>void download(f)}>{f==='PDF'?'Print / Save PDF':f}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+      </div>
+      {gallery?<div className="kachamak-scroll min-h-0 flex-1 overflow-auto p-5" style={{zoom}}><div className="mb-5 flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">{folder?.title??'Book styles'}</h1><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>{useKachamak.getState().addNode('publish',folder?.id??null,'folder','New folder');}}>New folder</button>{otherStyles.length>0&&<button className={btn} onClick={()=>setImporting(true)}>Use style from another book</button>}</div></div>
+        {group('Saved styles',savedCards)}{group('House styles',houseStyles)}
+      </div>:<>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
+          <strong className="mr-auto truncate">{entry.name}</strong>
+          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v}>{v}</option>)}</select>
+          <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setWantPdf(false);setPrint(m==='Print');}}>{m}</button>)}</div>
+        </div>
+        <PublishProof source={source} print={print} frameRef={frame} onReady={onReady} zoom={zoom}/>
+      </>}
+    </div>
+    {toolsHost&&createPortal(<PublishTools novel={novel} name={entry.name} style={s} change={change} save={saveAs} inspect={inspect} print={print} draft={!saved&&!!drafts[house]}/>,toolsHost)}
+    <Dialog open={importing} onOpenChange={setImporting}><DialogContent aria-describedby={undefined}><DialogHeader><DialogTitle>Use style from another book</DialogTitle></DialogHeader>
+      <div className="grid max-h-[60vh] gap-2 overflow-y-auto">{otherStyles.map(item=><button key={item.book.id+':'+item.node.id} className={btn+' justify-start text-left'} onClick={()=>{
+        const style={...item.node.bookStyle!};
+        if(style.chapterImage){
+          const source=galleryImage(item.book.gallery,style.chapterImage);
+          const match=source&&novel.gallery?.find(img=>img.kind==='image'&&img.image===source.image);
+          if(match)style.chapterImage=galleryImageRef(match.id);
+          else {delete style.chapterImage;toast.message('Style copied. Choose chapter artwork from this book’s Gallery.');}
+        }
+        if(useKachamak.getState().addNode('publish',folder?.id??null,{bookStyle:style},item.node.title)){setImporting(false);setGallery(false);}
+      }}>{item.path}</button>)}</div></DialogContent></Dialog>
+    <Dialog open={saving} onOpenChange={setSaving}><DialogContent aria-describedby={undefined}><DialogHeader><DialogTitle>Save as style</DialogTitle></DialogHeader>
+      <form className="grid gap-4" onSubmit={e=>{e.preventDefault();const name=styleName.trim();if(!name)return;
+        const id=useKachamak.getState().addNode('publish',destination||null,{bookStyle:s},name);if(id){if(!saved)setDrafts(existing=>{const next={...existing};delete next[house];return next;});setSaving(false);setGallery(false);}
+      }}><label className="grid gap-1 text-sm">Style name<input autoFocus required maxLength={200} className={btn+' bg-background'} value={styleName} onChange={e=>setStyleName(e.target.value)}/></label>
+      <label className="grid gap-1 text-sm">Folder<select className={btn+' bg-background'} value={destination} onChange={e=>setDestination(e.target.value)}><option value="">Styles library</option>{options.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
+      <button type="submit" className={btn+active} disabled={!styleName.trim()}>Save style</button></form></DialogContent></Dialog>
+  </>;
+}

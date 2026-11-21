@@ -1,0 +1,32 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {bookArticles,bookCss,escapeText,type Publication} from '@/lib/kachamak/publication';
+import {useKachamak} from '@/lib/kachamak/store';
+import {trims,type BookStyle} from '@/lib/kachamak/book-style';
+
+export function proofDocument(book:Publication,style:BookStyle,print:boolean){
+  const width=trims[style.trim][0]*96/25.4;
+  const screen=print?`@media screen{html{background:#262626}.pagedjs_pages{display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 0;zoom:calc(var(--fit,1) * var(--panel-zoom,1))}.pagedjs_page{background:white;box-shadow:0 2px 10px #0006;flex:none}}`:
+    'html{background:#262626;padding:16px}body{zoom:var(--panel-zoom,1);max-width:36em;min-height:85vh;margin:auto;background:#fff;padding:2.5em 2em}';
+  return '<!doctype html><html lang="'+book.lang+'"><head><meta charset="utf-8"><title>'+escapeText(book.title)+'</title><style>'+bookCss(style,book.lang,print)+'</style><style data-pagedjs-ignore>'+screen+'</style>'+
+    (print?'<script>window.PagedConfig={auto:false};</script><script src="/publish-pagination.js"></script>':'')+'</head><body>'+bookArticles(book)+
+    (print?`<script>document.currentScript.remove();window.addEventListener('load',async()=>{try{await document.fonts.ready;await new Paged.Previewer().preview();function fit(){document.documentElement.style.setProperty('--fit',Math.min(1.3,Math.max(.15,(document.documentElement.clientWidth-36)/${width})));}fit();window.addEventListener('resize',fit);document.documentElement.dataset.ready='yes';window.dispatchEvent(new Event('proofready'));}catch(e){document.documentElement.dataset.ready='error';window.dispatchEvent(new Event('proofready'));}});</script>`:'')+'</body></html>';
+}
+export function PublishProof({source,print,frameRef,onReady,zoom}:{zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onReady:(ready:boolean)=>void}){
+  const [status,setStatus]=useState(''), token=useRef(0);
+  useEffect(()=>{token.current++;onReady(false);setStatus(print?'Setting pages…':'');},[source,print,onReady]);
+  useEffect(()=>{frameRef.current?.contentDocument?.documentElement.style.setProperty('--panel-zoom',String(zoom));},[frameRef,zoom]);
+  return <div className="relative flex min-h-0 flex-1 flex-col">
+    {status&&<div aria-live="polite" className="absolute bottom-2 left-2 z-10 rounded bg-background/95 px-2 py-1 text-xs text-muted-foreground">{status}</div>}
+    <iframe ref={frameRef} title={print?'Print proof':'eBook proof'} className="min-h-60 w-full flex-1 border-0 bg-neutral-800" sandbox="allow-scripts allow-same-origin allow-modals" srcDoc={source}
+      onLoad={()=>{const w=frameRef.current?.contentWindow;if(!w)return;
+        w.document.documentElement.style.setProperty('--panel-zoom',String(zoom));
+        w.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();frameRef.current?.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,ctrlKey:true,deltaY:e.deltaY,deltaMode:e.deltaMode}));}},{passive:false});
+        w.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='0'){e.preventDefault();useKachamak.getState().setPanelZoom('mid',1);}});
+        const id=token.current;const done=()=>{if(id!==token.current||!frameRef.current)return;
+          const doc=w.document;if(print && doc.documentElement.dataset.ready!=='yes'){setStatus('Pagination failed. Reopen the proof to try again.');return;}
+          const pages=doc.querySelectorAll('.pagedjs_page').length;setStatus(print?pages+' '+(pages===1?'page':'pages'):'');onReady(true);};
+        if(!print||w.document.documentElement.dataset.ready)done();else w.addEventListener('proofready',done,{once:true});
+      }}/>
+  </div>;
+}

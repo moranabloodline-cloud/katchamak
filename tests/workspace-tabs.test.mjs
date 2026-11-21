@@ -28,7 +28,7 @@ assert.equal(useKachamak.getState().activeTab,'codex','Hiding a background tab k
 actions.hideTab(projectId,'codex');
 assert.equal(useKachamak.getState().activeTab,'planning','Hiding the active tab opens its visible neighbour');
 assert.equal(novel().sections.binder[0].content,'<p>Keep this manuscript.</p>');
-assert.deepEqual(workspaceTabs(novel(),true).map(t=>t.key),[folderTab,'codex','finance']);
+assert.deepEqual(workspaceTabs(novel(),true).map(t=>t.key),[folderTab,'codex','publish','finance']);
 const hiddenBook=JSON.parse(JSON.stringify(novel()));
 assert.ok(isUsableBackup(hiddenBook));
 assert.ok(validCloudLibrary({novels:[hiddenBook],collections:[]}));
@@ -39,7 +39,7 @@ actions.openNoteTab(folder);
 assert.deepEqual(keys(),allTabs,'Restoring tabs recovers their original positions');
 for(const key of allTabs) actions.hideTab(projectId,key);
 assert.deepEqual(keys(),[]);
-assert.deepEqual(workspaceTabs(novel(),true).map(t=>t.key).filter(key=>key!=='finance'),allTabs,'Every hidden tab remains available under +');
+assert.deepEqual(workspaceTabs(novel(),true).map(t=>t.key).filter(key=>key!=='finance'&&key!=='publish'),allTabs,'Every hidden tab remains available under +');
 for(const key of allTabs) actions.setTab(key);
 assert.deepEqual(keys(),allTabs);
 const portable=JSON.parse(JSON.stringify(novel()));assert.ok(isUsableBackup(portable));assert.equal(validCloudLibrary({novels:[portable],collections:[]}),true);
@@ -52,7 +52,7 @@ const before=useKachamak.getState();actions.moveWorkspaceTab(projectId,'trash','
 actions.createNovel('Other project','Tester');const other=useKachamak.getState().activeNovelId;
 assert.equal(useKachamak.getState().novels.find(n=>n.id===other).tabOrder,undefined,'A project has its own default order');
 actions.hideTab(projectId,'codex');
-assert.deepEqual(workspaceTabs(useKachamak.getState().novels.find(n=>n.id===other),true).map(t=>t.key),['finance'],'Hiding from an inactive book cannot affect the open book');
+assert.deepEqual(workspaceTabs(useKachamak.getState().novels.find(n=>n.id===other),true).map(t=>t.key),['publish','finance'],'Hiding from an inactive book cannot affect the open book');
 const guarded=useKachamak.getState();actions.moveWorkspaceTab(projectId,'binder','timeline');assert.equal(useKachamak.getState(),guarded,'A late drag from another project cannot change either order');
 const legacy=structuredClone(portable);delete legacy.tabOrder;
 assert.deepEqual(useKachamak.persist.getOptions().migrate({novels:[legacy]},26).novels,[legacy],'v27 migration preserves legacy projects exactly');

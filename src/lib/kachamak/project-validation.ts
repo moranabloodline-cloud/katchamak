@@ -1,3 +1,4 @@
+import {validBookStyle} from './book-style';
 import {validKanban} from './kanban';
 import {validCurrency,validTransaction} from './finance';
 import type { Novel, SectionKey } from './types';
@@ -24,6 +25,7 @@ export function isReadableProject(value: unknown): boolean {
   if (typeof n.title !== "string" || !n.title.trim()) return false;
   if (n.author !== undefined && typeof n.author !== "string") return false;
   if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
+  if(n.publishEnabled!==undefined && typeof n.publishEnabled!=='boolean')return false;
   if(n.financeCurrency!==undefined && !validCurrency(n.financeCurrency))return false;
   const cover = n.cover as Record<string, unknown>;
   if (typeof cover.bg !== "string" || typeof cover.icon !== "string" || !validNovelMetadata({series:n.series,seriesIndex:n.seriesIndex,language:n.language,genres:n.genres,subgenres:n.subgenres,chapterCount:n.chapterCount,targetAudience:n.targetAudience,tones:n.tones,writingStyles:n.writingStyles,plotTechniques:n.plotTechniques,sellingPoints:n.sellingPoints,explicitContent:n.explicitContent,archived:n.archived,cover:{image:cover.image}})) return false;
@@ -36,7 +38,7 @@ export function isReadableProject(value: unknown): boolean {
       typeof node.kind === "string" && ["content", "synopsis", "notes", "status", "label"].every((key) => node[key] === undefined || typeof node[key] === "string") &&
       (node.ignoreAutoLinking === undefined || typeof node.ignoreAutoLinking === 'boolean') &&
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
-      (node.kanban===undefined || validKanban(node.kanban)) && (node.transaction===undefined || validTransaction(node.transaction)) && validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
+      (node.bookStyle===undefined || validBookStyle(node.bookStyle)) && (node.kanban===undefined || validKanban(node.kanban)) && (node.transaction===undefined || validTransaction(node.transaction)) && validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validNotePageSettings(node.pageSettings) && validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
       validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
       (node.event === undefined || validEvent(node.event)) &&
@@ -61,7 +63,7 @@ export function isReadableProject(value: unknown): boolean {
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && !validHiddenInspectorTabs(n.hiddenInspectorTabs)) return false;
   if (!validInspectorByTab(n.inspectorByTab)) return false;
-  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance','kanban'].includes(k)))) return false;
+  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance','kanban','publish'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];
     if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;

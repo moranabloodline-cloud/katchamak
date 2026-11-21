@@ -58,6 +58,7 @@ export function* projectImageRefs(book:Novel, includeEmbedded = false) {
         const ref = embeddedRefs.get(image);
         if (ref) yield ref;
       }
+      if(isGalleryImageRef(note.bookStyle?.chapterImage))yield note.bookStyle.chapterImage;
       if(isGalleryImageRef(note.image))yield note.image;
       for (const column of note.kanban?.columns ?? []) {
         for (const card of column.cards) if (isGalleryImageRef(card.cover)) yield card.cover;

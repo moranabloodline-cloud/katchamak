@@ -12,7 +12,8 @@ export type SectionKey =
   | "timeline"
   | "family"
   | "finance"
-  | "kanban";
+  | "kanban"
+  | "publish";
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
@@ -25,6 +26,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "family",
   "finance",
   "kanban",
+  "publish",
 ];
 
 export type TabKey = SectionKey | "gallery" | "trash" | `note:${string}`;
@@ -54,6 +56,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "timeline", label: "Timeline" },
   { key: "family", label: "Relationships" },
   { key: "kanban", label: "Kanban" },
+  { key: "publish", label: "Publish" },
   { key: "finance", label: "Finance" },
   { key: "trash", label: "Trash" },
 ];
@@ -101,6 +104,7 @@ export interface NoteNode {
   aliases?: string[];
   ignoreAutoLinking?: boolean; // skip this note as a target during automatic link review
   linkChoices?: LinkChoice[];
+  bookStyle?: import("./book-style").BookStyle;
   kanban?: import('./kanban').KanbanBoard;
   transaction?: import('./finance').Transaction;
   event?: StoryEvent;
@@ -121,6 +125,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
+  publishEnabled?: boolean;
   financeCurrency?: import('./finance').FinanceCurrency;
   gallery?: import('./gallery').GalleryEntry[];
   homepage?: import('./homepage').Homepage;

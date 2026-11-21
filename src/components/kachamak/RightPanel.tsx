@@ -87,6 +87,7 @@ export function RightPanel({
   emptyInfo,
   infoEditor,
   infoOnly = false,
+  publishTools,
   canvas,
 }: {
   novel: Novel;
@@ -98,6 +99,7 @@ export function RightPanel({
   emptyInfo?: ReactNode;
   infoEditor?: ReactNode;
   infoOnly?: boolean;
+  publishTools?: (host:HTMLDivElement|null)=>void;
   canvas?: {page:HomePageEntry; toolsRef:(host:HTMLDivElement|null)=>void};
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
@@ -117,7 +119,7 @@ export function RightPanel({
     if(canvas)changeHomepage(novel.id,{type:'info',field,value:html},canvas.page.id);
     else if(node)updateNode(section,node.id,{[field]:html});
   };
-  const activeTab = canvas ? novel.inspectorByTab?.homepage?.selected ?? 'info' : infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
+  const activeTab = publishTools ? 'tools' : canvas ? novel.inspectorByTab?.homepage?.selected ?? 'info' : infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
   const setInspectorTabHidden = useKachamak(s => s.setInspectorTabHidden);
   const selectInspectorTab = useKachamak(s => s.selectInspectorTab);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -156,8 +158,8 @@ export function RightPanel({
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
       <div ref={toolbarRef} className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-white/10 px-2">
-        <TabsList aria-label={canvas?"Canvas inspector":"Note inspector"} className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${!canvas && visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
-          {canvas ? <>
+        <TabsList aria-label={publishTools?"Publish inspector":canvas?"Canvas inspector":"Note inspector"} className={`h-auto min-w-0 justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 ${!canvas && visibleTabs.length>3 ? '[&>[role=tab]]:px-2 [&>[role=tab]]:text-xs' : ''}`}>
+          {publishTools ? <TabsTrigger value="tools" className={tabCls}>Tools</TabsTrigger> : canvas ? <>
             <TabsTrigger value="info" className={tabCls}>Info</TabsTrigger>
             <TabsTrigger value="tools" className={tabCls}>Tools</TabsTrigger>
           </> : visibleTabs.map(t=>{
@@ -171,7 +173,7 @@ export function RightPanel({
             </ContextMenu>;
           })}
         </TabsList>
-        {!canvas && !infoOnly && <DropdownMenu>
+        {!publishTools && !canvas && !infoOnly && <DropdownMenu>
           <DropdownMenuTrigger asChild><button type="button" disabled={!hiddenTabs.length} aria-label="Show hidden inspector tabs" title={hiddenTabs.length?'Show hidden tabs':'All tabs are visible'} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-white/10 disabled:opacity-40"><Plus className="size-4"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" aria-label="Hidden inspector tabs" onCloseAutoFocus={event=>{
             if(!restoringTab.current)return;
@@ -244,6 +246,7 @@ export function RightPanel({
             </div>
           </div>}
         </TabsContent>}
+        {publishTools && <TabsContent value="tools" className="mt-0"><div ref={publishTools}/></TabsContent>}
         {canvas && <TabsContent value="tools" className="mt-0"><div ref={canvas.toolsRef}/></TabsContent>}
 
         {node && <>

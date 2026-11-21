@@ -1,3 +1,5 @@
+> **2026-11-21 — Publish i stilovi knjige.** Opcioni tab Publish donosi šest stilova knjige, biblioteku stilova u stablu i živi pregled štampe i e-knjige. Iz istog Binder rukopisa priprema PDF preko dijaloga za štampu, EPUB, DOCX i HTML.
+
 > **2026-11-21 — Detalji Kanban kartice.** Kartica ima oznake u boji, početak i rok, čekliste, članove, završetak i naslovnu sliku iz Galerije knjige. Komentari i istorija izmena prate karticu između kolona.
 
 > **2026-11-21 — Kanban table i podtable.** Svaka knjiga ima sopstveno Kanban stablo. Kartice čuvaju opis, prioritet i rok, a kolone i kartice svoj redosled.
@@ -667,6 +669,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Publish.** Opcioni tab Publish donosi šest stilova knjige, biblioteku stilova u stablu i živi pregled štampe i e-knjige. Iz istog Binder rukopisa priprema PDF preko dijaloga za štampu, EPUB, DOCX i HTML. Stilovi čuvaju izgled poglavlja, blokova, uvodnih i završnih stranica. Uključeni su u čuvanje knjige i Undo/Redo.
 
 - **2026-11-21 — Detalji Kanban kartice.** Kartica ima oznake u boji, početak i rok, čekliste, članove, završetak i naslovnu sliku iz Galerije knjige. Komentari i istorija izmena prate karticu između kolona. Članovi se dodeljuju po imenu unutar knjige.
 

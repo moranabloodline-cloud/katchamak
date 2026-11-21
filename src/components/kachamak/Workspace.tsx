@@ -138,7 +138,7 @@ export function Workspace() {
             onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
             <EyeOff aria-hidden="true"/>
           </button>
-          <PageFormatMenu key={novel.id+':'+formatTab} projectId={novel.id} tab={formatTab==='trash'||formatTab==='gallery'||formatTab==='kanban'||folder?.section==='kanban'?null:formatTab} label={formatLabel}/>
+          <PageFormatMenu key={novel.id+':'+formatTab} projectId={novel.id} tab={formatTab==='trash'||formatTab==='gallery'||formatTab==='publish'||folder?.section==='publish'||formatTab==='kanban'||folder?.section==='kanban'?null:formatTab} label={formatLabel}/>
           <button type="button" aria-label="Trash" title="Trash" aria-current={trashOpen?'page':undefined}
             onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
             <Trash2 aria-hidden="true"/>
