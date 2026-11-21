@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PenLine } from "lucide-react";
 import { EditorPage, RulerRow } from "./WriteArea";
-import { CtrlZoom } from "./CtrlZoom";
+import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
@@ -106,8 +106,8 @@ export function SplitEditors({ section }: { section: SectionKey }) {
   const splitRatio = useKachamak((s) => s.splitRatio ?? 0.5);
   /* zoom po POVŠINI: dok korisnik ne podesi svoj, nasleđuje midZoom —
      bez skoka kad dođe iz Write moda */
-  const zoomA = useKachamak((s) => s.paneAZoom ?? s.midZoom ?? 1);
-  const zoomB = useKachamak((s) => s.paneBZoom ?? s.midZoom ?? 1);
+  const zoomA = usePanelZoom("paneA");
+  const zoomB = usePanelZoom("paneB");
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const paneARef = useRef<HTMLDivElement | null>(null);

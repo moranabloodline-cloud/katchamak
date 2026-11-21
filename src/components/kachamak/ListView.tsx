@@ -25,7 +25,6 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const moveNodeTo = useKachamak((s) => s.moveNodeTo);
-  const midZoom = useKachamak((s) => s.midZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
   const scoped = rootId ? findNode(roots,rootId) : null;
@@ -76,7 +75,7 @@ export function ListView({ section, rootId }: { section: SectionKey; rootId?: st
   };
 
   return (
-    <div className="p-6" style={{ zoom: midZoom }}>
+    <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground">
           {all.length} notes · {total.toLocaleString()} words

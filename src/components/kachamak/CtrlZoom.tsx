@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useKachamak } from "@/lib/kachamak/store";
+import {currentPanelZoom, subscribeZoom, zoomScope, type ZoomPanel} from "@/lib/kachamak/workspace-zoom";
 
-export type ZoomPanel = "left" | "mid" | "right" | "paneA" | "paneB";
+export function usePanelZoom(panel:ZoomPanel) {
+  useKachamak(zoomScope);
+  return useSyncExternalStore(subscribeZoom,()=>currentPanelZoom(useKachamak.getState(),panel),()=>1);
+}
 
 /* Ctrl + skrol nad panelom = zoom SADRŽINE tog panela (0.5–2.0, korak 0.1;
    trake/okvir ostaju iste visine pa linije trake 2 ostaju poravnate).
@@ -22,6 +26,7 @@ export function CtrlZoom({
   panel: ZoomPanel;
   targetRef: React.RefObject<HTMLElement | null>;
 }) {
+  const scope=useKachamak(zoomScope);
   useEffect(() => {
     const el = targetRef.current;
     if (!el) return;
@@ -34,26 +39,16 @@ export function CtrlZoom({
       e.preventDefault();
       /* zoom površine je LOKALAN — ne pusti event do main listenera */
       e.stopPropagation();
-      acc += e.deltaY;
+      acc += e.deltaY * (e.deltaMode===1?16:e.deltaMode===2?Math.max(el.clientHeight,1):1);
       if (Math.abs(acc) >= 50) {
         const step = acc < 0 ? 0.1 : -0.1;
         acc = 0;
         const s = useKachamak.getState();
-        const cur =
-          panel === "left"
-            ? s.leftZoom
-            : panel === "mid"
-              ? s.midZoom
-              : panel === "right"
-                ? s.rightZoom
-                : panel === "paneA"
-                  ? s.paneAZoom ?? s.midZoom
-                  : s.paneBZoom ?? s.midZoom;
-        s.setPanelZoom(panel, (cur ?? 1) + step);
+        s.setPanelZoom(panel, currentPanelZoom(s,panel) + step);
       }
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [panel, targetRef]);
+  }, [panel, targetRef, scope]);
   return null;
 }

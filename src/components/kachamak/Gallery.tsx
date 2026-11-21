@@ -1,5 +1,6 @@
 'use client';
 
+import {usePanelZoom} from './CtrlZoom';
 import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
 import {Check, ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, Images, MoreHorizontal, Upload, X} from 'lucide-react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
@@ -45,6 +46,7 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
   novel:Novel; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>;
   drag:GalleryDrag|null; setDrag:SetGalleryDrag;
 }) {
+  const leftZoom=usePanelZoom("left");
   const entries=novel.gallery;
   const tree=useRef<HTMLElement>(null);
   const select=useTreeSelection(tree,folderId);
@@ -125,7 +127,7 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
   },[entries,collapsed,draggedFolders]);
   return <div className="flex h-full min-h-0 flex-col">
     <WorkspaceNavigation/>
-    <nav ref={tree} aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto p-1">
+    <nav ref={tree} style={{zoom:leftZoom}} aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto p-1">
       <button type="button" aria-current={folderId===null?'page':undefined} onClick={()=>{select.clear();openFolder(null);}}
         {...dropTarget(null,'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm')}>
         <Images className="size-4 text-teal-300"/>Gallery
@@ -224,7 +226,7 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
   }
   const moveOptions=editing?.type==='move'?entries.filter(item=>item.kind==='folder').map(item=>({item,path:galleryPath(entries,item.id)}))
     .filter(option=>!option.path.some(ancestor=>ancestor.id===editing.item.id)).sort((a,b)=>compareNames(a.item,b.item)):[];
-  return <section aria-label="Project gallery" className="col-span-full row-start-2 min-h-0 min-w-0 overflow-y-auto overscroll-contain kachamak-scroll">
+  return <section style={{zoom:"var(--workspace-canvas-zoom, 1)"}} aria-label="Project gallery" className="col-span-full row-start-2 min-h-0 min-w-0 overflow-y-auto overscroll-contain kachamak-scroll">
     <div className="mx-auto max-w-screen-2xl p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Gallery path" className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">

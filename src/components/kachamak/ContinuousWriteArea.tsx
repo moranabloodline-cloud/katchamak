@@ -17,11 +17,10 @@ export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?
   const scope='continuous'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const novels=useKachamak(s=>s.novels),projectId=useKachamak(s=>s.activeNovelId);
   const selectedId=useKachamak(s=>s.selectedNodeId);
-  const zoom=useKachamak(s=>s.midZoom??1);
   const novel=novels.find(n=>n.id===projectId),notes=continuousSelection(novel?.sections[section]??[],selectedId,rootId);
   const scrollRef=useRef<HTMLDivElement>(null),[preview,setPreview]=useState<string|null>(null);
   useEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=0;},[selectedId,section,rootId,projectId]);
-  return <div data-note-link-scope={scope} onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection((event.target as Element).closest<HTMLElement>('.kachamak-editor'));}} className="flex h-full min-h-0 flex-col" style={{zoom}}><style>{noteAnchorStyles(novel,scope)}</style>
+  return <div data-note-link-scope={scope} onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection((event.target as Element).closest<HTMLElement>('.kachamak-editor'));}} className="flex h-full min-h-0 flex-col"><style>{noteAnchorStyles(novel,scope)}</style>
     <RulerRow node={notes.find(node=>node.id===selectedId)??notes[0]}/>
     <div ref={scrollRef} aria-label="Continuous manuscript · read only" className="min-h-0 flex-1 overflow-y-auto kachamak-scroll pb-[40vh]" style={{scrollbarGutter:'stable'}}>
       {notes.map(node=>{

@@ -115,7 +115,6 @@ export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: s
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const addNode = useKachamak((s) => s.addNode);
   const moveNodeTo = useKachamak((s) => s.moveNodeTo);
-  const midZoom = useKachamak((s) => s.midZoom ?? 1);
   const novel = novels.find((n) => n.id === activeNovelId);
   const allRoots = novel?.sections[section] ?? [];
   const scoped = rootId ? findNode(allRoots,rootId) : null;
@@ -162,7 +161,6 @@ export function Corkboard({ section, rootId }: { section: SectionKey; rootId?: s
   return (
     <div
       className="min-h-full bg-background text-foreground"
-      style={{ zoom: midZoom }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         /* drop on the bare cork (gaps, "+" button) → move to the end of the level */

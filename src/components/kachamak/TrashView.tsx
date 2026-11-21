@@ -1,5 +1,6 @@
 "use client";
 
+import {usePanelZoom} from './CtrlZoom';
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import { useState } from "react";
@@ -34,10 +35,11 @@ const SECTION_NAMES: Record<SectionKey, string> = {
 };
 
 export function TrashSections({novel}: {novel: Novel}) {
+  const leftZoom=usePanelZoom("left");
   return (
     <div className="flex h-full flex-col">
       <WorkspaceNavigation />
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div style={{zoom:leftZoom}} className="min-h-0 flex-1 overflow-y-auto">
         <div className="space-y-1 px-2 pb-3">
           {(Object.keys(SECTION_NAMES) as SectionKey[]).map((k) => {
             const count = novel.trash.filter((t) => t.section === k).length;
@@ -92,7 +94,7 @@ export function TrashView() {
   );
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
+    <div style={{zoom:"var(--workspace-canvas-zoom, 1)"}} className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
         <div className="mx-auto max-w-2xl p-8">
           <h2 className="text-2xl font-bold">Trash</h2>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -372,10 +372,9 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
    (Ctrl + skrol) važi za lenjir i stranu, NE i za formatnu traku — da
    donje linije trake 2 ostanu u istom redu kroz panele. */
 export function WriteArea({ node, section }: { node: NoteNode; section: SectionKey }) {
-  const midZoom = useKachamak((s) => s.midZoom ?? 1);
 
   return (
-    <div className="flex h-full min-h-0 flex-col" style={{ zoom: midZoom }}>
+    <div className="flex h-full min-h-0 flex-col">
       <RulerRow node={node} />
       <EditorPage node={node} section={section} />
     </div>

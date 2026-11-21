@@ -9,6 +9,7 @@ import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {iconForNote} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
+import {saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
 import {familyDiagram} from '@/lib/kachamak/family-diagram';
@@ -92,6 +93,9 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const marker=useId().replace(/[^\w-]/g,'');
   const {people,width,height,positions,paths}=useMemo(()=>familyDiagram(novel,tree),[novel,tree]);
   const viewportRef=useRef<HTMLDivElement>(null),diagramRef=useRef<HTMLDivElement>(null);
+  const scope=useKachamak(zoomScope);
+  const savedZoom=Number(useZoomSetting(scope,'family-diagram'));
+  const diagramZoom=savedZoom>0 && savedZoom<=3?savedZoom:1;
   useEffect(()=>{
     const viewport=viewportRef.current,diagram=diagramRef.current;
     if(!viewport||!diagram)return;
@@ -114,12 +118,14 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
       const after=diagram.getBoundingClientRect();
       // Centering and scroll limits can move the scaled diagram's origin.
       // Keep the same point under the pointer wherever there is room to scroll.
-      viewport.scrollLeft+=after.left+(event.clientX-before.left)*next/current-event.clientX;
-      viewport.scrollTop+=after.top+(event.clientY-before.top)*next/current-event.clientY;
+      const viewportScale=viewport.getBoundingClientRect().width/viewport.offsetWidth || 1;
+      viewport.scrollLeft+=(after.left+(event.clientX-before.left)*next/current-event.clientX)/viewportScale;
+      viewport.scrollTop+=(after.top+(event.clientY-before.top)*next/current-event.clientY)/viewportScale;
+      saveZoomSetting(scope,'family-diagram',String(next));
     };
     viewport.addEventListener('wheel',wheel,{passive:false});
     return ()=>viewport.removeEventListener('wheel',wheel);
-  },[width,height]);
+  },[width,height,scope,tree?.id,people.length]);
   const names=new Map(people.map(p=>[p.id,p.title]));
   const lineTypes=new Set(paths.map(path=>path.style));
   const {width:w,height:h}=familyCard;
@@ -133,7 +139,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
       <Network aria-hidden="true" className="mx-auto mb-4 size-8 text-amber-400/70"/>
       {tree?<p className="text-sm text-muted-foreground">Choose people from the Codex using + next to People in the Family tab.</p>:<button type="button" onClick={onCreate} className={action}><Plus className="size-4"/>New family tree</button>}
     </div> : <div ref={viewportRef} className="min-h-0 flex-1 overflow-auto kachamak-scroll px-4 py-5 [overflow-anchor:none]">
-      <div ref={diagramRef} className="relative mx-auto" style={{width,height}} aria-label="People and relationships">
+      <div ref={diagramRef} className="relative mx-auto" style={{width,height,zoom:diagramZoom}} aria-label="People and relationships">
         <svg aria-hidden="true" width={width} height={height} className="pointer-events-none absolute inset-0 overflow-visible text-muted-foreground">
           <defs><marker id={marker} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8" fill="currentColor"/></marker></defs>
           {paths.map(({roles,style,arrow,d})=><g key={JSON.stringify(roles)}>

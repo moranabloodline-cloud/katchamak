@@ -1,5 +1,6 @@
 "use client";
 
+import {usePanelZoom} from './CtrlZoom';
 import {addFinanceNote} from './Finance';
 import { useEffect, useRef, useState } from "react";
 import {
@@ -595,7 +596,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
   const moveTreeNotes = useKachamak((s) => s.moveTreeNotes);
   const treeScope = useKachamak((s) => s.treeScope);
-  const leftZoom = useKachamak((s) => s.leftZoom ?? 1);
+  const leftZoom = usePanelZoom("left");
   const novel = novels.find((n) => n.id === activeNovelId);
   const roots = novel?.sections[section] ?? [];
   const [templateTarget, setTemplateTarget] = useState<{ bookId: string; parentId: string | null } | null>(null);

@@ -1,5 +1,6 @@
 "use client";
 
+import {usePanelZoom} from './CtrlZoom';
 import {
   useEffect,
   useRef,
@@ -100,7 +101,7 @@ export function RightPanel({
   const updateNode = useKachamak((s) => s.updateNode);
   const {font,size,spacing}=useNoteAppearance(node);
   const proseStyle=noteTypography(font,size,spacing);
-  const rightZoom = useKachamak((s) => s.rightZoom ?? 1);
+  const rightZoom = usePanelZoom("right");
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
   const [tab, setTab] = useState<string|null>(null);

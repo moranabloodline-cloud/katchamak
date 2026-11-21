@@ -26,7 +26,7 @@ let bubbled=0;
 document.addEventListener('wheel',()=>bubbled++);
 function wheel(ctrlKey,deltaY,deltaMode=0){
   const event=new window.WheelEvent('wheel',{bubbles:true,cancelable:true,ctrlKey,deltaY,deltaMode,clientX:120,clientY:80});
-  chart.dispatchEvent(event);
+  React.act(()=>chart.dispatchEvent(event));
   return event;
 }
 assert.equal(wheel(false,-300).defaultPrevented,false);

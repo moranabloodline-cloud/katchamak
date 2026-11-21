@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 import {DocumentTarget} from './DocumentTarget';
 import {documentTargetProgress} from '@/lib/kachamak/document-target';
@@ -25,7 +25,7 @@ import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
 import { RightPanel } from "./RightPanel";
 import { TrashInfo, TrashSections, TrashView } from "./TrashView";
-import { CtrlZoom } from "./CtrlZoom";
+import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
 import { useWebLibrary } from "@/lib/kachamak/cloud-library";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
@@ -313,6 +313,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   /* zone za Ctrl+skrol (zoom po panelu) */
   const leftPanelRef = useRef<HTMLElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
+  const canvasZoom=usePanelZoom("mid");
   const rightPanelRef = useRef<HTMLElement | null>(null);
 
   const novel = novels.find((n) => n.id === activeNovelId);
@@ -416,11 +417,11 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
 
       {/* Homepage spans the editor and inspector columns below the shared toolbar. */}
       <div className={wideCanvas ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)]' : 'contents'}>
-      <main ref={mainRef} tabIndex={-1} className={wideCanvas ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
+      <main ref={mainRef} tabIndex={-1} style={{"--workspace-canvas-zoom":canvasZoom} as CSSProperties} className={wideCanvas ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
+        <CtrlZoom panel="mid" targetRef={mainRef} />
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
         {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
-        <CtrlZoom panel="mid" targetRef={mainRef} />
-        <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
+        <div style={{zoom:view==="split"?undefined:canvasZoom}} className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {finance && novel && <FinanceWorkspace key={treeScopeKey} novel={novel} rootId={rootId} selected={selected} list={view==='finance-list'}/>}
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
           {view==='family' && novel && <FamilyTreeGraph key={treeScopeKey+':'+selected?.id} novel={novel} tree={selected}

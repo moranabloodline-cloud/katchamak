@@ -169,7 +169,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       </div>}
     </article>;
   }
-  return <section aria-label="Project homepage" aria-description={page.title} className="@container col-span-full row-start-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
+  return <section style={{zoom:"var(--workspace-canvas-zoom, 1)"}} aria-label="Project homepage" aria-description={page.title} className="@container col-span-full row-start-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
     <div className={'pointer-events-none sticky top-0 z-10 flex h-8 shrink-0 items-center justify-end gap-1.5 px-1.5'+(page.locked?' -mb-8':'')}>
       {onShowPages&&<Button size="icon" variant="ghost" className="pointer-events-auto mr-auto size-7 bg-background/90 md:hidden" aria-label="Show homepage pages" onClick={onShowPages}><ListTree/></Button>}
       <div className="pointer-events-auto flex items-center gap-1.5 rounded-md bg-background/90">

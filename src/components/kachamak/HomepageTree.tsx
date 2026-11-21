@@ -1,5 +1,6 @@
 'use client';
 
+import {usePanelZoom} from './CtrlZoom';
 import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
 import {ChevronDown, ChevronRight, FileText, House, MoreVertical, Plus, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
@@ -84,9 +85,10 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   };
   const dialogTitle=dialog?.action==='rename'?'Rename page':dialog?.id?'New subpage':'New page';
   let hiddenBelow=Infinity;
+  const leftZoom=usePanelZoom("left");
   return <div className="flex h-full flex-col">
     <WorkspaceNavigation includeHomePages/>
-    <nav ref={tree} {...dropTarget(null)} aria-label="Homepage pages" className="min-h-0 flex-1 overflow-auto p-1">
+    <nav ref={tree} style={{zoom:leftZoom}} {...dropTarget(null)} aria-label="Homepage pages" className="min-h-0 flex-1 overflow-auto p-1">
       {rows.map(row=>{
         if(row.depth>hiddenBelow)return null;
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;

@@ -1,3 +1,5 @@
+> **2026-11-21 — Zaseban zum za svaki tab i panel.** Ctrl + skrol menja zum sadržaja ispod miša. Pregledač pamti veličinu levog stabla, radne površine, desnog panela i obe Split površine za svaku knjigu i tab.
+
 > **2026-11-21 — Redovi na Homepage stranici.** Add row dodaje red sa dve jednake kolone. Remove row uklanja izabrani red i ostavlja njegove elemente na stranici.
 
 > **2026-11-21 — Naslov Homepage kartice.** Sopstveni naslov kartice prikazuje se u uskoj traci iznad slike. Klik na zaključanoj stranici otvara povezano odredište.
@@ -625,6 +627,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Zum po knjizi, tabu i panelu.** Provereni svi tabovi, korisnički tab, oba Split panela i vraćanje nivoa zuma posle osvežavanja. Vremenska osa i graf odnosa zadržavaju zum oko kursora.
 
 - **2026-11-21 — Homepage redovi.** Komande su dostupne na otključanoj početnoj stranici i podstranicama. Provereni su dodavanje i uređivanje reda, otkazivanje i potvrda uklanjanja, redosled sadržaja, očuvanje slike i linka, osvežavanje i uski ekran.
 

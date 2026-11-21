@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight,Plus,ZoomIn,ZoomOut,Maximize2} from 'lucide-react';
 import {useKachamak} from '@/lib/kachamak/store';
+import {saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
 import {findNode,findNodeInNovel,locateNode} from '@/lib/kachamak/utils';
 import {TIMELINE_LIMIT,TIMELINE_MAX_SPAN,GREGORIAN,baseYearDays,dateToMinute,eventType,minuteToDate,minutesPerDay,shiftMonth,yearText,type StoryDate} from '@/lib/kachamak/story-calendar';
 import {boundedViewport,fittedRange,timelineRows,type EventRow} from '@/lib/kachamak/timeline-data';
@@ -41,7 +42,8 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const pickedRoot=novel?.timeline?.pinnedRootId?findNode(roots,novel.timeline.pinnedRootId):null;
   const followedScopeId=viewSelection?.id===state.selectedNodeId?viewSelection.scopeId:novel&&section==="timeline"?timelineScope(novel.sections.timeline,state.selectedNodeId,rootId):selectedScope?.section===section&&(!folderScope||findNode([folderScope],selectedScope.node.id))?selectedScope.node.id:rootId;
   const scopeId=pickedRoot?.id??followedScopeId;
-  const [viewport,setViewport]=useState<{key:string;center:number;span:number}|null>(null);
+  const zoomKey=zoomScope(state);
+  const savedViewport=useZoomSetting(zoomKey,'timeline-viewport');
   const addRequest=useTimelineAddRequest();
   useEffect(()=>{
     if(!novel||!addRequest||addRequest.novelId!==novel.id||addRequest.section!==section
@@ -59,7 +61,13 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const day=minutesPerDay(calendar),fit=fittedRange(rows,day,1);
   const defaultViewport=range?boundedViewport(range.start+(range.end-range.start)/2,range.end-range.start+1):fit;
   const scopeKey=novel.id+':'+section+':'+mode+':'+(scopeId??'all')+':'+(range?range.start+','+range.end:'all')+':'+(mode==='calendar'?JSON.stringify(calendar)+':':'')+rows.map(r=>r.node.id+','+r.event.start+','+r.event.end).join(';');
-  const local=viewport?.key===scopeKey?viewport:null;
+  // Invalidate an old framing when the dates or range change. Store only a
+  // numeric signature and coordinates, even for a timeline with many notes.
+  let signature=2166136261;
+  for(let i=0;i<scopeKey.length;i++)signature=Math.imul(signature^scopeKey.charCodeAt(i),16777619);
+  const [savedSignature,savedCenter,savedSpan]=savedViewport?.split(' ').map(Number)??[];
+  const local=savedSignature===signature && Number.isFinite(savedCenter) && savedSpan>0 && Number.isFinite(savedSpan)
+    ? boundedViewport(savedCenter,savedSpan):null;
   const firstEvent=rows.find(r=>eventType(r.event)==='event')??rows[0];
   const calendarStart=mode==='calendar'?firstEvent?.event.start:undefined;
   const scoped=!!scopeId||section==='timeline'||!!range;
@@ -70,7 +78,10 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
   const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesTimelineDialog())setEditing({id:r.node.id,start:r.event.start});else if(!state.rightPanelOpen)state.toggleRightPanel();};
-  const changeViewport=(patch:Partial<{center:number;span:number}>)=>{const next=boundedViewport(patch.center??center,patch.span??span);setViewport({key:scopeKey,...next});state.setTimeline(next);};
+  const changeViewport=(patch:Partial<{center:number;span:number}>)=>{
+    const next=boundedViewport(patch.center??center,patch.span??span);
+    saveZoomSetting(zoomKey,'timeline-viewport',[signature,next.center,next.span].join(' '));
+  };
   const changeCenter=(value:number)=>changeViewport({center:Math.max(-TIMELINE_LIMIT,Math.min(TIMELINE_LIMIT,Math.round(value)))});
   const monthMove=(delta:number)=>{try{changeCenter(shiftMonth(calendar,center,delta));}catch{/* Limit reached. */}};
   const navigate=(id:string|null)=>{if(pickedRoot)state.setTimeline({pinnedRootId:null});setViewSelection(null);state.select(id);};

@@ -33,6 +33,7 @@ import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} fr
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
+import {saveZoomSetting,zoomScope,type ZoomPanel} from './workspace-zoom';
 
 interface KachamakState {
   novels: Novel[];
@@ -102,7 +103,7 @@ interface KachamakState {
   rightZoom: number;
   paneAZoom: number | null;
   paneBZoom: number | null;
-  setPanelZoom: (panel: "left" | "mid" | "right" | "paneA" | "paneB", v: number) => void;
+  setPanelZoom: (panel: ZoomPanel, v: number) => void;
 
   /* panel sizes in px (drag the vertical line to widen / narrow) */
   leftPanelWidth: number;
@@ -410,18 +411,9 @@ export const useKachamak = create<KachamakState>()(
         set({ splitRatio: Math.round(Math.min(0.8, Math.max(0.2, r)) * 1000) / 1000 }),
 
       setPanelZoom: (panel, v) => {
+        if(!Number.isFinite(v))return;
         const z = Math.round(Math.min(2, Math.max(0.5, v)) * 100) / 100;
-        set(
-          panel === "left"
-            ? { leftZoom: z }
-            : panel === "mid"
-              ? { midZoom: z }
-              : panel === "right"
-                ? { rightZoom: z }
-                : panel === "paneA"
-                  ? { paneAZoom: z }
-                  : { paneBZoom: z }
-        );
+        saveZoomSetting(zoomScope(get()),panel,String(z));
       },
 
       addStatus: (name) => {

@@ -108,10 +108,9 @@ export function FinanceWorkspace({novel,selected,rootId,list}:{novel:Novel;selec
   const currency=novel.financeCurrency??'EUR';
   const formatter=new Intl.NumberFormat(undefined,{style:'currency',currency});
   const money:Money=minor=>formatter.format(decimalAmount(minor));
-  const zoom=useKachamak(s=>s.midZoom);
   const open=(id:string)=>{const state=useKachamak.getState();state.select(id);if(!state.rightPanelOpen)state.toggleRightPanel();};
   const reset=()=>{const state=useKachamak.getState();state.setTab('finance');state.select(null);};
-  return <section aria-label="Finance workspace" style={{zoom}} className="@container mx-auto w-full max-w-[100rem] p-4 md:p-6">
+  return <section aria-label="Finance workspace" className="@container mx-auto w-full max-w-[100rem] p-4 md:p-6">
     <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">{scope&&<button className="mb-1 text-xs text-amber-300 hover:underline" onClick={reset}>All finances</button>}
         <h2 className="break-words text-2xl font-semibold">{scope?.title??(list?'Finance list':'Finance dashboard')}</h2>
