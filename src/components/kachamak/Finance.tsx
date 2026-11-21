@@ -40,7 +40,10 @@ export function FinanceEditor({node,currency}:{node:NoteNode;currency:string}) {
     }} onBlur={()=>{if(!invalid)setDraft(null);}}/></label>
     {invalid && <p role="alert" className="text-amber-300">Enter a positive amount or zero, with up to two decimal places.</p>}
     <label className="block">Date<input type="date" className={field} value={t.date} onChange={e=>change({date:e.target.value})}/></label>
-    <label className="block">Description <span className="text-muted-foreground">(optional)</span><textarea rows={4} className={field} value={t.description} onChange={e=>change({description:e.target.value})}/></label>
+    <label className="block min-w-0">Description <span className="text-muted-foreground">(optional)</span>
+      <textarea rows={4} wrap="soft" className={field+' min-h-[calc(4lh+1rem+2px)] max-w-full field-sizing-content resize-y whitespace-pre-wrap wrap-anywhere'}
+        value={t.description} onChange={e=>change({description:e.target.value})}/>
+    </label>
   </div>;
 }
 

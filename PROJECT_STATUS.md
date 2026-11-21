@@ -1,3 +1,5 @@
+> **2026-11-21 — Prelamanje opisa u Finance.** U panelu Info opis prati širinu polja i čuva ručno unete prelome pasusa.
+
 > **2026-11-21 — Boje rezultata u Finance.** Veliki iznosi prate tip i znak rezultata. Break-even traka je zlatna do pokrića i zelena kod punog pokrića. Folder sa prihodom bez troškova prikazuje „No expenses recorded“.
 
 > **2026-11-21 — Finance po knjizi.** Finance se uključuje preko menija +. Dashboard prati prihode, troškove, neto rezultat i pokriće troškova za knjigu ili izabrani folder. List i Inspector rade sa istim transakcijama.
@@ -615,6 +617,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Finance → Info → Description.** Polje prelama i neprekinute linkove i raste po visini prema sadržaju. Na probnoj transakciji u Chromeu proverene su širine polja 191 i 424 px, prikaz na uskom ekranu i očuvanje unetog teksta nakon osvežavanja. Prošli su Finance testovi, TypeScript i desktop build.
 
 - **2026-11-21 — Prikaz pokrića troškova.** U Chromeu su provereni prazna knjiga, folderi sa samo prihodom ili samo troškom, zlatna traka na 65%, zelena na 100% i boja pozitivnog, negativnog i nultog neto rezultata. Prošli su Finance testovi, TypeScript i desktop build.
 
