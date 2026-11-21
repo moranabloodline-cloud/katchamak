@@ -1,3 +1,5 @@
+> **2026-11-21 — Širina i otvorenost desnog panela po tabu.** Svaka knjiga pamti širinu i poslednje otvoreno ili zatvoreno stanje desnog panela zasebno za svaki tab koji koristi panel.
+
 > **2026-11-21 — Desni panel po tabu.** Svaki radni tab knjige pamti skrivene i poslednju izabranu karticu inspektora. Kartice inspektora na Homepage-u su trajno isključene.
 
 > **2026-11-21 — Ctrl + 0 vraća zum panela ispod miša na 100%.** U Splitu se resetuje samo beleška ispod miša, čak i kada je fokus u drugoj belešci.
@@ -631,6 +633,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Raspored desnog panela.** Provereni su povratak na zatvoren panel, obnova njegove širine, zasebno podešavanje za zakačenu belešku i osvežavanje nakon čuvanja.
 
 - **2026-11-21 — Podešavanja inspektora.** Raniji spisak skrivenih kartica je početna postavka za svaki tab. Provereni su menjanje beleške, korisnički tab, povratak posle osvežavanja, vraćanje preko dugmeta + i zaključan Homepage.
 

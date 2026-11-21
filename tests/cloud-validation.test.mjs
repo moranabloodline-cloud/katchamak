@@ -46,7 +46,7 @@ modern.sections.timeline = [node('period', {timelineKind: 'period', event: {type
 modern.timeline = { rootId: null, detail: 'synopsis', compact: false, calendar: calendarPreset('gregorian') };
 modern.trash = [{ id: 'trash', section: 'binder', node: node('deleted', {children: [node('deleted-child')]}), deletedAt: 1 }];
 modern.hiddenInspectorTabs = ['info','details','mentions','family'];
-modern.inspectorByTab = {binder:{hidden:['mentions'],selected:'details'},'note:chapter':{hidden:[],selected:'mentions'}};
+modern.inspectorByTab = {binder:{hidden:['mentions'],selected:'details',width:415,open:false},'note:chapter':{hidden:[],selected:'mentions'}};
 modern.hiddenSections = ['planning']; modern.openNoteTabs = ['chapter']; modern.extension = { retained: true };
 const wrap = novel => ({ novels: [novel], collections: [] });
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -75,6 +75,8 @@ const invalidCases = [
   ['invalid inspector scope', n => n.inspectorByTab.homepage = {hidden:[]}],
   ['invalid inspector selection', n => n.inspectorByTab.binder.selected = 'timeline'],
   ['hidden inspector selection', n => n.inspectorByTab.binder.selected = 'mentions'],
+  ['invalid inspector width', n => n.inspectorByTab.binder.width = 750],
+  ['invalid inspector open state', n => n.inspectorByTab.binder.open = 'closed'],
   ['invalid inspector visibility', n => n.inspectorByTab.binder.hidden = ['details','details']],
   ['timeline shape', n => n.timeline = null],
   ['timeline root', n => n.timeline.rootId = 3],

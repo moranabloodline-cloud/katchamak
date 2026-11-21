@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
 import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
-import {changeInspectorTab} from './inspector-tabs';
+import {changeInspectorTab, clampInspectorWidth, inspectorOpen, withInspectorLayout} from './inspector-tabs';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -53,6 +53,7 @@ interface KachamakState {
   rightPanelOpen: boolean;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
+  setRightPanelOpen: (open: boolean) => void;
 
   /* Scrivener-style ruler above the title in the editor — the eye at its end
      hides it or shows it again (persisted preference) */
@@ -316,6 +317,13 @@ function updateInspectorTab(s: KachamakState, projectId: string, tab: InspectorT
   return {novels: s.novels.map(n => n === book ? updated : n)};
 }
 
+function updateInspectorLayout(state: KachamakState, layout: {width: number} | {open: boolean}) {
+  const book = state.novels.find(n => n.id === state.activeNovelId);
+  if (!book) return state;
+  const updated = withInspectorLayout(book, state, layout);
+  return updated === book ? state : {novels: state.novels.map(n => n === book ? touch(updated) : n)};
+}
+
 function resolveChoices(node: NoteNode) {
   return node.linkChoices?.length ? validLinkChoices(contentText(node.content),node.linkChoices) : [];
 }
@@ -404,10 +412,11 @@ export const useKachamak = create<KachamakState>()(
       setLeftPanelWidth: (px) =>
         set({ leftPanelWidth: Math.round(Math.min(560, Math.max(240, px))) }),
       setRightPanelWidth: (px) =>
-        set({ rightPanelWidth: Math.round(Math.min(680, Math.max(190, px))) }),
+        set(s => Number.isFinite(px) ? updateInspectorLayout(s, {width: clampInspectorWidth(px)}) : s),
 
       toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
-      toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+      setRightPanelOpen: open => set(s => updateInspectorLayout(s, {open})),
+      toggleRightPanel: () => set(s => updateInspectorLayout(s, {open: !inspectorOpen(s)})),
 
       setRulerVisible: (v) => set({ rulerVisible: v }),
 
@@ -730,10 +739,9 @@ export const useKachamak = create<KachamakState>()(
           ...(s.view==='homepage' ? {view:'write' as const} : {}),
           selectedNodeId: created?.id ?? null,
           renamingNodeId: financial ? null : created?.id ?? null,
-          ...(financial ? {rightPanelOpen:true} : {}),
           paneAId: s.activePane === "a" ? (created?.id ?? s.paneAId) : s.paneAId,
           paneBId: s.activePane === "b" ? (created?.id ?? s.paneBId) : s.paneBId,
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+          novels: s.novels.map((x) => (x.id === novel.id ? touch(financial ? withInspectorLayout(x, s, {open: true}) : x) : x)),
         }));
         return created?.id ?? null;
       },
@@ -1008,7 +1016,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 53,
+      version: 54,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1021,6 +1029,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<54){ /* Tabs without saved dimensions inherit the previous workspace layout. */ }
         if(version<53){ /* Untouched tabs inherit the book's legacy hidden inspector list. */ }
         if(version<52) for(const novel of s.novels??[]) if(novel.sections && novel.sections.finance===undefined) novel.sections.finance=[];
         if(version<51 && s.novels) s.novels=migrateLibraryArtwork(s.novels);

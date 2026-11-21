@@ -1,10 +1,45 @@
-import { INSPECTOR_TABS, SECTION_KEYS, type InspectorTabKey, type Novel, type SectionKey, type TabKey } from './types';
+import { INSPECTOR_TABS, SECTION_KEYS, type InspectorTabKey, type Novel, type SectionKey, type TabKey, type ViewMode } from './types';
 
-export type InspectorSettings = {hidden: InspectorTabKey[]; selected?: InspectorTabKey};
+export type InspectorSettings = {hidden: InspectorTabKey[]; selected?: InspectorTabKey; width?: number; open?: boolean};
 type InspectorBook = Pick<Novel, 'inspectorByTab' | 'hiddenInspectorTabs'>;
 
 export function inspectorSettings(book: InspectorBook, workspace: TabKey): InspectorSettings {
   return book.inspectorByTab?.[workspace] ?? {hidden: book.hiddenInspectorTabs ?? []};
+}
+
+type PanelState = {
+  activeNovelId: string | null; activeTab: TabKey; view: ViewMode; novels: Novel[];
+  rightPanelWidth: number; rightPanelOpen: boolean;
+};
+
+const MIN_WIDTH = 190;
+const MAX_WIDTH = 680;
+export function clampInspectorWidth(px: number) {
+  return Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, px)));
+}
+
+function currentSettings(state: PanelState) {
+  if (state.view === 'homepage' || state.activeTab === 'gallery') return undefined;
+  return state.novels.find(book => book.id === state.activeNovelId)?.inspectorByTab?.[state.activeTab];
+}
+
+export function inspectorWidth(state: PanelState) {
+  return currentSettings(state)?.width ?? state.rightPanelWidth;
+}
+
+export function inspectorOpen(state: PanelState) {
+  if (state.view === 'homepage') return true;
+  if (state.activeTab === 'gallery') return false;
+  return currentSettings(state)?.open ?? state.rightPanelOpen;
+}
+
+export function withInspectorLayout(book: Novel, state: PanelState, layout: {width: number} | {open: boolean}) {
+  if (book.id !== state.activeNovelId || state.view === 'homepage' || state.activeTab === 'gallery') return book;
+  if ('width' in layout ? layout.width === inspectorWidth(state) : layout.open === inspectorOpen(state)) return book;
+
+  const tab = state.activeTab;
+  const settings = {...inspectorSettings(book, tab), ...layout};
+  return {...book, inspectorByTab: {...book.inspectorByTab, [tab]: settings}};
 }
 
 export function selectedInspectorTab(settings: InspectorSettings, workspace: TabKey) {
@@ -24,10 +59,10 @@ export function changeInspectorTab(
     const index = visible.findIndex(tab => tab.key === key);
     const selected = selectedInspectorTab(settings, workspace) === key
       ? (visible[index + 1] ?? visible[index - 1])?.key : settings.selected;
-    return {hidden: [...settings.hidden, key], selected};
+    return {...settings, hidden: [...settings.hidden, key], selected};
   }
   if (settings.hidden.includes(key)) {
-    return action === 'show' ? {hidden: settings.hidden.filter(tab => tab !== key), selected: key} : null;
+    return action === 'show' ? {...settings, hidden: settings.hidden.filter(tab => tab !== key), selected: key} : null;
   }
   return settings.selected === key ? null : {...settings, selected: key};
 }
@@ -44,6 +79,8 @@ export function validInspectorByTab(value: unknown) {
   return Object.entries(value).every(([tab, settings]) =>
     (SECTION_KEYS.includes(tab as SectionKey) || tab === 'trash' || (tab.startsWith('note:') && tab.length > 5)) &&
     settings && typeof settings === 'object' && !Array.isArray(settings) &&
+    (settings.width === undefined || Number.isInteger(settings.width) && settings.width >= MIN_WIDTH && settings.width <= MAX_WIDTH) &&
+    (settings.open === undefined || typeof settings.open === 'boolean') &&
     validHiddenInspectorTabs(settings.hidden) && (settings.selected === undefined ||
       (isInspectorKey(settings.selected) && !settings.hidden.includes(settings.selected))));
 }

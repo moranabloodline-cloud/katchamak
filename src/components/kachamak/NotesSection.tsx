@@ -23,6 +23,7 @@ import {GREGORIAN} from "@/lib/kachamak/story-calendar";
 import {FamilyTreeGraph,FamilyTreeEditor} from './FamilyTree';
 import { TimelineView } from "./TimelineView";
 import { ListView } from "./ListView";
+import { clampInspectorWidth, inspectorOpen, inspectorWidth } from "@/lib/kachamak/inspector-tabs";
 import { RightPanel } from "./RightPanel";
 import { TrashInfo, TrashSections, TrashView } from "./TrashView";
 import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
@@ -63,9 +64,21 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
 
 
 /* vertical line between the panels — drag it to widen / narrow a panel */
-function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" | "right" }) {
+type ResizerProps =
+  | {side: 'left'; onMove: (dx: number) => void}
+  | {side: 'right'; width: number; onResize: (width: number) => void};
+
+function Resizer(props: ResizerProps) {
+  const {side} = props;
   const [dragging, setDragging] = useState(false);
   const lastX = useRef(0);
+  const preview = useRef<{host: HTMLElement; width: number} | null>(null);
+
+  const clearPreview = () => {
+    preview.current?.host.style.removeProperty('--inspector-drag-width');
+    preview.current = null;
+  };
+  useEffect(() => clearPreview, []);
 
   useEffect(() => {
     if (!dragging) return;
@@ -84,18 +97,36 @@ function Resizer({ onMove, side }: { onMove: (dx: number) => void; side: "left" 
       aria-orientation="vertical"
       aria-label={`Resize ${side} panel`}
       onPointerDown={(e) => {
+        if (!e.isPrimary || e.button !== 0) return;
         e.preventDefault();
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        if (props.side === 'right') {
+          const host = e.currentTarget.closest<HTMLElement>('[data-workspace]') ?? e.currentTarget.parentElement!;
+          preview.current = {host, width: props.width};
+        }
         lastX.current = e.clientX;
         setDragging(true);
       }}
       onPointerMove={(e) => {
-        if (!dragging) return;
-        onMove(e.clientX - lastX.current);
+        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        const dx = e.clientX - lastX.current;
         lastX.current = e.clientX;
+        if (props.side === 'left') {
+          props.onMove(dx);
+        } else if (preview.current) {
+          // Resize the panel and its header live. Save one book update on release.
+          const draft = preview.current;
+          draft.width = clampInspectorWidth(draft.width - dx);
+          draft.host.style.setProperty('--inspector-drag-width', draft.width + 'px');
+        }
       }}
-      onPointerUp={() => setDragging(false)}
-      onPointerCancel={() => setDragging(false)}
+      onPointerUp={() => {
+        if (props.side === 'right' && preview.current) props.onResize(preview.current.width);
+        clearPreview();
+        setDragging(false);
+      }}
+      onPointerCancel={() => { clearPreview(); setDragging(false); }}
+      onLostPointerCapture={() => { clearPreview(); setDragging(false); }}
       className={`relative col-start-2 row-start-1 hidden w-px shrink-0 cursor-col-resize bg-white/10 after:absolute after:inset-y-0 after:-left-1.5 after:-right-1.5 after:content-[''] after:hover:bg-orange-500/10 ${side==="left"?"md:block":"lg:block"} ${
         dragging ? "bg-orange-500/70" : "hover:bg-orange-500/40"
       }`}
@@ -296,11 +327,12 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const activePane = useKachamak((s) => s.activePane);
   const setView = useKachamak((s) => s.setView);
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
-  const rightPanelOpen = useKachamak((s) => s.rightPanelOpen);
+  const rightPanelOpen = useKachamak(inspectorOpen);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const toggleRightPanel = useKachamak((s) => s.toggleRightPanel);
   const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
-  const rightPanelWidth = useKachamak((s) => s.rightPanelWidth);
+  const rightPanelWidth = useKachamak(inspectorWidth);
+  const workspaceTab = useKachamak(s => s.activeTab);
   const setLeftPanelWidth = useKachamak((s) => s.setLeftPanelWidth);
   const setRightPanelWidth = useKachamak((s) => s.setRightPanelWidth);
   const setAllNodesCollapsed = useKachamak((s) => s.setAllNodesCollapsed);
@@ -481,16 +513,16 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </>}
       </main>
 
-      {view !== 'gallery' && (rightPanelOpen || view==='homepage' ? (
+      {view !== 'gallery' && (rightPanelOpen ? (
         <>
           {!wideCanvas && <Resizer
-            side="right"
-            onMove={(dx) => setRightPanelWidth(useKachamak.getState().rightPanelWidth - dx)}
+            key={JSON.stringify([activeNovelId, workspaceTab])}
+            side="right" width={rightPanelWidth} onResize={setRightPanelWidth}
           />}
           <aside
             data-workspace-chrome
             ref={rightPanelRef}
-            style={{ width: rightPanelWidth }}
+            style={{width: `var(--inspector-drag-width, ${rightPanelWidth}px)`}}
             className={view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
           >
             {!wideCanvas && <CtrlZoom panel="right" targetRef={rightPanelRef} />}

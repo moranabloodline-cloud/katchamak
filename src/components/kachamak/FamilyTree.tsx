@@ -9,7 +9,7 @@ import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {iconForNote} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
-import {inspectorSettings,selectedInspectorTab} from '@/lib/kachamak/inspector-tabs';
+import {inspectorOpen,inspectorSettings,selectedInspectorTab} from '@/lib/kachamak/inspector-tabs';
 import {registerZoomReset,saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
@@ -134,7 +134,7 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const names=new Map(people.map(p=>[p.id,p.title]));
   const lineTypes=new Set(paths.map(path=>path.style));
   const {width:w,height:h}=familyCard;
-  const rightOpen=useKachamak(s=>s.rightPanelOpen);
+  const rightOpen=useKachamak(inspectorOpen);
   const workspace=useKachamak(s=>s.activeTab);
   const familyInspectorOpen=rightOpen && selectedInspectorTab(inspectorSettings(novel,workspace),workspace)==='family';
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">

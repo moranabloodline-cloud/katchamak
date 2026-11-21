@@ -108,7 +108,7 @@ export function FinanceWorkspace({novel,selected,rootId,list}:{novel:Novel;selec
   const currency=novel.financeCurrency??'EUR';
   const formatter=new Intl.NumberFormat(undefined,{style:'currency',currency});
   const money:Money=minor=>formatter.format(decimalAmount(minor));
-  const open=(id:string)=>{const state=useKachamak.getState();state.select(id);if(!state.rightPanelOpen)state.toggleRightPanel();};
+  const open=(id:string)=>{const state=useKachamak.getState();state.select(id);state.setRightPanelOpen(true);};
   const reset=()=>{const state=useKachamak.getState();state.setTab('finance');state.select(null);};
   return <section aria-label="Finance workspace" className="@container mx-auto w-full max-w-[100rem] p-4 md:p-6">
     <header className="mb-5 flex flex-wrap items-end justify-between gap-3">

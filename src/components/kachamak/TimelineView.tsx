@@ -78,7 +78,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const date=minuteToDate(calendar,center);
   const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
-  const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesTimelineDialog())setEditing({id:r.node.id,start:r.event.start});else if(!state.rightPanelOpen)state.toggleRightPanel();};
+  const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesTimelineDialog())setEditing({id:r.node.id,start:r.event.start});else state.setRightPanelOpen(true);};
   const changeViewport=(patch:Partial<{center:number;span:number}>)=>{
     const next=boundedViewport(patch.center??center,patch.span??span);
     saveZoomSetting(zoomKey,'timeline-viewport',[signature,next.center,next.span].join(' '));
