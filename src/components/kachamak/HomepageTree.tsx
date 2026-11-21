@@ -7,6 +7,7 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem} from '@/components/ui/context-menu';
 import {branchSources,insideBranches,type BranchSource} from '@/lib/kachamak/tree-move';
 import {useTreeSelection} from './useTreeSelection';
 import {toast} from 'sonner';
@@ -74,6 +75,14 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const show=(action:PageDialog['action'],id:string|null,name='')=>{
     setError('');setTitle(action==='rename'?name:'');setDialog({action,id});
   };
+  function removePage(id:string,name:string){
+    const root=id===HOME_ROOT;
+    const message=root?'Clear every element on this canvas? Nested canvases will stay in the tree.':
+      'Delete “'+name+'” and all its nested canvases?';
+    if(!window.confirm(message))return;
+    if(useKachamak.getState().deleteHomePage(novel.id,id))selection.clear();
+    else toast.error('The canvas could not be deleted.');
+  }
   const choose=(id:string)=>{useKachamak.getState().openHomePage(novel.id,id);onDismiss();};
   const submit=()=>{
     if(!dialog)return;
@@ -94,7 +103,9 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;
         const active=selected===row.id;
         const Icon=row.id===HOME_ROOT?House:PanelsTopLeft;
-        return <div key={row.id} {...dropTarget(row.id)} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex items-center rounded-md border '+(over===row.id?'ring-1 ring-inset ring-teal-400 ':'')+
+        const clearDisabled=row.id===HOME_ROOT && (!!novel.homepage?.locked || !novel.homepage?.blocks.length);
+        const deleteLabel=row.id===HOME_ROOT?'Clear canvas':'Delete canvas';
+        return <ContextMenu key={row.id}><ContextMenuTrigger asChild><div {...dropTarget(row.id)} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex items-center rounded-md border '+(over===row.id?'ring-1 ring-inset ring-teal-400 ':'')+
           (selection.marked?.has(row.id)?'outline outline-1 -outline-offset-1 outline-teal-400 ':'')+(active?'border-amber-500/60 bg-amber-400/10 text-amber-300':'border-transparent hover:bg-white/5')}>
           {row.hasChildren?<button type="button" className="grid size-6 shrink-0 place-items-center" aria-label={(collapsed.has(row.id)?'Expand ':'Collapse ')+row.title}
             aria-expanded={!collapsed.has(row.id)} onClick={()=>setCollapsed(current=>{const next=new Set(current);if(next.has(row.id))next.delete(row.id);else next.add(row.id);return next;})}>
@@ -122,8 +133,13 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
           </DropdownMenuTrigger><DropdownMenuContent align="start">
             <DropdownMenuItem onSelect={()=>show('create',row.id,row.title)}>New nested canvas</DropdownMenuItem>
             <DropdownMenuItem onSelect={()=>show('rename',row.id,row.title)}>Rename</DropdownMenuItem>
+            <DropdownMenuItem disabled={clearDisabled} onSelect={()=>removePage(row.id,row.title)}>{deleteLabel}</DropdownMenuItem>
           </DropdownMenuContent></DropdownMenu>
-        </div>;
+        </div></ContextMenuTrigger><ContextMenuContent>
+          <ContextMenuItem onSelect={()=>show('create',row.id)}>New nested canvas</ContextMenuItem>
+          <ContextMenuItem onSelect={()=>show('rename',row.id,row.title)}>Rename</ContextMenuItem>
+          <ContextMenuItem disabled={clearDisabled} onSelect={()=>removePage(row.id,row.title)}>{deleteLabel}</ContextMenuItem>
+        </ContextMenuContent></ContextMenu>;
       })}
     </nav>
     {drag && <div {...dropTarget(null)} className={'shrink-0 rounded border border-dashed border-teal-400/60 p-2 text-center text-xs '+(over===null?'bg-teal-400/15':'')}>Move to top level</div>}

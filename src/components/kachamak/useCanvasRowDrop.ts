@@ -1,7 +1,8 @@
 import {useCallback,useEffect,useRef,type RefObject} from 'react';
 import type {HomeCell} from '@/lib/kachamak/homepage';
 
-export function useCanvasRowDrop(scroller:RefObject<HTMLDivElement|null>) {
+export function useCanvasRowDrop(surface:RefObject<HTMLDivElement|null>,panBy:(x:number,y:number)=>void) {
+  const pan=useRef(panBy);pan.current=panBy;
   const active=useRef<HTMLElement|null>(null);
   const frame=useRef(0);
   const caption=useRef('');
@@ -15,7 +16,7 @@ export function useCanvasRowDrop(scroller:RefObject<HTMLDivElement|null>) {
   };
   const laneAt=(x:number,y:number)=>{
     const lane=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-home-cell]');
-    return lane && scroller.current?.contains(lane)?lane:null;
+    return lane && surface.current?.contains(lane)?lane:null;
   };
   const clear=useCallback(()=>{
     cancelAnimationFrame(frame.current);
@@ -27,16 +28,16 @@ export function useCanvasRowDrop(scroller:RefObject<HTMLDivElement|null>) {
 
   function scrollAtEdge(){
     frame.current=0;
-    const el=scroller.current;
+    const el=surface.current;
     if(!el)return;
     const {x,y}=pointer.current;
     const r=el.getBoundingClientRect();
     if(x<r.left||x>=r.right||y<r.top||y>=r.bottom)return;
     const edge=48;
-    const step=y<r.top+edge?-Math.ceil((r.top+edge-y)/3):y>r.bottom-edge?Math.ceil((y-r.bottom+edge)/3):0;
-    const top=el.scrollTop;
-    if(step)el.scrollTop+=step;
-    if(el.scrollTop!==top){
+    const delta=(v:number,min:number,max:number)=>v<min+edge?Math.ceil((min+edge-v)/4):v>max-edge?-Math.ceil((v-max+edge)/4):0;
+    const dx=delta(x,r.left,r.right),dy=delta(y,r.top,r.bottom);
+    if(dx||dy){
+      pan.current(dx,dy);
       highlight(laneAt(x,y));
       frame.current=requestAnimationFrame(scrollAtEdge);
     }

@@ -36,7 +36,7 @@ export function validBoard(page:Homepage, rowCards?:ReadonlySet<string>):boolean
     return validBoard({...page,mode:'page',blocks:fixed}) && validBoard({...page,mode:'board',blocks:page.blocks.filter(b=>b.layout!=='row'&&!b.cell)},rowCards);
   }
   if(page.mode!==undefined && page.mode!=='board' && page.mode!=='page')return false;
-  if(page.mode!=='board')return page.blocks.every(b=>!b.at && !b.columnId && b.layout!=='column' && b.layout!=='line');
+  if(page.mode!=='board')return page.blocks.every(b=>(!b.at || b.layout==='row' && isPoint(b.at)) && !b.columnId && b.layout!=='column' && b.layout!=='line');
   const byId=new Map(page.blocks.map(b=>[b.id,b]));
   return page.blocks.every(b=>{
     if(b.cell || b.layout==='row')return false;

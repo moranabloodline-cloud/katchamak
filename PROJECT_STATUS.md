@@ -1,3 +1,5 @@
+> **2026-11-21 — Canvas na jednoj radnoj površini.** Redovi, kolone, kartice i veze dele iste koordinate, pomeranje i zum. Desni klik otvara brisanje na platnu i u stablu.
+
 > **2026-11-21 — Grupno premeštanje na Canvasu.** Više kartica može da se prevuče u jednu fiksnu kolonu i vrati jednim izborom iz menija.
 
 > **2026-11-21 — Premeštanje Canvas kartica.** Slobodna kartica može da se prevuče u fiksnu kolonu, a meni kartice je vraća u slobodan raspored.
@@ -649,6 +651,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **Canvas — jedna površina.** Fiksni red dobija položaj na platnu i raste sa sadržajem. Stari redovi zadržavaju redosled, slobodne kartice svoje koordinate, a veze prate kartice i u koloni. Brisanje reda ili kolone oslobađa kartice. Brisanje grane traži potvrdu i vraća izbor na preostalog roditelja. Osnovni Homepage ima posebno pražnjenje bez uklanjanja podstranica.
 
 - **2026-11-21 — Grupe kartica u fiksnoj koloni.** Redosled prati položaj kartica na slobodnoj površini. U koloni rade pojedinačni izbor, Ctrl i Shift. Pri oslobađanju grupa izlazi sleva nadesno po redosledu u koloni. Iste veze i slike ostaju u podacima knjige.
 

@@ -2,7 +2,6 @@
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, LockKeyhole, MoreHorizontal, MoveDown, Pencil, Plus, Rows3, SquareCheck, Trash2} from 'lucide-react';
-import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from '@/components/ui/alert-dialog';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
@@ -62,7 +61,8 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
 export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Novel;pageId?:string;onShowPages?:()=>void}) {
   const entry=useMemo(()=>homepageEntry(novel,pageId) ?? homepageEntry(novel,HOME_ROOT)!,[novel,pageId]);
   const page=useMemo(()=>unifiedCanvas(entry),[entry]);
-  const free=useMemo(()=>({...page,mode:'board' as const,blocks:canvasParts(page.blocks).free}),[page]);
+  const parts=useMemo(()=>canvasParts(page.blocks),[page]);
+  const free=useMemo(()=>({...page,blocks:parts.free}),[page,parts]);
   const pages=useMemo(()=>homepageRows(novel),[novel]);
   const titles=useMemo(()=>new Map(pages.map(p=>[p.id,p.title])),[pages]);
   const openPage=useKachamak(s=>s.openHomePage);
@@ -77,7 +77,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const selectedIds=useMemo(()=>new Set(selection),[selection]);
   const rowAnchor=useRef<string|null>(null);
   const drag=useHomepageDrag(page.locked,(id,p)=>change(p.cell?{type:'into',id,cell:p.cell}:{type:'place',id,targetId:p.targetId,side:p.side}));
-  const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean}|null>(null);
+  const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;at?:HomeBlock['at']}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
   const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
@@ -85,8 +85,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const opener=useRef<HTMLElement|null>(null);
   const classicPosition=useRef<HomeBlock['at']>(undefined);
   const addRowButton=useRef<HTMLButtonElement>(null);
-  const addRow=()=>{
-    captureOpener();setEditor({createRow:true});
+  const addRow=(at:NonNullable<HomeBlock['at']>)=>{
+    captureOpener();setEditor({createRow:true,at});
   };
   const captureOpener=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const restoreFocus=()=>requestAnimationFrame(()=>{if(opener.current?.isConnected)opener.current.focus();});
@@ -113,7 +113,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     else if(block.target)openTarget(block.target);
     else {captureOpener();setPreviewId(block.id);}
   };
-  const roots=page.blocks.filter(b=>b.layout==='row');
+  const roots=useMemo(()=>parts.fixed.filter(b=>b.layout==='row'),[parts]);
   const lanes=new Map<string,HomeBlock[][]>();
   for(const b of roots)if(b.layout==='row')lanes.set(b.id,Array.from({length:b.columns!},()=>[]));
   for(const b of page.blocks)if(b.cell)lanes.get(b.cell.rowId)?.[b.cell.column]?.push(b);
@@ -133,7 +133,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       setSelection(toggle?(selectedIds.has(block.id)?previous.filter(id=>id!==block.id):[...previous,block.id]):[block.id]);
     }
   }
-  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[]):React.ReactNode {
+  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[],removeRow?:()=>void):React.ReactNode {
     const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
@@ -159,20 +159,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {(block.title||!page.locked)&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title"><LockKeyhole size={13}/>{block.title||'Fixed row'}<span>{block.columns} {block.columns===1?'column':'columns'}</span></h2>
         {!page.locked&&<div className="ml-auto flex flex-wrap justify-end gap-2">
           <button {...editButton} id={'home-edit-row-'+block.id} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3"/>Edit row</button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild><button type="button" className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button></AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove this row?</AlertDialogTitle>
-                <AlertDialogDescription>Its elements will move into the free area of this canvas in reading order.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={()=>{
-                  if(change({type:'remove',original:block}))requestAnimationFrame(()=>addRowButton.current?.focus({preventScroll:true}));
-                }}>Remove row</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <button type="button" onClick={removeRow} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button>
         </div>}</div>}
         <div className="grid grid-cols-1 gap-4 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {lanes.get(block.id)?.map((children,column)=>{
@@ -224,21 +211,21 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       </div>}
     </article>;
   }
-  const actions=<>
+  const actions=(placeRow:()=>NonNullable<HomeBlock['at']>)=><>
     {roots.length>0&&<select aria-label="Fixed rows width" title="Fixed rows width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
-    <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={addRow}><Rows3 size={15}/>Add row</Button>
+    <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={()=>addRow(placeRow())}><Rows3 size={15}/>Add row</Button>
   </>;
-  const fixedRows=roots.length?(release:(cards:HomeBlock[])=>void)=><section aria-label="Fixed rows" className="@container cv-fixed-section" style={{zoom:"var(--workspace-canvas-zoom, 1)"}}>
+  const renderRow=(row:HomeBlock,release:(cards:HomeBlock[])=>void,removeRow:()=>void)=><div className="@container cv-fixed-section">
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
       style={{fontFamily:style?.font,
       '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
       '--home-leading':style?.spacing,'--home-align':style?.page?.align} as CSSProperties}
-      className={'mx-auto w-full p-4 @[640px]:p-8 '+(page.locked?'pt-8 ':'')+(page.width==='reading'?'max-w-3xl':'max-w-[100rem]')}>
-      <div {...(page.locked?{}:drag.gridEvents)} className="grid grid-cols-1 items-start gap-4 @[530px]:grid-cols-2 @[1040px]:grid-cols-4">
-        {roots.map((block,index)=>renderBlock(block,index,roots.length,release))}
+      className="w-full">
+      <div {...(page.locked?{}:drag.gridEvents)} className="grid grid-cols-1 items-start">
+        {renderBlock(row,0,1,release,[],removeRow)}
       </div>
     </div>
-  </section>:undefined;
+  </div>;
   const classicFree=(b:HomeBlock)=>{
     const display=blockDisplay(b,byId,titles,novel.gallery);
     if(['card','text','banner'].includes(b.layout)){
@@ -254,13 +241,13 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   };
   return <>
     <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages}
-      selection={selection} setSelection={setSelection} fixedRows={fixedRows} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
+      selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={at=>{captureOpener();setEditor({});classicPosition.current=at;}}/>
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}
     {!page.locked&&artwork&&<HomeArtworkEditor src={projectImageSrc(novel.gallery,artwork.src)!} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}
       onSave={options=>change({type:'edit',original:artwork.block,block:{...artwork.block,...options,image:artwork.block.image||(options.imageCutout?artwork.src:undefined)}})}/>}
-    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} createRow={editor.createRow} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block:classicPosition.current?{...block,at:classicPosition.current}:block})}/>}
+    {!page.locked&&editor&&<HomeBlockEditor novel={novel} original={editor.original} cell={editor.cell} createRow={editor.createRow} notes={notes} pages={pages} onClose={closeEditor} onSave={block=>change(editor.original?{type:'edit',original:editor.original,block}:{type:'add',block:editor.at||classicPosition.current?{...block,at:editor.at??classicPosition.current}:block})}/>}
     {page.locked&&preview&&details&&<Dialog open onOpenChange={open=>{if(!open){setPreviewId(null);restoreFocus();}}}>
       <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>{details.title||'Block preview'}</DialogTitle></DialogHeader>

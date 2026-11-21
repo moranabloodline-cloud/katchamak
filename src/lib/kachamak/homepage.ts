@@ -45,7 +45,7 @@ export interface HomeBlock extends CanvasFields {
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -164,6 +164,7 @@ export function validHomepage(value: unknown): boolean {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object') return false;
   const page = value as Homepage;
+  if(page.legacyRowX!==undefined && !Number.isFinite(page.legacyRowX))return false;
   if(page.title!==undefined && typeof page.title!=='string')return false;
   if(typeof page.locked!=='boolean' || !Array.isArray(page.blocks) || !page.blocks.every(validBlock))return false;
   const rows=new Map(page.blocks.filter(b=>b.layout==='row').map(b=>[b.id,b.columns]));
@@ -182,7 +183,7 @@ export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
   | { type:'into'; id:string; cell:HomeCell }
   | { type: 'add'; block: HomeBlock }
   | { type: 'edit'; original: HomeBlock; block: HomeBlock }
-  | { type: 'remove'; original: HomeBlock }
+  | { type: 'remove'; original: HomeBlock; column?:number; positions?:Record<string,{x:number;y:number}> }
   | { type: 'move'; id: string; offset: -1 | 1 }
   | ({ type: 'place'; id: string } & HomePlacement);
 
@@ -202,11 +203,23 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
   }
   const {fixed,free,parked}=canvasParts(page.blocks);
   const block='original' in action?action.original:'block' in action?action.block:'id' in action?page.blocks.find(b=>b.id===action.id):undefined;
+  if(action.type==='boardMove'&&block?.layout==='column')return null;
+  if(action.type==='boardSelection'&&['translate','align','distribute'].includes(action.command.kind)){
+    const ids=new Set(action.ids);
+    if(free.some(b=>b.layout==='column'&&ids.has(b.id)))return null;
+  }
   if(action.type==='add'&&page.blocks.some(b=>b.id===action.block.id))return null;
+  if(action.type==='add'&&action.block.layout==='line'&&action.block.edge){
+    const next={...page,blocks:[...page.blocks,action.block]};
+    return validBlock(action.block)&&validBoard(next)?next:null;
+  }
   if(action.type==='remove'&&block?.layout==='row'){
     if(!fixed.some(b=>b.id===block.id&&JSON.stringify(b)===JSON.stringify(block)))return null;
-    return releaseRow(page,block);
+    if(action.column!==undefined&&!columnExists(action.column,block.columns))return null;
+    return releaseRow(page,block,action.positions,action.column);
   }
+  if(action.type==='removeBoardItem'&&block?.edge&&parked.some(b=>b.id===block.id&&JSON.stringify(b)===JSON.stringify(block)))
+    return {...page,blocks:page.blocks.filter(b=>b.id!==block.id)};
   const structured=!!block && inFixedRow(block);
   if(structured){
     if(action.type==='boardMove'||action.type==='removeBoardItem')return null;

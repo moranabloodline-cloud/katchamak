@@ -1,5 +1,5 @@
 import type {HomeBlock,HomeCell,Homepage} from './homepage';
-import {boardRects,CARD_WIDTH,COLUMN_WIDTH,isPoint,type Point} from './canvas-board';
+import {boardRects,CARD_WIDTH,COLUMN_WIDTH,isPoint,type BoardRect,type Point} from './canvas-board';
 
 export const inFixedRow=(b:HomeBlock)=>b.layout==='row'||!!b.cell;
 
@@ -58,7 +58,11 @@ export function transferCanvasCards(page:Homepage, action:CanvasTransfer):Homepa
 
 // Read old books and imports without rewriting them when the user simply opens a Canvas.
 export function unifiedCanvas<T extends Homepage>(page:T):T {
-  if(page.mode==='canvas')return page;
+  if(page.mode==='canvas'){
+    if(page.legacyRowX!==undefined||!page.blocks.some(b=>b.layout==='row'&&!b.at))return page;
+    const left=page.blocks.reduce((min,b)=>b.at&&!b.columnId&&!inFixedRow(b)?Math.min(min,b.at.x):min,0);
+    return {...page,legacyRowX:left+legacyRowLeft};
+  }
   if(page.mode==='board')return {...page,mode:'canvas'};
   const blocks:HomeBlock[]=[],ids=new Set(page.blocks.map(b=>b.id));
   let row:HomeBlock|undefined,used=0;
@@ -74,15 +78,39 @@ export function unifiedCanvas<T extends Homepage>(page:T):T {
     }
     blocks.push({...b,cell:{rowId:row.id,column:used++}});
   }
-  return {...page,mode:'canvas',blocks};
+  return unifiedCanvas({...page,mode:'canvas',blocks});
 }
 
-export function releaseRow(page:Homepage,row:HomeBlock):Homepage {
+export const legacyRowLeft=-1240;
+export function worldRows(rows:HomeBlock[],width:number,heights:ReadonlyMap<string,number>,originX=legacyRowLeft){
+  const rects=new Map<string,BoardRect>();
+  for(const row of rows){
+    const {x,y:anchor}=row.at??{x:originX,y:0};
+    let y=anchor;
+    const h=heights.get(row.id)??112;
+    // Older pages were a stack. Keep that order and let subsequent rows make room for a growing row.
+    for(const previous of [...rects.values()].sort((a,b)=>a.y-b.y)){
+      if(x<previous.x+previous.w && x+width>previous.x && y<previous.y+previous.h+16 && y+h+16>previous.y)
+        y=previous.y+previous.h+16;
+    }
+    rects.set(row.id,{x,y,w:width,h});
+  }
+  return rects;
+}
+
+export function releaseRow(page:Homepage,row:HomeBlock,positions?:Record<string,Point>,column?:number):Homepage {
   const fixed=page.blocks.filter(inFixedRow),free=page.blocks.filter(b=>!inFixedRow(b));
   const rects=boardRects(free,new Map());
   let x=24;
   for(const rect of rects.values())x=Math.max(x,rect.x+rect.w+24);
-  const children=fixed.filter(b=>b.cell?.rowId===row.id).sort((a,b)=>a.cell!.column-b.cell!.column);
-  const released=children.map((b,i)=>({...b,cell:undefined,at:{x:x+i*(COLUMN_WIDTH+24),y:28}}));
-  return {...page,blocks:[...fixed.filter(b=>b.id!==row.id&&b.cell?.rowId!==row.id),...free,...released]};
+  const whole=column===undefined||row.columns===1;
+  const children=fixed.filter(b=>b.cell?.rowId===row.id && (whole||b.cell.column===column)).sort((a,b)=>a.cell!.column-b.cell!.column);
+  const released=children.map((b,i)=>({...b,cell:undefined,at:positions?.[b.id]??{x:x+i*(COLUMN_WIDTH+24),y:28}}));
+  const releasedIds=new Set(children.map(b=>b.id));
+  const remaining=fixed.filter(b=>!(whole && b.id===row.id) && !releasedIds.has(b.id)).map(b=>{
+    if(b.id===row.id)return {...row,columns:row.columns!-1};
+    if(b.cell?.rowId===row.id && column!==undefined && b.cell.column>column)return {...b,cell:{rowId:row.id,column:b.cell.column-1}};
+    return b;
+  });
+  return {...page,blocks:[...remaining,...free,...released]};
 }

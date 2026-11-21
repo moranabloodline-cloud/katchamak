@@ -139,6 +139,7 @@ interface KachamakState {
   renameNovel: (title: string) => void;
   activeHomePageId: string;
   openHomePage: (projectId: string, pageId: string) => boolean;
+  deleteHomePage: (bookId:string,pageId:string)=>boolean;
   moveHomePages: (bookId:string,sources:BranchSource[],parentId:string|null)=>void;
   convertBoardSelection: (projectId:string,pageId:string,ids:string[],title:string,heights:[string,number][])=>boolean;
   createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board'|'canvas') => boolean;
@@ -644,6 +645,33 @@ export const useKachamak = create<KachamakState>()(
         set({activeHomePageId: pageId, view: 'homepage'});
         return true;
       },
+      deleteHomePage: (bookId,pageId) => {
+        const state=get(),novel=state.novels.find(n=>n.id===bookId);
+        if(!novel||state.activeNovelId!==bookId)return false;
+        const page=homepageEntry(novel,pageId);
+        if(!page)return false;
+        if(pageId===HOME_ROOT){
+          if(page.locked)return false;
+          set({novels:state.novels.map(n=>n===novel?touch({...n,homepage:{...n.homepage,locked:false,blocks:[]}}):n)});
+          return true;
+        }
+        const pages=novel.homePages??[];
+        const children=new Map<string,string[]>();
+        for(const p of pages)if(p.parentId){
+          const siblings=children.get(p.parentId)??[];
+          siblings.push(p.id);children.set(p.parentId,siblings);
+        }
+        const removed=new Set<string>(),pending=[pageId];
+        while(pending.length){
+          const current=pending.pop()!;
+          if(removed.has(current))continue;
+          removed.add(current);
+          for(const child of children.get(current)??[])pending.push(child);
+        }
+        set({novels:state.novels.map(n=>n===novel?touch({...n,homePages:pages.filter(p=>!removed.has(p.id))}):n),
+          activeHomePageId:removed.has(state.activeHomePageId)?page.parentId??HOME_ROOT:state.activeHomePageId});
+        return true;
+      },
       moveHomePages: (bookId,sources,parentId) => set(state=>{
         const novel=state.novels.find(n=>n.id===bookId);
         if (!novel || state.activeNovelId!==bookId || sources.some(item=>item.id===HOME_ROOT)) throw new Error('Choose pages from the open book.');
@@ -1030,7 +1058,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 59,
+      version: 60,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1043,6 +1071,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<60){ /* Rows without a world position keep their original reading order. */ }
         if(version<59){ /* Existing connections already use stable card IDs. A row can now temporarily hold either endpoint. */ }
         if(version<58){ /* Existing pages and boards are normalized on their first Canvas edit, including imported books. */ }
         if(version<57){ /* Missing positionLocked and stack preserve the board's original movable items and layer order. */ }
