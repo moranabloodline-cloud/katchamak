@@ -1,7 +1,8 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, Link2, LockKeyhole, ListTree, Pencil, Plus, Trash2, UnlockKeyhole} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, Columns3, GripVertical, Link2, LockKeyhole, ListTree, Pencil, Plus, Rows3, Trash2, UnlockKeyhole} from 'lucide-react';
+import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from '@/components/ui/alert-dialog';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {HOME_ROOT, homepageEntry, homepageRows, type HomeChange, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
@@ -68,6 +69,13 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const [previewId,setPreviewId]=useState<string|null>(null);
   const [message,setMessage]=useState('');
   const opener=useRef<HTMLElement|null>(null);
+  const addRowButton=useRef<HTMLButtonElement>(null);
+  const addRow=()=>{
+    const id=crypto.randomUUID();
+    if(change({type:'add',block:{id,layout:'row',width:'full',columns:2,title:'',text:''}})){
+      requestAnimationFrame(()=>document.getElementById('home-edit-row-'+id)?.focus());
+    }
+  };
   const captureOpener=()=>{opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;};
   const restoreFocus=()=>requestAnimationFrame(()=>{if(opener.current?.isConnected)opener.current.focus();});
   const closeEditor=()=>{setEditor(null);restoreFocus();};
@@ -112,7 +120,23 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     return <article key={block.id} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${drag.dragging===block.id?'opacity-55':''} ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
       {row?<div className={'@container/row rounded-lg px-1 py-3 '+(page.locked?'':'outline outline-dashed outline-border')}>
         {block.title&&<h2 className="mb-2 text-xl font-semibold">{block.title}</h2>}
-        {!page.locked&&<button {...editButton} className="absolute -top-2 right-2 z-[1] flex cursor-grab items-center gap-1 rounded bg-background px-2 text-xs text-muted-foreground active:cursor-grabbing"><GripVertical className="size-3"/>Edit row</button>}
+        {!page.locked&&<div className="mb-2 flex flex-wrap justify-end gap-2">
+          <button {...editButton} id={'home-edit-row-'+block.id} className="flex min-h-7 cursor-grab scroll-mt-12 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"><GripVertical className="size-3"/>Edit row</button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild><button type="button" className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove this row?</AlertDialogTitle>
+                <AlertDialogDescription>Its elements will stay on this page in reading order.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={()=>{
+                  if(change({type:'remove',original:block}))requestAnimationFrame(()=>addRowButton.current?.focus({preventScroll:true}));
+                }}>Remove row</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>}
         <div className="grid grid-cols-1 gap-4 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {lanes.get(block.id)?.map((children,column)=>{
             const active=drag.hint?.cell?.rowId===block.id && drag.hint.cell.column===column;
@@ -141,7 +165,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {emptyImage&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
         <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change({type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
         <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change({type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
-        <Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm(row?'Remove this row and keep its elements on the homepage?':'Remove this block from the homepage?'))change({type:'remove',original:block});}}><Trash2/></Button>
+        {!row&&<Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm('Remove this block from the homepage?'))change({type:'remove',original:block});}}><Trash2/></Button>}
       </div>}
     </article>;
   }
@@ -151,6 +175,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
       <div className="pointer-events-auto flex items-center gap-1.5 rounded-md bg-background/90">
         {!page.locked&&<label title="Page width" className="relative grid size-8 shrink-0 place-items-center rounded focus-within:outline @[520px]:block @[520px]:size-auto"><Columns3 aria-hidden="true" className="size-4 @[520px]:hidden"/><select aria-label="Page width" className="absolute inset-0 w-full cursor-pointer rounded border border-border bg-background px-2 py-1 text-sm opacity-0 @[520px]:static @[520px]:opacity-100" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide page</option><option value="reading">Reading width</option></select></label>}
         {!page.locked&&page.blocks.length>0&&<Button size="sm" variant="outline" aria-label="Add block" title="Add block" onClick={()=>edit()}><Plus/><span className="hidden @[520px]:inline">Add block</span></Button>}
+        {!page.locked&&<Button ref={addRowButton} size="sm" variant="outline" onClick={addRow}><Rows3/>Add row</Button>}
         <Button size="icon" variant="ghost" className="size-7 text-muted-foreground hover:text-foreground" aria-label={page.locked?'Unlock page':'Lock page'} title={page.locked?'Unlock page':'Lock page'} onClick={()=>change({type:'lock',locked:!page.locked})}>
           {page.locked?<UnlockKeyhole aria-hidden="true" className="size-3.5"/>:<LockKeyhole aria-hidden="true" className="size-3.5"/>}
         </Button>
