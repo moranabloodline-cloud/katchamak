@@ -8,8 +8,8 @@ import { noteLinkInstructions, noteLinkTitle } from './note-links';
 
 export function cloneableWorkspaceTabs(novel: Novel) {
   return workspaceTabs(novel).filter(({key}) => {
-    if (key === 'timeline' || key === 'family' || key === 'trash' || key === 'gallery') return false;
-    return !key.startsWith('note:') || !['timeline','family'].includes(findNodeInNovel(novel, key.slice(5))?.section ?? '');
+    if (key === 'finance' || key === 'timeline' || key === 'family' || key === 'trash' || key === 'gallery') return false;
+    return !key.startsWith('note:') || !['timeline','family','finance'].includes(findNodeInNovel(novel, key.slice(5))?.section ?? '');
   });
 }
 

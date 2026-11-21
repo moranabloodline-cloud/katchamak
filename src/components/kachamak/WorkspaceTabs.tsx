@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Images, House, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
+import { Wallet, Images, House, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
 import { useKachamak } from '@/lib/kachamak/store';
 import { type Novel, type TabKey } from '@/lib/kachamak/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -15,6 +15,7 @@ import {cloneableWorkspaceTabs} from '@/lib/kachamak/clone-workspace-tab';
 import {CloneWorkspaceTabDialog} from './CloneWorkspaceTabDialog';
 
 const tabStyles = {
+  finance: { icon: Wallet, color: "#a3c69a" },
   gallery: { icon: Images, color: '#79c6b5' },
   binder: { icon: BookOpen, color: '#ecb66b' },
   codex: { icon: LibraryBig, color: '#56c8b5' },
@@ -48,12 +49,13 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
 export function useOpenWorkspaceTab(novel: Novel | undefined) {
   const setTab=useKachamak(s=>s.setTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
-  const inGallery=useKachamak(s=>s.activeTab==='gallery');
+  const inGallery=useKachamak(s=>s.activeTab==='gallery'||s.activeTab==='finance');
   const specialView=inGallery||view==='timeline'||view==='family'||view==='homepage';
   const lastNoteView=useRef(specialView?'write':view);
   useEffect(()=>{if(!specialView)lastNoteView.current=view;},[view,specialView]);
   return (key:TabKey)=>{
     if(!novel)return;
+    if(key==='finance'){setTab(key);setView('write');useKachamak.getState().select(null);return;}
     if(key==='gallery'){setTab(key);setView('write');return;}
     if(key==='family'){
       const state=useKachamak.getState(), roots=novel.sections.family;

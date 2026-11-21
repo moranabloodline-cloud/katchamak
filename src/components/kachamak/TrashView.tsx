@@ -30,6 +30,7 @@ const SECTION_NAMES: Record<SectionKey, string> = {
   prompts: "Prompts",
   timeline: "Timeline",
   family: "Family Tree",
+  finance: "Finance",
 };
 
 export function TrashSections({novel}: {novel: Novel}) {

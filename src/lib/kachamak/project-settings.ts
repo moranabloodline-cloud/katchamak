@@ -1,5 +1,6 @@
+import {validCurrency} from './finance';
 import type {Novel} from './types';
-export type NovelSettingsPatch=Partial<Pick<Novel,'title'|'author'|'series'|'seriesIndex'|'language'|'genres'|'subgenres'|'chapterCount'|'targetAudience'|'tones'|'writingStyles'|'plotTechniques'|'sellingPoints'|'explicitContent'|'archived'|'cover'>>;
+export type NovelSettingsPatch=Partial<Pick<Novel,'title'|'author'|'series'|'seriesIndex'|'language'|'genres'|'subgenres'|'chapterCount'|'targetAudience'|'tones'|'writingStyles'|'plotTechniques'|'sellingPoints'|'explicitContent'|'archived'|'cover'|'financeCurrency'>>;
 import {validProjectImage, validCoverImage, availableProjectImage} from './project-image';
 export {validCoverImage} from './project-image';
 const labels=(value:unknown,limit:number)=>value===undefined||Array.isArray(value)&&value.length<=limit&&value.every(item=>typeof item==='string'&&!!item.trim()&&item.length<=100)&&new Set(value.map(item=>item.trim().toLocaleLowerCase())).size===value.length;
@@ -10,8 +11,8 @@ export function validNovelMetadata(value:{series?:unknown;seriesIndex?:unknown;l
 }
 export function novelSettingsPatch(novel:Novel,patch:NovelSettingsPatch):NovelSettingsPatch|null {
   const next={...novel,...patch};
-  if(typeof next.title!=='string'||!next.title.trim()||next.title.length>200||typeof next.author!=='string'||next.author.length>200||!next.cover||typeof next.cover.bg!=='string'||typeof next.cover.icon!=='string'||!validNovelMetadata(next)||!availableProjectImage(novel.gallery,next.cover.image))return null;
-  return {title:next.title.trim(),author:next.author.trim(),series:next.series?.trim()||'',seriesIndex:next.seriesIndex?.trim()||'',language:next.language?.trim(),genres:next.genres?.map(value=>value.trim()),subgenres:next.subgenres?.map(value=>value.trim()),chapterCount:next.chapterCount,targetAudience:next.targetAudience?.trim(),tones:next.tones?.map(value=>value.trim()),writingStyles:next.writingStyles?.map(value=>value.trim()),plotTechniques:next.plotTechniques?.map(value=>value.trim()),sellingPoints:next.sellingPoints?.map(value=>value.trim()),explicitContent:next.explicitContent,archived:next.archived??false,cover:{...next.cover}};
+  if(typeof next.title!=='string'||!next.title.trim()||next.title.length>200||typeof next.author!=='string'||next.author.length>200||!next.cover||typeof next.cover.bg!=='string'||typeof next.cover.icon!=='string'||(next.financeCurrency!==undefined&&!validCurrency(next.financeCurrency))||!validNovelMetadata(next)||!availableProjectImage(novel.gallery,next.cover.image))return null;
+  return {...(next.financeCurrency?{financeCurrency:next.financeCurrency}:{}),title:next.title.trim(),author:next.author.trim(),series:next.series?.trim()||'',seriesIndex:next.seriesIndex?.trim()||'',language:next.language?.trim(),genres:next.genres?.map(value=>value.trim()),subgenres:next.subgenres?.map(value=>value.trim()),chapterCount:next.chapterCount,targetAudience:next.targetAudience?.trim(),tones:next.tones?.map(value=>value.trim()),writingStyles:next.writingStyles?.map(value=>value.trim()),plotTechniques:next.plotTechniques?.map(value=>value.trim()),sellingPoints:next.sellingPoints?.map(value=>value.trim()),explicitContent:next.explicitContent,archived:next.archived??false,cover:{...next.cover}};
 }
 /** A portable, bounded raster image: included in cloud snapshots and JSON backups. */
 export function readNovelCover(file:File,bounds={width:960,height:1440}):Promise<string> {

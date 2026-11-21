@@ -15,6 +15,7 @@ import type {
   ViewMode,
 } from "./types";
 import {novelSettingsPatch,type NovelSettingsPatch} from "./project-settings";
+import {newTransaction, validTransaction, type TransactionType} from './finance';
 import { DEFAULT_NOTE_ICON, SECTION_KEYS } from "./types";
 import { newNovel, DEFAULT_STATUSES } from "./seed";
 import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
@@ -154,7 +155,7 @@ interface KachamakState {
   addNode: (
     section: SectionKey,
     parentId: string | null,
-    kind?: NoteNode["kind"] | { templateId: string },
+    kind?: NoteNode["kind"] | TransactionType | { templateId: string },
     title?: string,
     visibleRootBlocks?: DetailBlockKey[]
   ) => string | null;
@@ -699,13 +700,18 @@ export const useKachamak = create<KachamakState>()(
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return null;
         const roots = novel.sections[section];
+        if(section==="finance" && parentId && findNode(roots,parentId)?.transaction) return null;
         let created: NoteNode | null = null;
 
         /* free hierarchy — every new note is the same thing; the user names it
            (inline rename opens right away), picks its icon and its colour */
         const template = typeof kind === "object" ? findNode(novel.sections.templates, kind.templateId) : null;
         if (typeof kind === "object" && !template) return null;
-        const n = makeNode(typeof kind === "string" ? kind : "doc", template?.title ?? title ?? "Untitled", template ?? undefined);
+        const financial = kind === "income" || kind === "expense";
+        if (financial && section !== "finance") return null;
+        const n = makeNode(typeof kind === "string" && !financial ? kind : "doc", template?.title ?? title ?? "Untitled", template ?? undefined);
+        if (financial) n.transaction = newTransaction(kind);
+        if (section === "finance" && kind === "folder") n.icon = "folder";
         if (parentId === null) {
           if (!template) n.hiddenDetailBlocks = DETAIL_BLOCKS.map(block => block.key).filter(key => !visibleRootBlocks.includes(key));
           created = n;
@@ -724,7 +730,8 @@ export const useKachamak = create<KachamakState>()(
         set((s) => ({
           ...(s.view==='homepage' ? {view:'write' as const} : {}),
           selectedNodeId: created?.id ?? null,
-          renamingNodeId: created?.id ?? null,
+          renamingNodeId: financial ? null : created?.id ?? null,
+          ...(financial ? {rightPanelOpen:true} : {}),
           paneAId: s.activePane === "a" ? (created?.id ?? s.paneAId) : s.paneAId,
           paneBId: s.activePane === "b" ? (created?.id ?? s.paneBId) : s.paneBId,
           novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
@@ -739,6 +746,7 @@ export const useKachamak = create<KachamakState>()(
         const target = findNode(roots, id);
         if (!target) return;
         if(patch.ignoreAutoLinking !== undefined && typeof patch.ignoreAutoLinking !== 'boolean')return;
+        if(patch.transaction!==undefined && !validTransaction(patch.transaction))return;
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
@@ -823,6 +831,7 @@ export const useKachamak = create<KachamakState>()(
       moveTreeNotes: (bookId,section,sources,parentId,position) => set(state=>{
         const novel=state.novels.find(n=>n.id===bookId);
         if (!novel || state.activeNovelId!==bookId) throw new Error('Choose notes from the open book.');
+        if(section==="finance" && parentId && findNode(novel.sections.finance,parentId)?.transaction) throw new Error("Choose a financial folder as the destination.");
         const nodes=moveNoteBranches(novel.sections[section],sources,parentId,position);
         return {novels:state.novels.map(n=>n===novel?touch({...n,sections:{...n.sections,[section]:nodes}}):n)};
       }),
@@ -841,6 +850,7 @@ export const useKachamak = create<KachamakState>()(
           return;
         const destination = novel.sections[destSection];
         if (destParentId && !findNode(destination, destParentId)) return;
+        if (destSection==="finance" && destParentId && findNode(destination,destParentId)?.transaction) return;
         if (!canPlaceNote(destination, destParentId, moving)) {
           toast.error('This branch would be nested too deeply to save. Choose a higher-level parent.');
           return;
@@ -999,7 +1009,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 51,
+      version: 52,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1012,6 +1022,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<52) for(const novel of s.novels??[]) if(novel.sections && novel.sections.finance===undefined) novel.sections.finance=[];
         if(version<51 && s.novels) s.novels=migrateLibraryArtwork(s.novels);
         if(version<50){ /* Previously embedded artwork remains readable alongside book-local gallery references. */ }
         if(version<49){ /* An absent gallery is an empty project gallery. */ }

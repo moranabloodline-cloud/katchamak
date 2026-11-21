@@ -1,3 +1,5 @@
+> **2026-11-21 — Finance po knjizi.** Finance se uključuje preko menija +. Dashboard prati prihode, troškove, neto rezultat i pokriće troškova za knjigu ili izabrani folder. List i Inspector rade sa istim transakcijama.
+
 > **2026-11-21 — Ikonice preko slike beleške.** Zamena i uklanjanje slike prikazuju se pri prelasku mišem i dostupni su tastaturom.
 
 > **2026-11-21 — Grupno premeštanje u levom stablu.** Ctrl ili Cmd bira pojedinačne stavke, a Shift opseg vidljivih redova. Izabrane grane u Galeriji, na Homepage-u i u svim tabovima za beleške premeštaju se zajedno.
@@ -611,6 +613,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Finance.** Prihodi i troškovi koriste stablo beleški, Inspector, zajedničku korpu, automatsko čuvanje i rezervne kopije. Jedna valuta važi za celu knjigu. U probnoj knjizi provereni su unos, izmena, prevlačenje, iznosi po podfolderima, sortiranje, prebacivanje prikaza, zum panela i čuvanje posle osvežavanja. Provereni su JSON i izvoz svih beleški kao Markdown i HTML. Test starije migracije u details-blocks očekuje sliku direktno u belešci, iako ju je prethodna verzija već premeštala u Galeriju.
 
 - **2026-11-21 — Kontrole slike beleške.** Postavljena slika na hover prikazuje ikonicu za zamenu dole levo i X gore desno. Na ekranu bez hover-a kontrole su vidljive za dodir. Chrome provera obuhvatila je mirovanje, hover, izbor iz Galerije, pregled, uklanjanje, tastaturu i emulaciju dodira.
 

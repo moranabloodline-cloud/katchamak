@@ -10,7 +10,8 @@ export type SectionKey =
   | "templates"
   | "prompts"
   | "timeline"
-  | "family";
+  | "family"
+  | "finance";
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
@@ -21,6 +22,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "prompts",
   "timeline",
   "family",
+  "finance",
 ];
 
 export type TabKey = SectionKey | "gallery" | "trash" | `note:${string}`;
@@ -49,6 +51,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "prompts", label: "Prompts" },
   { key: "timeline", label: "Timeline" },
   { key: "family", label: "Relationships" },
+  { key: "finance", label: "Finance" },
   { key: "trash", label: "Trash" },
 ];
 
@@ -95,6 +98,7 @@ export interface NoteNode {
   aliases?: string[];
   ignoreAutoLinking?: boolean; // skip this note as a target during automatic link review
   linkChoices?: LinkChoice[];
+  transaction?: import('./finance').Transaction;
   event?: StoryEvent;
   timelineKind?: 'event' | 'period'; // an undated Timeline note awaiting its dates
   createdAt: number;
@@ -113,6 +117,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
+  financeCurrency?: import('./finance').FinanceCurrency;
   gallery?: import('./gallery').GalleryEntry[];
   homepage?: import('./homepage').Homepage;
   homePages?: import('./homepage').HomePageEntry[];

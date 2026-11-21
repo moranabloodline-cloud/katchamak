@@ -374,7 +374,7 @@ async function saveSnapshot() {
     if (memberships.length > 1) throw new Error('A project folder can belong to one collection. Move it to a single collection first.');
     const loc = await place(novel.id, 'project', novel.title, memberships[0]?.id ?? null);
     const webNotes: Record<string, NoteFile> = {};
-    for (const section of SECTION_KEYS) visit(novel.sections[section], node => {
+    for (const section of SECTION_KEYS) visit(novel.sections[section]??[], node => {
       webNotes[node.id] = { path: `Notes/${section}/${folderName(node.title, node.id)}.md`, markdown: converter.turndown(node.content) + '\n' };
     });
     const prior = await readText(loc.handle, 'project.json');

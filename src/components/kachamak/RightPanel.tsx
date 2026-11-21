@@ -83,6 +83,7 @@ export function RightPanel({
   familySettings,
   headerOnly = false,
   emptyInfo,
+  infoEditor,
 }: {
   novel: Novel;
   node: NoteNode | null;
@@ -92,6 +93,7 @@ export function RightPanel({
   familySettings?: ReactNode;
   headerOnly?: boolean;
   emptyInfo?: ReactNode;
+  infoEditor?: ReactNode;
 }) {
   const updateNode = useKachamak((s) => s.updateNode);
   const {font,size,spacing}=useNoteAppearance(node);
@@ -188,7 +190,7 @@ export function RightPanel({
             (arhitektura §11), svako polje skroluje svoj sadržaj nezavisno */}
         {node ? <>
         <TabsContent value="info" className="mt-0 h-full">
-          <div ref={infoBoxRef} className="flex h-full min-h-0 flex-col">
+          {infoEditor ?? <div ref={infoBoxRef} className="flex h-full min-h-0 flex-col">
             <div
               className="flex min-h-0 shrink-0 flex-col"
               style={{ height: `${infoRatio * 100}%` }}
@@ -225,7 +227,7 @@ export function RightPanel({
                 />
               </div>
             </div>
-          </div>
+          </div>}
         </TabsContent>
 
         {/* Details — postojeće veze, aliasi i podaci note

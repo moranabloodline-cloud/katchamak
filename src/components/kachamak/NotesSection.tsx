@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 import {DocumentTarget} from './DocumentTarget';
 import {documentTargetProgress} from '@/lib/kachamak/document-target';
+import {FinanceWorkspace, FinanceEditor} from "./Finance";
 import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
@@ -283,7 +284,8 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
-  const view = trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
+  const finance=section==='finance' && !trash && !gallery && storedView!=='homepage';
+  const view = finance ? (storedView==='list'?'finance-list':'finance-dashboard') : trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
 
   const wideCanvas = view==='homepage' || view==='gallery';
   const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();
@@ -331,7 +333,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
       return next;
     });
   };
-  const selected = wideCanvas || view==='trash' ? null : ((view==="timeline"&&section==="timeline")||view==='family')&&hit?.section!==section?null:hit?.node ?? null;
+  const selected = wideCanvas || view==='trash' || (section!=='finance' && hit?.section==='finance') ? null : ((view==="timeline"&&section==="timeline")||view==='family'||finance)&&hit?.section!==section?null:hit?.node ?? null;
   const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
@@ -419,6 +421,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} onShowPages={()=>setMobilePages(true)} /> : <>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
+          {finance && novel && <FinanceWorkspace key={treeScopeKey} novel={novel} rootId={rootId} selected={selected} list={view==='finance-list'}/>}
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
           {view==='family' && novel && <FamilyTreeGraph key={treeScopeKey+':'+selected?.id} novel={novel} tree={selected}
             onCreate={()=>useKachamak.getState().addNode('family',rootId??null,'doc','New family tree')} onEdit={openFamilyInspector}/>}
@@ -437,7 +440,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
 
         {/* The extra Timeline workspace controls need more room before the count can be centered. */}
         <div data-workspace-chrome className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
-          <DocumentTarget node={selected} section={selectedSection}/>
+          {!finance && <><DocumentTarget node={selected} section={selectedSection}/>
           {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
               OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
               Details tabu); zbir celog romana samo kad ništa nije selektovano */}
@@ -452,21 +455,21 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
               : novel
                 ? `${novelWords(novel).toLocaleString("en-US")} words`
                 : "0 words"}
-          </span>
+          </span></>}
           <div
             role="toolbar"
             aria-label="View mode"
             className="ml-auto flex min-w-0 items-center gap-0.5 overflow-x-auto px-1 @[440px]:px-2"
           >
             {view==="timeline"&&<span aria-hidden="true" className="hidden shrink-0 border-r border-border pr-2 text-[11px] font-medium text-muted-foreground @[440px]:mr-1 @[440px]:inline">Workspace</span>}
-            {(section==="timeline"?[{key:"timeline" as const,label:"Timeline"},...VIEW_BTNS]:section==="family"?[{key:"family" as const,label:"Tree"},...VIEW_BTNS]:VIEW_BTNS).map((b) => (
+            {(finance?[{key:'write' as const,label:'Dashboard'},{key:'list' as const,label:'List'}]:section==="timeline"?[{key:"timeline" as const,label:"Timeline"},...VIEW_BTNS]:section==="family"?[{key:"family" as const,label:"Tree"},...VIEW_BTNS]:VIEW_BTNS).map((b) => (
               <button
                 key={b.key}
                 type="button"
-                onClick={() => setView(view === b.key ? "write" : b.key)}
-                aria-pressed={view === b.key}
+                onClick={() => setView(!finance && view === b.key ? "write" : b.key)}
+                aria-pressed={(finance?(view==='finance-list'?'list':'write'):view) === b.key}
                 className={`shrink-0 rounded-lg px-1.5 py-1 text-xs transition-colors @[440px]:px-2 @[440px]:text-[13px] ${
-                  view === b.key
+                  (finance?(view==='finance-list'?'list':'write'):view) === b.key
                     ? "border border-amber-400/70 bg-amber-400/15 text-amber-300"
                     : "border border-transparent text-zinc-300 hover:text-white"
                 }`}
@@ -493,9 +496,10 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
           >
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {novel && <div className="min-h-0 flex-1">
-              <RightPanel key={familySettings?`${novel.id}:family:${editFamily}`:novel.id}
+              <RightPanel key={finance?'finance:'+novel.id+':'+(selected?.id??''):familySettings?`${novel.id}:family:${editFamily}`:novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings}
-                headerOnly={wideCanvas} emptyInfo={trash ? <TrashInfo/> : undefined}
+                infoEditor={finance && selected?.transaction ? <FinanceEditor key={selected.id} node={selected} currency={novel.financeCurrency??'EUR'}/> : undefined}
+                headerOnly={wideCanvas} emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}
                 onHide={()=>{
                   setCompactFamily(false);
                   if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();

@@ -1,5 +1,6 @@
 "use client";
 
+import {addFinanceNote} from './Finance';
 import { useEffect, useRef, useState } from "react";
 import {
   Hourglass,
@@ -205,14 +206,14 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
   };
 
   const renderDest = (n: NoteNode, d: number, sec: SectionKey): React.ReactNode => {
-    const invalid = sec === section && subtreeIds.has(n.id);
+    const invalid = (sec === section && subtreeIds.has(n.id)) || (sec==="finance" && !!n.transaction);
     return (
       <div key={n.id}>
         <button
           type="button"
           disabled={invalid}
           onClick={() => pickDestination(sec, n.id)}
-          title={invalid ? "You can't move a note into itself or its sub-pages." : n.title}
+          title={sec==="finance" && n.transaction ? "Choose a financial folder." : invalid ? "You can't move a note into itself or its sub-pages." : n.title}
           className={`flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm transition-colors ${
             invalid
               ? "cursor-not-allowed text-muted-foreground/40"
@@ -417,10 +418,14 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                  icon picker that "Change icon" just opened */
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              <DropdownMenuItem onSelect={() => addNode(section, node.id, "doc")}>
+              {section==="finance" ? !node.transaction && <>
+                <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'folder')}>New folder</DropdownMenuItem>
+                <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'income')}>+ Income</DropdownMenuItem>
+                <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'expense')}>+ Expense</DropdownMenuItem>
+              </> : <><DropdownMenuItem onSelect={() => addNode(section, node.id, "doc")}>
                 Create note
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onTemplate(node.id)}>Insert Template</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onTemplate(node.id)}>Insert Template</DropdownMenuItem></>}
               <DropdownMenuSeparator className="bg-white/10" />
               {section==="timeline"&&<><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</DropdownMenuItem><DropdownMenuItem onSelect={()=>addTimelineNote(section,node.id,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</DropdownMenuItem><DropdownMenuSeparator/></>}
               <DropdownMenuItem onSelect={() => setRenamingNode(node.id)}>
@@ -622,7 +627,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
     return fraction<0.3?'before':fraction>0.7?'after':'onto';
   };
   const allowed=(id:string,mode:DropMode)=>drag && !insideBranches(id,drag.ids,drag.parents) &&
-    (id!==rootId || mode==='onto');
+    (id!==rootId || mode==='onto') && (section!=='finance' || mode!=='onto' || !findNode(roots,id)?.transaction);
   const finish=(event:React.DragEvent,id:string|null,mode:DropMode)=>{
     event.preventDefault();
     event.stopPropagation();
@@ -717,10 +722,14 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal }: { section
       </ContextMenuTrigger>
       <ContextMenuContent aria-label="Tree actions" className="w-56 border-white/10 bg-[#1b1b1b] font-serif">
         {section==="timeline"&&<><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</ContextMenuItem><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</ContextMenuItem></>}
-        <ContextMenuItem onSelect={() => addNode(section,rootId??null,'doc')}>
+              {section==="finance" ? <>
+                <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'folder')}>New folder</ContextMenuItem>
+                <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'income')}>+ Income</ContextMenuItem>
+                <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'expense')}>+ Expense</ContextMenuItem>
+              </> : <><ContextMenuItem onSelect={() => addNode(section,rootId??null,'doc')}>
           {rootId?'Create note':'Create top-level note'}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => openTemplates(rootId ?? null)}>Insert Template</ContextMenuItem>
+        <ContextMenuItem onSelect={() => openTemplates(rootId ?? null)}>Insert Template</ContextMenuItem></>}
         <ContextMenuSeparator className="bg-white/10" />
         <ContextMenuItem onSelect={() => rootId?useKachamak.getState().setSubtreeCollapsed(section,rootId,false):setAllNodesCollapsed(section,false)}>Expand all</ContextMenuItem>
         <ContextMenuItem onSelect={() => { onDismissReveal?.(); if (rootId) useKachamak.getState().setSubtreeCollapsed(section,rootId,true); else setAllNodesCollapsed(section,true); }}>Collapse all</ContextMenuItem>
