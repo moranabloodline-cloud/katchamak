@@ -2,6 +2,9 @@
 .cv-board-main { position:relative; display:flex; flex:1; flex-direction:column; min-width:0; }
 .cv-layout-scroll { display:flex; flex:1; min-height:0; flex-direction:column; overflow:auto; overscroll-behavior:contain; }
 .cv-fixed-section { flex:none; }
+.cv-fixed-section [data-home-cell][data-card-drop] { outline:2px solid #d6a95e; outline-offset:2px; background:rgb(214 169 94 / 12%); }
+.cv-fixed-section [data-home-cell][data-card-drop]::after { content:attr(data-card-drop); pointer-events:none; position:absolute; bottom:1.7rem; inset-inline:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:5px 9px; border:1px dashed #d6a95e; border-radius:5px; color:var(--foreground); background:var(--background); font-size:13px; }
+.cv-fixed-section [data-home-cell][data-card-drop] > button { color:var(--foreground); }
 .cv-free-area { position:relative; display:flex; flex:1 0 auto; flex-direction:column; min-height:0; }
 .cv-free-area[hidden] { display:none; }
 .cv-free-area.cv-below-rows { min-height:min(54dvh,490px); }

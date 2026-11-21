@@ -29,17 +29,18 @@ export function validCanvasFields(b:HomeBlock) {
     default: return true;
   }
 }
-export function validBoard(page:Homepage) {
+export function validBoard(page:Homepage, rowCards?:ReadonlySet<string>):boolean {
   if(page.mode==='canvas'){
     const fixed=page.blocks.filter(b=>b.layout==='row'||b.cell);
-    return validBoard({...page,mode:'page',blocks:fixed}) && validBoard({...page,mode:'board',blocks:page.blocks.filter(b=>b.layout!=='row'&&!b.cell)});
+    const rowCards=new Set(fixed.filter(b=>b.cell).map(b=>b.id));
+    return validBoard({...page,mode:'page',blocks:fixed}) && validBoard({...page,mode:'board',blocks:page.blocks.filter(b=>b.layout!=='row'&&!b.cell)},rowCards);
   }
   if(page.mode!==undefined && page.mode!=='board' && page.mode!=='page')return false;
   if(page.mode!=='board')return page.blocks.every(b=>!b.at && !b.columnId && b.layout!=='column' && b.layout!=='line');
   const byId=new Map(page.blocks.map(b=>[b.id,b]));
   return page.blocks.every(b=>{
     if(b.cell || b.layout==='row')return false;
-    if(b.layout==='line')return !b.columnId && [b.edge!.from,b.edge!.to].every(id=>byId.has(id)&&byId.get(id)!.layout!=='line');
+    if(b.layout==='line')return !b.columnId && [b.edge!.from,b.edge!.to].every(id=>rowCards?.has(id) || byId.has(id)&&byId.get(id)!.layout!=='line');
     return isPoint(b.at) && (b.columnId===undefined || b.layout!=='column' && byId.get(b.columnId)?.layout==='column');
   });
 }

@@ -1030,7 +1030,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 58,
+      version: 59,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1043,6 +1043,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<59){ /* Existing connections already use stable card IDs. A row can now temporarily hold either endpoint. */ }
         if(version<58){ /* Existing pages and boards are normalized on their first Canvas edit, including imported books. */ }
         if(version<57){ /* Missing positionLocked and stack preserve the board's original movable items and layer order. */ }
         // Old Homepage records use the default page mode. Keep their saved blocks intact.

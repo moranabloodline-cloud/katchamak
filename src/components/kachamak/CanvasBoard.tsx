@@ -13,10 +13,11 @@ import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
 import {CanvasItemFace} from './CanvasItemFace';
 import {CanvasTools,toolsByKind} from './CanvasTools';
 import {InkPaths} from './CanvasInk';
+import {useCanvasRowDrop} from './useCanvasRowDrop';
 
 type Gesture={kind:'pan'|'move'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
-  fixedRows:ReactNode;layoutActions:ReactNode;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
+  fixedRows?: (release:(block:HomeBlock)=>void)=>ReactNode;layoutActions:ReactNode;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(at:Point)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string):Point{
@@ -26,6 +27,7 @@ function initialPan(key:string):Point{
 export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixedRows,layoutActions,editClassic,renderClassic,addClassic}:Props){
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
   const scroller=useRef<HTMLDivElement>(null),freeArea=useRef<HTMLDivElement>(null);
+  const rowDrop=useCanvasRowDrop(scroller);
   const positionKey='kachamak-board:'+novel.id+':'+page.id;
   const [pan,setPan]=useState<Point>(()=>initialPan(positionKey));
   const showGrid=useZoomSetting(positionKey,'grid')!=='hidden';
@@ -73,7 +75,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
   const batch=(command:SelectionCommand)=>save({type:'boardSelection',ids:items.map(b=>b.id),command,heights:[...heights]});
   const save=(action:HomeChange)=>{const ok=change(action);if(!ok)setStatus('The board changed. Select the item again.');return ok;};
   useEffect(()=>{try{sessionStorage.setItem(positionKey,JSON.stringify(pan));}catch{}},[pan,positionKey]);
-  useEffect(()=>{if(page.locked){setEditor(null);setFrom(null);setTool('select');setMove(null);setSelected(null);setMarquee(null);setLiveInk([]);gesture.current=null;}},[page.locked]);
+  useEffect(()=>{if(page.locked){rowDrop.clear();setEditor(null);setFrom(null);setTool('select');setMove(null);setSelected(null);setMarquee(null);setLiveInk([]);gesture.current=null;}},[page.locked]);
   useLayoutEffect(()=>{
     if(previousZoom.current===zoom)return;
     const s=surface.current;if(!s)return;
@@ -142,6 +144,19 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     }
     return best!;
   }
+  function releaseCard(block:HomeBlock){
+    if(!block.cell)return;
+    const at=nextPosition('note');
+    if(!save({type:'releaseCard',id:block.id,cell:block.cell,at}))return;
+    setTool('select');setFrom(null);setSelected(block.id);
+    requestAnimationFrame(()=>{
+      const s=surface.current;if(!s)return;
+      freeArea.current?.scrollIntoView({block:'end'});
+      if(at.y*zoom+pan.y>s.clientHeight-80||at.x*zoom+pan.x>s.clientWidth-80)
+        setPan({x:s.clientWidth/2-(at.x+CARD_WIDTH/2)*zoom,y:s.clientHeight/2-(at.y+45)*zoom});
+      world.current?.querySelector<HTMLElement>('[data-board-card="'+CSS.escape(block.id)+'"]')?.focus({preventScroll:true});
+    });
+  }
   function pick(kind:CanvasTool){
     if(page.locked)return;
     if(fixedRows)freeArea.current?.scrollIntoView({block:'nearest'});
@@ -202,7 +217,11 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     if(g.kind==='frame' && (marquee||Math.abs(dx)+Math.abs(dy)>3))setMarquee(frameBetween(g.origin,p));
     if(g.kind==='pan')setPan({x:g.origin.x+dx,y:g.origin.y+dy});
     if(g.kind==='ink'){g.points!.push([p.x,p.y]);setLiveInk([...g.points!]);}
-    if(g.kind==='move'&&(Math.abs(dx)+Math.abs(dy)>3 || move))setMove({id:g.id!,at:{x:g.origin.x+dx/zoom,y:g.origin.y+dy/zoom},over:g.group?undefined:columnAt(p,g.id!),group:g.group?new Set(g.group):undefined});
+    if(g.kind==='move'&&(Math.abs(dx)+Math.abs(dy)>3 || move)){
+      const card=blocks.get(g.id!);
+      if(fixedRows && !g.group && card && card.layout!=='column')rowDrop.track(e.clientX,e.clientY,card.title||'Move card here');
+      setMove({id:g.id!,at:{x:g.origin.x+dx/zoom,y:g.origin.y+dy/zoom},over:g.group?undefined:columnAt(p,g.id!),group:g.group?new Set(g.group):undefined});
+    }
   }
   function endGesture(e:PEvent<HTMLDivElement>){
     const g=gesture.current;if(!g||!e.isPrimary)return;
@@ -212,6 +231,16 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
       setFramed(dragged);
       const hits=dragged?framedItems(page.blocks,rects,frameBetween(g.origin,p)):[];
       setSelection(selectionRoots(page.blocks,new Set([...(g.base??[]),...hits])).map(b=>b.id));
+    }
+    if(g.kind==='move'&&(move||dragged)&&fixedRows){
+      const cell=!g.group&&blocks.get(g.id!)?.layout!=='column'&&rowDrop.target(e.clientX,e.clientY);
+      if(cell){
+        if(save({type:'dockCard',id:g.id!,cell}))setSelected(null);
+        cancelGesture();return;
+      }
+      // The gap between layouts, the header, and the side panels are not drop targets.
+      const hovered=document.elementFromPoint(e.clientX,e.clientY);
+      if(!hovered||!surface.current?.contains(hovered)){cancelGesture();return;}
     }
     if(g.kind==='move'&&(move||dragged)&&g.group){
       save({type:'boardSelection',ids:g.group,heights:[...heights],command:{kind:'translate',delta:{x:(point.x-g.start.x)/zoom,y:(point.y-g.start.y)/zoom}}});
@@ -229,7 +258,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
     }
     cancelGesture();
   }
-  function cancelGesture(){gesture.current=null;setMove(null);setLiveInk([]);setMarquee(null);}
+  function cancelGesture(){rowDrop.clear();gesture.current=null;setMove(null);setLiveInk([]);setMarquee(null);}
   const editBlock=(b:HomeBlock)=>{
     if(!(b.layout in toolsByKind) || b.layout==='image'&&(b.imageFrame||b.imageCutout))editClassic(b);
     else setEditor({initial:b,original:b});
@@ -243,7 +272,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,fixed
       {!page.locked&&layoutActions}
       {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}</header>
     <div ref={scroller} className="cv-layout-scroll">
-    {fixedRows}
+    {fixedRows?.(releaseCard)}
     <div ref={freeArea} className={'cv-free-area'+(fixedRows?' cv-below-rows':'')} hidden={!!fixedRows&&page.locked&&!page.blocks.length}>
     {fixedRows&&<h3 className="cv-free-label"><MousePointer2 size={13}/>Free canvas</h3>}
     <div ref={surface} tabIndex={0} aria-label="Board surface" className={'cv-surface cv-mode-'+tool} style={{backgroundImage:showGrid?undefined:'none',backgroundSize:24*zoom+'px '+24*zoom+'px',backgroundPosition:pan.x+'px '+pan.y+'px'}}

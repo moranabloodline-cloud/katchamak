@@ -1,9 +1,9 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
-import {inFixedRow,releaseRow,unifiedCanvas} from './canvas-layout';
+import {canvasParts,inFixedRow,releaseRow,unifiedCanvas} from './canvas-layout';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
-import {validCanvasFields,validBoard,moveOnBoard,type CanvasFields,type BoardMove} from './canvas-board';
+import {isPoint,validCanvasFields,validBoard,moveOnBoard,type Point,type CanvasFields,type BoardMove} from './canvas-board';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
@@ -176,6 +176,8 @@ export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
 export type HomeChange = BoardMove | BoardSelectionChange
   | {type:'removeBoardItem'; original:HomeBlock; positions:Record<string,{x:number;y:number}>}
+  | {type:'dockCard'; id:string; cell:HomeCell}
+  | {type:'releaseCard'; id:string; cell:HomeCell; at:Point}
   | {type:'task'; id:string; index:number; done:boolean}
   | { type: 'lock'; locked: boolean }
   | { type:'width'; width:'reading'|'wide' }
@@ -197,7 +199,18 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
   if(action.type==='lock')return {...page,locked:action.locked};
   if(page.locked)return null;
   if(action.type==='width')return {...page,width:action.width};
-  const fixed=page.blocks.filter(inFixedRow),free=page.blocks.filter(b=>!inFixedRow(b));
+  if(action.type==='dockCard'||action.type==='releaseCard'){
+    const current=page.blocks.find(b=>b.id===action.id);
+    if(!current||current.positionLocked||['line','column','row'].includes(current.layout))return null;
+    if(action.type==='dockCard'){
+      if(current.cell || !validCell(page.blocks,action.cell) || (current.columnId && page.blocks.find(b=>b.id===current.columnId)?.positionLocked))return null;
+      const docked={...current,at:undefined,columnId:undefined,cell:action.cell};
+      return {...page,blocks:[...page.blocks.filter(b=>b!==current),docked]};
+    }
+    if(!current.cell||!sameCell(current.cell,action.cell)||!isPoint(action.at))return null;
+    return {...page,blocks:page.blocks.map(b=>b===current?{...b,cell:undefined,at:action.at}:b)};
+  }
+  const {fixed,free,parked}=canvasParts(page.blocks);
   const block='original' in action?action.original:'block' in action?action.block:'id' in action?page.blocks.find(b=>b.id===action.id):undefined;
   if(action.type==='add'&&page.blocks.some(b=>b.id===action.block.id))return null;
   if(action.type==='remove'&&block?.layout==='row'){
@@ -218,10 +231,13 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
     ? {...action,block:{...action.block,at:{x:24+free.length*24,y:28+free.length*24}}} : action;
   const next=changeHomepage({...page,mode:structured?'page':'board',blocks:structured?fixed:free},edit);
   if(!next)return null;
-  return {...page,blocks:structured?[...next.blocks,...free]:[...fixed,...next.blocks]};
+  const removed=action.type==='remove'||action.type==='removeBoardItem'?action.original.id:undefined;
+  const kept=removed?parked.filter(b=>b.edge!.from!==removed&&b.edge!.to!==removed):parked;
+  return {...page,blocks:[...(structured?next.blocks:fixed),...(structured?free:next.blocks),...kept]};
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
+  if(action.type==='dockCard'||action.type==='releaseCard')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
   if(action.type==='boardSelection')return applySelection(page,action);

@@ -3,6 +3,19 @@ import {boardRects,COLUMN_WIDTH} from './canvas-board';
 
 export const inFixedRow=(b:HomeBlock)=>b.layout==='row'||!!b.cell;
 
+// A connection stays with the canvas while either endpoint is in a fixed row.
+export function canvasParts(blocks:HomeBlock[]) {
+  const fixed=blocks.filter(inFixedRow);
+  const fixedIds=new Set(fixed.map(b=>b.id));
+  const free:HomeBlock[]=[], parked:HomeBlock[]=[];
+  for(const block of blocks){
+    if(fixedIds.has(block.id))continue;
+    if(block.edge && (fixedIds.has(block.edge.from)||fixedIds.has(block.edge.to)))parked.push(block);
+    else free.push(block);
+  }
+  return {fixed,free,parked};
+}
+
 // Read old books and imports without rewriting them when the user simply opens a Canvas.
 export function unifiedCanvas<T extends Homepage>(page:T):T {
   if(page.mode==='canvas')return page;

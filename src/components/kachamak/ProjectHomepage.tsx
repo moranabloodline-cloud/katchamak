@@ -1,12 +1,12 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
-import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, LockKeyhole, Pencil, Plus, Rows3, Trash2} from 'lucide-react';
+import {ArrowLeft, ArrowRight, ArrowUpRight, Crop, GripVertical, Link2, LockKeyhole, MoreHorizontal, MoveDown, Pencil, Plus, Rows3, Trash2} from 'lucide-react';
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from '@/components/ui/alert-dialog';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
-import {inFixedRow,unifiedCanvas} from '@/lib/kachamak/canvas-layout';
+import {canvasParts,unifiedCanvas} from '@/lib/kachamak/canvas-layout';
 import {HOME_ROOT, homepageEntry, homepageRows, type HomeChange, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
 import {flattenNotes} from '@/lib/kachamak/note-links';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
@@ -62,7 +62,7 @@ function BlockFace({block,title,image}:{block:HomeBlock;title?:string;image?:str
 export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Novel;pageId?:string;onShowPages?:()=>void}) {
   const entry=useMemo(()=>homepageEntry(novel,pageId) ?? homepageEntry(novel,HOME_ROOT)!,[novel,pageId]);
   const page=useMemo(()=>unifiedCanvas(entry),[entry]);
-  const free=useMemo(()=>({...page,mode:'board' as const,blocks:page.blocks.filter(b=>!inFixedRow(b))}),[page]);
+  const free=useMemo(()=>({...page,mode:'board' as const,blocks:canvasParts(page.blocks).free}),[page]);
   const pages=useMemo(()=>homepageRows(novel),[novel]);
   const titles=useMemo(()=>new Map(pages.map(p=>[p.id,p.title])),[pages]);
   const openPage=useKachamak(s=>s.openHomePage);
@@ -114,7 +114,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
   const lanes=new Map<string,HomeBlock[][]>();
   for(const b of roots)if(b.layout==='row')lanes.set(b.id,Array.from({length:b.columns!},()=>[]));
   for(const b of page.blocks)if(b.cell)lanes.get(b.cell.rowId)?.[b.cell.column]?.push(b);
-  function renderBlock(block:HomeBlock,index:number,count:number):React.ReactNode {
+  function renderBlock(block:HomeBlock,index:number,count:number,release:(b:HomeBlock)=>void):React.ReactNode {
     const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
@@ -150,8 +150,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         <div className="grid grid-cols-1 gap-4 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {lanes.get(block.id)?.map((children,column)=>{
             const active=drag.hint?.cell?.rowId===block.id && drag.hint.cell.column===column;
-            return <div key={column} data-home-cell={block.id} data-column={column} className={`relative flex min-w-0 flex-col gap-3 rounded pb-6 ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
-              {children.map((child,i)=>renderBlock(child,i,children.length))}
+            return <div key={column} data-home-cell={block.id} data-column={column} className={`relative flex min-w-0 flex-col gap-3 rounded pb-6 ${page.locked?'':'min-h-14'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
+              {children.map((child,i)=>renderBlock(child,i,children.length,release))}
               {!page.locked&&<DropdownMenu><DropdownMenuTrigger asChild>
                 <button type="button" aria-label={'Add element to column '+(column+1)} className="absolute bottom-0 left-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"><Plus className="size-3"/>Add element</button>
               </DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
@@ -186,6 +186,11 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
         {emptyImage&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
         <Button size="icon" variant="ghost" className="size-7" disabled={!index} aria-label="Move earlier" title="Move earlier" onClick={()=>change({type:'move',id:block.id,offset:-1})}><ArrowLeft/></Button>
         <Button size="icon" variant="ghost" className="size-7" disabled={index===count-1} aria-label="Move later" title="Move later" onClick={()=>change({type:'move',id:block.id,offset:1})}><ArrowRight/></Button>
+        {block.cell&&<DropdownMenu><DropdownMenuTrigger asChild>
+          <Button size="icon" variant="ghost" className="size-7" aria-label={'More actions: '+name} title="More actions"><MoreHorizontal/></Button>
+        </DropdownMenuTrigger><DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={()=>release(block)}><MoveDown size={15}/>Premesti na slobodnu površinu</DropdownMenuItem>
+        </DropdownMenuContent></DropdownMenu>}
         {!row&&<Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm('Remove this block from the homepage?'))change({type:'remove',original:block});}}><Trash2/></Button>}
       </div>}
     </article>;
@@ -194,17 +199,17 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages}:{novel:Nove
     {roots.length>0&&<select aria-label="Fixed rows width" title="Fixed rows width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
     <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={addRow}><Rows3 size={15}/>Add row</Button>
   </>;
-  const fixedRows=roots.length>0&&<section aria-label="Fixed rows" className="@container cv-fixed-section" style={{zoom:"var(--workspace-canvas-zoom, 1)"}}>
+  const fixedRows=roots.length?(release:(block:HomeBlock)=>void)=><section aria-label="Fixed rows" className="@container cv-fixed-section" style={{zoom:"var(--workspace-canvas-zoom, 1)"}}>
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
       style={{fontFamily:style?.font,
       '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
       '--home-leading':style?.spacing,'--home-align':style?.page?.align} as CSSProperties}
       className={'mx-auto w-full p-4 @[640px]:p-8 '+(page.locked?'pt-8 ':'')+(page.width==='reading'?'max-w-3xl':'max-w-[100rem]')}>
       <div {...(page.locked?{}:drag.gridEvents)} className="grid grid-cols-1 items-start gap-4 @[530px]:grid-cols-2 @[1040px]:grid-cols-4">
-        {roots.map((block,index)=>renderBlock(block,index,roots.length))}
+        {roots.map((block,index)=>renderBlock(block,index,roots.length,release))}
       </div>
     </div>
-  </section>;
+  </section>:undefined;
   const classicFree=(b:HomeBlock)=>{
     const display=blockDisplay(b,byId,titles,novel.gallery);
     if(['card','text','banner'].includes(b.layout)){
