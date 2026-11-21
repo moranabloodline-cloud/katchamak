@@ -1,3 +1,5 @@
+> **2026-11-21 — Zumiranje u Split prikazu.** Ctrl + točkić menja veličinu teksta i lenjira samo u belešci ispod miša, i kada druga beleška ima fokus. Bočni paneli i obe gornje trake zadržavaju svoje dimenzije.
+
 > **2026-11-21 — Skrolovanje u Split prikazu.** Točkić pomera samo belešku ispod pokazivača. Druga beleška, bočni paneli i obe gornje trake zadržavaju položaj i kada druga beleška ima fokus.
 
 > **2026-11-21 — Nezavisno skrolovanje bočnih panela.** U verziji 404 pomeranje stabla ili sadržaja Details zadržava položaj otvorene beleške, obe gornje trake i drugog panela, uključujući skrolovanje preko početka i kraja.
@@ -593,6 +595,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Ctrl + točkić u Splitu, verzija 404.** Lokalni test objavljenog paketa u Chromeu sa dve duge probne beleške. Leva je uvećana na 130%, zatim desna na 120% i smanjena na 80%. Merene su širine reči, visine lenjira i razmaci oznaka. Pri svakom koraku proveren je i prikaz suprotne beleške, levog stabla, desnog panela Details, obe gornje trake, razdelnika i prozora. Prošlo na širinama od 1550 i 1200 px, sa jednakim i različitim širinama beležaka. Obe beleške su vraćene na 100% i proveren je običan skrol posle otpuštanja Ctrl.
 
 - **2026-11-21 — Provera Split prikaza u verziji 404.** U Chromeu su iz stabla otvorene dve probne beleške od 420 i 360 pasusa. Na prozorima od 1550 × 860 i 1200 × 740 px provereni su oba smera skrolovanja i nastavak preko obe ivice, sa fokusom u suprotnoj belešci, već skrolovanim stablom i otvorenim Details panelom. Provera je ponovljena i posle pomeranja razdelnika. Druga beleška, bočni paneli i gornje trake pomerili su se za 0 px.
 
