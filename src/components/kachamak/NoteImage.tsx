@@ -7,6 +7,8 @@ import {GalleryImagePicker} from './GalleryImagePicker';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {Dialog,DialogContent,DialogTitle,DialogClose} from '@/components/ui/dialog';
 
+const imageAction = 'absolute grid size-7 place-items-center rounded bg-black/75 text-white hover:bg-black/90 focus-visible:outline-2 focus-visible:outline-amber-500 pointer-events-none opacity-0 group-hover/note-image:pointer-events-auto group-hover/note-image:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100';
+
 export function NoteImage({node,section}:{node:NoteNode;section:SectionKey}) {
   const novel=useKachamak(state=>state.novels.find(book=>book.id===state.activeNovelId));
   const previewButton=useRef<HTMLButtonElement>(null);
@@ -20,16 +22,16 @@ export function NoteImage({node,section}:{node:NoteNode;section:SectionKey}) {
     if(state.activeNovelId===novel.id && state.selectedNodeId===node.id)state.updateNode(section,node.id,{image:value});
   };
   return <section aria-label="Note image">
-    <div className="relative flex aspect-[6/5] w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-white/15 bg-black/15">
+    <div className="group/note-image relative flex aspect-[6/5] w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-white/15 bg-black/15">
       {image&&<button ref={previewButton} type="button" aria-label="Enlarge note image" onClick={()=>setPreview(true)} className="h-full w-full cursor-zoom-in">
         <img src={image} alt={node.title+' image'} onLoad={e=>{if(e.currentTarget.naturalHeight)setImageRatio(e.currentTarget.naturalWidth/e.currentTarget.naturalHeight);}} className="size-full object-contain"/>
       </button>}
       <GalleryImagePicker key={novel.id+':'+node.id} novel={novel} onPick={apply}>
-        <button type="button" className={image?'absolute bottom-2 left-2 rounded bg-black/80 px-2 py-1 text-xs text-white':'flex size-full items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground'}>
-          <ImagePlus className="size-4"/>{image?'Change image':'Choose from Gallery'}
+        <button type="button" aria-label={image?'Change image':undefined} className={image?imageAction+' bottom-2 left-2':'flex size-full items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground'}>
+          <ImagePlus aria-hidden="true" className="size-4"/>{!image&&'Choose from Gallery'}
         </button>
       </GalleryImagePicker>
-      {image&&<button type="button" aria-label="Remove note image" className="absolute top-1 right-1 rounded bg-black/60 p-1 text-white" onClick={()=>{setPreview(false);apply(undefined);}}><X className="size-3"/></button>}
+      {image&&<button type="button" aria-label="Remove note image" className={imageAction+' top-1 right-1'} onClick={()=>{setPreview(false);apply(undefined);}}><X aria-hidden="true" className="size-3"/></button>}
     </div>
     <Dialog open={preview&&!!image} onOpenChange={setPreview}><DialogContent aria-describedby={undefined} onCloseAutoFocus={event=>{event.preventDefault();previewButton.current?.focus();}} showCloseButton={false} style={{width:`min(80vw, 960px, calc(80dvh * ${imageRatio}), calc(800px * ${imageRatio}))`}} className="max-w-[calc(100vw-2rem)] gap-0 overflow-hidden border-white/25 bg-black p-0 sm:max-w-[calc(100vw-2rem)]">
       <DialogTitle className="sr-only">{node.title} image</DialogTitle>

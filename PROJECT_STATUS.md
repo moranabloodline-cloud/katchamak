@@ -1,3 +1,5 @@
+> **2026-11-21 — Ikonice preko slike beleške.** Zamena i uklanjanje slike prikazuju se pri prelasku mišem i dostupni su tastaturom.
+
 > **2026-11-21 — Grupno premeštanje u levom stablu.** Ctrl ili Cmd bira pojedinačne stavke, a Shift opseg vidljivih redova. Izabrane grane u Galeriji, na Homepage-u i u svim tabovima za beleške premeštaju se zajedno.
 
 > **2026-11-21 — Prevlačenje foldera u stablu Galerije.** Folder sa celim sadržajem može da se premesti u drugi folder ili na Gallery za povratak u koren.
@@ -609,6 +611,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Kontrole slike beleške.** Postavljena slika na hover prikazuje ikonicu za zamenu dole levo i X gore desno. Na ekranu bez hover-a kontrole su vidljive za dodir. Chrome provera obuhvatila je mirovanje, hover, izbor iz Galerije, pregled, uklanjanje, tastaturu i emulaciju dodira.
 
 - **2026-11-21 — Zajednički izbor foldera, stranica i beleški.** Roditelj i označeni potomak putuju kao jedna grana. Jedna izmena proverava celo odredište, dubinu i početne roditelje. Za beleške ostaje moguće spuštanje pre ili posle druge beleške, a izdvojeni tab zadržava svoj koren. U Chromeu su provereni izbor mišem, podfolder i povratak u koren u Galeriji, na Homepage-u i u osam sekcija beleški, kao i redosled na izdvojenom tabu i čuvanje posle osvežavanja.
 
