@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {projectImageSrc} from '../src/lib/kachamak/project-image.ts';
+import {migrateLibraryArtwork} from '../src/lib/kachamak/migrate-gallery-images.ts';
 import {calendarPreset} from '../src/lib/kachamak/story-calendar.ts';
 import { Database } from 'bun:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -188,7 +190,8 @@ await cloud.initializeWebLibrary();
 assert.equal(useKachamak.getState().activeTab,'note:note-1');
 const restoredTimelineNote=useKachamak.getState().novels[0].sections.timeline.find(n=>n.id===timelineRoot).children[0];
 for(const [key,expected] of Object.entries(timelineLayout))assert.deepEqual(restoredTimelineNote[key],expected);
-assert.equal(useKachamak.getState().novels[0].sections.binder[0].image,'data:image/png;base64,aW1hZ2U=','Note images survive authenticated cloud save/reload');
+const restoredBook=useKachamak.getState().novels[0];
+assert.equal(projectImageSrc(restoredBook.gallery,restoredBook.sections.binder[0].image),'data:image/png;base64,aW1hZ2U=','Note images survive authenticated cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].hiddenDetailBlocks,['aliases','codex'],'Block visibility survives cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].tabOrder,savedTabOrder,'Tab order survives authenticated cloud save/reload');
 assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].documentTarget,documentTarget,'Document targets survive authenticated cloud save/reload');
@@ -199,7 +202,8 @@ assert.equal(useKachamak.getState().novels[0].language,'en-US');assert.deepEqual
 assert.equal(useKachamak.getState().novels[0].timeline.detail,'titles');
 assert.equal(useKachamak.getState().novels[0].timeline.display,'calendar');
 assert.deepEqual(useKachamak.getState().novels[0].timeline.calendar,eraCalendar);
-assert.deepEqual(useKachamak.getState().novels[0].sections.binder[0].event,{start:-1440,end:2880,precision:'day',groupId:'history',banner:'data:image/png;base64,aGVsbG8='});
+assert.deepEqual(restoredBook.sections.binder[0].event,{start:-1440,end:2880,precision:'day',groupId:'history',banner:restoredBook.cover.image});
+assert.equal(projectImageSrc(restoredBook.gallery,restoredBook.cover.image),'data:image/png;base64,aGVsbG8=');
 assert.equal(useKachamak.getState().novels[0].timeline.groups[0].name,'History');
 assert.equal(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).id,timelineRoot);assert.equal(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).children[0].content,'<p>Nested timeline prose.</p>');assert.deepEqual(useKachamak.getState().novels[0].sections.timeline.find(node=>node.id===timelineRoot).children[0].event,{type:'period',start:15,end:45,precision:'time',cardColor:'#a855f7',cardOpacity:.6,cardDetail:'dates',cardStyle:'color'});
 assert.equal(useKachamak.getState().novels[0].sections.codex[0].aliases[0],'Cernobog');
@@ -346,7 +350,19 @@ finishReading(originalBook);
 await assert.rejects(delayedImport,/session changed/);
 assert.deepEqual(await (await call(a)).json(),originalAccount);
 assert.deepEqual(await (await call(b)).json(),otherAccount);
-assert.deepEqual(useKachamak.getState().novels,otherAccount.snapshot.novels);
+assert.deepEqual(useKachamak.getState().novels, migrateLibraryArtwork(otherAccount.snapshot.novels));
+// A second window edits prose while this window is promoting the legacy cover.
+const concurrentProse = structuredClone(otherAccount);
+concurrentProse.snapshot.novels[0].sections.binder[0].content='<p>Concurrent prose survives the migration.</p>';
+assert.equal((await call(b,'/api/library','POST',concurrentProse)).status,200);
+await cloud.saveWebLibrary();
+const upgradedAccount = await (await call(b)).json();
+assert.deepEqual(upgradedAccount.snapshot.novels,useKachamak.getState().novels);
+assert.equal(upgradedAccount.revision,otherAccount.revision+2);
+assert.equal(upgradedAccount.snapshot.novels[0].sections.binder[0].content,'<p>Concurrent prose survives the migration.</p>');
+await cloud.reloadWebLibrary();
+await cloud.saveWebLibrary();
+assert.equal((await (await call(b)).json()).revision,upgradedAccount.revision,'Reload never migrates the same artwork twice');
 console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, nested library, Unicode manuscript roundtrip, attachments, failed-save recovery, two-view refresh and conflict preservation.');
 
 const invalidBannerLibrary={novels:structuredClone(useKachamak.getState().novels),collections:[]};

@@ -1,3 +1,5 @@
+> **2026-11-21 — Ranije dodate slike u Galeriji.** Otvaranje biblioteke prenosi slike beležaka, Homepage stranica, Timeline kartica i naslovnica u galeriju pripadajuće knjige. Ista sačuvana slika dobija jednu stavku.
+
 > **2026-11-21 — Izbor slika iz Gallery.** Beleške, Homepage, Timeline i naslovnica koriste zajedničku sliku iz galerije knjige. Izbor pretražuje foldere, a sačuvane veze prate sliku posle promene imena ili mesta.
 
 > **2026-11-21 — Gallery.** Svaka knjiga ima galeriju slika sa sopstvenim stablom foldera i podfoldera. Slike i raspored foldera čuvaju se uz knjigu i ulaze u JSON rezervnu kopiju.
@@ -599,6 +601,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-21 — Prenos postojećih slika.** Postojeća stavka u podfolderu ima prednost. Knjiga pamti vezu do slike na svakom mestu korišćenja. Kadar, uklonjena pozadina, raspored i slike u korpi ostaju dostupni. Podržane slike iz starog HTML sadržaja ulaze i u galeriju uz očuvanje izvornog teksta za izvoz. Provera u Chromeu obuhvatila je dve knjige, četiri prikaza, prekid čuvanja, osvežavanje pre ponovnog pokušaja i proveru jedne kopije posle uspešnog čuvanja. Test istovremene izmene potvrdio je da tekst iz drugog prozora ostaje sačuvan.
 
 - **2026-11-21 — Slike iz galerije knjige.** Upload slika za projekat nalazi se u Gallery. Beleška, blokovi na svim Homepage stranicama, Timeline kartice, naslovnica i izbor avatara otvaraju galeriju. Slika u upotrebi zaštićena je od brisanja. U Chromeu je ista slika iz podfoldera postavljena na belešku, zaključani baner, Timeline događaj i naslovnicu. Nakon ponovnog učitavanja proverene su sve četiri veze i jedna kopija slike u knjizi. Testovi pokrivaju i ranije ugrađene slike, kopiranje između knjiga i JSON rezervnu kopiju.
 

@@ -28,8 +28,23 @@ export function availableProjectImage(gallery:GalleryEntry[]|undefined, value:st
   return !isGalleryImageRef(value) || !!galleryImage(gallery,value);
 }
 
+// Older pasted/imported HTML can already contain self-contained images. Read it
+// in an inert template so inspecting a manuscript never loads an external URL.
+export function* embeddedNoteImages(note: NoteNode) {
+  for (const html of [note.content, note.synopsis, note.notes]) {
+    if (!html?.includes('data:image/') || !/<img\b/i.test(html) || typeof document === 'undefined') continue;
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    for (const img of template.content.querySelectorAll('img[src]')) {
+      const src = img.getAttribute('src');
+      if (src && validCoverImage(src)) yield src;
+    }
+  }
+}
+
 // Include the trash so restoring a note also restores its artwork.
-export function* projectImageRefs(book:Novel) {
+export function* projectImageRefs(book:Novel, includeEmbedded = false) {
+  let embeddedRefs: Map<string, string> | undefined;
   if(isGalleryImageRef(book.cover?.image))yield book.cover.image;
   for(const page of [book.homepage,...(book.homePages??[])]) {
     for(const block of page?.blocks??[])if(isGalleryImageRef(block.image))yield block.image;
@@ -37,6 +52,12 @@ export function* projectImageRefs(book:Novel) {
   const stack:NoteNode[][]=[...Object.values(book.sections??{}),(book.trash??[]).map(item=>item.node)];
   while(stack.length) {
     for(const note of stack.pop()!) {
+      if (includeEmbedded) for (const image of embeddedNoteImages(note)) {
+        if (!embeddedRefs) embeddedRefs = new Map((book.gallery ?? []).flatMap(entry =>
+          entry.kind === 'image' ? [[entry.image, galleryImageRef(entry.id)] as const] : []));
+        const ref = embeddedRefs.get(image);
+        if (ref) yield ref;
+      }
       if(isGalleryImageRef(note.image))yield note.image;
       const banner=note.event?.banner;
       if(isGalleryImageRef(banner))yield banner;

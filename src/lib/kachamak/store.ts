@@ -1,4 +1,5 @@
 "use client";
+import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
 import { projectStorage, isWebSession, folderSaved } from "./session-storage";
 
 import { create } from "zustand";
@@ -500,7 +501,7 @@ export const useKachamak = create<KachamakState>()(
           };
           normalizeNovelSections(n);
           set((s) => ({
-            novels: [...s.novels, n as Novel],
+            novels: [...s.novels, migrateBookArtwork(n as Novel)],
             activeNovelId: n.id,
             activeHomePageId: HOME_ROOT,
             activeTab: "binder",
@@ -575,7 +576,7 @@ export const useKachamak = create<KachamakState>()(
         if (!book || state.activeNovelId!==projectId) throw new Error('Reopen the project to change its gallery.');
         if(change.type==='remove') {
           const ref=galleryImageRef(change.id);
-          for(const used of projectImageRefs(book))if(used===ref)throw new Error('This image is in use. Remove it from the book, including any notes in Trash, before deleting it from Gallery.');
+          for(const used of projectImageRefs(book, true))if(used===ref)throw new Error('This image is in use. Remove it from the book, including any notes in Trash, before deleting it from Gallery.');
         }
         const gallery=changeGallery(book.gallery??[],change);
         return {novels:state.novels.map(n=>n===book?touch({...book,gallery}):n)};
@@ -978,7 +979,7 @@ export const useKachamak = create<KachamakState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 50,
+      version: 51,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -991,6 +992,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if(version<51 && s.novels) s.novels=migrateLibraryArtwork(s.novels);
         if(version<50){ /* Previously embedded artwork remains readable alongside book-local gallery references. */ }
         if(version<49){ /* An absent gallery is an empty project gallery. */ }
         if(version<48) s.activeHomePageId=HOME_ROOT;

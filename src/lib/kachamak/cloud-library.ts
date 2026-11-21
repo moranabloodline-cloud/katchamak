@@ -1,4 +1,5 @@
 'use client';
+import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
 import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
 import {HOME_ROOT, homepageEntry} from './homepage';
 import { create } from 'zustand';
@@ -199,6 +200,16 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
   revision = data.revision; saved = snapshot();
   if(keepAppearance){const acknowledged=JSON.parse(saved);acknowledged.editorAppearance=appearance;saved=JSON.stringify(acknowledged);}
   useWebLibrary.setState({ ready: true, busy: false, pending: snapshot()!==saved, error: null, conflict: false });
+  // Retain the acknowledged snapshot as the CAS baseline. This change then uses
+  // the same autosave, offline draft and retry path as edits in the workspace.
+  const novels = migrateLibraryArtwork(data.snapshot.novels);
+  if (novels !== data.snapshot.novels) {
+    // The upgrade can be replayed from the server after an offline reload. Only
+    // subsequent changes by the writer need a separate local recovery copy.
+    recoveryBase = saved;
+    recoveryBasePayload = JSON.stringify({ novels, collections: data.snapshot.collections });
+    useKachamak.setState({ novels });
+  }
 }
 export async function initializeWebLibrary() {
   if (initializing) return initializing;
@@ -230,8 +241,6 @@ export async function initializeWebLibrary() {
       return;
     }
     const confirmed = await api('/api/library/demo/install',{method:'POST'});
-    apply(confirmed);
-    writeWorkspaceRoute();
     if (!subscribed) {
       subscribed = true;
       const changed = () => {
@@ -248,6 +257,8 @@ export async function initializeWebLibrary() {
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
       useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
     }
+    apply(confirmed);
+    writeWorkspaceRoute();
     if (useLocalRecovery.getState().drafts.some(d => d.retryClone)) await loadLocalDrafts(confirmed);
   })().catch(error => { fail(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
@@ -311,7 +322,11 @@ async function reconcileRevision(){
   const keepAppearance=JSON.stringify(local.editorAppearance??DEFAULT_EDITOR_APPEARANCE)!==JSON.stringify(base.editorAppearance??DEFAULT_EDITOR_APPEARANCE);
   const content=(value:Snapshot)=>JSON.stringify([value.novels,value.collections]);
   const localContent=content(local),remoteContent=content(remote.snapshot),baseContent=content(base);
-  if(localContent===remoteContent||localContent===baseContent){
+  const migrationOnly = () => {
+    const novels = migrateLibraryArtwork(base.novels);
+    return novels !== base.novels && content({ ...base, novels }) === localContent;
+  };
+  if(localContent===remoteContent||localContent===baseContent||migrationOnly()){
     const checkpoint = activeDraft;
     apply(remote,keepAppearance);
     if (localContent === remoteContent) await removeAcknowledgedDraft(checkpoint, saved);
@@ -435,7 +450,7 @@ export async function recoverLocalDraft(summary: DraftSummary) {
     const ids = new Map(source.novels.map((n, index) => [n.id, root + '-book-' + index]));
     const folders = new Map(source.collections.map((c, index) => [c.id, root + '-folder-' + index]));
     if (folders.size !== source.collections.length || source.collections.some(c => typeof c.name !== 'string' || !Array.isArray(c.projectIds) || c.projectIds.some(id => !ids.has(id)) || c.parentId !== null && !folders.has(c.parentId))) throw new Error('This draft has invalid collections. Export its project backups instead.');
-    const novels = source.novels.map(n => { const copy = { ...n, id: ids.get(n.id)!, title: n.title + ' (Recovered)', author: n.author ?? '', trash: n.trash ?? [], statuses: n.statuses ?? [], labels: n.labels ?? [] }; normalizeNovelSections(copy); return copy; });
+    const novels = source.novels.map(n => { const copy = { ...n, id: ids.get(n.id)!, title: n.title + ' (Recovered)', author: n.author ?? '', trash: n.trash ?? [], statuses: n.statuses ?? [], labels: n.labels ?? [] }; normalizeNovelSections(copy); return migrateBookArtwork(copy); });
     const assigned = new Set(source.collections.flatMap(c => c.projectIds));
     const current = { novels: useKachamak.getState().novels, collections: useCollections.getState().collections };
     const groupName = current.collections.find(c => c.id === root)?.name ?? 'Recovered · ' + new Date(draft.updatedAt).toLocaleString();
@@ -502,7 +517,7 @@ export async function importWebProject(file: string | Blob, collectionId: string
   normalizeNovelSections(novel);
   if (!validCloudLibrary({novels:[novel],collections:[]}))
     throw new Error('This backup contains project data that cannot be saved to your cloud library.');
-  addNovel(novel, collectionId); await flushWebLibrary();
+  addNovel(migrateBookArtwork(novel), collectionId); await flushWebLibrary();
 }
 function filesPath(id: string | null) { if (!id) throw new Error('Open a project first.'); return '/api/library/files/' + encodeURIComponent(id); }
 export async function projectAttachments(projectId = useKachamak.getState().activeNovelId): Promise<{ id: string; name: string; size: number }[]> {

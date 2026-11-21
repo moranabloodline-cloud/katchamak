@@ -1,4 +1,5 @@
 'use client';
+import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
 import { requestJson } from './request-json';
 import { create } from 'zustand';
 import { previewFolder } from './preview-folder';
@@ -135,6 +136,8 @@ async function loadAll(unchanged?: string) {
   } finally { applying = false; }
   locations = nextLocations; savedSnapshot = snapshot();
   useWebLibrary.setState({ ready: true, busy: false, pending: false, error: null, reconnect: false });
+  const upgraded = migrateLibraryArtwork(novels);
+  if (upgraded !== novels) useKachamak.setState({ novels: upgraded });
   } catch (error) { roots = priorRoots; expected = priorExpected; throw error; }
 }
 export async function initializeWebLibrary(reconnect = false) {
@@ -161,7 +164,6 @@ export async function initializeWebLibrary(reconnect = false) {
       const permission = await vault.queryPermission({ mode: 'readwrite' });
       if (permission !== 'granted') { useWebLibrary.setState({ busy: false, reconnect: true, ready: false }); return; }
     }
-    await loadAll();
     if (!subscribed) {
       subscribed = true;
       const changed = () => {
@@ -175,6 +177,7 @@ export async function initializeWebLibrary(reconnect = false) {
       };
       useKachamak.subscribe(changed); useCollections.subscribe(changed);
     }
+    await loadAll();
   })().catch(error => { setError(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
 }
@@ -200,7 +203,7 @@ export async function importWebProject(json: string, collectionId: string | null
   const input = JSON.parse(json); const value = input?.format === 'katchamak-project' ? input.novel : input;
   if (!isUsableBackup(value)) throw new Error('Not a Katchamak project.');
   normalizeNovelSections(value);
-  const novel = { ...value, id: noteId() } as Novel;
+  const novel = migrateBookArtwork({ ...value, id: noteId() } as Novel);
   await ensureVault();
   applying = true;
   try {

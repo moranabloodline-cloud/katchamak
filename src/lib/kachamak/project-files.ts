@@ -1,5 +1,6 @@
 "use client";
 
+import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { useKachamak, isUsableBackup, normalizeNovelSections, saveProjectsLocally } from "./store";
@@ -38,6 +39,8 @@ function install(loaded: Loaded, open = false) {
   applying = true;
   try { useKachamak.setState(state => ({ novels: [...state.novels.filter(n => n.id !== novel.id), novel], ...(open ? { activeNovelId: novel.id, selectedNodeId: null, paneAId: null, paneBId: null, activeTab: "binder" as const } : {}) })); }
   finally { applying = false; }
+  const upgraded = migrateBookArtwork(novel);
+  if (upgraded !== novel) useKachamak.setState(s => ({ novels: s.novels.map(n => n.id === novel.id ? upgraded : n) }));
 }
 
 export async function initializeProjectFiles() {
@@ -68,6 +71,8 @@ export async function initializeProjectFiles() {
         timer = setTimeout(() => { timer = null; void flushProjectFiles().catch(fail); }, 300);
       });
     }
+    const upgraded = migrateLibraryArtwork(novels);
+    if (upgraded !== novels) useKachamak.setState({ novels: upgraded });
   })().catch(error => { fail(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
 }
@@ -139,7 +144,7 @@ export async function importFileProject(json: string): Promise<string | null> {
   if (!isUsableBackup(parsed)) throw new Error("Not a Katchamak project backup.");
   normalizeNovelSections(parsed);
   const novel = { ...parsed, id: newNovel("", "").id, author: parsed.author ?? "", trash: parsed.trash ?? [], statuses: parsed.statuses ?? [], labels: parsed.labels ?? [] } as Novel;
-  const loaded = await invoke<Loaded | null>("create_disk_project", { document: wrap(novel) });
+  const loaded = await invoke<Loaded | null>("create_disk_project", { document: wrap(migrateBookArtwork(novel)) });
   if (!loaded) return null;
   install(loaded, true);
   return novel.id;
