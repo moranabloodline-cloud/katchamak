@@ -4,6 +4,7 @@ import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,ty
 import {createPortal} from 'react-dom';
 import {Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
+import {canvasOpeningView} from '@/lib/kachamak/canvas-file';
 import {alignCanvasEdges,type AlignmentGuide} from '@/lib/kachamak/canvas-guides';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
@@ -33,7 +34,7 @@ function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Po
 }
 export function CanvasBoard({novel,page,byId,change,open,describe,showTree,toolsHost,showInspector,onToolPicked,selection,setSelection,rows,rowContents,heldLines,renderRow,layoutActions,addRow,editClassic,renderClassic,addClassic}:Props){
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
-  const positionKey='kachamak-board:'+novel.id+':'+page.id;
+  const positionKey='kachamak-board:'+novel.id+':'+page.id+(page.viewKey?':'+page.viewKey:'');
   const cameraKey=positionKey+':world';
   const snapEdges=useZoomSetting(positionKey,'snap-edges')!=='off';
   const showGrid=useZoomSetting(positionKey,'grid')!=='hidden';
@@ -127,8 +128,13 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   },[zoom]);
   useLayoutEffect(()=>{
     const el=surface.current,first=rows[0];
-    if(!el||!first||storedZoom)return;
+    if(!el||storedZoom)return;
     try{if(sessionStorage.getItem(cameraKey))return;}catch{}
+    if(page.viewKey){
+      const {level,x,y}=canvasOpeningView({...page,blocks:[...rows,...page.blocks]},el.clientWidth);
+      previousZoom.current=level;setZoom(level);setPan({x,y});return;
+    }
+    if(!first)return;
     const level=Math.min(1,Math.max(.02,Math.floor((el.clientWidth-48)/rowWidth*100)/100));
     if(level<1){
       previousZoom.current=level;setZoom(level);

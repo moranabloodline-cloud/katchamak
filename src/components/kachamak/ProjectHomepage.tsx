@@ -19,8 +19,7 @@ import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import './canvas.css';
 import {CanvasBoard} from './CanvasBoard';
-import {canvasOpeningView,type CanvasFile} from '@/lib/kachamak/canvas-file';
-import {saveZoomSetting} from '@/lib/kachamak/workspace-zoom';
+import type {CanvasFile} from '@/lib/kachamak/canvas-file';
 import {toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
 import {CanvasItemFace} from './CanvasItemFace';
@@ -83,8 +82,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
   const [message,setMessage]=useState('');
   const [incoming,setIncoming]=useState<{file:CanvasFile;name:string;project:string;page:string;expected:Novel['homepage']}|null>(null);
-  const [cameraRevision,setCameraRevision]=useState(0);
-  const canvasHost=useRef<HTMLDivElement>(null),fileInput=useRef<HTMLInputElement>(null);
+  const fileInput=useRef<HTMLInputElement>(null);
   async function readLayout(file?:File){
     if(!file)return;
     const expected=page.id===HOME_ROOT?novel.homepage:novel.homePages?.find(p=>p.id===page.id);
@@ -99,14 +97,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
     const ok=useKachamak.getState().importCanvasLayout(incoming.project,incoming.page,incoming.expected,incoming.file);
     setIncoming(null);
     if(!ok){setMessage('The layout could not be applied. Check its links or reopen the file if the canvas changed.');return;}
-    const surface=canvasHost.current?.querySelector<HTMLElement>('.cv-surface');
-    if(surface){
-      const {level,x,y}=canvasOpeningView(incoming.file.layout,surface.clientWidth);
-      const key='kachamak-board:'+novel.id+':'+page.id;
-      saveZoomSetting(key,'zoom',String(level));
-      try{sessionStorage.setItem(key+':world',JSON.stringify({x,y}));}catch{}
-    }
-    setCameraRevision(v=>v+1);setSelection([]);
+    setSelection([]);
   }
   const opener=useRef<HTMLElement|null>(null);
   const addRowButton=useRef<HTMLButtonElement>(null);
@@ -272,9 +263,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       : <button type="button" className="absolute inset-0 w-full" aria-label={display.name} onClick={()=>activate(b)}/>}</div>;
   };
   return <>
-    <div ref={canvasHost} className="contents"><CanvasBoard key={cameraRevision} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
+    <CanvasBoard key={page.id+':'+(page.viewKey??'')} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
-      addClassic={placement=>{captureOpener();setEditor(placement);}}/></div>
+      addClassic={placement=>{captureOpener();setEditor(placement);}}/>
     {incoming&&incoming.page===page.id&&incoming.project===novel.id&&<Dialog open onOpenChange={open=>{if(!open)setIncoming(null);}}><DialogContent><DialogHeader><DialogTitle>Replace this canvas layout?</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Open {incoming.name} in {page.title}. Undo restores the previous layout.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setIncoming(null)}>Cancel</Button><Button onClick={installLayout}>Replace layout</Button></div></DialogContent></Dialog>}
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}

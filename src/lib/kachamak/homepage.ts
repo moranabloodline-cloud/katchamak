@@ -46,7 +46,7 @@ export interface HomeBlock extends CanvasFields {
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { synopsis?:string; notes?:string; icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { viewKey?:string; synopsis?:string; notes?:string; icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -185,6 +185,7 @@ export function validHomepage(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const page = value as Homepage;
   if(page.icon!==undefined&&!validAppearance('icon',page.icon) || page.color!==undefined&&!validAppearance('color',page.color))return false;
+  if(page.viewKey!==undefined&&(typeof page.viewKey!=='string'||!page.viewKey||page.viewKey.length>80))return false;
   if(page.legacyRowX!==undefined && !Number.isFinite(page.legacyRowX))return false;
   if([page.title,page.synopsis,page.notes].some(field=>field!==undefined && typeof field!=='string'))return false;
   if(typeof page.locked!=='boolean' || !Array.isArray(page.blocks) || !page.blocks.every(validBlock))return false;

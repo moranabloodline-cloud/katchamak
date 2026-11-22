@@ -769,7 +769,8 @@ export const useKachamak = create<KachamakState>()(
         if(current!==expected||current?.locked||!current&&pageId!==HOME_ROOT)return false;
         const result=importCanvasFile(book,current??EMPTY_HOMEPAGE,file);
         if(!result)return false;
-        const updated=pageId===HOME_ROOT?{...book,homepage:result.page}:{...book,homePages:book.homePages!.map(p=>p.id===pageId?{...p,...result.page}:p)};
+        const page={...result.page,viewKey:crypto.randomUUID()};
+        const updated=pageId===HOME_ROOT?{...book,homepage:page}:{...book,homePages:book.homePages!.map(p=>p.id===pageId?{...p,...page}:p)};
         set({novels:state.novels.map(n=>n===book?touch({...updated,gallery:result.gallery}):n)});
         return true;
       },
