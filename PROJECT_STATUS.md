@@ -1,3 +1,5 @@
+> **2026-11-22 — House styles na rukopisu projekta.** Galerija poredi stilove na istom odlomku otvorene knjige. U kartici su vidljivi prostor za povez, visina početka poglavlja i, kada su uključeni, tekući naslov i broj strane.
+
 > **2026-11-22 — Izvoz bez tri ilustrovana poglavlja.** Provereni su PDF, EPUB, DOCX i lokalni HTML iste probne knjige posle isključivanja C04, C16 i C28 u Publish-u.
 
 > **2026-11-22 — Publish, HTML izdanje bez interneta.** Izvezeni HTML otvara se kao lokalni fajl. U probnoj knjizi svih 36 stavki sadržaja i svih 48 ilustracija rade uz isključenu mrežu.
@@ -689,6 +691,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-22 — House styles na rukopisu projekta
+- Galerija i detaljan pregled podrazumevano otvaraju prvo uključeno poglavlje ili belešku sa sadržajem po redosledu u Publish-u. Ručni izbor iz Bindera i žanrovski primeri dostupni su kroz njihove kontrole. Kada izdanje nema tekst ili sliku za prikaz, koristi naslovnu stranu te knjige.
+- Kartica koristi iste milimetarske margine i iste postavke otvaranja poglavlja kao desna štampana strana. Izmerena je geometrija prostora za tekst i naslova svakog od 22 stila u Chrome-u. Najveće odstupanje između kartice i štampanog pregleda iznosilo je manje od 0,01% dimenzije strane.
+- Provereni su promena poglavlja, izbor žanrovskog primera, povratak na projekat i prazno izdanje. Test je potvrdio i da pregled čuva sadržaj i redosled Bindera i podešavanja izbora za izvoz.
 
 ### 2026-11-22 — Izbor poglavlja u sva četiri formata
 - U rukopisu „Atlas of the Outer Sound“ isključena su po dva pojavljivanja slika iz svakog od tri poglavlja. U svim fajlovima ostala su 33 poglavlja u prethodno sačuvanom redosledu i 42 pojavljivanja 11 različitih ilustracija. Izostali su naslovi, pasusi, slike i potpisi iz izabranih poglavlja. Ilustracija 4 izostala je iz svih fajlova. Ilustracija 5 ostala je u C05, C17 i C29.

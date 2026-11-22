@@ -5,8 +5,8 @@ import {BookOpen,Check,Download,FolderTree,Grid2X2,Moon,Settings2,Sun} from 'luc
 import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
-import {baseStyle,trims,type BookStyle} from '@/lib/kachamak/book-style';
-import {binderChapterChoices,bookArticles,bookCss,chapterSpecimen,prepareChapterSample,proofs,publication,type ChapterSample,type Proof} from '@/lib/kachamak/publication';
+import {baseStyle,fontStacks,trims,type BookStyle} from '@/lib/kachamak/book-style';
+import {binderChapterChoices,bookArticles,bookCss,escapeText,pageMargins,projectOpeningSample,projectStyleProof,prepareChapterSample,proofs,publication,type ChapterSample,type Proof} from '@/lib/kachamak/publication';
 import {withGenreSample} from '@/lib/kachamak/house-styles';
 import {galleryImage,galleryImageRef} from '@/lib/kachamak/project-image';
 import {findNode,locateNode} from '@/lib/kachamak/utils';
@@ -23,18 +23,21 @@ type StyleCard={name:string;style:BookStyle;node:NoteNode};
 function styleCards(nodes:NoteNode[]):StyleCard[]{
   return nodes.flatMap(node=>node.hidden?[]:node.bookStyle?[{name:node.title,style:node.bookStyle,node}]:styleCards(node.children));
 }
-function Miniature({book,entry,comparison,selected,choose}:{book:Novel;entry:StyleCard;comparison:ChapterSample|null;selected:boolean;choose:()=>void}){
+function Miniature({book,entry,comparison,genre,selected,choose}:{book:Novel;entry:StyleCard;comparison:ChapterSample|null;genre:boolean;selected:boolean;choose:()=>void}){
   const holder=useRef<HTMLDivElement>(null),[width,setWidth]=useState(160);
   useEffect(()=>{if(!holder.current)return;const observer=new ResizeObserver(([r])=>setWidth(r.contentRect.width));observer.observe(holder.current);return()=>observer.disconnect();},[]);
   const s=entry.style,[w,h]=trims[s.trim],sheet=w*96/25.4;
   const source=useMemo(()=>{
-    const sample=comparison?chapterSpecimen(book,s,comparison,true):publication(book,s,'Chapter opening');
-    const padding=[s.top,s.outer,s.bottom,s.inner].map(value=>value+'mm').join(' ');
-    const paper='html{background:white;overflow:hidden}body{padding:'+padding+'}.book-name{display:none}';
-    // Flow overflow into clipped columns so the first sheet ends on a whole line above its bottom margin.
-    const firstSheet=comparison?'body{height:100vh}main{height:100%;columns:1;column-fill:auto;overflow:hidden}':'';
-    return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,'print')+paper+firstSheet+'</style><body><main>'+bookArticles(sample)+'</main></body></html>';
-  },[book,s,comparison]);
+    const sample=genre?publication(book,s,'Chapter opening'):projectStyleProof(book,s,'Chapter opening',comparison,true);
+    const titlePage=sample.sections[0]?.id==='matter-title-page';
+    const margins='.running,.folio{position:absolute;left:'+s.inner+'mm;right:'+s.outer+'mm;display:grid;place-content:center;overflow:hidden;white-space:nowrap}'+
+      '.running{top:0;height:'+s.top+'mm;font:9pt '+fontStacks[s.headingFont]+';color:'+s.accent+'}.folio{bottom:0;height:'+s.bottom+'mm;font:9pt '+fontStacks[s.bodyFont]+'}';
+    const paper='html{background:white;overflow:hidden}body{position:relative;height:100vh;overflow:hidden;padding:'+pageMargins(s)+'}.book-name{display:none}'+
+      'main{height:100%;columns:1;column-fill:auto;overflow:hidden}'+margins;
+    const running=s.running&&!titlePage?'<div class="running">'+escapeText(sample.title)+'</div>':'';
+    const folio=s.folios&&!titlePage?'<div class="folio">1</div>':'';
+    return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,'print')+paper+'</style><body>'+running+'<main>'+bookArticles(sample)+'</main>'+folio+'</body></html>';
+  },[book,s,comparison,genre]);
   return <button type="button" aria-label={'Preview '+entry.name} aria-pressed={selected} onClick={choose} className={'group flex min-w-0 flex-col rounded-lg border p-2 text-left transition-colors '+(selected?'border-amber-400/70 bg-amber-400/5':'border-white/10 bg-white/[.025] hover:border-amber-300/40')}>
     <div ref={holder} className="pointer-events-none relative w-full overflow-hidden rounded-sm bg-white" style={{aspectRatio:w+'/'+h}}>
       <iframe title={entry.name+' specimen'} tabIndex={-1} sandbox="allow-same-origin" scrolling="no" loading="lazy" srcDoc={source} className="absolute left-0 top-0 origin-top-left border-0" style={{width:sheet,height:h*96/25.4,transformOrigin:'top left',transform:'scale('+width/sheet+')'}}/>
@@ -59,10 +62,12 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   useEffect(()=>{useKachamak.getState().installPublishStyles(novel.id);},[novel.id,novel.publishStyleCatalogVersion]);
   const rows=useMemo(()=>manuscriptEntries(novel),[novel]);
   const chapterChoices=useMemo(()=>binderChapterChoices(novel),[novel]);
-  const [comparisonId,setComparisonId]=useState('');
+  // null follows the current manuscript, an empty string explicitly requests genre examples.
+  const [comparisonId,setComparisonId]=useState<string|null>(null);
+  const genre=comparisonId==='';
   const selectedChapter=chapterChoices.find(choice=>choice.node.id===comparisonId);
-  const comparison=useMemo(()=>selectedChapter?prepareChapterSample(novel,selectedChapter):null,[novel,selectedChapter]);
-  useEffect(()=>{if(comparisonId&&!selectedChapter)setComparisonId('');},[comparisonId,selectedChapter]);
+  const comparison=useMemo(()=>genre?null:selectedChapter?prepareChapterSample(novel,selectedChapter):projectOpeningSample(novel,rows,chapterChoices),[novel,genre,selectedChapter,rows,chapterChoices]);
+  useEffect(()=>{if(comparisonId&&!selectedChapter)setComparisonId(null);},[comparisonId,selectedChapter]);
   const includedRows=useMemo(()=>rows.filter(row=>row.included),[rows]);
   const hasContents=includedRows.length>0;
   const [focusNote,setFocusNote]=useState<string|null>(null);
@@ -94,10 +99,11 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   const options=treeOptions(roots);
   const source=useMemo(()=>{
     if(gallery||!hasStyle)return '';
-    const book=proof==='Chapter opening'&&comparison?chapterSpecimen(novel,s,comparison,false):publication(novel,s,proof);
+    const book=genre?publication(novel,s,proof):projectStyleProof(novel,s,proof,comparison);
+    if(!book.sections.length)return '';
     return proofDocument(book,s,print);
-  },[novel,s,proof,print,gallery,comparison,hasStyle]);
-  const compare=(id:string)=>{
+  },[novel,s,proof,print,gallery,comparison,genre,hasStyle]);
+  const compare=(id:string|null)=>{
     setComparisonId(id);setProof('Chapter opening');setWantPdf(false);
   };
   const open=(card:StyleCard)=>{
@@ -131,7 +137,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   useEffect(()=>{if(!wantPdf||!ready||!print||gallery||proof!=='Manuscript'||frame.current?.contentDocument?.documentElement?.dataset.ready!=='yes')return;
     setWantPdf(false);frame.current.contentWindow?.print();
   },[wantPdf,ready,print,gallery,proof]);
-  const group=(items:StyleCard[])=>items.length>0&&<section className="mb-7"><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node.id} book={novel} entry={card} comparison={comparison} selected={card.node.id===entry?.node.id} choose={()=>open(card)}/>)}</div></section>;
+  const group=(items:StyleCard[])=>items.length>0&&<section className="mb-7"><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node.id} book={novel} entry={card} comparison={comparison} genre={genre} selected={card.node.id===entry?.node.id} choose={()=>open(card)}/>)}</div></section>;
   return <>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2">
@@ -139,12 +145,14 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         <button className={btn+(gallery?active:'')} onClick={()=>{setWantPdf(false);setGalleryStyleId(entry?.node.id);onInspect('tools');useKachamak.getState().select(folder?.id??null);setGallery(true);}}><Grid2X2 className="size-3.5"/>Styles</button>
         <button disabled={!entry} className={btn+(!gallery?active:'')} onClick={()=>{if(gallery){setProof('Chapter opening');if(entry)useKachamak.getState().select(entry.node.id);}setGallery(false);}}><BookOpen className="size-3.5"/>Proof</button>
         {(gallery||proof==='Chapter opening')&&<div role="group" aria-label="Style samples" className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 border-l border-white/10 pl-2 max-sm:order-last max-sm:w-full max-sm:border-0 max-sm:pl-0">
-          <select aria-label="Compare Binder chapter" className={btn+' min-w-0 max-w-full shrink bg-background sm:max-w-64'} disabled={!chapterChoices.length} value={selectedChapter?.node.id??''} onChange={e=>compare(e.target.value)}>
-            <option disabled value="">{chapterChoices.length?'Compare Binder chapter…':'No Binder chapters'}</option>
+          <select aria-label="Compare Binder chapter" className={btn+' min-w-0 max-w-full shrink bg-background sm:max-w-64'} value={genre?':genre':selectedChapter?.node.id??''} onChange={e=>compare(e.target.value||null)}>
+            {genre&&<option hidden value=":genre">Compare Binder chapter…</option>}
+            <option value="">{novel.title}{!genre&&!selectedChapter&&comparison?' — '+comparison.title:''}</option>
             {chapterChoices.map(({node,path})=><option key={node.id} value={node.id}>{path}</option>)}
           </select>
-          <button type="button" aria-pressed={!comparison} className={btn+(!comparison?active:'')} onClick={()=>compare('')}>Genre samples</button>
+          <button type="button" aria-pressed={genre} className={btn+(genre?active:'')} onClick={()=>compare('')}>Genre samples</button>
         </div>}
+        {!genre&&!comparison&&(gallery||proof==='Chapter opening')&&<span role="status" className="text-xs text-muted-foreground">Showing the title page. Select a Binder item with text in Manuscript to preview a chapter.</span>}
         {comparison&&!comparison.full&&(gallery||proof==='Chapter opening')&&<span role="status" className="text-xs text-muted-foreground">This chapter has no text yet.</span>}
         <span className="min-w-1 flex-1"/>
         <button className={btn+' lg:hidden'} onClick={onShowTools} aria-label="Show style tools"><Settings2 className="size-4"/></button>
@@ -156,11 +164,11 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
       </div>:<>
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
           <strong className="mr-auto truncate">{entry?.name??"Book proof"}</strong>
-          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'&&s.sampleGenre?'Style sample':v}</option>)}</select>
+          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'&&genre&&s.sampleGenre?'Style sample':v==='Chapter opening'&&!genre?'Project opening':v}</option>)}</select>
           <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setWantPdf(false);setPrint(m==='Print');}}>{m}</button>)}</div>
           {!print&&<button type="button" className={btn} aria-pressed={darkReader} aria-label="Dark reader preview" title={darkReader?'Use light reader background':'Use dark reader background'} onClick={()=>setDarkReader(!darkReader)}>{darkReader?<Sun className="size-3.5"/>:<Moon className="size-3.5"/>}</button>}
         </div>
-        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:<PublishProof key={source} anchor={anchor} source={source} print={print} darkReader={darkReader} frameRef={frame} onReady={onReady} zoom={zoom}/>}
+        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:!source?<p role="status" className="p-5 text-sm text-muted-foreground">{proof==='Scene break'?'This chapter has no scene break.':proof==='Special blocks'?'This chapter has no special blocks.':'This chapter has no text yet.'}</p>:<PublishProof key={source} anchor={anchor} source={source} print={print} darkReader={darkReader} frameRef={frame} onReady={onReady} zoom={zoom}/>}
       </>}
     </div>
     {toolsHost&&createPortal(inspector==='manuscript'?<PublishManuscript book={novel} rows={rows} change={action=>{

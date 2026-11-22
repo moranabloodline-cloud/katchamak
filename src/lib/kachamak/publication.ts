@@ -1,5 +1,5 @@
 import {genreSamples} from './genre-samples';
-import {manuscriptEntries} from './publish-manuscript';
+import {manuscriptEntries,type ManuscriptEntry} from './publish-manuscript';
 import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
 import {fontStacks,glyphs,trims} from './book-style';
@@ -181,8 +181,31 @@ export function prepareChapterSample(book:Novel,choice:BinderChapterChoice){
     }
   }
   collect(choice.node);
-  const body=openingBody(passages.join('<hr>'));
-  return {title:choice.node.title,number:choice.number,full:body.innerHTML,excerpt:firstSheetExcerpt(body)};
+  return chapterSample(choice.node.title,choice.number,passages.join('<hr>'));
+}
+function chapterSample(title:string,number:number,html:string){
+  const body=openingBody(html);
+  return {title,number,full:body.innerHTML,excerpt:firstSheetExcerpt(body)};
+}
+function hasPassage(html:string){
+  return !!html.replace(/<[^>]+>|&nbsp;/g,'').trim()||/<img\b/i.test(html);
+}
+function isPart(node:NoteNode,content:string){
+  return node.kind==='folder'||node.kind==='act'||(node.kind!=='chapter'&&node.children.length>0&&!hasPassage(content));
+}
+// Select an opening in export order. Child notes have their own inclusion flags.
+export function projectOpeningSample(book:Novel,entries:ManuscriptEntry[],choices:BinderChapterChoice[]){
+  const visible=new Set(choices.map(c=>c.node.id));
+  const targets=new Map<string,string>();
+  let number=0;
+  for(const {node,included} of entries){
+    if(!included||node.kind==='folder'||node.kind==='act')continue;
+    const content=cleanBody(node.content??'',book,'<hr>',targets);
+    if(isPart(node,content))continue;
+    number++;
+    if(visible.has(node.id)&&hasPassage(content))return chapterSample(node.title,number,content);
+  }
+  return null;
 }
 export type ChapterSample=ReturnType<typeof prepareChapterSample>;
 export function chapterSpecimen(book:Novel,s:BookStyle,sample:ChapterSample,thumbnail:boolean):Publication{
@@ -202,7 +225,7 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
     entries.forEach(({node},i)=>targets.set(node.id,'entry-'+i));
     for(const {node} of entries){
       const content=cleanBody(node.content??'',book,divider(s),targets);
-      const part=(node.kind==='folder'||node.kind==='act'||(!content.replace(/<[^>]+>|&nbsp;/g,'').trim()&&!content.includes('<img') && node.children.length>0 && node.kind!=='chapter'));
+      const part=isPart(node,content);
       const leaf:Leaf={id:targets.get(node.id)!,title:node.title,kind:part?'part':'chapter',html:''};
       leaf.html=part?'<h1>'+escapeText(node.title)+'</h1>'+content:chapterHead(node.title,++index,s,art)+opening(content);
       chapters.push(leaf);
@@ -230,6 +253,32 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
   };
   return {...model,sections:[{id:'specimen',title:proof,kind:proof==='Chapter opening'?'chapter':'special',html:examples[proof]!}]};
 }
+// Share the opening (right-hand) margins with the paged print layout.
+export function pageMargins(s:BookStyle){
+  return [s.top,s.outer,s.bottom,s.inner].map(mm=>mm+'mm').join(' ');
+}
+export function projectStyleProof(book:Novel,s:BookStyle,proof:Proof,sample:ChapterSample|null,thumbnail=false):Publication{
+  const model:Publication={title:book.title,author:book.author,lang:bookLanguage(book.language),sections:[]};
+  if(proof==='Manuscript')return publication(book,s);
+  if(proof==='Chapter opening'&&sample)return chapterSpecimen(book,s,sample,thumbnail);
+  if(proof==='Chapter opening'||proof==='Title page')return {...model,sections:[special('Title page',book,s,[])]};
+  if(proof==='Body text'||proof==='Scene break'||proof==='Special blocks'){
+    if(!sample)return model;
+    const body=document.createElement('div');body.innerHTML=sample.full;
+    let html=body.innerHTML;
+    if(proof==='Scene break'){
+      const hr=body.querySelector('hr');
+      html=hr?(hr.previousElementSibling?.outerHTML??'')+'<hr>'+(hr.nextElementSibling?.outerHTML??''):'';
+    }else if(proof==='Special blocks'){
+      const selector='blockquote,h2,h3,h4,h5,h6,.letter,pre,.verse,aside,.aside,table';
+      html=Array.from(body.querySelectorAll(selector)).filter(n=>!n.parentElement?.closest(selector)).map(n=>n.outerHTML).join('');
+    }
+    if(html)model.sections.push({id:'binder-passage',kind:'special',title:sample.title,html:html.replaceAll('<hr>',divider(s))});
+    return model;
+  }
+  const contents=proof==='Contents'?manuscriptEntries(book).filter(row=>row.included).map(({node},i)=>({id:'entry-'+i,title:node.title,kind:'chapter' as const,html:''})):[];
+  return {...model,sections:[special(proof==='End matter'?'About the author':proof,book,s,contents)]};
+}
 export function bookCss(s:BookStyle,medium:'print'|'screen'|'ebook'){
   const print=medium==='print',reader=medium==='ebook';
   const accent=reader?'currentColor':s.accent;
@@ -250,7 +299,7 @@ blockquote p,aside p,.letter p,.verse p,.aside p{text-align:inherit;text-indent:
 ${s.initial==='Normal'?'':'.opening::first-letter{font-family:'+fontStacks[s.headingFont]+';color:'+accent+';'+(s.initial==='Drop cap'?'float:left;font-size:3em;line-height:.85;margin:.07em .08em 0 0':'font-size:1.9em;line-height:.9')+'}'}
 .title-page{text-align:center;padding-top:${print?h*.19+'mm':'4em'}}.title-page p{text-align:center;text-indent:0}.contents p{text-indent:0;text-align:left;margin:.4em 0}.contents a{text-decoration:none}
 ${rules}
-${print?`@page{size:${w}mm ${h}mm;margin:${s.top}mm ${s.outer}mm ${s.bottom}mm ${s.inner}mm;@top-center{content:${s.running?'string(booktitle)':'none'};font:9pt ${fontStacks[s.headingFont]};color:${accent}}@bottom-center{content:${s.folios?'counter(page)':'none'};font:9pt ${fontStacks[s.bodyFont]}}}
+${print?`@page{size:${w}mm ${h}mm;margin:${pageMargins(s)};@top-center{content:${s.running?'string(booktitle)':'none'};font:9pt ${fontStacks[s.headingFont]};color:${accent}}@bottom-center{content:${s.folios?'counter(page)':'none'};font:9pt ${fontStacks[s.bodyFont]}}}
 @page titleleaf{@top-center{content:none}@bottom-center{content:none}}article#matter-title-page{page:titleleaf}
 @page:left{margin-left:${s.outer}mm;margin-right:${s.inner}mm}@page:blank{@top-center{content:none}@bottom-center{content:none}}
 article{break-before:page}article.chapter{break-before:${s.recto?'right':'page'}}article:first-child{break-before:auto}.book-name{string-set:booktitle content();height:0;overflow:hidden;line-height:0}`:'.book-name{display:none}article+article{margin-top:3em;break-before:page}'}

@@ -8,7 +8,7 @@ const {workspaceTabs}=await import('../src/lib/kachamak/workspace-tabs.ts');
 const {houseStyles,houseStyleCatalogVersion}=await import('../src/lib/kachamak/house-styles.ts');
 const {genreSamples}=await import('../src/lib/kachamak/genre-samples.ts');
 const {baseStyle,trims,validBookStyle}=await import('../src/lib/kachamak/book-style.ts');
-const {publication,htmlEdition,binderChapterChoices,prepareChapterSample,chapterSpecimen}=await import('../src/lib/kachamak/publication.ts');
+const {publication,htmlEdition,binderChapterChoices,prepareChapterSample,chapterSpecimen,projectOpeningSample,projectStyleProof}=await import('../src/lib/kachamak/publication.ts');
 const {epubEdition}=await import('../src/lib/kachamak/publish-export.ts');
 const {wordEdition}=await import('../src/lib/kachamak/publish-word.ts');
 const {validCloudLibrary}=await import('../src/lib/kachamak/cloud-write-validation.mjs');
@@ -29,6 +29,21 @@ state().updateNode('binder',ch,{content:'<p>First <strong>four</strong> words st
   const choices=binderChapterChoices(fixture);
   assert.deepEqual(choices.map(c=>c.node.id),[first.id,'chosen','scene','next','copy']);
   assert.deepEqual(choices.filter(c=>c.node.title==='Arrival').map(c=>c.path),['Part II / Light & shadow / Arrival','Arrival']);
+  const {manuscriptEntries}=await import('../src/lib/kachamak/publish-manuscript.ts');
+  const auto=projectOpeningSample(fixture,manuscriptEntries(fixture),choices);
+  assert.equal(auto.title,'Arrival');
+  assert(auto.full.includes('Another arrival.'));
+  const empty={...fixture,publishManuscript:{included:[]}};
+  assert.equal(projectOpeningSample(empty,manuscriptEntries(empty),choices),null);
+  const onlyParent={...fixture,publishManuscript:{included:['chosen']}};
+  const parentSample=projectOpeningSample(onlyParent,manuscriptEntries(onlyParent),choices);
+  assert(parentSample.full.includes('First line.')&&!parentSample.full.includes('Fresh rain'));
+  for(const {style} of houseStyles){
+    assert(projectStyleProof(fixture,style,'Chapter opening',auto,true).sections[0].html.includes('Another arrival.'));
+    assert(projectStyleProof(empty,style,'Chapter opening',null,true).sections[0].html.includes(fixture.title.replace('&','&amp;')));
+    assert.equal(projectStyleProof(fixture,style,'Scene break',auto).sections.length,0);
+    assert.equal(projectStyleProof(fixture,style,'Special blocks',auto).sections.length,0);
+  }
   const sample=prepareChapterSample(fixture,choices[1]);
   assert.equal(sample.number,2);
   assert(!sample.excerpt.includes('Final sentence.')&&sample.full.includes('Final sentence.'));
