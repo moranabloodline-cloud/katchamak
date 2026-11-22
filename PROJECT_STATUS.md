@@ -1,3 +1,5 @@
+> **2026-11-22 — Broj reči rukopisa u biblioteci.** Kartice knjiga, prikaz liste i zbir za celu knjigu broje tekst svih nivoa Bindera.
+
 > **2026-11-22 — House styles na rukopisu projekta.** Galerija poredi stilove na istom odlomku otvorene knjige. U kartici su vidljivi prostor za povez, visina početka poglavlja i, kada su uključeni, tekući naslov i broj strane.
 
 > **2026-11-22 — Izvoz bez tri ilustrovana poglavlja.** Provereni su PDF, EPUB, DOCX i lokalni HTML iste probne knjige posle isključivanja C04, C16 i C28 u Publish-u.
@@ -691,6 +693,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-22 — Broj reči rukopisa.** Ispravljena je greška koja je zbiru rukopisa dodavala tekst drugih tabova, sinopsise i radne beleške. Regresioni test obuhvata ugnježdene stavke, uređivanje, uklanjanje, vraćanje i odabir za izvoz.
 
 ### 2026-11-22 — House styles na rukopisu projekta
 - Galerija i detaljan pregled podrazumevano otvaraju prvo uključeno poglavlje ili belešku sa sadržajem po redosledu u Publish-u. Ručni izbor iz Bindera i žanrovski primeri dostupni su kroz njihove kontrole. Kada izdanje nema tekst ili sliku za prikaz, koristi naslovnu stranu te knjige.

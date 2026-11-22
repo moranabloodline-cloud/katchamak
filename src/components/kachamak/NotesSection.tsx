@@ -488,7 +488,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             className={`ml-10 mr-1 min-w-0 max-w-52 flex-1 truncate whitespace-nowrap text-xs text-muted-foreground ${view === "timeline"
               ? "@[1040px]:absolute @[1040px]:left-1/2 @[1040px]:mx-0 @[1040px]:-translate-x-1/2"
               : "@[680px]:absolute @[680px]:left-1/2 @[680px]:ml-0 @[680px]:-translate-x-1/2"}`}
-            title={target?'Document text / target':view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Total words in the novel"}
+            title={target?'Document text / target':view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Manuscript words in Binder"}
           >
             {target?`${targetCount.toLocaleString('en-US')}/${target.amount.toLocaleString('en-US')} ${target.unit}`:view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
               ? `${ownWords(selected).toLocaleString("en-US")} words`

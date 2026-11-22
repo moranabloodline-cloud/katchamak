@@ -127,9 +127,11 @@ export function sectionWords(novel: Novel, key: SectionKey): number {
 }
 
 export function novelWords(novel: Novel): number {
-  /* broji SVE sekcije — „everything is a note“, pa se pisanje u Codexu,
-     Planningu i ostalim tabovima takođe računa (po Nikoli: tačan broj reči) */
-  return SECTION_KEYS.reduce((a, key) => a + sectionWords(novel, key), 0);
+  let words = 0;
+  forEachNode(novel.sections.binder ?? [], (node) => {
+    words += countWords(node.content);
+  });
+  return words;
 }
 
 export function novelScenes(novel: Novel): number {
