@@ -120,7 +120,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     if(!entry)return;
     if(!hasContents){toast.error('Select at least one Binder item in Manuscript.');return;}
     if(format==='PDF'){
-      if(!gallery&&print&&proof==='Manuscript'&&ready&&frame.current?.contentDocument?.documentElement.dataset.ready==='yes'){frame.current.contentWindow?.print();return;}
+      if(!gallery&&print&&proof==='Manuscript'&&ready&&frame.current?.contentDocument?.documentElement?.dataset.ready==='yes'){frame.current.contentWindow?.print();return;}
       setReady(false);setPrint(true);setProof('Manuscript');setGallery(false);setWantPdf(true);return;
     }
     setBusy(true);
@@ -128,7 +128,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     catch{toast.error('The edition could not be exported. Please try again.');}finally{setBusy(false);}
   };
   const onReady=useCallback((v:boolean)=>setReady(v),[]);
-  useEffect(()=>{if(!wantPdf||!ready||!print||gallery||proof!=='Manuscript'||frame.current?.contentDocument?.documentElement.dataset.ready!=='yes')return;
+  useEffect(()=>{if(!wantPdf||!ready||!print||gallery||proof!=='Manuscript'||frame.current?.contentDocument?.documentElement?.dataset.ready!=='yes')return;
     setWantPdf(false);frame.current.contentWindow?.print();
   },[wantPdf,ready,print,gallery,proof]);
   const group=(items:StyleCard[])=>items.length>0&&<section className="mb-7"><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node.id} book={novel} entry={card} comparison={comparison} selected={card.node.id===entry?.node.id} choose={()=>open(card)}/>)}</div></section>;

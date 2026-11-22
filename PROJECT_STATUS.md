@@ -1,3 +1,5 @@
+> **2026-11-22 — Publish, cela knjiga sa ilustracijama.** Štampani sadržaj prikazuje stvarne početne strane posle promene redosleda. Pregled podnosi zamenu velikog dokumenta dok se njegov okvir još učitava.
+
 > **2026-11-22 — Provera svih 22 Publish stila.** Zumiranje čuva prelom štampane stranice. Numerisane liste, spojene ćelije, zaglavlja tabela i kurziv u ćeliji prenose se u DOCX; početna slova i mali verzali prate tekst i kroz promene naglaska.
 
 > **2026-11-21 — Završni pregled Publish stilova.** Galerija zadržava aktivni stil za pregled i izvoz. Kartice prikazuju format, font i veličinu. EPUB prati podešavanja čitača, a njegov pregled ima svetlu i tamnu podlogu.
@@ -681,6 +683,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-22 — Promena redosleda u ilustrovanoj knjizi
+- Proba je obuhvatila 36 poglavlja u tri Binder foldera, 48 pojavljivanja ilustracija iz 12 fajlova u Galeriji i tri strane sadržaja. Kroz Publish su premeštena tri poglavlja. Posle čuvanja i ponovnog učitavanja stablo i tekst Bindera ostali su identični početnom snimku.
+- Obe verzije su izvezene kroz Print / Save PDF i imale su po 149 strana. Poređenje je obuhvatilo tekst i slike po strani, brojeve strana, prazne strane, svih 36 odredišta u svakom sadržaju i početke poglavlja na desnoj strani.
+- Broj u sadržaju štampe sada se izračunava iz preloma celog rukopisa i prati premeštanje poglavlja. Provera spremnosti pregleda sačeka koreni HTML element novog dokumenta.
 
 ### 2026-11-22 — Publish, provera svakog House stila
 - Na istom izolovanom Binder rukopisu provereni su žanrovski primer, poređenje poglavlja, redosled, devet dodatnih pregleda i odmah vidljiva promena veličine fonta u svakom od 22 stila.
