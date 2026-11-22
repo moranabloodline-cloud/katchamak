@@ -38,7 +38,7 @@ function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,st
     }
     raw=template.innerHTML;
   }
-  el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','style','start','colspan','rowspan'],ALLOW_DATA_ATTR:false});
+  el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','style','start','value','reversed','colspan','rowspan'],ALLOW_DATA_ATTR:false});
   for(const n of Array.from(el.querySelectorAll<HTMLElement>('*'))){
     const old=n.getAttribute('data-block')||n.className;
     n.removeAttribute('class');n.removeAttribute('data-block');
@@ -75,15 +75,18 @@ function openingBody(html:string){
   if(first){
     first.classList.add('opening');
     const walker=document.createTreeWalker(first,NodeFilter.SHOW_TEXT);
-    let remaining=4;
-    const texts:Text[]=[];while(walker.nextNode())texts.push(walker.currentNode as Text);
+    // Count words across inline markup so an italic syllable does not consume a word.
+    const leadEnd=/^\s*\S+(?:\s+\S+){0,3}/u.exec(first.textContent??'')?.[0].length??0;
+    const texts:Text[]=[];
+    while(walker.nextNode())texts.push(walker.currentNode as Text);
+    let remaining=leadEnd;
     for(const text of texts){
       if(!remaining)break;
-      const matches=[...text.data.matchAll(/\S+/g)].slice(0,remaining);
-      if(!matches.length)continue;
-      const last=matches.at(-1)!;text.splitText(last.index!+last[0].length);
+      const count=Math.min(remaining,text.length);
+      if(!count)continue;
+      if(count<text.length)text.splitText(count);
       const span=document.createElement('span');span.className='lead';text.replaceWith(span);span.append(text);
-      remaining-=matches.length;
+      remaining-=count;
     }
   }
   return doc;

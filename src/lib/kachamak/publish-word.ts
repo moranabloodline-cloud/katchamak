@@ -1,4 +1,4 @@
-import {AlignmentType,Bookmark,BorderStyle,Document,ExternalHyperlink,Footer,Header,HeadingLevel,ImageRun,InternalHyperlink,LevelFormat,Packer,PageNumber,Paragraph,SectionType,Table,TableCell,TableRow,TextRun,WidthType,type IParagraphOptions,type IRunOptions,type ISectionOptions,type ParagraphChild} from 'docx';
+import {AlignmentType,Bookmark,BorderStyle,Document,ExternalHyperlink,Footer,Header,HeadingLevel,ImageRun,InternalHyperlink,LevelFormat,Packer,PageNumber,Paragraph,SectionType,Table,TableCell,TableRow,TextRun,WidthType,type INumberingOptions,type IParagraphOptions,type IRunOptions,type ISectionOptions,type ParagraphChild} from 'docx';
 import {type BookStyle,trims} from './book-style';
 import {imageBytes} from './publish-export';
 import type {Publication} from './publication';
@@ -50,6 +50,37 @@ export async function wordEdition(book:Publication,s:BookStyle){
   }
   type WordBlock=Paragraph|Table;
   let listId=0;
+  const numberingDefinitions=new Map<string,INumberingOptions['config'][number]>();
+  function listNumbering(ordered:boolean,depth:number,start:number){
+    const level=Math.min(depth,8);
+    const reference=ordered?'ordered-'+level+'-'+start:'bullets';
+    if(!numberingDefinitions.has(reference)){
+      const levels=Array.from({length:9},(_,i)=>({
+        level:i,start:i===level?start:1,format:ordered?LevelFormat.DECIMAL:LevelFormat.BULLET,
+        text:ordered?'%'+(i+1)+'.':'•',alignment:AlignmentType.LEFT,
+        style:{paragraph:{indent:{left:360*(i+1),hanging:180}}}
+      }));
+      numberingDefinitions.set(reference,{reference,levels});
+    }
+    return {reference,level,instance:++listId};
+  }
+  // Cells and list items accept both inline runs and full blocks. Group adjacent
+  // runs into a single paragraph, keeping their emphasis and their reading order.
+  function paragraphsIn(container:HTMLElement){
+    const wrapper=container.cloneNode(false) as HTMLElement;
+    let paragraph:HTMLElement|undefined;
+    for(const child of container.childNodes){
+      if(child instanceof HTMLElement && child.matches('p,div,section,aside,figure,blockquote,pre,h1,h2,h3,h4,h5,h6,ol,ul,table')){
+        paragraph=undefined;wrapper.append(child.cloneNode(true));continue;
+      }
+      if(!paragraph){
+        if(child.nodeType===3&&!child.textContent?.trim())continue;
+        paragraph=document.createElement('p');wrapper.append(paragraph);
+      }
+      paragraph.append(child.cloneNode(true));
+    }
+    return wrapper;
+  }
   async function blocks(parent:HTMLElement,opts:IParagraphOptions={},level=0):Promise<WordBlock[]>{
     const result:WordBlock[]=[];
     for(const node of parent.childNodes){
@@ -57,37 +88,56 @@ export async function wordEdition(book:Publication,s:BookStyle){
       const tag=node.tagName,cls=node.className;
       if(tag==='TABLE'){
         const rows:TableRow[]=[];
-        for(const tr of (node as HTMLTableElement).rows){const cells:TableCell[]=[];
-          for(const td of tr.cells){const nested=await blocks(td);cells.push(new TableCell({columnSpan:td.colSpan,children:nested.length?nested:[new Paragraph('')]}));}
-          rows.push(new TableRow({children:cells}));
+        for(const tr of (node as HTMLTableElement).rows){
+          const cells:TableCell[]=[];
+          for(const td of tr.cells){
+            const group=tr.parentElement as HTMLTableSectionElement;
+            const remaining=group.rows.length-tr.sectionRowIndex;
+            const nested=await blocks(paragraphsIn(td));
+            cells.push(new TableCell({columnSpan:td.colSpan,rowSpan:Math.min(td.rowSpan||remaining,remaining),children:nested.length?nested:[new Paragraph('')]}));
+          }
+          rows.push(new TableRow({tableHeader:tr.parentElement?.tagName==='THEAD',children:cells}));
         }
         if(rows.length)result.push(new Table({width:{size:100,type:WidthType.PERCENTAGE},rows}));continue;
       }
       if(tag==='UL'||tag==='OL'){
-        const instance=++listId;
-        for(const li of node.children){const shallow=li.cloneNode(true) as HTMLElement;shallow.querySelectorAll('ol,ul').forEach(l=>l.remove());
-          result.push(new Paragraph({numbering:{reference:tag==='OL'?'ordered':'bullets',level:Math.min(level,8),instance},children:await inline(shallow)}));
-          for(const child of li.children)if(['OL','UL'].includes(child.tagName)){const wrap=document.createElement('div');wrap.append(child.cloneNode(true));result.push(...await blocks(wrap,{},level+1));}
-        }continue;
+        const ordered=tag==='OL', reversed=ordered&&node.hasAttribute('reversed');
+        const items=Array.from(node.children).filter(li=>li.tagName==='LI') as HTMLLIElement[];
+        let counter=ordered&&node.hasAttribute('start')?(node as HTMLOListElement).start:reversed?items.length:1;
+        let numbering=listNumbering(ordered,level,counter);
+        for(const [i,li] of items.entries()){
+          if(ordered&&li.hasAttribute('value'))counter=li.value;
+          if(ordered&&(li.hasAttribute('value')||reversed&&i>0))numbering=listNumbering(true,level,counter);
+          const wrapper=paragraphsIn(li);
+          if(wrapper.firstElementChild?.tagName!=='P')wrapper.prepend(document.createElement('p'));
+          const first=wrapper.firstElementChild!;
+          result.push(new Paragraph({numbering,children:await inline(first)}));
+          first.remove();
+          result.push(...await blocks(wrapper,{indent:{left:360*(level+1)}},level+1));
+          counter+=reversed?-1:1;
+        }
+        continue;
       }
       if(['ARTICLE','SECTION','FIGURE','NAV','HEADER'].includes(tag)||(['DIV','BLOCKQUOTE','ASIDE'].includes(tag)&&node.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,table,pre,blockquote'))){
         const head=cls==='chapter-head',title=cls==='title-page';
-        result.push(...await blocks(node,head||title?{alignment:title?AlignmentType.CENTER:alignment[s.chapterAlign]}:opts));continue;
+        result.push(...await blocks(node,head||title?{alignment:title?AlignmentType.CENTER:alignment[s.chapterAlign]}:opts,level));continue;
       }
       const h=/^H[1-6]$/.test(tag),chapter=tag==='H1',open=node.classList.contains('opening');
       const block=h&&!chapter?s.blocks.Subheading:node.closest('blockquote')?s.blocks.Quote:node.closest('pre,.verse')?s.blocks.Verse:node.closest('.letter')?s.blocks.Letter:node.closest('aside,.aside')?s.blocks.Aside:undefined;
       const decoration=['ornament','number','scene'].includes(cls);
-      const format:IRunOptions={font:h?s.headingFont:s.bodyFont,color:h?s.heading.slice(1):decoration?accent:ink,bold:h,italics:block?.italic,size:Math.round(2*(chapter?s.headingSize:s.size*(block?.size??1)))};
+      const format:IRunOptions={font:h?s.headingFont:s.bodyFont,color:h?s.heading.slice(1):decoration?accent:ink,bold:h||!!node.closest('th'),italics:block?.italic,size:Math.round(2*(chapter?s.headingSize:s.size*(block?.size??1)))};
       let lead:TextRun|undefined;
       if(open && s.initial!=='Normal'){
-        const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);
-        let text:Text|null;
-        while((text=walker.nextNode() as Text|null)){
-          const initial=/^(\s*)(\S)/u.exec(text.data);
-          if(!initial)continue;
-          text.deleteData(initial[1].length,initial[2].length);
-          lead=new TextRun({text:initial[2],font:s.headingFont,color:accent,size:Math.round(s.size*(s.initial==='Drop cap'?5:3.5))});
-          break;
+        // Match the opening punctuation and the first letter with its combining marks as a single initial.
+        const first=/^\s*(\p{P}*[^\s\p{P}]\p{M}*)/u.exec(node.textContent??'');
+        if(first){
+          let remaining=first[0].length;
+          const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);
+          while(remaining&&walker.nextNode()){
+            const text=walker.currentNode as Text,count=Math.min(text.length,remaining);
+            text.deleteData(0,count);remaining-=count;
+          }
+          lead=new TextRun({text:first[1],font:s.headingFont,color:accent,size:Math.round(s.size*(s.initial==='Drop cap'?5:3.5))});
         }
       }
       const content=await inline(node,format);
@@ -104,7 +154,7 @@ export async function wordEdition(book:Publication,s:BookStyle){
       const settings:IParagraphOptions={
         heading:h?headingLevels[Number(tag[1])-1]:undefined,keepNext:h||chapterHeader,
         alignment:decorated?AlignmentType.CENTER:opts.alignment??alignment[block?.align??s.align],
-        indent:{firstLine:tag==='P'&&!block&&!opts.alignment&&(!open||s.firstIndent)?Math.round(s.indent*space):0},
+        indent:opts.indent??{firstLine:tag==='P'&&!node.closest('td,th')&&!block&&!opts.alignment&&(!open||s.firstIndent)?Math.round(s.indent*space):0},
         spacing:{line:Math.round(240*s.leading),before:headerStart?mm(height*(titlePage ? .19 : s.sink/100)):decorated?Math.round(space*s.dividerGap):undefined,after:Math.round(space*(titleEnd?s.chapterGap:decorated?s.dividerGap:s.paragraphGap))},
         border:block?.rule?{left:{style:BorderStyle.SINGLE,color:accent,size:8,space:6}}:undefined,
         children:content
@@ -122,7 +172,7 @@ export async function wordEdition(book:Publication,s:BookStyle){
       headers:s.running?{default:new Header({children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:book.title,size:18,color:accent})]})]})}:undefined,
       footers:s.folios?{default:new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({children:[PageNumber.CURRENT],size:18})]})]})}:undefined,children});
   }
-  const documentFile=new Document({title:book.title,creator:book.author,styles:{default:{document:{run:{font:s.bodyFont,size:Math.round(s.size*2),color:ink,language:{value:book.lang}}}}},numbering:{config:['ordered','bullets'].map(reference=>({reference,levels:Array.from({length:9},(_,level)=>({level,format:reference==='ordered'?LevelFormat.DECIMAL:LevelFormat.BULLET,text:reference==='ordered'?'%'+(level+1)+'.':'•',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:360*(level+1),hanging:180}}}}))}))},sections});
+  const documentFile=new Document({title:book.title,creator:book.author,styles:{default:{document:{run:{font:s.bodyFont,size:Math.round(s.size*2),color:ink,language:{value:book.lang}}}}},numbering:{config:[...numberingDefinitions.values()]},sections});
   // The packer's section API exposes left/right margins. Word uses this document setting to mirror them at the spine.
   const settings='<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
     '<w:displayBackgroundShape/><w:mirrorMargins/><w:defaultTabStop w:val="720"/>'+

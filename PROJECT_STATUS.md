@@ -1,3 +1,5 @@
+> **2026-11-22 — Provera svih 22 Publish stila.** Zumiranje čuva prelom štampane stranice. Numerisane liste, spojene ćelije, zaglavlja tabela i kurziv u ćeliji prenose se u DOCX; početna slova i mali verzali prate tekst i kroz promene naglaska.
+
 > **2026-11-21 — Završni pregled Publish stilova.** Galerija zadržava aktivni stil za pregled i izvoz. Kartice prikazuju format, font i veličinu. EPUB prati podešavanja čitača, a njegov pregled ima svetlu i tamnu podlogu.
 
 > **2026-11-21 — Poređenje istog poglavlja u Publish galeriji.** Izbor poglavlja iz Bindera prikazuje njegov početak u svim stilovima. Klik na stil otvara celo poglavlje, a Genre samples vraća žanrovske primere.
@@ -679,6 +681,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-22 — Publish, provera svakog House stila
+- Na istom izolovanom Binder rukopisu provereni su žanrovski primer, poređenje poglavlja, redosled, devet dodatnih pregleda i odmah vidljiva promena veličine fonta u svakom od 22 stila.
+- PDF je imao 249 stranica rukopisa i 22 stranice uzoraka. Broj stranica i formati poklapaju se sa pregledom; provera na četiri nivoa zuma pokriva i ranije odsečene redove u stilu Graphic Novels.
+- Provereni su HTML, EPUB i DOCX za svaki stil. Sva 22 DOCX fajla otvorena su i prelomljena u LibreOffice Writer-u. Regresioni test pokriva početni broj liste i nastavak posle ručno zadatog broja, spojene ćelije i formatiran tekst u ćeliji.
 
 - **2026-11-21 — Publish.** Proverena su sva 22 žanrovska preloma. Naslovni list se štampa bez tekućeg naslova i broja strane. Word izdanje preslikava unutrašnju marginu na parnim stranama i čuva pasuse citata, redove stihova i nivoe podnaslova. Izbor teksta za poređenje ostaje odvojen od izdanja.
 

@@ -106,6 +106,36 @@ assert.equal(JSON.stringify(book().sections.binder),original);
   const gap=p=>p.getElementsByTagName('w:spacing')[0]?.getAttribute('w:after');
   assert.equal(gap(paragraphs.find(p=>p.textContent===rich.title)),String(Math.round(style.size*20*style.chapterGap)));
 }
+// Rich-text boundaries, editable table structure, and real list counters must survive export.
+{
+  const html='<p>“Žu<em>ti</em> čamac prelazi prag danas.”</p>'+
+    '<ol start="7"><li>First route</li><li value="12"><p>Detour</p><ul><li>Nested path</li></ul><p>After the turn</p></li><li>Final route</li></ol>'+
+    '<table><thead><tr><th>Route</th><th>Place</th><th>Record</th></tr></thead><tbody>'+
+    '<tr><td rowspan="2">Pair</td><td colspan="2">A <em>careful</em> record</td></tr><tr><td>East</td><td>West</td></tr></tbody></table>';
+  const passage={...book().sections.binder[0],content:html};
+  const openingStyle={...style,initial:'Drop cap',smallCaps:true};
+  const edition=publication({...book(),sections:{binder:[passage]}},openingStyle);
+  const rich=edition.sections.find(section=>section.kind==='chapter');
+  const preview=new JSDOM(rich.html).window.document;
+  assert.equal(Array.from(preview.querySelectorAll('.lead'),span=>span.textContent).join(''),'“Žuti čamac prelazi prag');
+  assert.equal(preview.querySelector('ol li[value]')?.value,12);
+  const pkg=unzipSync(new Uint8Array(await (await wordEdition(edition,openingStyle)).arrayBuffer()));
+  const word=xml(strFromU8(pkg['word/document.xml'])),numbers=xml(strFromU8(pkg['word/numbering.xml']));
+  const tags=(node,name)=>Array.from(node.getElementsByTagName('w:'+name));
+  const paragraphs=tags(word,'p');
+  const paragraph=text=>paragraphs.find(p=>p.textContent===text);
+  assert(paragraph('“Ž'));
+  const cell=tags(word,'tc').find(c=>c.textContent==='A careful record');
+  assert.equal(tags(cell,'p').length,1);assert.equal(tags(cell,'i').length,1);
+  assert.deepEqual(tags(word,'vMerge').map(e=>e.getAttribute('w:val')),['restart','continue']);
+  assert(tags(word,'gridSpan').some(e=>e.getAttribute('w:val')==='2'));
+  assert(tags(word,'tblHeader').some(e=>e.getAttribute('w:val')!=='false'));
+  const numId=text=>tags(paragraph(text),'numId')[0].getAttribute('w:val');
+  const start=text=>tags(tags(numbers,'num').find(n=>n.getAttribute('w:numId')===numId(text)),'startOverride')[0].getAttribute('w:val');
+  assert.equal(start('First route'),'7');assert.equal(start('Detour'),'12');
+  assert.equal(numId('Detour'),numId('Final route'));
+  assert(paragraphs.indexOf(paragraph('Nested path'))<paragraphs.indexOf(paragraph('After the turn')));
+}
 const {manuscriptEntries}=await import('../src/lib/kachamak/publish-manuscript.ts');
 const {stepWorkspaceHistory}=await import('../src/lib/kachamak/store.ts');
 const {setHistoryOwner}=await import('../src/lib/kachamak/workspace-history.ts');

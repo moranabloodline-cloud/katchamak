@@ -5,8 +5,17 @@ import {useKachamak} from '@/lib/kachamak/store';
 import {trims,type BookStyle} from '@/lib/kachamak/book-style';
 
 export function proofDocument(book:Publication,style:BookStyle,print:boolean){
-  const width=trims[style.trim][0]*96/25.4;
-  const screen=print?`@media screen{html{background:#262626}.pagedjs_pages{display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 0;zoom:calc(var(--fit,1) * var(--panel-zoom,1))}.pagedjs_page{background:white;box-shadow:0 2px 10px #0006;flex:none}}`:
+  const [trimWidth,trimHeight]=trims[style.trim];
+  const width=trimWidth*96/25.4;
+  // CSS zoom can reflow a finished page into a hidden second column at fractional
+  // magnifications. Scale its painted surface and reserve the resulting footprint.
+  const screen=print?`@media screen{
+    html{background:#262626}
+    .pagedjs_pages{display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 0}
+    .pagedjs_page{background:white;box-shadow:0 2px 10px #0006;flex:none}
+    html[data-ready=yes] .pagedjs_pages{--scale:calc(var(--fit,1) * var(--panel-zoom,1));width:max(100%,calc(${trimWidth}mm * var(--scale) + 32px))}
+    html[data-ready=yes] .pagedjs_page{transform:scale(var(--scale));transform-origin:top center;margin-bottom:calc(${trimHeight}mm * (var(--scale) - 1))}
+  }`:
     'html{background:#262626;color:#201f1c;padding:clamp(4px,2vw,16px);line-height:1.5}body{zoom:var(--panel-zoom,1);max-width:36em;min-height:85vh;margin:auto;background:#fff;padding:2.5em clamp(1em,5vw,2em)}html[data-reader-theme=dark]{color-scheme:dark;background:#151515;color:#e7e4df}html[data-reader-theme=dark] body{background:#242424}';
   return '<!doctype html><html lang="'+book.lang+'"><head><meta charset="utf-8"><title>'+escapeText(book.title)+'</title><style>'+bookCss(style,print?'print':'ebook')+'</style><style data-pagedjs-ignore>'+screen+'</style>'+
     (print?'<script>window.PagedConfig={auto:false};</script><script src="/publish-pagination.js"></script>':'')+'</head><body>'+bookArticles(book)+
