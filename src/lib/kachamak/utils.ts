@@ -126,12 +126,16 @@ export function sectionWords(novel: Novel, key: SectionKey): number {
   return (novel.sections[key] ?? []).reduce((a, r) => a + nodeWords(r), 0);
 }
 
-export function novelWords(novel: Novel): number {
+export function manuscriptTreeWords(roots: NoteNode[]): number {
   let words = 0;
-  forEachNode(novel.sections.binder ?? [], (node) => {
+  forEachNode(roots, (node) => {
     words += countWords(node.content);
   });
   return words;
+}
+
+export function novelWords(novel: Novel): number {
+  return manuscriptTreeWords(novel.sections.binder ?? []);
 }
 
 export function novelScenes(novel: Novel): number {

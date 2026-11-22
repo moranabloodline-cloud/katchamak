@@ -1,3 +1,5 @@
+> **2026-11-22 — Donji brojač Bindera.** Izbor scene prikazuje broj reči njenog teksta. Izbor poglavlja prikazuje zbir njegovog teksta i svih podređenih stavki.
+
 > **2026-11-22 — Broj reči rukopisa u biblioteci.** Kartice knjiga, prikaz liste i zbir za celu knjigu broje tekst svih nivoa Bindera.
 
 > **2026-11-22 — House styles na rukopisu projekta.** Galerija poredi stilove na istom odlomku otvorene knjige. U kartici su vidljivi prostor za povez, visina početka poglavlja i, kada su uključeni, tekući naslov i broj strane.
@@ -693,6 +695,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-22 — Brojanje po izboru u Binderu.** Provere obuhvataju sve prikaze, uvezena poglavlja, odvojeni cilj dokumenta i izostavljanje sinopsisa i polja Notes.
 
 - **2026-11-22 — Broj reči rukopisa.** Ispravljena je greška koja je zbiru rukopisa dodavala tekst drugih tabova, sinopsise i radne beleške. Regresioni test obuhvata ugnježdene stavke, uređivanje, uklanjanje, vraćanje i odabir za izvoz.
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 import {DocumentTarget} from './DocumentTarget';
-import {documentTargetProgress} from '@/lib/kachamak/document-target';
+import { WorkspaceWordCount } from './WorkspaceWordCount';
 import {FinanceWorkspace, FinanceEditor} from "./Finance";
 import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
@@ -16,7 +16,6 @@ import {ProjectHomepage} from './ProjectHomepage';
 import {HomepageTree} from './HomepageTree';
 import {HOME_ROOT, homepageEntry} from '@/lib/kachamak/homepage';
 import {ContinuousWriteArea} from './ContinuousWriteArea';
-import {continuousSelection} from '@/lib/kachamak/continuous-manuscript';
 import { SplitEditors } from "./SplitEditors";
 import {timelineDefaultStart} from "@/lib/kachamak/timeline-tree";
 import {TimelineEventEditor} from "./TimelineEventEditor";
@@ -32,7 +31,7 @@ import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
 import { useWebLibrary } from "@/lib/kachamak/cloud-library";
 import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
-import { findNodeInNovel, novelWords, ownWords, countWords } from "@/lib/kachamak/utils";
+import { findNodeInNovel } from "@/lib/kachamak/utils";
 import {ColourPalette} from "./PresetColourPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -392,10 +391,6 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   useEffect(()=>{if(view!=='homepage')setMobilePages(false);},[view]);
   useEffect(()=>{if (kanban || publish) setMobilePages(false);},[kanban,publish,selectedNodeId]);
 
-  const manuscriptWords=view==='continuous'?continuousSelection(novel?.sections[section]??[],selectedNodeId,rootId).reduce((total,node)=>total+countWords(node.content),0):0;
-  const target=view!=='continuous'&&selected?.documentTarget?.amount?selected.documentTarget:null;
-  const targetCount=target?documentTargetProgress(selected?.content??'',target).count:0;
-
   return (
     <div className="relative flex min-h-0 flex-1">
       {leftPanelOpen || revealSearch || mobilePages ? (
@@ -481,21 +476,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         {/* The extra Timeline workspace controls need more room before the count can be centered. */}
         <div data-workspace-chrome className="@container relative flex h-10 shrink-0 items-center border-t border-amber-500/25">
           {!finance && <><DocumentTarget node={selected} section={selectedSection}/>
-          {/* brojač na dnu radne površine — kao u Scriveneru pokazuje reči
-              OTVORENE note (content + Synopsis + Notes, isto što i „Words“ u
-              Details tabu); zbir celog romana samo kad ništa nije selektovano */}
-          <span
-            className={`ml-10 mr-1 min-w-0 max-w-52 flex-1 truncate whitespace-nowrap text-xs text-muted-foreground ${view === "timeline"
-              ? "@[1040px]:absolute @[1040px]:left-1/2 @[1040px]:mx-0 @[1040px]:-translate-x-1/2"
-              : "@[680px]:absolute @[680px]:left-1/2 @[680px]:ml-0 @[680px]:-translate-x-1/2"}`}
-            title={target?'Document text / target':view === "continuous" ? "Words in the current manuscript view" : selected ? "Words in the selected note" : "Manuscript words in Binder"}
-          >
-            {target?`${targetCount.toLocaleString('en-US')}/${target.amount.toLocaleString('en-US')} ${target.unit}`:view === "continuous" ? `${manuscriptWords.toLocaleString("en-US")} words` : selected
-              ? `${ownWords(selected).toLocaleString("en-US")} words`
-              : novel
-                ? `${novelWords(novel).toLocaleString("en-US")} words`
-                : "0 words"}
-          </span></>}
+          <WorkspaceWordCount novel={novel} section={section} selectedSection={selectedSection} selected={selected} view={storedView} rootId={rootId}/></>}
           <div
             role="toolbar"
             aria-label="View mode"
