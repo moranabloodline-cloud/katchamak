@@ -1,3 +1,5 @@
+> **2026-11-22 — Publish, HTML izdanje bez interneta.** Izvezeni HTML otvara se kao lokalni fajl. U probnoj knjizi svih 36 stavki sadržaja i svih 48 ilustracija rade uz isključenu mrežu.
+
 > **2026-11-22 — Publish, EPUB i DOCX na istom ilustrovanom rukopisu.** DOCX čuva sliku i potpis zajedno na strani. Otvaranjem oba izdanja potvrđeni su izabrani redosled, položaj ilustracija i navigacija kroz sadržaj.
 
 > **2026-11-22 — Publish, cela knjiga sa ilustracijama.** Štampani sadržaj prikazuje stvarne početne strane posle promene redosleda. Pregled podnosi zamenu velikog dokumenta dok se njegov okvir još učitava.
@@ -685,6 +687,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-22 — Lokalni HTML izvoz ilustrovane knjige
+- Ista probna knjiga iz provere PDF-a, EPUB-a i DOCX-a izvezena je preko Publish → Export book → HTML, sa istom selekcijom i promenjenim redosledom. Tekst i stablo Bindera upoređeni su pre i posle izvoza.
+- Sačuvani fajl otvoren je u svežem Chrome profilu sa isključenom mrežom i kešom. Svih 36 stavki sadržaja provereno je klikom i očitavanjem vidljivog naslova na odredištu. Pregledač je prikazao svih 48 ilustracija iz 12 izvornih slika bez zahteva za spoljnim resursima.
+- Pikseli, potpisi i položaj svake slike među pasusima poklopili su se sa rukopisom, kao i redosled svih poglavlja.
 
 ### 2026-11-22 — EPUB i DOCX posle promene redosleda u Publish
 - U EPUB čitaču i LibreOffice Writeru svih 36 veza iz sadržaja vodilo je na odgovarajuće poglavlje. Redosled u oba fajla poklopio se sa sačuvanim redosledom za izvoz, a rukopis i stablo u Binderu ostali su identični.
