@@ -1,6 +1,7 @@
 .cv-board-shell,.cv-page-shell { position:relative; display:flex; min-width:0; min-height:0; overflow:hidden; }
 .cv-board-main { position:relative; display:flex; flex:1; flex-direction:column; min-width:0; }
 .cv-viewport { position:relative; display:flex; flex:1; min-height:0; overflow:hidden; overscroll-behavior:contain; }
+.cv-guides { position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none; z-index:2147483646; stroke:#f5bd61; stroke-width:1; }
 .cv-world-row { position:absolute; }
 .cv-card[data-dragging],.cv-card[data-dragging] * { pointer-events:none; }
 .cv-fixed-section [data-fixed-selected] { outline:2px solid #d6a95e; outline-offset:2px; border-radius:6px; }
@@ -11,7 +12,7 @@
 .cv-fixed-section [data-home-cell][data-card-drop]::after { content:attr(data-card-drop); pointer-events:none; position:absolute; bottom:1.7rem; inset-inline:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:5px 9px; border:1px dashed #d6a95e; border-radius:5px; color:var(--foreground); background:var(--background); font-size:13px; }
 .cv-fixed-section [data-home-cell][data-card-drop] > button { color:var(--foreground); }
 .cv-row-title { display:flex; align-items:center; gap:7px; font:600 13px/1.4 system-ui,sans-serif; }
-.cv-row-title { padding:6px 8px; }
+.cv-row-title { padding:3px 4px; }
 .cv-row-grip { display:inline-grid; place-items:center; border-radius:4px; padding:3px; color:var(--muted-foreground); }
 .cv-row-grip:hover,.cv-row-grip:focus-visible { background:var(--muted); color:var(--foreground); }
 [data-row-handle] { cursor:grab; touch-action:none; user-select:none; }

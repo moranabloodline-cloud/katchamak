@@ -116,6 +116,19 @@ export function isWebsite(value: unknown): value is string {
   catch { return false; }
 }
 
+function embeddedMedia(value:unknown,kind:'audio'|'video'):value is string{
+  if(typeof value!=='string'||value.length>3_000_000)return false;
+  const pattern=kind==='audio'?/^data:audio\/(?:wav|mpeg|ogg);base64,[a-z0-9+/]+=*$/i:/^data:video\/(?:webm|mp4);base64,[a-z0-9+/]+=*$/i;
+  return pattern.test(value);
+}
+export function canvasAudio(value:unknown):value is string {
+  return embeddedMedia(value,'audio')||isWebsite(value);
+}
+export function directCanvasVideo(value:unknown):value is string {
+  return embeddedMedia(value,'video')||isWebsite(value) && /\.(webm|mp4)$/i.test(new URL(value,'https://canvas.invalid').pathname);
+}
+export function canvasVideo(value:unknown){return directCanvasVideo(value)||!!youtubeVideoId(value);}
+
 export function youtubeVideoId(value:unknown):string|null {
   if (!isWebsite(value)) return null;
   const url=new URL(value);
@@ -154,12 +167,12 @@ function validTarget(value: HomeTarget | undefined) {
 function validBlock(block: HomeBlock) {
   return !!block && typeof block.id === 'string' && !!block.id &&
     HOME_LAYOUTS.includes(block.layout) && ['standard','wide','full'].includes(block.width) &&
-    validCanvasFields(block) && (block.layout!=='audio' || isWebsite(block.audio)) && typeof block.title === 'string' && typeof block.text === 'string' &&
+    validCanvasFields(block) && (block.layout!=='audio' || canvasAudio(block.audio)) && typeof block.title === 'string' && typeof block.text === 'string' &&
     validProjectImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
     (block.cell===undefined || (!!block.cell && typeof block.cell.rowId==='string' && Number.isInteger(block.cell.column))) &&
     (block.manualPosition===undefined||block.manualPosition===true&&block.layout==='row'&&isPoint(block.at)) &&
     (block.layout!=='row' || (!block.cell && Number.isInteger(block.columns) && block.columns!>=1 && block.columns!<=6)) &&
-    (block.layout!=='video' || !!youtubeVideoId(block.videoUrl)) &&
+    (block.layout!=='video' || canvasVideo(block.videoUrl)) &&
     (block.links===undefined || (Array.isArray(block.links) && block.links.every(l=>l && typeof l.id==='string' && !!l.id && typeof l.label==='string' && !!l.target && validTarget(l.target)) && new Set(block.links.map(l=>l.id)).size===block.links.length));
 }
 type AppearanceField='icon'|'color';

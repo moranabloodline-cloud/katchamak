@@ -38,6 +38,7 @@ import { changeGallery, type GalleryChange } from './gallery';
 import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} from './tree-move';
 import {inFixedRow,unifiedCanvas} from './canvas-layout';
 import {extractBoard} from './canvas-selection';
+import {importCanvasFile} from './canvas-file';
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
@@ -153,6 +154,7 @@ interface KachamakState {
   createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board'|'canvas') => boolean;
   renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
 
+  importCanvasLayout: (projectId:string,pageId:string,expected:Novel['homepage'],file:unknown) => boolean;
   changeHomepage: (projectId:string,action:HomeChange,pageId?:string,unified?:boolean) => boolean;
   updateNovelSettings: (id:string,patch:NovelSettingsPatch) => boolean;
   setDefaultAuthor: (a: string) => void;
@@ -760,6 +762,17 @@ export const useKachamak = create<KachamakState>()(
         return true;
       },
 
+      importCanvasLayout:(projectId,pageId,expected,file)=>{
+        const state=get(),book=state.novels.find(n=>n.id===projectId);
+        if(!book||state.activeNovelId!==projectId||state.activeHomePageId!==pageId)return false;
+        const current=pageId===HOME_ROOT?book.homepage:book.homePages?.find(p=>p.id===pageId);
+        if(current!==expected||current?.locked||!current&&pageId!==HOME_ROOT)return false;
+        const result=importCanvasFile(book,current??EMPTY_HOMEPAGE,file);
+        if(!result)return false;
+        const updated=pageId===HOME_ROOT?{...book,homepage:result.page}:{...book,homePages:book.homePages!.map(p=>p.id===pageId?{...p,...result.page}:p)};
+        set({novels:state.novels.map(n=>n===book?touch({...updated,gallery:result.gallery}):n)});
+        return true;
+      },
       changeHomepage: (projectId, action, pageId = HOME_ROOT, unified=false) => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (!novel || state.activeNovelId !== projectId) return false;

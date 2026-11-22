@@ -19,6 +19,8 @@ import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import './canvas.css';
 import {CanvasBoard} from './CanvasBoard';
+import {canvasOpeningView,type CanvasFile} from '@/lib/kachamak/canvas-file';
+import {saveZoomSetting} from '@/lib/kachamak/workspace-zoom';
 import {toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
 import {CanvasItemFace} from './CanvasItemFace';
@@ -80,6 +82,32 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const [previewId,setPreviewId]=useState<string|null>(null);
   const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
   const [message,setMessage]=useState('');
+  const [incoming,setIncoming]=useState<{file:CanvasFile;name:string;project:string;page:string;expected:Novel['homepage']}|null>(null);
+  const [cameraRevision,setCameraRevision]=useState(0);
+  const canvasHost=useRef<HTMLDivElement>(null),fileInput=useRef<HTMLInputElement>(null);
+  async function readLayout(file?:File){
+    if(!file)return;
+    const expected=page.id===HOME_ROOT?novel.homepage:novel.homePages?.find(p=>p.id===page.id);
+    try{
+      const incomingFile=JSON.parse(await file.text()) as CanvasFile;
+      if(incomingFile?.format!=='kachamak-canvas/1'||incomingFile.projectId!==novel.id)throw Error('Choose a Canvas layout for this book.');
+      setIncoming({file:incomingFile,name:file.name,project:novel.id,page:page.id,expected});
+    }catch(error){setMessage(error instanceof SyntaxError?'Choose a valid Canvas layout file.':error instanceof Error?error.message:'Could not open the layout.');}
+  }
+  function installLayout(){
+    if(!incoming)return;
+    const ok=useKachamak.getState().importCanvasLayout(incoming.project,incoming.page,incoming.expected,incoming.file);
+    setIncoming(null);
+    if(!ok){setMessage('The layout could not be applied. Check its links or reopen the file if the canvas changed.');return;}
+    const surface=canvasHost.current?.querySelector<HTMLElement>('.cv-surface');
+    if(surface){
+      const {level,x,y}=canvasOpeningView(incoming.file.layout,surface.clientWidth);
+      const key='kachamak-board:'+novel.id+':'+page.id;
+      saveZoomSetting(key,'zoom',String(level));
+      try{sessionStorage.setItem(key+':world',JSON.stringify({x,y}));}catch{}
+    }
+    setCameraRevision(v=>v+1);setSelection([]);
+  }
   const opener=useRef<HTMLElement|null>(null);
   const addRowButton=useRef<HTMLButtonElement>(null);
   const addRow=(at:NonNullable<HomeBlock['at']>,manualPosition?:true)=>{
@@ -157,19 +185,19 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
         }
         selectInColumn(block,toggle,e.shiftKey);
       }} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
-      {row?<div className={'@container/row rounded-lg px-1 py-3 '+(page.locked?'':'outline outline-dashed outline-border')}>
-        {(block.title||!page.locked)&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title">
+      {row?<div className={'@container/row rounded-lg px-1 py-1 '+(page.locked?'':'outline outline-dashed outline-border')}>
+        {(block.title||!page.locked)&&<div className="mb-1 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title">
           {!page.locked&&<button type="button" data-row-handle={block.id} aria-label={'Move row: '+(block.title||'Row')} title="Drag row · Arrow keys to move" className="cv-row-grip"><GripVertical size={16}/></button>}
-          <span className="cv-row-name" data-row-handle={page.locked?undefined:block.id}>{block.title||'Row'}</span><span>{block.columns} {block.columns===1?'column':'columns'}</span></h2>
+          <span className="cv-row-name" data-row-handle={page.locked?undefined:block.id}>{block.title||'Row'}</span></h2>
         {!page.locked&&<div className="ml-auto flex flex-wrap justify-end gap-2">
           <button {...editButton} id={'home-edit-row-'+block.id} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3"/>Edit row</button>
           <button type="button" onClick={removeRow} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button>
         </div>}</div>}
-        <div className="grid grid-cols-1 gap-4 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
+        <div className="grid grid-cols-1 gap-2 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {lanes.get(block.id)?.map((children,column)=>{
             const selectedSiblings=children.filter(b=>selectedIds.has(b.id));
             const active=selectedIds.has(block.id)&&selectedColumn===column;
-            return <div key={column} data-home-cell={block.id} data-column={column} tabIndex={page.locked?undefined:0} aria-label={'Column '+(column+1)} className={`relative flex min-w-0 flex-col gap-3 rounded pb-6 ${page.locked?'':'min-h-14'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
+            return <div key={column} data-home-cell={block.id} data-column={column} tabIndex={page.locked?undefined:0} aria-label={'Column '+(column+1)} className={`relative flex min-w-0 flex-col gap-2 rounded ${page.locked?'':'min-h-14 pb-6'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
               {children.map((child,i)=>renderBlock(child,i,children.length,release,selectedSiblings))}
               {!page.locked&&<DropdownMenu><DropdownMenuTrigger asChild>
                 <button type="button" aria-label={'Add element to column '+(column+1)} className="absolute bottom-0 left-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"><Plus className="size-3"/>Add element</button>
@@ -214,6 +242,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
     </article>;
   }
   const actions=(placeRow:()=>NonNullable<HomeBlock['at']>)=><>
+    <Button size="sm" variant="ghost" onClick={()=>fileInput.current?.click()}>Import layout…</Button>
+    <input hidden ref={fileInput} type="file" accept=".json,application/json" aria-label="Canvas layout file" onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';void readLayout(file);}}/>
     {roots.length>0&&<select aria-label="Row width" title="Row width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
     <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={()=>addRow(placeRow())}><Rows3 size={15}/>Add row</Button>
   </>;
@@ -242,9 +272,10 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       : <button type="button" className="absolute inset-0 w-full" aria-label={display.name} onClick={()=>activate(b)}/>}</div>;
   };
   return <>
-    <CanvasBoard novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
+    <div ref={canvasHost} className="contents"><CanvasBoard key={cameraRevision} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
-      addClassic={placement=>{captureOpener();setEditor(placement);}}/>
+      addClassic={placement=>{captureOpener();setEditor(placement);}}/></div>
+    {incoming&&incoming.page===page.id&&incoming.project===novel.id&&<Dialog open onOpenChange={open=>{if(!open)setIncoming(null);}}><DialogContent><DialogHeader><DialogTitle>Replace this canvas layout?</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Open {incoming.name} in {page.title}. Undo restores the previous layout.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setIncoming(null)}>Cancel</Button><Button onClick={installLayout}>Replace layout</Button></div></DialogContent></Dialog>}
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}
     {!page.locked&&artwork&&<HomeArtworkEditor src={projectImageSrc(novel.gallery,artwork.src)!} block={artwork.block} onClose={()=>{setArtwork(null);restoreFocus();}}

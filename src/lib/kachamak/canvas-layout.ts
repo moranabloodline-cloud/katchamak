@@ -101,8 +101,8 @@ export function worldRows(rows:HomeBlock[],width:number,heights:ReadonlyMap<stri
     const h=heights.get(row.id)??112;
     // Older pages were a stack. Keep that order and let subsequent rows make room for a growing row.
     if(!row.manualPosition)for(const previous of stack){
-      if(x<previous.x+previous.w && x+width>previous.x && y<previous.y+previous.h+16 && y+h+16>previous.y)
-        y=previous.y+previous.h+16;
+      if(x<previous.x+previous.w && x+width>previous.x && y<previous.y+previous.h+8 && y+h+8>previous.y)
+        y=previous.y+previous.h+8;
     }
     const rect={x,y,w:width,h};
     rects.set(row.id,rect);

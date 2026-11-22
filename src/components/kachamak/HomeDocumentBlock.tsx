@@ -1,10 +1,13 @@
 import {HomeArtwork} from './HomeArtwork';
 import {useState} from 'react';
 import {Info,Play} from 'lucide-react';
-import {youtubeVideoId,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
+import {canvasVideo,directCanvasVideo,youtubeVideoId,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
 
-export function HomeVideo({id,title,interactive}:{id:string;title:string;interactive:boolean}){
+export function HomeVideo({url,title,interactive}:{url:string;title:string;interactive:boolean}){
   const [playing,setPlaying]=useState(false);
+  if(directCanvasVideo(url))return <video className="w-full rounded-md" aria-label={title||'Video'} src={url} controls={interactive} playsInline preload="metadata"/>;
+  const id=youtubeVideoId(url);
+  if(!id)return null;
   const poster=<><img alt="" draggable={false} src={'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'} className="absolute inset-0 size-full object-cover opacity-75" onError={e=>{e.currentTarget.hidden=true;}}/><span className="relative grid h-11 w-16 place-items-center rounded-xl bg-red-600 text-white"><Play aria-hidden="true" className="size-6 fill-current"/></span></>;
   const frame='relative grid aspect-video min-h-[200px] w-full place-items-center overflow-hidden rounded-lg bg-zinc-900';
   return <>
@@ -18,7 +21,7 @@ export function HomeDocumentBlock({block,image,interactive,describe,open}:{
   block:HomeBlock;image?:string;interactive:boolean;describe:(target:HomeTarget)=>string;open:(target:HomeTarget)=>void;
 }){
   if(block.layout==='divider')return <div className="flex min-h-5 items-center"><hr className="w-full border-border"/></div>;
-  const video=block.layout==='video'?youtubeVideoId(block.videoUrl):null;
+  const video=block.layout==='video'&&canvasVideo(block.videoUrl)?block.videoUrl:undefined;
   const title=block.title||(block.target?describe(block.target):'');
   return <div className={'min-w-0 break-words '+(block.layout==='callout'?'flex items-start gap-3 rounded-lg border border-sky-400/35 bg-sky-400/10 px-4 py-3':'space-y-2')}>
     {block.layout==='callout'&&<Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-sky-400"/>}
@@ -33,7 +36,7 @@ export function HomeDocumentBlock({block,image,interactive,describe,open}:{
           ? <a className={cls} href={link.target.url} target="_blank" rel="noopener noreferrer">{label}</a>
           : <button type="button" className={cls+' text-left'} onClick={()=>open(link.target)}>{label}</button>}</li>;
       })}</ul>}
-      {video&&<HomeVideo key={video+interactive} id={video} title={title} interactive={interactive}/>}
+      {video&&<HomeVideo key={video+interactive} url={video} title={title} interactive={interactive}/>}
     </div>
   </div>;
 }

@@ -7,7 +7,7 @@ import {Input} from '@/components/ui/input';
 import {Textarea} from '@/components/ui/textarea';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {flattenNotes} from '@/lib/kachamak/note-links';
-import {homepageRows,isWebsite,youtubeVideoId,type HomeBlock} from '@/lib/kachamak/homepage';
+import {homepageRows,isWebsite,canvasAudio,canvasVideo,type HomeBlock} from '@/lib/kachamak/homepage';
 import type {Novel} from '@/lib/kachamak/types';
 import type {CanvasTool} from '@/lib/kachamak/canvas-board';
 import {GalleryImagePicker} from './GalleryImagePicker';
@@ -32,8 +32,8 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
   const tasks=draft.tasks??[],cells=draft.cells??[];
   const text=['note','comment','heading','image','map','link'].includes(kind);
   function save(){
-    if(kind==='video'&&!youtubeVideoId(draft.videoUrl))return setError('Enter a YouTube video address.');
-    if(kind==='audio'&&!isWebsite(draft.audio))return setError('Enter a direct audio file address.');
+    if(kind==='video'&&!canvasVideo(draft.videoUrl))return setError('Enter a YouTube, MP4 or WebM address.');
+    if(kind==='audio'&&!canvasAudio(draft.audio))return setError('Enter a direct audio file address.');
     if((kind==='image'||kind==='map')&&!draft.image)return setError('Choose an image from this book’s Gallery.');
     if((kind==='draw'||kind==='sketch')&&!draft.ink?.length)return setError('Draw at least one stroke.');
     if(draft.target){const t=draft.target;
@@ -57,8 +57,8 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
         {kind==='map'&&draft.pin&&<MapPin className="cv-pin" style={{left:100*draft.pin.x+'%',top:100*draft.pin.y+'%'}}/>}</div>}
         <GalleryImagePicker novel={novel} onPick={image=>patch({image,pin:undefined})}><Button type="button" variant="outline"><ImagePlus/>{galleryImage?'Replace image':'Choose from Gallery'}</Button></GalleryImagePicker>
         {kind==='map'&&galleryImage&&<small className="text-muted-foreground">Click the map to place its pin.</small>}</div>}
-      {kind==='video'&&<label>YouTube address<Input type="url" required value={draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></label>}
-      {kind==='audio'&&<label>Audio file address<Input type="url" required value={draft.audio??''} onChange={e=>patch({audio:e.target.value})} placeholder="https://…/recording.mp3"/></label>}
+      {kind==='video'&&<label>Video address<Input type="text" required={!draft.videoUrl} placeholder={draft.videoUrl?.startsWith('data:')?'Embedded video · enter a URL to replace':'YouTube, MP4 or WebM URL'} value={draft.videoUrl?.startsWith('data:')?'':draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></label>}
+      {kind==='audio'&&<label>Audio file address<Input type="text" required={!draft.audio} value={draft.audio?.startsWith('data:')?'':draft.audio??''} onChange={e=>patch({audio:e.target.value})} placeholder={draft.audio?.startsWith('data:')?'Embedded audio · enter a URL to replace':'https://…/recording.mp3'}/></label>}
       {['color','column','sketch','draw'].includes(kind)&&<label>Color<div className="flex items-center gap-2"><input type="color" value={draft.color??'#deb679'} onChange={e=>patch({color:e.target.value})}/><code>{draft.color}</code></div></label>}
       {(kind==='sketch'||kind==='draw')&&<CanvasInk value={draft.ink??[]} color={draft.color??'#deb679'} onChange={ink=>patch({ink})}/>}
       {kind==='todo'&&<div className="grid gap-2">{tasks.map((t,i)=><div key={i} className="flex items-center gap-2"><input type="checkbox" aria-label={'Task '+(i+1)+' completed'} checked={t.done} onChange={e=>patch({tasks:tasks.map((v,j)=>i===j?{...v,done:e.target.checked}:v)})}/>

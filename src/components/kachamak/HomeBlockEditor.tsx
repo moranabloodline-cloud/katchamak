@@ -9,7 +9,7 @@ import {Textarea} from '@/components/ui/textarea';
 import {GalleryImagePicker} from './GalleryImagePicker';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import type {Novel} from '@/lib/kachamak/types';
-import {isWebsite, youtubeVideoId, type HomeBlock, type HomeCell, type HomeLayout, type homepageRows, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
+import {isWebsite, canvasVideo, type HomeBlock, type HomeCell, type HomeLayout, type homepageRows, type HomeLink, type HomeTarget} from '@/lib/kachamak/homepage';
 import {HomeArtwork} from './HomeArtwork';
 import {HomeArtworkEditor} from './HomeArtworkEditor';
 import {HomeDestinationFields,homeSelectClass} from './HomeDestinationFields';
@@ -45,7 +45,7 @@ export function HomeBlockEditor({novel,original,cell,createRow,notes,pages,onSav
   const updateLink=(id:string,value:Partial<HomeLink>)=>patch({links:links.map(l=>l.id===id?{...l,...value}:l)});
   const validDestination=(target:HomeTarget)=>target.kind==='page'?pages.some(p=>p.id===target.id):target.kind==='note'?notes.some(n=>n.node.id===target.id):target.kind==='web'?isWebsite(target.url):true;
   const save=()=>{
-    if(video&&!youtubeVideoId(draft.videoUrl)){setError('Enter a YouTube video address.');return;}
+    if(video&&!canvasVideo(draft.videoUrl)){setError('Enter a YouTube, MP4 or WebM address.');return;}
     if(list&&links.some(l=>!validDestination(l.target))){setError('Choose a valid destination for every link.');return;}
     const target=hasDestination?draft.target:undefined;
     if(target&&!validDestination(target)){setError('Choose a valid link destination.');return;}
@@ -74,7 +74,7 @@ export function HomeBlockEditor({novel,original,cell,createRow,notes,pages,onSav
           {draft.image&&<Button type="button" variant="ghost" onClick={()=>{patch({image:undefined,imageFrame:undefined,imageCutout:undefined});}}>Remove image</Button>}
         </div>}
         {hasDestination&&<HomeDestinationFields notes={notes} pages={pages} target={draft.target} onChange={target=>patch({target})} optional/>}
-        {video&&<Label className="grid gap-2">YouTube address<Input type="url" required placeholder="https://www.youtube.com/watch?v=…" value={draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></Label>}
+        {video&&<Label className="grid gap-2">Video address<Input type="text" required={!draft.videoUrl} placeholder={draft.videoUrl?.startsWith('data:')?'Embedded video · enter a URL to replace':'YouTube, MP4 or WebM URL'} value={draft.videoUrl?.startsWith('data:')?'':draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></Label>}
         {list&&<div className="grid gap-3">{links.map((link,i)=><fieldset key={link.id} className="grid gap-3 rounded-md border border-border p-3">
           <legend className="px-1 text-sm">Link {i+1}</legend>
           <Label className="grid gap-2">Link label<Input value={link.label} onChange={e=>updateLink(link.id,{label:e.target.value})}/></Label>

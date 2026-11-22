@@ -2,7 +2,7 @@
 import {useMemo} from 'react';
 import {MapPin,ExternalLink,SquareCheck,ArrowUpRight} from 'lucide-react';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
-import {youtubeVideoId,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
+import {canvasVideo,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
 import type {Novel,NoteNode} from '@/lib/kachamak/types';
 import {contentText} from '@/lib/kachamak/note-links';
 import {HomeArtwork} from './HomeArtwork';
@@ -13,7 +13,7 @@ export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;toggle:(index:number,done:boolean)=>void}){
   const title=b.title || (b.target?describe(b.target):'');
   const image=b.imageCutout||projectImageSrc(novel.gallery,b.image || (b.layout==='note'?source?.image:undefined));
-  const id=youtubeVideoId(b.videoUrl);
+  const video=b.videoUrl&&canvasVideo(b.videoUrl);
   const destination=b.target && (b.target.kind==='web'?<a className="cv-link" href={b.target.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>{b.title||describe(b.target)}</a>:
     <button type="button" className="cv-link" onClick={()=>b.target&&open(b.target)}><ArrowUpRight size={14}/>{describe(b.target)}</button>);
   const excerpt=useMemo(()=>b.layout==='note'&&source?contentText(source.content).slice(0,190):'',[source?.content,b.layout]);
@@ -28,7 +28,7 @@ export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle
     {b.layout==='table'&&<div className="overflow-auto"><table><tbody>{b.cells?.map((row,i)=><tr key={i}>{row.map((v,j)=>i===0?<th key={j}>{v}</th>:<td key={j}>{v}</td>)}</tr>)}</tbody></table></div>}
     {b.layout==='color'&&<code>{b.color?.toUpperCase()}</code>}
     {b.layout==='audio'&&<audio controls preload="none" src={b.audio}/>}
-    {b.layout==='video'&&id&&<HomeVideo id={id} title={title} interactive/>}
+    {b.layout==='video'&&video&&<HomeVideo url={b.videoUrl!} title={title} interactive/>}
     {destination}
   </div>;
 }

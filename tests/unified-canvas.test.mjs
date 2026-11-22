@@ -148,7 +148,7 @@ const newRow=item('world','row',{columns:2,at:{x:400,y:200}});
 const below={...row,id:'below',at:{x:400,y:380}};
 const heights=new Map([['world',340]]);
 const grown=worldRows([newRow,below],1160,heights);
-assert.equal(grown.get('world').h,340);assert.equal(grown.get('below').y,556);
+assert.equal(grown.get('world').h,340);assert.equal(grown.get('below').y,548);
 const column=item('standing','column',{at:{x:202,y:-610}});
 const withColumn=changeHomepage(migrated,{type:'add',block:column});
 assert.ok(withColumn);
