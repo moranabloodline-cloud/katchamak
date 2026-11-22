@@ -13,6 +13,9 @@ interface Props {
 }
 
 function footerCount({ novel, section, selectedSection, selected, view, rootId }: Props) {
+  if (view === "split" && section === "binder" && !selected) {
+    return { value: words(0), title: "No document in the active pane" };
+  }
   const binderNote = section === "binder" && selectedSection === "binder" ? selected : null;
   if (view === "continuous") {
     const notes = continuousSelection(novel?.sections[section] ?? [], selected?.id ?? null, rootId);

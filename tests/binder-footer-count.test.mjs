@@ -30,7 +30,7 @@ for (const view of ['write', 'continuous', 'split', 'list', 'corkboard']) {
   assert.equal(footer(view, scene), '3 words', 'A scene counts only its body, including when it has children');
   assert.equal(footer(view, chapter), '8 words', 'A chapter counts all descendants once, excluding siblings');
   assert.equal(footer(view, legacy), '2 words', 'Imported chapters can be ordinary parent notes');
-  assert.equal(footer(view, null), '13 words');
+  assert.equal(footer(view, null), view === 'split' ? '0 words' : '13 words');
 }
 second.content += ' added';
 second.hidden = true;

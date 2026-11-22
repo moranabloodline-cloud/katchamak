@@ -313,13 +313,18 @@ function NoteMetaBar({ section, node }: { section: SectionKey; node: NoteNode })
 export function NotesSection({ section, rootId, revealSearch, trash = false, gallery = false }: { section: SectionKey; rootId?: string; revealSearch?: boolean; trash?: boolean; gallery?: boolean }) {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
-  const selectedNodeId = useKachamak((s) => s.selectedNodeId);
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
   const finance=section==='finance' && !trash && !gallery && storedView!=='homepage';
   const kanban = section === 'kanban' && !trash && !gallery && storedView !== 'homepage';
   const publish = section==='publish' && !trash && !gallery && storedView!=='homepage';
   const view = publish ? 'publish' : kanban ? 'kanban' : finance ? (storedView==='list'?'finance-list':'finance-dashboard') : trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
+  const selectedNodeId = useKachamak((s) => {
+    if (section === "binder" && view === "split") {
+      return s.activePane === "a" ? s.paneAId : s.paneBId;
+    }
+    return s.selectedNodeId;
+  });
 
   const wideCanvas = view==='homepage' || view==='gallery';
   const [galleryFolder,setGalleryFolder]=useState<{book:string;id:string|null}>();

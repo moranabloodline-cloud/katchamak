@@ -1,3 +1,5 @@
+> **2026-11-22 — Brojač u Binder Splitu.** Klik ili prelazak fokusa na editor prikazuje broj reči otvorene scene ili zbir poglavlja u tom panelu.
+
 > **2026-11-22 — Donji brojač Bindera.** Izbor scene prikazuje broj reči njenog teksta. Izbor poglavlja prikazuje zbir njegovog teksta i svih podređenih stavki.
 
 > **2026-11-22 — Broj reči rukopisa u biblioteci.** Kartice knjiga, prikaz liste i zbir za celu knjigu broje tekst svih nivoa Bindera.
@@ -695,6 +697,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-22 — Aktivni panel u Splitu.** Proveren je izbor levo–desno–levo, obnova sa različitom selekcijom stabla, prazna strana, fokus sa tastature i preračunavanje posle izmene scene.
 
 - **2026-11-22 — Brojanje po izboru u Binderu.** Provere obuhvataju sve prikaze, uvezena poglavlja, odvojeni cilj dokumenta i izostavljanje sinopsisa i polja Notes.
 
