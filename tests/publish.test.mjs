@@ -110,6 +110,8 @@ assert.equal(JSON.stringify(book().sections.binder),original);
 {
   const html='<p>“Žu<em>ti</em> čamac prelazi prag danas.”</p>'+
     '<ol start="7"><li>First route</li><li value="12"><p>Detour</p><ul><li>Nested path</li></ul><p>After the turn</p></li><li>Final route</li></ol>'+
+    '<figure><p>First plate</p><figcaption>Caption below</figcaption></figure>'+
+    '<figure><figcaption>Caption above</figcaption><p>Second plate</p></figure><p>Following text</p>'+
     '<table><thead><tr><th>Route</th><th>Place</th><th>Record</th></tr></thead><tbody>'+
     '<tr><td rowspan="2">Pair</td><td colspan="2">A <em>careful</em> record</td></tr><tr><td>East</td><td>West</td></tr></tbody></table>';
   const passage={...book().sections.binder[0],content:html};
@@ -125,6 +127,9 @@ assert.equal(JSON.stringify(book().sections.binder),original);
   const paragraphs=tags(word,'p');
   const paragraph=text=>paragraphs.find(p=>p.textContent===text);
   assert(paragraph('“Ž'));
+  const keepsNext=text=>tags(paragraph(text),'keepNext').some(flag=>flag.getAttribute('w:val')!=='false');
+  assert(keepsNext('First plate'));assert(keepsNext('Caption above'));
+  assert(!keepsNext('Caption below'));assert(!keepsNext('Second plate'));assert(!keepsNext('Following text'));
   const cell=tags(word,'tc').find(c=>c.textContent==='A careful record');
   assert.equal(tags(cell,'p').length,1);assert.equal(tags(cell,'i').length,1);
   assert.deepEqual(tags(word,'vMerge').map(e=>e.getAttribute('w:val')),['restart','continue']);

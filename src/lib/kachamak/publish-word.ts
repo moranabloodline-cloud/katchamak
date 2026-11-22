@@ -151,8 +151,12 @@ export async function wordEdition(book:Publication,s:BookStyle){
       const titlePage=header?.classList.contains('title-page');
       const headerStart=(chapterHeader||titlePage)&&node===header?.firstElementChild;
       const titleEnd=chapterHeader&&node===header?.lastElementChild;
+      // Word paginates paragraphs separately. Bind the caption to its adjacent
+      // figure content in either caption order, stopping at the figure boundary.
+      const nextInFigure=header?.tagName==='FIGURE'?node.nextElementSibling:null;
+      const keepWithCaption=nextInFigure!==null&&(tag==='FIGCAPTION'||nextInFigure.tagName==='FIGCAPTION');
       const settings:IParagraphOptions={
-        heading:h?headingLevels[Number(tag[1])-1]:undefined,keepNext:h||chapterHeader,
+        heading:h?headingLevels[Number(tag[1])-1]:undefined,keepNext:h||chapterHeader||keepWithCaption,
         alignment:decorated?AlignmentType.CENTER:opts.alignment??alignment[block?.align??s.align],
         indent:opts.indent??{firstLine:tag==='P'&&!node.closest('td,th')&&!block&&!opts.alignment&&(!open||s.firstIndent)?Math.round(s.indent*space):0},
         spacing:{line:Math.round(240*s.leading),before:headerStart?mm(height*(titlePage ? .19 : s.sink/100)):decorated?Math.round(space*s.dividerGap):undefined,after:Math.round(space*(titleEnd?s.chapterGap:decorated?s.dividerGap:s.paragraphGap))},
