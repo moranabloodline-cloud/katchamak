@@ -1,3 +1,5 @@
+> **2026-11-22 — Izvoz bez tri ilustrovana poglavlja.** Provereni su PDF, EPUB, DOCX i lokalni HTML iste probne knjige posle isključivanja C04, C16 i C28 u Publish-u.
+
 > **2026-11-22 — Publish, HTML izdanje bez interneta.** Izvezeni HTML otvara se kao lokalni fajl. U probnoj knjizi svih 36 stavki sadržaja i svih 48 ilustracija rade uz isključenu mrežu.
 
 > **2026-11-22 — Publish, EPUB i DOCX na istom ilustrovanom rukopisu.** DOCX čuva sliku i potpis zajedno na strani. Otvaranjem oba izdanja potvrđeni su izabrani redosled, položaj ilustracija i navigacija kroz sadržaj.
@@ -687,6 +689,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-22 — Izbor poglavlja u sva četiri formata
+- U rukopisu „Atlas of the Outer Sound“ isključena su po dva pojavljivanja slika iz svakog od tri poglavlja. U svim fajlovima ostala su 33 poglavlja u prethodno sačuvanom redosledu i 42 pojavljivanja 11 različitih ilustracija. Izostali su naslovi, pasusi, slike i potpisi iz izabranih poglavlja. Ilustracija 4 izostala je iz svih fajlova. Ilustracija 5 ostala je u C05, C17 i C29.
+- Proverena su sva 33 odredišta iz sadržaja u svakom formatu. PDF i štampani pregled poklopili su se na svih 137 strana, uključujući folije i slike. DOCX je otvoren u Writeru, EPUB u čitaču, a lokalni HTML u Chrome-u bez mreže i keša.
+- Izbor je proveren posle čuvanja i ponovnog učitavanja probne knjige. Potpuno stablo Bindera, uključujući tekst i reference na ilustracije, identično je snimku pre izbora.
 
 ### 2026-11-22 — Lokalni HTML izvoz ilustrovane knjige
 - Ista probna knjiga iz provere PDF-a, EPUB-a i DOCX-a izvezena je preko Publish → Export book → HTML, sa istom selekcijom i promenjenim redosledom. Tekst i stablo Bindera upoređeni su pre i posle izvoza.
