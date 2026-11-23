@@ -1,3 +1,5 @@
+> **2026-11-23 — Grupno poravnanje na Canvasu.** Tokom povlačenja više izabranih kartica, tanak okvir pokazuje granice cele grupe za vodiče po ivicama, sredini i jednakim razmacima.
+
 > **2026-11-23 — Centriranje i jednaki razmaci na Canvasu.** Isprekidana zlatna linija označava zajedničku sredinu kartica. Dve oznake između tri uzastopne kartice prikazuju jednake horizontalne ili vertikalne razmake.
 
 > **2026-11-22 — Canvas, poravnanje i raspored demo atlasa.** Canvas sada prikazuje privremene linije za poravnanje pri pomeranju kartica, grupa i redova. U zaključanom prikazu kolone više ne rezervišu prostor za kontrole uređivanja.
@@ -701,6 +703,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23 — Vodiči za više kartica.** Poravnanje tokom povlačenja i pri puštanju koristi isti zajednički okvir i isti pomak za sve članove. Mišem su provereni pravougaoni izbor, povlačenje za oba člana, podudaranje spoljnih ivica i sredina i jednaki razmaci na 100% i 120% zuma. Pomak između kartica u probnom primeru ostao je 115 × 28 jedinica.
 
 - **2026-11-23 — Canvas vodiči.** Pri pomeranju bilo koje od tri kartice poravnanje koristi njihove ivice i sredine u koordinatama platna. Prag je pet ekranskih piksela. Provereni su različite širine, oba smera, četiri nivoa zuma u testovima geometrije i povlačenje mišem na 100% i 120% uz nestanak linija po otpuštanju.
 

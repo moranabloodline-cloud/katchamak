@@ -2,6 +2,7 @@
 .cv-board-main { position:relative; display:flex; flex:1; flex-direction:column; min-width:0; }
 .cv-viewport { position:relative; display:flex; flex:1; min-height:0; overflow:hidden; overscroll-behavior:contain; }
 .cv-guides { position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none; z-index:2147483646; stroke:#f5bd61; stroke-width:1; }
+.cv-guides .cv-group-bound { fill:none; stroke-opacity:.65; stroke-dasharray:3 4; }
 .cv-guides [data-guide=center] { stroke-dasharray:5 3; }
 .cv-guides [data-guide=gap],.cv-guides marker path { stroke:#ffe09b; }
 .cv-world-row { position:absolute; }

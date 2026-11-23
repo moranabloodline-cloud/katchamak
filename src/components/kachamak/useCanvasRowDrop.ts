@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useRef,type RefObject} from 'react';
 import type {HomeCell} from '@/lib/kachamak/homepage';
 
-export function useCanvasRowDrop(surface:RefObject<HTMLDivElement|null>,panBy:(x:number,y:number)=>void) {
+export function useCanvasRowDrop(surface:RefObject<HTMLDivElement|null>,panBy:(dx:number,dy:number,clientX:number,clientY:number)=>void) {
   const pan=useRef(panBy);pan.current=panBy;
   const active=useRef<HTMLElement|null>(null);
   const frame=useRef(0);
@@ -37,7 +37,7 @@ export function useCanvasRowDrop(surface:RefObject<HTMLDivElement|null>,panBy:(x
     const delta=(v:number,min:number,max:number)=>v<min+edge?Math.ceil((min+edge-v)/4):v>max-edge?-Math.ceil((v-max+edge)/4):0;
     const dx=delta(x,r.left,r.right),dy=delta(y,r.top,r.bottom);
     if(dx||dy){
-      pan.current(dx,dy);
+      pan.current(dx,dy,x,y);
       highlight(laneAt(x,y));
       frame.current=requestAnimationFrame(scrollAtEdge);
     }

@@ -5,7 +5,7 @@ import {createPortal} from 'react-dom';
 import {Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {canvasOpeningView} from '@/lib/kachamak/canvas-file';
-import {alignCanvas,type AlignmentGuide} from '@/lib/kachamak/canvas-guides';
+import {alignCanvas,canvasDragFrame,type AlignmentGuide,type GuideItem} from '@/lib/kachamak/canvas-guides';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -21,7 +21,7 @@ import {InkPaths} from './CanvasInk';
 import {useCanvasToolDrop,type CanvasPlacement} from './useCanvasToolDrop';
 import {useCanvasRowDrop} from './useCanvasRowDrop';
 
-type Gesture={boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
+type Gesture={geometry?:{scene:GuideItem[];frame:ReturnType<typeof canvasDragFrame>};boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
   selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
   rows:HomeBlock[];rowContents:HomeBlock[];heldLines:HomeBlock[];
@@ -60,10 +60,14 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const gesture=useRef<Gesture|null>(null);
   const [guides,setGuides]=useState<AlignmentGuide[]>([]);
   const consumeClick=useRef(false);
-  const [move,setMove]=useState<{id:string;at:Point;over?:string;group?:Set<string>}|null>(null);
-  const rowDrop=useCanvasRowDrop(surface,(dx,dy)=>{
+  const [move,setMove]=useState<{id:string;at:Point;over?:string;group?:Set<string>;groupBounds?:BoardRect}|null>(null);
+  const rowDrop=useCanvasRowDrop(surface,(dx,dy,clientX,clientY)=>{
     setPan(p=>({x:p.x+dx,y:p.y+dy}));
-    setMove(m=>m&&({...m,at:{x:m.at.x-dx/zoomRef.current,y:m.at.y-dy/zoomRef.current}}));
+    const g=gesture.current;
+    if(g?.kind==='move'){
+      const p=boardPoint(local(clientX,clientY));
+      previewCardMove(g,{x:p.x-dx/zoom,y:p.y-dy/zoom},clientX,clientY);
+    }
   });
   const [menu,setMenu]=useState<{block:HomeBlock;column?:number}|{at:Point}|null>(null);
   const [movingRow,setMovingRow]=useState<{id:string;at:Point}|null>(null);
@@ -83,6 +87,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const lastPointer=useRef<Point|null>(null),previousZoom=useRef(zoom);
   const rects=useMemo(()=>boardRects(page.blocks,heights),[page.blocks,heights]);
   const blocks=useMemo(()=>new Map(page.blocks.map(b=>[b.id,b])),[page.blocks]);
+  const guideScene=useMemo(()=>[...rects,...rowRects].map(([id,rect])=>({id,rect,columnId:blocks.get(id)?.columnId})),[rects,rowRects,blocks]);
   function toggleFreeCard(id:string){
     setSelection(previous=>{
       const active=previous.filter(key=>blocks.has(key));
@@ -145,8 +150,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     if(!world.current || typeof ResizeObserver==='undefined')return;
     const observer=new ResizeObserver(entries=>setHeights(prev=>{
       let next=prev;
-      for(const {target} of entries){
-        const el=target as HTMLElement,id=el.dataset.boardCard??el.dataset.worldRow!,h=el.offsetHeight;
+      for(const {target,borderBoxSize} of entries){
+        const el=target as HTMLElement,id=el.dataset.boardCard??el.dataset.worldRow!;
+        const h=borderBoxSize?.[0]?.blockSize??el.offsetHeight;
         if(h && prev.get(id)!==h){if(next===prev)next=new Map(prev);next.set(id,h);}
       }
       return next;
@@ -387,19 +393,23 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     const delta={x:p.x-g.boardStart!.x,y:p.y-g.boardStart!.y};
     const raw={x:g.origin.x+delta.x,y:g.origin.y+delta.y};
     if(!snapping||g.kind==='move'&&g.dockable&&(rowDrop.target(clientX,clientY)||!g.group&&columnAt(p,g.id!)))return {at:raw,guides:[]};
-    const ids=new Set(g.group??[g.id!]);
-    const moving:BoardRect[]=[],targets:BoardRect[]=[];
-    for(const [id,r] of [...rects,...rowRects]){
-      const parent=blocks.get(id)?.columnId;
-      if(parent&&ids.has(parent))continue;
-      (ids.has(id)?moving:targets).push(r);
+    if(g.geometry?.scene!==guideScene){
+      g.geometry={scene:guideScene,frame:canvasDragFrame(guideScene,new Set(g.group??[g.id!]))};
     }
-    if(!moving.length)return {at:raw,guides:[]};
-    const x=Math.min(...moving.map(r=>r.x)),y=Math.min(...moving.map(r=>r.y));
-    const bounds={x:x+delta.x,y:y+delta.y,w:Math.max(...moving.map(r=>r.x+r.w))-x,h:Math.max(...moving.map(r=>r.y+r.h))-y};
+    const frame=g.geometry.frame;
+    if(!frame)return {at:raw,guides:[]};
+    const bounds={...frame.bounds,x:frame.bounds.x+delta.x,y:frame.bounds.y+delta.y};
     const el=surface.current!,scale=zoom*el.getBoundingClientRect().width/el.clientWidth;
-    const aligned=alignCanvas(bounds,targets,5/scale);
-    return {at:{x:raw.x+aligned.at.x-bounds.x,y:raw.y+aligned.at.y-bounds.y},guides:aligned.guides};
+    const aligned=alignCanvas(bounds,frame.targets,5/scale);
+    // Apply the frame's snapped translation equally to every member, whichever card was grabbed.
+    const at={x:g.origin.x+(aligned.at.x-frame.bounds.x),y:g.origin.y+(aligned.at.y-frame.bounds.y)};
+    return {at,guides:aligned.guides,groupBounds:g.group?{...bounds,...aligned.at}:undefined};
+  }
+  function previewCardMove(g:Gesture,p:Point,clientX:number,clientY:number){
+    const placement=dragPlacement(g,p,clientX,clientY);
+    setGuides(placement.guides);
+    setMove({id:g.id!,at:placement.at,groupBounds:placement.groupBounds,
+      over:g.group?undefined:columnAt(p,g.id!),group:g.group?new Set(g.group):undefined});
   }
   function track(e:PEvent<HTMLDivElement>){
     const point=local(e.clientX,e.clientY);lastPointer.current=point;
@@ -417,9 +427,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
         const caption=g.group?g.group.length+' cards':blocks.get(g.id!)?.title||'Move card here';
         rowDrop.track(e.clientX,e.clientY,caption);
       }
-      const placement=dragPlacement(g,p,e.clientX,e.clientY);
-      setGuides(placement.guides);
-      setMove({id:g.id!,at:placement.at,over:g.group?undefined:columnAt(p,g.id!),group:g.group?new Set(g.group):undefined});
+      previewCardMove(g,p,e.clientX,e.clientY);
     }
   }
   function endGesture(e:PEvent<HTMLDivElement>){
@@ -550,7 +558,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
             !(kind in toolsByKind)?renderClassic(b):<CanvasItemFace block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
           </article>;
         })}
-        {!page.locked&&(move||movingRow)&&guides.length>0&&<svg aria-hidden="true" className="cv-guides"><defs><marker id={edgePrefix+'-gap-cap'} markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M4 0v8"/></marker></defs>
+        {!page.locked&&(move||movingRow)&&(guides.length>0||move?.groupBounds)&&<svg aria-hidden="true" className="cv-guides"><defs><marker id={edgePrefix+'-gap-cap'} markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M4 0v8"/></marker></defs>
+          {move?.groupBounds&&<rect className="cv-group-bound" x={move.groupBounds.x} y={move.groupBounds.y}
+            width={move.groupBounds.w} height={move.groupBounds.h} vectorEffect="non-scaling-stroke"/>}
           {guides.map(({kind,...segment},i)=>{
             const cap=kind==='gap'?'url(#'+edgePrefix+'-gap-cap)':undefined;
             return <line key={i} data-guide={kind} {...segment} markerStart={cap} markerEnd={cap} vectorEffect="non-scaling-stroke"/>;

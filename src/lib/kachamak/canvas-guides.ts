@@ -4,6 +4,23 @@ type Axis='x'|'y';
 type GuideKind='edge'|'center'|'gap';
 export type AlignmentGuide={kind:GuideKind;x1:number;y1:number;x2:number;y2:number};
 
+export type GuideItem={id:string;rect:BoardRect;columnId?:string};
+export function canvasDragFrame(scene:GuideItem[],members:ReadonlySet<string>){
+  const targets:BoardRect[]=[];
+  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
+  for(const {id,rect,columnId} of scene){
+    // A selected column carries its contents. Neither one is a stationary neighbor.
+    if(columnId&&members.has(columnId))continue;
+    if(!members.has(id)){targets.push(rect);continue;}
+    left=Math.min(left,rect.x);
+    top=Math.min(top,rect.y);
+    right=Math.max(right,rect.x+rect.w);
+    bottom=Math.max(bottom,rect.y+rect.h);
+  }
+  if(!Number.isFinite(left))return;
+  return {bounds:{x:left,y:top,w:right-left,h:bottom-top},targets};
+}
+
 type Interval={start:number;end:number;near:number;far:number};
 function project(r:BoardRect,axis:Axis):Interval{
   return axis==='x'

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {applySelection,boardLayers,extractBoard,framedItems,frameBetween} from '../src/lib/kachamak/canvas-selection.ts';
+import {alignCanvas,canvasDragFrame} from '../src/lib/kachamak/canvas-guides.ts';
 import {boardRects} from '../src/lib/kachamak/canvas-board.ts';
 import {changeHomepage,validHomepage} from '../src/lib/kachamak/homepage.ts';
 
@@ -54,4 +55,35 @@ assert.deepEqual(parent.blocks.find(b=>b.id==='external').edge,{from:'portal',to
 assert.equal(child.blocks.filter(b=>b.layout==='line').length,3);
 assert.equal(extractBoard(parent,ids,'Retry','other','other-link',heights),null);
 assert.equal(apply({...page,locked:true},{kind:'connect'}),null);
+// Treat the entire multi-selection, including the empty space between staggered cards, as one item.
+const pair=[
+  card('one','note',12.5,45.25,{extent:{w:40,h:20}}),
+  card('two','note',71.25,63.5,{extent:{w:28.75,h:31}}),
+];
+const left=card('left','note',-80,0,{extent:{w:80,h:100}});
+const right=card('right','note',200,0,{extent:{w:50,h:100}});
+const linked=edge('linked','one','two');
+const sheet={mode:'canvas',locked:false,blocks:[left,...pair,right,linked]};
+const members=new Set(['two','one']);
+const scene=[...boardRects(sheet.blocks,new Map())].map(([id,rect])=>({id,rect}));
+const group=canvasDragFrame(scene,members);
+assert.deepEqual(group.bounds,{x:12.5,y:45.25,w:87.5,h:49.25});
+assert.deepEqual(group.targets,[scene[0].rect,scene[3].rect]);
+assert.equal(canvasDragFrame(scene,new Set()),undefined);
+for(const zoom of [.25,1,2.5]){
+  const snap=alignCanvas({...group.bounds,x:56.25+1/zoom,y:25.375+1/zoom},group.targets,5/zoom);
+  assert.ok(Math.abs(snap.at.x-56.25)<1e-9&&Math.abs(snap.at.y-25.375)<1e-9);
+  assert.deepEqual(snap.guides.filter(g=>g.kind==='gap').map(g=>g.x2-g.x1),[56.25,56.25]);
+  assert.ok(snap.guides.some(g=>g.kind==='center'&&g.y1===50&&g.y2===50));
+  const edgeSnap=alignCanvas({...group.bounds,x:200-87.5+1/zoom,y:130},group.targets,5/zoom);
+  assert.equal(edgeSnap.at.x+group.bounds.w,200);
+  assert.ok(edgeSnap.guides.some(g=>g.kind==='edge'&&g.x1===200&&g.x2===200));
+  const delta={x:snap.at.x-group.bounds.x,y:snap.at.y-group.bounds.y};
+  const dropped=changeHomepage(sheet,{type:'boardSelection',ids:[...members],command:{kind:'translate',delta}});
+  for(const item of pair){
+    assert.deepEqual(dropped.blocks.find(b=>b.id===item.id).at,{x:item.at.x+delta.x,y:item.at.y+delta.y});
+  }
+  for(const neighbor of [left,right,linked])assert.deepEqual(dropped.blocks.find(b=>b.id===neighbor.id),neighbor);
+}
+
 console.log('Canvas marquee, six alignments, equal spacing, group moves, layer order, locks and linked board conversion passed.');
