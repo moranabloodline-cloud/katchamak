@@ -89,6 +89,7 @@ export interface NoteNode {
   label: string; // free text, "" = no label
   color?: string; // document colour (the dot in the right panel), "" = none
   image?: string; // optional portable raster portrait in Details
+  noteMap?: import('./note-map').NoteMap;
   documentTarget?: DocumentTarget;
   hiddenDetailBlocks?: DetailBlockKey[]; // presentation only; hiding never deletes data
   collapsedDetailBlocks?: DetailBlockKey[];

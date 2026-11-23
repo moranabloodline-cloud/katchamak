@@ -60,6 +60,7 @@ export function* projectImageRefs(book:Novel, includeEmbedded = false) {
       }
       if(isGalleryImageRef(note.bookStyle?.chapterImage))yield note.bookStyle.chapterImage;
       if(isGalleryImageRef(note.image))yield note.image;
+      if(note.noteMap?.kind==='gallery')yield note.noteMap.image;
       for (const column of note.kanban?.columns ?? []) {
         for (const card of column.cards) if (isGalleryImageRef(card.cover)) yield card.cover;
       }

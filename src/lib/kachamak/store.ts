@@ -27,6 +27,7 @@ import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
 import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
+import {validNoteMap} from './note-map';
 import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
 import {type CanvasInspectorTab, changeInspectorTab, clampInspectorWidth, inspectorOpen, withInspectorLayout} from './inspector-tabs';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
@@ -831,7 +832,7 @@ export const useKachamak = create<KachamakState>()(
         if (financial) n.transaction = newTransaction(kind);
         if (section === "finance" && kind === "folder") n.icon = "folder";
         if (parentId === null) {
-          if (!template) n.hiddenDetailBlocks = DETAIL_BLOCKS.map(block => block.key).filter(key => !visibleRootBlocks.includes(key));
+          if (!template) n.hiddenDetailBlocks = DETAIL_BLOCKS.map(block => block.key).filter(key => key!=='map'&&!visibleRootBlocks.includes(key));
           created = n;
           roots.push(n);
         } else {
@@ -866,6 +867,7 @@ export const useKachamak = create<KachamakState>()(
         if (patch.bookStyle && (section!=="publish" || target.kind==="folder" || !validBookStyle(patch.bookStyle) || !availableProjectImage(novel.gallery,patch.bookStyle.chapterImage))) return;
         if (patch.kanban !== undefined && (!validKanban(patch.kanban) || patch.kanban.columns.some(col => col.cards.some(card => !availableProjectImage(novel.gallery,card.cover))))) return;
         if(patch.transaction!==undefined && !validTransaction(patch.transaction))return;
+        if(!validNoteMap(patch.noteMap) || (patch.noteMap?.kind==='gallery' && !availableProjectImage(novel.gallery,patch.noteMap.image)))return;
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
         if(patch.timelineKind!==undefined&&patch.timelineKind!=="event"&&patch.timelineKind!=="period")return;
@@ -1132,7 +1134,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 70,
+      version: 71,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1145,6 +1147,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 71) { /* Map is opt-in in the Codex Details order; existing notes need no new fields. */ }
         if (version < 70) { /* Existing map pins are read in place until their first atlas edit. */ }
         if (version < 69) { /* Cards without a group ID remain independent. */ }
         if (version < 68) { /* Genre samples are associated on opening Publish, including imported books. */ }

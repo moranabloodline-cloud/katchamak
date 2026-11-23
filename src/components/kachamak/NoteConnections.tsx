@@ -6,6 +6,7 @@ import {indexNotes,groupLinkedNotes,referenceTo,type IndexedNote} from '@/lib/ka
 import {NotePreview} from './NotePreview';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NoteImage} from './NoteImage';
+import {NoteMapBlock} from './NoteMapBlock';
 import {DetailsBlock,DetailsBlocks,AddDetailsBlock} from './DetailsBlock';
 import {DEFAULT_HIDDEN_TIMELINE_BLOCKS,detailBlockOrder,moveDetailBlock,type DetailBlockKey} from '@/lib/kachamak/detail-blocks';
 import {cleanAliases} from '@/lib/kachamak/note-links';
@@ -27,12 +28,15 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
   const defaultHidden=section==='timeline'?DEFAULT_HIDDEN_TIMELINE_BLOCKS:[];
   const hidden=node.hiddenDetailBlocks??defaultHidden;
   const collapsed=node.collapsedDetailBlocks??[],order=detailBlockOrder(node.detailBlockOrder,!!timelineSettings);
-  const available=order.filter(key=>key!=='timeline'||!!timelineSettings),visibleOrder=available.filter(key=>!hidden.includes(key));
+  const available=order.filter(key=>(key!=='timeline'||!!timelineSettings)&&(key!=='map'||section==='codex')),visibleOrder=available.filter(key=>!hidden.includes(key));
+  const canAddMap=section==='codex'&&!available.includes('map');
   const updateLayout=(patch:Partial<NoteNode>)=>{if(useKachamak.getState().activeNovelId===novel?.id)update(section,node.id,patch);};
   const setBlockVisible=(key:DetailBlockKey,visible:boolean)=>{
     const state=useKachamak.getState();if(state.activeNovelId!==novel?.id)return;
     const current=node.hiddenDetailBlocks??defaultHidden;
-    update(section,node.id,{hiddenDetailBlocks:visible?current.filter(item=>item!==key):[...new Set([...current,key])]});
+    update(section,node.id,{hiddenDetailBlocks:visible?current.filter(item=>item!==key):[...new Set([...current,key])],
+      ...(key==='map'&&visible&&canAddMap?{detailBlockOrder:[...order,'map']}:{}),
+    });
   };
   useEffect(()=>{setAliases((node.aliases??[]).join('\n'));setAliasDirty(false);setPreview(null);},[node.id]);
   useEffect(()=>{if(!aliasDirty)setAliases((node.aliases??[]).join('\n'));},[node.aliases,aliasDirty]);
@@ -45,7 +49,7 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
   return <div className={mode==='details'?'flex min-h-0 flex-1 flex-col gap-1':'space-y-5'}>
     {mode==='details'?<>
       <div className="min-h-0 flex-1 overflow-y-auto kachamak-scroll"><DetailsBlocks key={node.id} order={visibleOrder} onMove={(from,to)=>updateLayout({detailBlockOrder:moveDetailBlock(order,from,to)})}>{available.map(block=><Fragment key={block}>{(block==='timeline'||!hidden.includes(block)) && <DetailsBlock block={block} hidden={hidden.includes(block)} collapsed={collapsed.includes(block)} onToggle={()=>updateLayout({collapsedDetailBlocks:collapsed.includes(block)?collapsed.filter(key=>key!==block):[...collapsed,block]})} onHide={()=>setBlockVisible(block,false)} headerAction={block==="codex"?<CodexNotePicker node={node} section={section}/>:undefined}>
-      {block==='timeline'?timelineSettings:block==='image'?<NoteImage node={node} section={section}/>:block==='aliases'?<textarea aria-label="Aliases" id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);saveAliases(e.target.value);}} onBlur={e=>saveAliases(e.target.value,true)} rows={1} className="block w-full min-w-0 max-w-full field-sizing-content resize-none overflow-hidden rounded border border-white/15 bg-transparent p-2 text-xs"/>:<>
+      {block==='timeline'?timelineSettings:block==='map'&&novel?<NoteMapBlock key={novel.id+':'+node.id} novel={novel} node={node}/>:block==='image'?<NoteImage node={node} section={section}/>:block==='aliases'?<textarea aria-label="Aliases" id="note-aliases" value={aliases} onChange={e=>{setAliases(e.target.value);setAliasDirty(true);saveAliases(e.target.value);}} onBlur={e=>saveAliases(e.target.value,true)} rows={1} className="block w-full min-w-0 max-w-full field-sizing-content resize-none overflow-hidden rounded border border-white/15 bg-transparent p-2 text-xs"/>:<>
       {outgoing.map(group=><section key={group.id} aria-label={group.title}>{group.title&&<h3 className="mb-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground" style={{color:group.color || undefined}}>{group.title}</h3>}<ul className={group.title?"space-y-2 pl-3":"space-y-2"}>{group.entries.map(({id,target})=><li key={id} className="text-xs">{target?row(target):<span className="text-xs text-muted-foreground">Missing note — it may be in Trash.</span>}{' '}<button type="button" aria-label="Remove link" className="inline align-baseline text-muted-foreground hover:text-red-400" onClick={()=>update(section,node.id,{links:(node.links??[]).filter(n=>n!==id)})}>×</button></li>)}</ul></section>)}
       </>}
       </DetailsBlock>}
@@ -56,7 +60,7 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
           <button type="button" onClick={()=>openProjectNote(target.id)} className="min-w-0 break-words text-right font-medium underline decoration-current/50 underline-offset-2 hover:decoration-current" style={{color:target.color||undefined}}>{target.title||'Untitled note'}</button>
         </li>)}</ul>
       </section>}</Fragment>)}</DetailsBlocks></div>
-      <AddDetailsBlock available={available} hidden={hidden} onAdd={key=>setBlockVisible(key,true)}/>
+      <AddDetailsBlock available={canAddMap?[...available,'map']:available} hidden={canAddMap?[...hidden,'map']:hidden} onAdd={key=>setBlockVisible(key,true)}/>
     </>:<>
       <section><div className="space-y-5">{mentionGroups.map(group=><section key={group.key} aria-label={group.label}><h3 className="mb-2 flex items-center gap-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground">{group.label}<span aria-label={`${group.entries.length} references`} className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground">{group.entries.length}</span></h3><ul className="space-y-2">{group.entries.map(ref=><li key={ref.source.node.id}>{row(ref.source,(ref.explicit?'Linked · ':'Mention · ')+ref.snippet)}</li>)}</ul></section>)}</div>{!incoming.length&&<p className="text-xs text-muted-foreground">No mentions yet. This note’s title, aliases and links will be found across all project notes.</p>}</section>
 

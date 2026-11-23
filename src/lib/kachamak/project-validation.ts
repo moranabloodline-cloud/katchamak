@@ -7,6 +7,7 @@ import { validHiddenInspectorTabs, validInspectorByTab } from './inspector-tabs'
 import { SECTION_KEYS } from './types';
 import { validNovelMetadata } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
+import {validNoteMap} from './note-map';
 import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validNoteFontSize, validNotePageSettings, validTabPageSettings } from './page-format';
 import {validProjectImage, projectImageRefs, availableProjectImage} from './project-image';
@@ -43,7 +44,7 @@ export function isReadableProject(value: unknown): boolean {
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
       (node.bookStyle===undefined || validBookStyle(node.bookStyle)) && (node.kanban===undefined || validKanban(node.kanban)) && (node.transaction===undefined || validTransaction(node.transaction)) && validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validNotePageSettings(node.pageSettings) && validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
-      validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) &&
+      validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) && validNoteMap(node.noteMap) &&
       (node.event === undefined || validEvent(node.event)) &&
       (node.timelineKind === undefined || (node.timelineKind==="event"||node.timelineKind==="period")) &&
       (node.linkChoices === undefined || Array.isArray(node.linkChoices) && node.linkChoices.every(c => c && Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end > c.start && typeof c.text === 'string' && (c.targetId === null || typeof c.targetId === 'string'))) &&

@@ -36,8 +36,8 @@ function FeatureDetails({feature,update,remove,move}:{feature:MapFeature;move:()
 }
 
 type Props={block:HomeBlock;image:string;initial:MapTool;host?:HTMLElement|null;close:()=>void;
-  onPick?:()=>void;showTools?:()=>void;persist:(next:MapAtlas)=>boolean};
-export function CanvasMapStudio({block,image,initial,host,close,onPick,showTools,persist}:Props){
+  backLabel?:string;onPick?:()=>void;showTools?:()=>void;persist:(next:MapAtlas)=>boolean};
+export function CanvasMapStudio({block,image,initial,host,close,backLabel='Back to canvas',onPick,showTools,persist}:Props){
   const atlas=atlasOf(block);
   const [movingPin,setMovingPin]=useState<string|null>(null);
   const [tool,setTool]=useState<MapTool>(initial),[points,setPoints]=useState<Point[]>([]),[name,setName]=useState('');
@@ -110,7 +110,7 @@ export function CanvasMapStudio({block,image,initial,host,close,onPick,showTools
     })}</div>}
   </section>;
   return <section className="atlas-studio" aria-label="Map workspace" onKeyDown={e=>{if(e.key==='Enter'&&(tool==='path'||tool==='region')&&e.target instanceof HTMLElement&&!e.target.closest('button,input,select,textarea')){e.preventDefault();finish();}if(e.key==='Escape'){e.stopPropagation();if(tool==='inspect')close();else choose('inspect');}}}>
-    <header className="atlas-bar"><button ref={back} type="button" onClick={close} title="Back to canvas" aria-label="Back to canvas"><ArrowLeft size={17}/></button><h3>{block.title||'Map'}</h3>
+    <header className="atlas-bar"><button ref={back} type="button" onClick={close} title={backLabel} aria-label={backLabel}><ArrowLeft size={17}/></button><h3>{block.title||'Map'}</h3>
       <button type="button" aria-label="Zoom out of map" disabled={zoom<=.5} onClick={()=>setZoom(Math.max(.5,zoom/1.25))}><Minus size={15}/></button>
       <button type="button" title="Fit map width" onClick={()=>setZoom(1)}>{Math.round(zoom*100)}%</button>
       <button type="button" aria-label="Zoom into map" disabled={zoom>=4} onClick={()=>setZoom(Math.min(4,zoom*1.25))}><Plus size={15}/></button>

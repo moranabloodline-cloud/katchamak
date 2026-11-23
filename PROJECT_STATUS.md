@@ -1,3 +1,5 @@
+> **2026-11-23 — Mape u Codex beleškama.** U panelu Details može da se doda blok Map. Izbor mape sa Canvasa deli anotacije sa izvornom mapom. Slika iz Galerije može da posluži kao zasebna mapa beleške.
+
 > **2026-11-23 — Anotacije na zaključanom rasporedu.** Add pin, Draw path i Draw region rade i kada je raspored kartica zaključan. Dvoklik i Enter završavaju crtanje.
 
 > **2026-11-23 — Geografske karte u Canvasu.** U grupi Map tools svaka karta ima svoje pinove, putanje, oblasti i merenja. Geografske karte koriste koordinate, a slike iz Galerije mogu da se kalibrišu pomoću poznatog rastojanja.
@@ -711,6 +713,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- 2026-11-23 — Codex Details pamti izabranu mapu po belešci. Skrivanje i ponovno dodavanje bloka čuvaju izbor.
 
 ### 2026-11-23 — Uređivanje karte na Canvasu
 

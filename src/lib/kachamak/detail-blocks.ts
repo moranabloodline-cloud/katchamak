@@ -1,5 +1,5 @@
 const baseBlocks=[{key:'image',label:'Image'},{key:'aliases',label:'Aliases'},{key:'codex',label:'Codex'}] as const;
-export const DETAIL_BLOCKS=[...baseBlocks,{key:'timeline',label:'Timeline'}] as const;
+export const DETAIL_BLOCKS=[...baseBlocks,{key:'timeline',label:'Timeline'},{key:'map',label:'Map'}] as const;
 export type DetailBlockKey=typeof DETAIL_BLOCKS[number]['key'];
 export const DEFAULT_HIDDEN_TIMELINE_BLOCKS:DetailBlockKey[]=baseBlocks.map(block=>block.key);
 
