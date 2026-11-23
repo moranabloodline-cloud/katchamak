@@ -1,4 +1,5 @@
 import { SECTION_KEYS, type SectionKey, type Novel } from './types';
+import {atlasOf,validAtlas,type MapAtlas} from './canvas-map';
 import {validProjectImage, validCoverImage} from './project-image';
 
 import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,worldRows,type CanvasTransfer} from './canvas-layout';
@@ -198,7 +199,9 @@ export function validHomepage(value: unknown): boolean {
 
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
-export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange | DuplicateGroupChange
+type MapAnnotationChange = {type:'mapAnnotations'; original:HomeBlock; atlas:MapAtlas};
+export type HomeChange = MapAnnotationChange | LayoutChange;
+type LayoutChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange | DuplicateGroupChange
   | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
   | {type:'moveRow';id:string;at:Point;heights:[string,number][]}
@@ -215,6 +218,13 @@ export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer | Car
   | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  if(action.type==='mapAnnotations'){
+    const current=page.blocks.find(block=>block.id===action.original.id);
+    if(current?.layout!=='map'||!current.image||current.image!==action.original.image||!validAtlas(action.atlas)||
+      JSON.stringify(atlasOf(current))!==JSON.stringify(atlasOf(action.original)))return null;
+    // The page lock protects the layout. Map annotations have their own edit commands.
+    return {...page,blocks:page.blocks.map(block=>block===current?{...block,pin:undefined,atlas:action.atlas}:block)};
+  }
   if(action.type==='info'){
     if(!['synopsis','notes'].includes(action.field)||typeof action.value!=='string'||action.value===(page[action.field]??''))return null;
     return {...page,[action.field]:action.value};
@@ -226,7 +236,7 @@ export function changeHomepage(page: Homepage, action: HomeChange): Homepage | n
     ?clearSingletonGroups(next):next;
 }
 // Operate on the appropriate layout in isolation so a free-board command cannot move a fixed row.
-export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|null {
+export function changeUnifiedCanvas(saved:Homepage,action:LayoutChange):Homepage|null {
   const page=unifiedCanvas(saved);
   if(action.type==='duplicateGroup')return duplicateCardGroup(page,action);
   if(action.type==='cardGroup')return changeCardGroup(page,action);
@@ -302,7 +312,7 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
   return {...page,blocks:[...(structured?next.blocks:fixed),...(structured?free:next.blocks),...kept]};
 }
 
-function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
+function applyHomeChange(page:Homepage,action:LayoutChange):Homepage|null {
   if(action.type==='duplicateGroup')return duplicateCardGroup(page,action);
   if(action.type==='cardGroup')return changeCardGroup(page,action);
   if(action.type==='deleteItems'||action.type==='moveRow'||action.type==='info'||action.type==='appearance'||action.type==='moveCellCards'||action.type==='dockCards'||action.type==='releaseCards')return null;

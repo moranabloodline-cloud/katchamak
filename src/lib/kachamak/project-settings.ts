@@ -35,6 +35,25 @@ export async function galleryAvatar(src:string):Promise<string> {
   return canvas.toDataURL('image/webp',0.85);
 }
 
+// Keep the original WebP and its embedded credits when a replacement already fits the gallery.
+export async function readGalleryReplacement(file:File):Promise<string>{
+  if(file.type==='image/webp'&&file.size<=524_970){
+    const header=new Uint8Array(await file.slice(0,12).arrayBuffer());
+    if(String.fromCharCode(...header.slice(0,4))==='RIFF'&&String.fromCharCode(...header.slice(8,12))==='WEBP'){
+      const bitmap=await createImageBitmap(file);
+      const fits=bitmap.width>0&&bitmap.height>0&&bitmap.width<=2400&&bitmap.height<=1600;
+      bitmap.close();
+      if(fits)return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(String(reader.result));
+        reader.onerror=()=>reject(new Error('The gallery image could not be read.'));
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+  return readHomepageImage(file);
+}
+
 export function readHomepageImage(file:File):Promise<string> {
   return readProjectImage(file,{width:2400,height:1600},true);
 }

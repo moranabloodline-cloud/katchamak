@@ -1,3 +1,5 @@
+> **2026-11-23 — Anotacije na zaključanom rasporedu.** Add pin, Draw path i Draw region rade i kada je raspored kartica zaključan. Dvoklik i Enter završavaju crtanje.
+
 > **2026-11-23 — Geografske karte u Canvasu.** U grupi Map tools svaka karta ima svoje pinove, putanje, oblasti i merenja. Geografske karte koriste koordinate, a slike iz Galerije mogu da se kalibrišu pomoću poznatog rastojanja.
 
 > **2026-11-23 — Dupliranje grupe i široki Homepage.** Duplicate group kopira raspored i unutrašnje veze kartica. Široki uvezeni raspored otvara se prema širini radne površine.
@@ -709,6 +711,11 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-23 — Uređivanje karte na Canvasu
+
+- Zaključavanje i dalje štiti raspored kartica. Posebna komanda čuva samo oznake odabrane karte i proverava da li je njen sadržaj u međuvremenu promenjen.
+- Desni klik povlači poslednju tačku, a oblast se može zatvoriti klikom na njen početak. Zamena slike u Galeriji zadržava postojeće reference.
 
 ### 2026-11-23 — Alati za karte na Canvasu
 

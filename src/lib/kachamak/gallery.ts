@@ -5,6 +5,7 @@ type Item = {id:string; name:string; parentId:string|null};
 export type GalleryEntry = Item & ({kind:'folder'} | {kind:'image'; image:string});
 export type GalleryChange =
   | {type:'add'; entries:GalleryEntry[]}
+  | {type:'replace'; id:string; previous:string; image:string}
   | {type:'rename'; id:string; name:string}
   | {type:'move'; id:string; parentId:string|null; from?:string|null}
   | {type:'moveImages'; ids:string[]; from:string|null; parentId:string|null}
@@ -75,6 +76,11 @@ export function changeGallery(entries:GalleryEntry[], change:GalleryChange):Gall
   }
   const item = entries.find(entry => entry.id === change.id);
   if (!item) throw new Error('This item is no longer in the gallery.');
+  if (change.type === 'replace') {
+    if (item.kind!=='image'||item.image!==change.previous) throw new Error('The image changed. Choose it again.');
+    if (typeof change.image!=='string'||!validCoverImage(change.image)) throw new Error('Choose a valid gallery image.');
+    return item.image===change.image?entries:entries.map(entry=>entry===item?{...item,image:change.image}:entry);
+  }
   if (change.type === 'remove') {
     if (entries.some(entry => entry.parentId === item.id)) throw new Error('Move the contents out of this folder first.');
     return entries.filter(entry => entry !== item);

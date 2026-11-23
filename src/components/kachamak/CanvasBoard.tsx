@@ -538,8 +538,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,mapSe
       {btn(page.locked?'Unlock canvas':'Lock canvas',page.locked?LockKeyhole:UnlockKeyhole,()=>save({type:'lock',locked:!page.locked}))}
       <button type="button" className="lg:hidden" aria-label="Show canvas inspector" title="Show canvas inspector" onClick={showInspector}><PanelRightOpen size={16}/></button></header>
     <div className="cv-viewport">
-    {activeMap&&mapImage&&mapSession&&<CanvasMapStudio key={[activeMap.id,activeMap.image,page.locked].join(':')} block={activeMap} image={mapImage} locked={page.locked} initial={page.locked&&mapSession.tool!=='measure'?'inspect':mapSession.tool} close={closeMap} host={toolsHost} onPick={onToolPicked} showTools={showInspector}
-      persist={atlas=>save({type:'edit',original:activeMap,block:{...activeMap,pin:undefined,atlas}})}/>}
+    {activeMap&&mapImage&&mapSession&&<CanvasMapStudio key={[activeMap.id,activeMap.image].join(':')} block={activeMap} image={mapImage} initial={mapSession.tool} close={closeMap} host={toolsHost} onPick={onToolPicked} showTools={showInspector}
+      persist={atlas=>save({type:'mapAnnotations',original:activeMap,atlas})}/>}
 
     <ContextMenu><ContextMenuTrigger asChild onContextMenu={e=>{
       const hit=(e.target as Element).closest<HTMLElement>('[data-board-edge-copy],[data-board-edge],[data-board-card],[data-home-block],[data-home-cell]');
@@ -653,7 +653,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,mapSe
     {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}{tool==='draw'&&<input aria-label="Drawing color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/>}<button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
     </div></div>
     {toolsHost && !activeMap && createPortal(<>
-      <CanvasMapLauncher maps={maps} focused={focused?.id} locked={page.locked} open={openMap}/>
+      <CanvasMapLauncher maps={maps} focused={focused?.id} open={openMap}/>
       {!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'&&<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}
       convert={title=>convertSelection(novel.id,page.id,items.map(b=>b.id),title,[...heights])}/>}
       <CanvasTools disabled={page.locked} onDrag={toolDrop.start} onDragEnd={toolDrop.clear} onPick={kind=>{pick(kind);onToolPicked?.();}} onClassic={()=>{addClassic({at:nextPosition('note')});onToolPicked?.();}} active={tool==='draw'||tool==='line'?tool:null}/>

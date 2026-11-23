@@ -9,7 +9,7 @@ import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';
 import {useKachamak} from '@/lib/kachamak/store';
 import {checkGalleryUploadSize} from '@/lib/kachamak/cloud-library';
-import {readHomepageImage} from '@/lib/kachamak/project-settings';
+import {readGalleryReplacement,readHomepageImage} from '@/lib/kachamak/project-settings';
 import {branchSources,insideBranches,type BranchSource} from '@/lib/kachamak/tree-move';
 import {useTreeSelection} from './useTreeSelection';
 import {galleryPath, type GalleryEntry} from '@/lib/kachamak/gallery';
@@ -195,6 +195,8 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
   const [error,setError]=useState('');
   const [uploading,setUploading]=useState(false);
   const input=useRef<HTMLInputElement>(null);
+  const replacementInput=useRef<HTMLInputElement>(null);
+  const replacement=useRef<Extract<GalleryEntry,{kind:'image'}>|null>(null);
   const editGallery=useKachamak(s=>s.editGallery);
   function edit(action:Edit) {
     setError('');setEditing(action);
@@ -224,6 +226,18 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
     } catch(e) {setError(e instanceof Error?e.message:'The images could not be added.');}
     finally {setUploading(false);}
   }
+  async function replaceImage(file?:File) {
+    const item=replacement.current;
+    replacement.current=null;
+    if(!item||!file)return;
+    setUploading(true);setError('');
+    try{
+      const image=await readGalleryReplacement(file);
+      checkGalleryUploadSize([{...item,image}],item);
+      editGallery(novel.id,{type:'replace',id:item.id,previous:item.image,image});
+    }catch(e){setError(e instanceof Error?e.message:'The image could not be replaced.');}
+    finally{setUploading(false);}
+  }
   const moveOptions=editing?.type==='move'?entries.filter(item=>item.kind==='folder').map(item=>({item,path:galleryPath(entries,item.id)}))
     .filter(option=>!option.path.some(ancestor=>ancestor.id===editing.item.id)).sort((a,b)=>compareNames(a.item,b.item)):[];
   return <section style={{zoom:"var(--workspace-canvas-zoom, 1)"}} aria-label="Project gallery" className="col-span-full row-start-2 min-h-0 min-w-0 overflow-y-auto overscroll-contain kachamak-scroll">
@@ -244,6 +258,8 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
           </div>}
           <Button size="sm" variant="outline" onClick={()=>edit({type:'create',parentId:folderId})}><FolderPlus/>New folder</Button>
           <Button size="sm" variant="secondary" disabled={uploading} onClick={()=>input.current?.click()}><Upload/>{uploading?'Uploading…':'Upload images'}</Button>
+          <input type="file" ref={replacementInput} hidden aria-label="Replacement gallery image" accept="image/png,image/jpeg,image/webp"
+            onChange={e=>{const file=e.target.files?.[0];e.target.value='';void replaceImage(file);}}/>
           <input ref={input} aria-label="Choose gallery images" type="file" className="hidden" accept="image/png,image/jpeg,image/webp" multiple
             onChange={e=>{const files=Array.from(e.target.files??[]);e.target.value='';void upload(files);}}/>
         </div>
@@ -281,6 +297,7 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
           <DropdownMenu><DropdownMenuTrigger asChild><button type="button" aria-label={'Actions for '+item.name}
             className="absolute bottom-1.5 right-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"><MoreHorizontal className="size-4"/></button></DropdownMenuTrigger>
             <DropdownMenuContent align="end"><DropdownMenuItem onSelect={()=>edit({type:'rename',item})}>Rename</DropdownMenuItem>
+              {item.kind==='image'&&<DropdownMenuItem disabled={uploading} onSelect={()=>{replacement.current=item;replacementInput.current?.click();}}>Replace image…</DropdownMenuItem>}
               <DropdownMenuItem onSelect={()=>edit({type:'move',item})}>Move to folder</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onSelect={()=>edit({type:'remove',item})}>Remove</DropdownMenuItem>
             </DropdownMenuContent></DropdownMenu>

@@ -44,9 +44,9 @@ const snapshot = () => {
   return cachedSnapshot;
 };
 // Check a whole upload before changing the book, including the other books in its cloud save.
-export function checkGalleryUploadSize(entries:import('./gallery').GalleryEntry[]) {
+export function checkGalleryUploadSize(entries:import('./gallery').GalleryEntry[],replaced?:import('./gallery').GalleryEntry) {
   if (!isWebSession()) return;
-  const bytes = new Blob([snapshot(),JSON.stringify(entries)]).size;
+  const bytes = new Blob([snapshot(),JSON.stringify(entries)]).size-(replaced?new Blob([JSON.stringify(replaced)]).size:0);
   if (bytes + 128 > 20 * 1024 * 1024) throw new Error('These images would exceed the 20 MB library save limit. Choose fewer or smaller images.');
 }
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });

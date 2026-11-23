@@ -30,7 +30,15 @@ for(const fixed of [false,true]){
   const action={type:'edit',original,block:{...original,atlas,pin:undefined}};
   const next=changeHomepage(page,action);assert.ok(next&&validHomepage(next));
   assert.equal(changeHomepage(next,action),null);
-  assert.equal(changeHomepage({...page,locked:true},action),null);
+  const locked={...page,locked:true};
+  assert.equal(changeHomepage(locked,action),null);
+  const annotate={type:'mapAnnotations',original,atlas};
+  const annotated=changeHomepage(locked,annotate);
+  assert.ok(annotated.locked&&validHomepage(annotated));
+  assert.deepEqual(annotated.blocks.find(b=>b.id===original.id),{...original,pin:undefined,atlas});
+  assert.equal(changeHomepage(annotated,annotate),null);
+  assert.equal(changeHomepage(locked,{...annotate,original:{...original,image:'gallery:other'}}),null);
+  assert.equal(changeHomepage(locked,{...annotate,atlas:{features:[{kind:'invalid'}]}}),null);
   const book=newNovel('Atlas tests','Author');book.gallery=[{id:'base',kind:'image',name:'Base',parentId:null,image:img}];
   const roundTrip=importCanvasFile(book,page,JSON.parse(JSON.stringify({format:'kachamak-canvas/1',projectId:book.id,layout:next,images:[]})));
   assert.deepEqual(roundTrip.page.blocks.find(b=>b.id==='map').atlas,atlas);
