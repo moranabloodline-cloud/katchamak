@@ -87,7 +87,7 @@ function ToolBtn({
 
 /* One fixed text toolbar, shared by Split panes. It formats its saved selection;
    the separate Format menu owns the page defaults used as fallback values. */
-export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
+export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspectorId?: string} = {}) {
   const history=useWorkspaceHistory();
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const setSpellCheck=useKachamak(state=>state.setEditorSpellCheck);
@@ -104,7 +104,9 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   const [textColour,setTextColour]=useState(''),[highlightColour,setHighlightColour]=useState('');
   const ownedRange=(range:Range|null)=>{
     const editor=editorForRange(range);
-    return editor&&node&&editor.dataset.noteId===node.id&&editor===activeWritingEditor()?range:null;
+    if(!editor)return null;
+    if(inspectorId && editor.closest<HTMLElement>('[data-inspector-prose]')?.dataset.inspectorProse===inspectorId)return range;
+    return node && editor.dataset.noteId===node.id && editor===activeWritingEditor()?range:null;
   };
   const editableRange=(range:Range|null)=>{
     return range&&!range.collapsed?ownedRange(range):null;
@@ -121,7 +123,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
   useEffect(() => {
     const sync = () => {
       const focused=document.activeElement;
-      if(node && focused?.closest('[data-editor-toolbar],[data-editor-toolbar-popup]')&&editorForRange(savedRange.current)?.dataset.noteId===node?.id)return;
+      if(focused?.closest('[data-editor-toolbar],[data-editor-toolbar-popup]') && ownedRange(savedRange.current))return;
       if(focused?.matches('input,textarea,select')){savedRange.current=null;setHasSelection(false);setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');return;}
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
       const editor=editorForRange(range);
@@ -140,14 +142,14 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
     sync();
     document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
     return()=>{document.removeEventListener('selectionchange',sync);document.removeEventListener('focusin',sync);document.removeEventListener('input',sync);};
-  },[node?.id,font,size]);
+  },[node?.id,inspectorId,font,size]);
 
   return (
     <div data-editor-toolbar role="toolbar" aria-label="Text formatting" className="col-start-1 row-start-1 flex h-10 min-w-0 shrink-0 items-center gap-1 overflow-x-auto kachamak-scroll border-b border-white/10 px-4 [&>*]:shrink-0">
       <ToolBtn title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={()=>history.run('undo')}><Undo2 className="h-4 w-4" /></ToolBtn>
       <ToolBtn title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={()=>history.run('redo')}><Redo2 className="h-4 w-4" /></ToolBtn>
       <span className="mx-1 h-5 w-px bg-white/10" />
-      <fieldset aria-label="Format selected text" title={hasSelection?undefined:'Select text to format it'} disabled={!node || !hasSelection} className="contents [&>*]:shrink-0 disabled:[&>button]:opacity-50 disabled:[&>select]:opacity-50">
+      <fieldset aria-label="Format selected text" title={hasSelection?undefined:'Select text to format it'} disabled={!hasSelection} className="contents [&>*]:shrink-0 disabled:[&>button]:opacity-50 disabled:[&>select]:opacity-50">
       <select
         aria-label="Text style"
         title="Text style"
@@ -253,7 +255,7 @@ export function EditorToolbar({node}: {node?: NoteNode | null} = {}) {
       </ToolBtn>
       <ToolBtn
         title="Link"
-        disabled={!node || !selectedTypography}
+        disabled={!selectedTypography}
         onClick={() => {
           const range=ownedRange(savedRange.current),editor=editorForRange(range);
           if(!range||!editor)return;

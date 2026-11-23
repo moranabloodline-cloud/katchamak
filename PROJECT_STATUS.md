@@ -1,3 +1,5 @@
+> **2026-11-23 — Formatiranje u poljima Synopsis i Notes.** Gornja traka prati označeni tekst u desnom panelu, uključujući Info na Canvasu. Promena beleške poništava prethodni izbor teksta.
+
 > **2026-11-23 — Ručni linkovi ka veb-stranicama.** Adrese umetnute u tekst beleške vide se kao podvučeni linkovi. Klik otvara odredište i ostavlja belešku otvorenu.
 
 > **2026-11-23 — Izbor linkova posle čuvanja.** Prozor zadržava širinu i položaj gornje ivice, a dugmad ostaju na istom mestu dok korisnik prolazi kroz predloge.
@@ -721,6 +723,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23.** U probnoj Planning belešci provereni su podebljanje i boja u sinopsisu, kurziv, veličina, prored i umetanje veb-linka u Notes, zatim Save i ponovno učitavanje. Tekst rukopisa ostao je isti. Regresioni test prolazi i za Info na Canvasu, prelazak između polja i izbor druge beleške.
 
 - **2026-11-23.** Uređivanje i Continuous prikaz podržavaju otvaranje postojećih i novih veb-linkova iz teksta. U probnoj Planning belešci proveren je izbor reči, umetanje preko ikonice Link, čuvanje, osvežavanje stranice i otvaranje odredišta u novom tabu.
 

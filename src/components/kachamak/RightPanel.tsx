@@ -212,7 +212,8 @@ export function RightPanel({
         {/* Info — Synopsis i Notes vertikalno; razdelnik između njih se vuče
             (arhitektura §11), svako polje skroluje svoj sadržaj nezavisno */}
         {info && <TabsContent value="info" className="mt-0 h-full">
-          {infoEditor ?? <div ref={infoBoxRef} className="flex h-full min-h-0 flex-col">
+          {infoEditor ?? <div key={info.id} ref={infoBoxRef} data-inspector-prose={info.id}
+            data-link-source-id={canvas ? undefined : info.id} className="flex h-full min-h-0 flex-col">
             <div
               className="flex min-h-0 shrink-0 flex-col"
               style={{ height: `${infoRatio * 100}%` }}

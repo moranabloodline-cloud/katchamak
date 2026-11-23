@@ -21,7 +21,8 @@ export function NoteLinkDialog() {
       const el=r?.commonAncestorContainer.nodeType===1?r.commonAncestorContainer as Element:r?.commonAncestorContainer.parentElement;
       editor.current=el?.closest<HTMLElement>('.kachamak-editor')??null;
       range.current=editor.current&&r?r.cloneRange():null;
-      const state=useKachamak.getState(),sourceId=editor.current?.dataset.noteId;
+      const state=useKachamak.getState();
+      const sourceId=editor.current?.dataset.noteId ?? editor.current?.closest<HTMLElement>('[data-link-source-id]')?.dataset.linkSourceId;
       context.current=state.activeNovelId&&sourceId?{projectId:state.activeNovelId,sourceId}:null;
       const text=selection?.toString().trim().slice(0,200)||'';
       setCanInsert(!!range.current);setQuery(text);setNewTitle(text);setParentId('');setUrl('');setOpen(true);

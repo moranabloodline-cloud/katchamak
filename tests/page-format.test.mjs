@@ -120,6 +120,30 @@ assert.deepEqual(headerActions().map(button=>button.getAttribute('aria-label')),
 assert.ok(headerActions().every(button=>button.title));
 assert.ok(headerActions().slice(0,-1).every(button=>!button.textContent.trim()));
 const toolbar=document.querySelector('[data-editor-toolbar]');
+async function formatInfoWord(label,word,size){
+  const field=document.querySelector('[role="textbox"][aria-label="'+label+'"]');
+  const text=field.querySelector('p').firstChild;
+  const start=text.textContent.indexOf(word);
+  assert.notEqual(start,-1);
+  await React.act(async()=>{
+    field.focus();
+    const range=document.createRange();
+    range.setStart(text,start);range.setEnd(text,start+word.length);
+    dom.getSelection().removeAllRanges();dom.getSelection().addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+  });
+  const select=toolbar.querySelector('[aria-label="Font size"]');
+  assert.equal(select.matches(':disabled'),false,label+' selection activates the toolbar');
+  await React.act(async()=>select.focus());
+  await React.act(async()=>{
+    select.value=String(size);
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  const formatted=field.querySelector('[data-editor-typography]');
+  assert.equal(formatted?.textContent,word);
+  assert.equal(formatted.style.fontSize,size+'px');
+  return field.innerHTML;
+}
 for(const label of ['Timeline','Relationships','Canvas','Trash','Binder']){
   await React.act(async()=>document.querySelector('header button[title="'+label+'"]').click());
   assert.equal(document.querySelectorAll('[data-editor-toolbar]').length,1);
@@ -133,12 +157,30 @@ for(const label of ['Timeline','Relationships','Canvas','Trash','Binder']){
       assert.ok(document.querySelector('[role="textbox"][aria-label="Notes"]'));
       await React.act(async()=>document.querySelector('[aria-label="Canvas board"] button:is([aria-label="Unlock canvas"],[aria-label="Lock canvas"])').click());
     }
+    await React.act(async()=>actions.changeHomepage(useKachamak.getState().activeNovelId,{type:'info',field:'notes',value:'<p>Canvas observation.</p>'}));
+    const canvasNotes=await formatInfoWord('Notes','observation',18);
+    assert.equal(useKachamak.getState().novels[0].homepage.notes,canvasNotes);
+    await React.act(async()=>{dom.getSelection().removeAllRanges();document.dispatchEvent(new Event('selectionchange'));});
   }else{
     assert.ok(document.querySelector('[aria-label="Note inspector"]'));
   }
   if(label!=='Binder')assert.ok(toolbar.querySelector('[aria-label="Format selected text"]').disabled);
 }
 await React.act(async()=>actions.select(id));
+await React.act(async()=>actions.updateNode('binder',id,{synopsis:'<p>A short summary.</p>',notes:'<p>A private remark.</p>'}));
+const synopsis=await formatInfoWord('Synopsis','short',20);
+assert.equal(node().synopsis,synopsis);
+assert.equal(node().notes,'<p>A private remark.</p>');
+const notes=await formatInfoWord('Notes','private',24);
+assert.equal(node().notes,notes);
+assert.equal(node().synopsis,synopsis);
+assert.equal(node().content,contentBeforePage);
+const formerField=document.querySelector('[role="textbox"][aria-label="Notes"]');
+await React.act(async()=>{const other=actions.addNode('binder',null,'doc','Another chapter');actions.select(other);});
+assert.equal(formerField.isConnected,false);
+assert.equal(toolbar.querySelector('[aria-label="Font size"]').matches(':disabled'),true,'Changing notes discards the old selection');
+await React.act(async()=>actions.select(id));
+assert.equal(document.querySelector('[role="textbox"][aria-label="Notes"]').innerHTML,notes);
 const noteEditor=document.querySelector('[aria-label="Note content"]');
 const prefs={left:useKachamak.getState().leftPanelOpen,right:inspectorOpen(useKachamak.getState())};
 await React.act(async()=>document.querySelector('button[aria-label="Focus"]').click());
