@@ -27,6 +27,7 @@ export function AutoLinkReview() {
   const [session,setSession]=useState<Session|null>(null),[selected,setSelected]=useState(''),[working,setWorking]=useState(false);
   const sessionRef=useRef<Session|null>(null),busy=useRef(false);
   const dialog=useRef<HTMLDivElement>(null);
+  const reviewDetails=useRef<HTMLDivElement>(null);
   const saveAttempt=useRef(0);
   const manualAttempt=useRef(0),preparing=useRef<number|null>(null);
   const manualContext=useRef<{projectId:string|null;noteId:string|null}|null>(null);
@@ -88,9 +89,10 @@ export function AutoLinkReview() {
     const active=document.activeElement;
     const frame=requestAnimationFrame(()=>{
       const root=dialog.current;if(!root)return;
-      if(active instanceof HTMLButtonElement&&root.contains(active)&&active.closest('[data-link-review-actions]')&&!active.disabled){active.focus();return;}
+      if(reviewDetails.current)reviewDetails.current.scrollTop=0;
+      if(active instanceof HTMLButtonElement&&root.contains(active)&&active.closest('[data-link-review-actions]')&&!active.disabled){active.focus({preventScroll:true});return;}
       const selector=match.candidates.length>1?'input[name="automatic-link-target"]':'[data-link-review-actions] button:not(:disabled)';
-      root.querySelector<HTMLElement>(selector)?.focus();
+      root.querySelector<HTMLElement>(selector)?.focus({preventScroll:true});
     });
     return()=>cancelAnimationFrame(frame);
   },[session?.noteId,match?.start,match?.text]);
@@ -157,13 +159,28 @@ export function AutoLinkReview() {
     next?.focus();
   };
   const start=match?Math.max(0,match.start-280):0,end=match?Math.min(text.length,match.end+360):0;
-  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}><DialogContent ref={dialog} onKeyDown={keyboard} onOpenAutoFocus={event=>event.preventDefault()} className="max-h-[88vh] overflow-y-auto border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl"><DialogHeader><DialogTitle>Automatic link detection</DialogTitle><DialogDescription>{session?.title} · {session?.matches.length??0} remaining. Matches Codex note titles in this book.</DialogDescription></DialogHeader>{session&&<p role="status" className="text-xs text-muted-foreground">{saveError?'Choices remain in this window. Saving failed; retry Save.':savePending?'Saving link choices…':'Link choices saved.'}</p>}{session&&session.unavailable>0&&<p className="text-xs text-amber-300">Removed {session.unavailable} unavailable links; their text is unchanged. Choose any replacement targets below.</p>}{session&&match&&<>
-    <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_208px]">
-      <div className="min-w-0 space-y-4">
+  return <Dialog open={!!session} onOpenChange={open=>{if(!open)close();}}>
+    <DialogContent ref={dialog} onKeyDown={keyboard} onOpenAutoFocus={event=>event.preventDefault()}
+      className="[--review-top:clamp(0.75rem,12dvh,10rem)] top-[var(--review-top)] flex max-h-[calc(100dvh-var(--review-top)-0.75rem)] w-[calc(100%-2rem)] translate-y-0 flex-col overflow-clip border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl">
+      <DialogHeader className="shrink-0 pr-5">
+        <DialogTitle>Automatic link detection</DialogTitle>
+        <DialogDescription className="break-words">{session?.title} · Matches Codex note titles in this book.</DialogDescription>
+      </DialogHeader>
+      {session&&match&&<div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1fr)_208px] md:grid-rows-[minmax(0,1fr)]">
+      <div ref={reviewDetails} className="row-start-2 min-h-0 min-w-0 space-y-4 overflow-y-auto overscroll-contain p-0.5 [scrollbar-gutter:stable] md:col-start-1 md:row-start-1">
+        <p role="status" className="text-xs text-muted-foreground">
+          {session.matches.length} remaining. {saveError?'Choices remain in this window. Saving failed; retry Save.':savePending?'Saving link choices…':'Link choices saved.'}
+        </p>
+        {session.unavailable>0&&<p className="text-xs text-amber-300">Removed {session.unavailable} unavailable links; their text is unchanged. Choose any replacement targets below.</p>}
         <div aria-label="Link context" className="min-h-48 whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/20 p-5 text-sm leading-7">{start>0?'…':''}{text.slice(start,match.start)}<mark className="rounded bg-amber-400 px-1 py-0.5 font-semibold text-black">{match.text}</mark>{text.slice(match.end,end)}{end<text.length?'…':''}</div>
-        <fieldset className="space-y-2"><legend className="mb-2 text-xs font-semibold">{match.candidates.length>1?'Choose the correct note — this name has multiple targets':'Link target'}</legend>{match.candidates.map(candidate=>{const path=paths.get(candidate.id),Icon=iconForNote(candidate)??(candidate.event?(eventType(candidate.event)==='period'?CalendarRange:Diamond):candidate.kind==='act'?Landmark:candidate.kind==='folder'||candidate.kind==='chapter'?Folder:BookText);return <label key={candidate.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-white/5 focus-within:ring-2 focus-within:ring-amber-400 ${selected===candidate.id?'border-amber-400/50':'border-white/15'}`}><input type="radio" name="automatic-link-target" value={candidate.id} checked={selected===candidate.id} onChange={()=>setSelected(candidate.id)} disabled={working} className="sr-only"/><Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" style={{color:candidate.color||'#a1a1aa'}}/><span className="min-w-0"><span className="block text-sm" style={{color:candidate.color||'#e7d6a8'}}>{candidate.title}</span><span className="mt-1 block break-words text-xs text-muted-foreground">{path??'Unavailable note'}</span></span></label>;})}</fieldset>
+        <fieldset className="space-y-2"><legend className="mb-2 text-xs font-semibold">{match.candidates.length>1?'Choose the correct note — this name has multiple targets':'Link target'}</legend>{match.candidates.map(candidate=>{const path=paths.get(candidate.id),Icon=iconForNote(candidate)??(candidate.event?(eventType(candidate.event)==='period'?CalendarRange:Diamond):candidate.kind==='act'?Landmark:candidate.kind==='folder'||candidate.kind==='chapter'?Folder:BookText);return <label key={candidate.id} className={`relative flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-white/5 focus-within:ring-2 focus-within:ring-amber-400 ${selected===candidate.id?'border-amber-400/50':'border-white/15'}`}><input type="radio" name="automatic-link-target" value={candidate.id} checked={selected===candidate.id} onChange={()=>setSelected(candidate.id)} disabled={working} className="sr-only"/><Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" style={{color:candidate.color||'#a1a1aa'}}/><span className="min-w-0"><span className="block text-sm" style={{color:candidate.color||'#e7d6a8'}}>{candidate.title}</span><span className="mt-1 block break-words text-xs text-muted-foreground">{path??'Unavailable note'}</span></span></label>;})}</fieldset>
       </div>
-      <div data-link-review-actions className="space-y-2"><button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected)}>Create link</button><button type="button" className={action} disabled={working} onClick={()=>void decide(null)}>Ignore link</button><button type="button" className={action} disabled={working} onClick={close}>Decide later</button></div>
-    </div>
-  </>}</DialogContent></Dialog>;
+      <div data-link-review-actions className="row-start-1 grid grid-cols-3 content-start gap-2 md:col-start-2 md:flex md:flex-col">
+        <button type="button" className={action+' border-amber-400/50 bg-amber-400 text-black hover:bg-amber-300'} disabled={working||!selected} onClick={()=>void decide(selected)}>Create link</button>
+        <button type="button" className={action} disabled={working} onClick={()=>void decide(null)}>Ignore link</button>
+        <button type="button" className={action} disabled={working} onClick={close}>Decide later</button>
+      </div>
+      </div>}
+    </DialogContent>
+  </Dialog>;
 }
