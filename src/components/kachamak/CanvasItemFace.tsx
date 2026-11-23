@@ -1,6 +1,7 @@
 'use client';
 import {useMemo} from 'react';
-import {MapPin,ExternalLink,SquareCheck,ArrowUpRight} from 'lucide-react';
+import {CanvasMapSurface} from './CanvasMapSurface';
+import {ExternalLink,SquareCheck,ArrowUpRight} from 'lucide-react';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {canvasVideo,type HomeBlock,type HomeTarget} from '@/lib/kachamak/homepage';
 import type {Novel,NoteNode} from '@/lib/kachamak/types';
@@ -9,8 +10,8 @@ import {HomeArtwork} from './HomeArtwork';
 import {HomeVideo} from './HomeDocumentBlock';
 import {InkPaths} from './CanvasInk';
 
-export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle}:{block:HomeBlock;novel:Novel;source?:NoteNode;locked:boolean;
-  open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;toggle:(index:number,done:boolean)=>void}){
+export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle,openMap}:{block:HomeBlock;novel:Novel;source?:NoteNode;locked:boolean;
+  openMap:(id:string)=>void;open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;toggle:(index:number,done:boolean)=>void}){
   const title=b.title || (b.target?describe(b.target):'');
   const image=b.imageCutout||projectImageSrc(novel.gallery,b.image || (b.layout==='note'?source?.image:undefined));
   const video=b.videoUrl&&canvasVideo(b.videoUrl);
@@ -20,7 +21,8 @@ export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle
   const body=b.text || excerpt;
   return <div className={'cv-face cv-face-'+b.layout}>
     {b.layout==='color'&&<div className="cv-swatch" style={{backgroundColor:b.color}}/>}
-    {image&&<div className="cv-picture">{b.imageFrame?<HomeArtwork src={image} frame={b.imageFrame} alt={b.title||b.layout}/>:<img src={image} alt={b.title||b.layout} draggable={false}/>}{b.pin&&<MapPin className="cv-pin" style={{left:b.pin.x*100+'%',top:b.pin.y*100+'%'}}/>}</div>}
+    {image&&b.layout==='map'&&<CanvasMapSurface block={b} image={image} open={()=>openMap(b.id)}/>}
+    {image&&b.layout!=='map'&&<div className="cv-picture">{b.imageFrame?<HomeArtwork src={image} frame={b.imageFrame} alt={b.title||b.layout}/>:<img src={image} alt={b.title||b.layout} draggable={false}/>}</div>}
     {(b.layout==='sketch'||b.layout==='draw')&&<svg viewBox="0 0 320 180" preserveAspectRatio="none" aria-label={b.title||'Drawing'} style={b.extent?{aspectRatio:b.extent.w+'/'+b.extent.h}:undefined}><InkPaths strokes={b.ink??[]} color={b.color??'#d4b487'}/></svg>}
     {title&&b.layout!=='link'&&<h3>{title}</h3>}
     {body&&<p>{body}</p>}

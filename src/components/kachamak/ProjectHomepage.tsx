@@ -23,6 +23,7 @@ import {CanvasBoard} from './CanvasBoard';
 import type {CanvasFile} from '@/lib/kachamak/canvas-file';
 import {toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
+import type {MapTool} from '@/lib/kachamak/canvas-map';
 import {CanvasItemFace} from './CanvasItemFace';
 import {CANVAS_TOOLS} from '@/lib/kachamak/canvas-board';
 import {useOpenWorkspaceTab} from './WorkspaceTabs';
@@ -74,6 +75,11 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const updatePage=useKachamak(s=>s.changeHomepage);
   const change=(action:HomeChange)=>updatePage(novel.id,action,page.id,true);
   const openTab=useOpenWorkspaceTab(novel);
+  const [mapSession,setMapSession]=useState<{id:string;tool:MapTool}|null>(null);
+  function openMap(id:string,tool:MapTool='inspect'){
+    setMapSession({id,tool});useKachamak.getState().selectCanvasInspectorTab(novel.id,'tools');
+    if(window.matchMedia('(min-width:1024px)').matches)onShowInspector?.();
+  }
   const [picked,setSelection]=useState<string[]>([]);
   const selectedIds=useMemo(()=>expandCardGroups(page.blocks,new Set(picked)),[page.blocks,picked]);
   const selection=useMemo(()=>[...selectedIds],[selectedIds]);
@@ -212,14 +218,14 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
           <button {...editButton} data-card-face aria-label={name} title={page.locked?undefined:'Select or drag · Double-click to edit'} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
       ):['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(block.layout)?<div className="cv-page-card">
         {!page.locked&&<button {...editButton} className="cv-page-grip"><GripVertical size={13}/>Edit {block.layout}</button>}
-        <CanvasItemFace block={block} novel={novel} source={block.target?.kind==='note'?byId.get(block.target.id):undefined} locked={page.locked} open={openTarget} describe={describe} toggle={(index,done)=>change({type:'task',id:block.id,index,done})}/>
+        <CanvasItemFace openMap={openMap} block={block} novel={novel} source={block.target?.kind==='note'?byId.get(block.target.id):undefined} locked={page.locked} open={openTarget} describe={describe} toggle={(index,done)=>change({type:'task',id:block.id,index,done})}/>
       </div>:<div className="relative min-w-0">
         <HomeDocumentBlock block={block} image={display.image} interactive={page.locked} describe={describe} open={openTarget}/>
         {!page.locked?<button {...editButton} data-card-face className="absolute inset-0 w-full cursor-grab rounded focus-visible:outline-2 focus-visible:outline-amber-400 active:cursor-grabbing"/>:
           block.target?.kind==='web'?<a aria-label={name} className="absolute inset-0" href={block.target.url} target="_blank" rel="noopener noreferrer"/>:
           block.target&&<button type="button" aria-label={name} className="absolute inset-0 w-full" onClick={()=>activate(block)}/>}
       </div>}
-      {!page.locked&&display.image&&!row&&<Button size="icon" variant="outline" className="home-arrange pointer-events-none absolute right-2 top-2 z-[1] size-8 bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+      {!page.locked&&display.image&&!row&&block.layout!=='map'&&<Button size="icon" variant="outline" className="home-arrange pointer-events-none absolute right-2 top-2 z-[1] size-8 bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
         aria-label={'Reposition image: '+name} title="Reposition image" onClick={()=>{captureOpener();setArtwork({block,src:display.source||display.image!});}}><Crop/></Button>}
       {!page.locked&&!row&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
         {(emptyImage||classic||!['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(block.layout))&&<Button size="icon" variant="ghost" className="size-7" aria-label={'Edit '+name} title="Edit block" onClick={()=>edit(block)}><Pencil/></Button>}
@@ -266,7 +272,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       : <button type="button" className="absolute inset-0 w-full" aria-label={display.name} onClick={()=>activate(b)}/>}</div>;
   };
   return <>
-    <CanvasBoard key={page.id+':'+(page.viewKey??'')} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} showInspector={onShowInspector} onToolPicked={onToolPicked}
+    <CanvasBoard key={page.id+':'+(page.viewKey??'')} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} mapSession={mapSession} openMap={openMap} closeMap={()=>setMapSession(null)} showInspector={onShowInspector} onToolPicked={onToolPicked}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={placement=>{captureOpener();setEditor(placement);}}/>
     {incoming&&incoming.page===page.id&&incoming.project===novel.id&&<Dialog open onOpenChange={open=>{if(!open)setIncoming(null);}}><DialogContent><DialogHeader><DialogTitle>Replace this canvas layout?</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Open {incoming.name} in {page.title}. Undo restores the previous layout.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setIncoming(null)}>Cancel</Button><Button onClick={installLayout}>Replace layout</Button></div></DialogContent></Dialog>}

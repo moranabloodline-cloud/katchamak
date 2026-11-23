@@ -1,6 +1,6 @@
 'use client';
 import {useMemo,useState} from 'react';
-import {ImagePlus, MapPin, Plus, X} from 'lucide-react';
+import {ImagePlus, Plus, X} from 'lucide-react';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
@@ -53,10 +53,10 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
       {text&&kind!=='heading'&&<label>{kind==='comment'?'Comment':'Text'}<Textarea rows={3} value={draft.text} onChange={e=>patch({text:e.target.value})}/></label>}
       {(kind==='link'||kind==='note')&&<HomeDestinationFields notes={notes} pages={pages} optional={kind==='note'} target={draft.target} onChange={target=>patch({target})}/>}
       {(kind==='image'||kind==='map')&&<div className="grid gap-2">{galleryImage&&<div className="relative justify-self-start">
-        <img src={galleryImage} alt={kind==='map'?'Map preview':'Image preview'} className="block max-h-56 max-w-full rounded object-contain" onPointerDown={kind==='map'?e=>{const r=e.currentTarget.getBoundingClientRect();patch({pin:{x:(e.clientX-r.x)/r.width,y:(e.clientY-r.y)/r.height}});}:undefined}/>
-        {kind==='map'&&draft.pin&&<MapPin className="cv-pin" style={{left:100*draft.pin.x+'%',top:100*draft.pin.y+'%'}}/>}</div>}
-        <GalleryImagePicker novel={novel} onPick={image=>patch({image,pin:undefined})}><Button type="button" variant="outline"><ImagePlus/>{galleryImage?'Replace image':'Choose from Gallery'}</Button></GalleryImagePicker>
-        {kind==='map'&&galleryImage&&<small className="text-muted-foreground">Click the map to place its pin.</small>}</div>}
+        <img src={galleryImage} alt={kind==='map'?'Map preview':'Image preview'} className="block max-h-56 max-w-full rounded object-contain"/>
+        </div>}
+        <GalleryImagePicker novel={novel} onPick={image=>{if(image===draft.image)return;if(kind==='map'&&(draft.atlas||draft.pin)&&!window.confirm('Replace the map image and clear its features and scale?'))return;patch({image,pin:undefined,atlas:undefined});}}><Button type="button" variant="outline"><ImagePlus/>{galleryImage?'Replace image':'Choose from Gallery'}</Button></GalleryImagePicker>
+        {kind==='map'&&galleryImage&&<small className="text-muted-foreground">Open this map on the canvas to place pins, draw and measure.</small>}</div>}
       {kind==='video'&&<label>Video address<Input type="text" required={!draft.videoUrl} placeholder={draft.videoUrl?.startsWith('data:')?'Embedded video · enter a URL to replace':'YouTube, MP4 or WebM URL'} value={draft.videoUrl?.startsWith('data:')?'':draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></label>}
       {kind==='audio'&&<label>Audio file address<Input type="text" required={!draft.audio} value={draft.audio?.startsWith('data:')?'':draft.audio??''} onChange={e=>patch({audio:e.target.value})} placeholder={draft.audio?.startsWith('data:')?'Embedded audio · enter a URL to replace':'https://…/recording.mp3'}/></label>}
       {['color','column','sketch','draw'].includes(kind)&&<label>Color<div className="flex items-center gap-2"><input type="color" value={draft.color??'#deb679'} onChange={e=>patch({color:e.target.value})}/><code>{draft.color}</code></div></label>}

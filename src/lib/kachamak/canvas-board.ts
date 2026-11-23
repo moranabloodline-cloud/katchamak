@@ -1,3 +1,4 @@
+import {validAtlas,type MapAtlas} from './canvas-map';
 import type {HomeBlock, Homepage} from './homepage';
 
 export type Point = {x:number; y:number};
@@ -8,7 +9,7 @@ export type CanvasFields = {
   positionLocked?:boolean; stack?:number; groupId?:string;
   at?: Point; columnId?: string; edge?: {from:string; to:string};
   color?: string; tasks?: {text:string; done:boolean}[]; cells?: string[][];
-  audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
+  atlas?:MapAtlas; audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
 };
 export const isPoint=(p:Point|undefined):p is Point=>!!p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const isInk=(ink:Stroke[]|undefined)=>Array.isArray(ink) && ink.length>0 && ink.every(stroke=>
@@ -25,7 +26,7 @@ export function validCanvasFields(b:HomeBlock) {
     case 'table': return Array.isArray(b.cells) && b.cells.length>0 && b.cells.every(row=>Array.isArray(row) && row.length>0 && row.length===b.cells![0].length && row.every(v=>typeof v==='string'));
     case 'sketch': case 'draw': return isInk(b.ink);
     case 'line': return !!b.edge && typeof b.edge.from==='string' && typeof b.edge.to==='string' && b.edge.from!==b.edge.to;
-    case 'map': return !!b.image && (!b.pin || isPoint(b.pin) && [b.pin.x,b.pin.y].every(v=>v>=0&&v<=1));
+    case 'map': return !!b.image && (b.atlas===undefined||validAtlas(b.atlas)) && (!b.pin || isPoint(b.pin) && [b.pin.x,b.pin.y].every(v=>v>=0&&v<=1));
     case 'color': return !!b.color;
     case 'link': return !!b.target;
     default: return true;
