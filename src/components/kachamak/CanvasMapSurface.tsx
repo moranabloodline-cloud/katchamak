@@ -8,9 +8,9 @@ import type {HomeBlock} from '@/lib/kachamak/homepage';
 export const pinIcons={Dimension:Orbit,Celestial:Star,Planet:Globe2,Continent:Earth,Forest:Trees,Island:TreePalm,Jungle:TreeDeciduous,Lake:Waves,Mountain,Ocean:Ship,Sea:Shell,Subcontinent:MapIcon,Empire:Crown,Kingdom:Castle,Duchy:Flag,County:Landmark,Settlement:House,District:Building2,Merchant:Store,Location:MapPin} satisfies Record<PinKind,typeof Orbit>;
 export function featureLabel(f:MapFeature){return f.kind==='pin'?f.category:f.kind==='path'?'Path':'Region';}
 const coordinates=(points:Point[])=>points.map(p=>(p.x*1000)+','+(p.y*1000)).join(' ');
-type Props={block:HomeBlock;image:string;open?:()=>void;onPoint?:(p:Point)=>void;onFinish?:()=>void;undoPoint?:()=>void;onSelect?:(id:string)=>void;
+type Props={block:HomeBlock;image:string;open?:()=>void;openLabel?:string;onPoint?:(p:Point)=>void;onFinish?:()=>void;undoPoint?:()=>void;onSelect?:(id:string)=>void;
   tool?:MapTool;points?:Point[];selected?:string;onAspect?:(ratio:number)=>void};
-export function CanvasMapSurface({block,image,open,onPoint,onFinish,undoPoint,onSelect,tool='inspect',points=[],selected,onAspect}:Props){
+export function CanvasMapSurface({block,image,open,openLabel='Open map',onPoint,onFinish,undoPoint,onSelect,tool='inspect',points=[],selected,onAspect}:Props){
   const features=atlasOf(block).features;
   const tracing=tool==='path'||tool==='region';
   const [cursor,setCursor]=useState<Point|null>(null);
@@ -46,11 +46,11 @@ export function CanvasMapSurface({block,image,open,onPoint,onFinish,undoPoint,on
     {features.map(f=>{
       if(f.kind!=='pin')return null;
       const Icon=pinIcons[f.category],style={left:(f.point.x*100)+'%',top:(f.point.y*100)+'%'};
-      return open||drawing&&tool!=='measure'?<span key={f.id} className="atlas-pin" style={style} aria-hidden="true"><Icon/></span>:
-        <button key={f.id} type="button" className="atlas-pin" data-active={selected===f.id||undefined} style={style} title={f.name+' · '+f.category}
+      return open||drawing&&tool!=='measure'?<span key={f.id} className="atlas-pin" data-active={selected===f.id||undefined} style={style} aria-hidden="true"><Icon/></span>:
+        <button key={f.id} type="button" className="atlas-pin" data-feature-id={f.id} data-active={selected===f.id||undefined} style={style} title={f.name+' · '+f.category}
           aria-label={f.name+' · '+f.category} onClick={e=>{e.stopPropagation();if(tool==='measure')onPoint?.(f.point);else onSelect?.(f.id);}}><Icon/></button>;
     })}
     {points.map((p,i)=><i key={i} className="atlas-vertex" style={{left:p.x*100+'%',top:p.y*100+'%'}}/>)}
-    {open&&<button type="button" className="atlas-open" aria-label={'Open map: '+(block.title||'Map')} onClick={open}><span><Maximize2 size={13}/>Open map</span></button>}
+    {open&&<button type="button" className="atlas-open" aria-label={openLabel+': '+(block.title||'Map')} onClick={open}><span><Maximize2 size={13}/>{openLabel}</span></button>}
   </div>;
 }

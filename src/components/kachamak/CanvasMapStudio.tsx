@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import './canvas-map.css';
 import {createPortal} from 'react-dom';
-import {ArrowLeft,Check,ChevronRight,MapPin,Minus,Plus,Route,Ruler,Scan,Trash2,Undo2,X} from 'lucide-react';
+import {ArrowLeft,Check,MapPin,Minus,Plus,Route,Ruler,Scan,Trash2,Undo2,X} from 'lucide-react';
 import type {Point} from '@/lib/kachamak/canvas-board';
 import type {HomeBlock} from '@/lib/kachamak/homepage';
 import {atlasOf,imageDistance,mapDistance,PIN_KINDS,type MapAtlas,type MapFeature,type MapTool,type PinKind} from '@/lib/kachamak/canvas-map';
@@ -13,16 +13,7 @@ const commands=[['pin','Add pin',MapPin],['path','Draw path',Route],['region','D
 function ToolButtons({tool,choose}:{tool?:MapTool;choose:(tool:MapTool)=>void}){
   return <div className="atlas-tool-grid">{commands.map(([id,label,Icon])=><button type="button" key={id} aria-pressed={tool===id} onClick={()=>choose(id)}><Icon size={16}/>{label}</button>)}</div>;
 }
-export function CanvasMapLauncher({maps,focused,open}:{maps:HomeBlock[];focused?:string;open:(id:string,tool:MapTool)=>void}){
-  const [choice,setChoice]=useState('');
-  const id=maps.find(b=>b.id===focused)?.id??maps.find(b=>b.id===choice)?.id??maps[0]?.id;
-  if(!id)return null;
-  return <section className="atlas-panel atlas-launch" aria-label="Map tools"><h3>Map tools</h3>
-    {maps.length>1?<label>Map<select aria-label="Choose map" value={id} onChange={e=>{setChoice(e.target.value);open(e.target.value,'inspect');}}>{maps.map(b=><option key={b.id} value={b.id}>{b.title||'Untitled map'}</option>)}</select></label>:
-      <button className="atlas-launch-name" type="button" onClick={()=>open(id,'inspect')}>{maps[0].title||'Open map'}<ChevronRight size={14}/></button>}
-    <ToolButtons choose={tool=>open(id,tool)}/>
-  </section>;
-}
+
 
 function FeatureDetails({feature,update,remove,move}:{feature:MapFeature;move:()=>void;update:(feature:MapFeature)=>void;remove:()=>void}){
   const [name,setName]=useState(feature.name),[category,setCategory]=useState<PinKind>(feature.kind==='pin'?feature.category:'Location');
@@ -36,12 +27,12 @@ function FeatureDetails({feature,update,remove,move}:{feature:MapFeature;move:()
 }
 
 type Props={block:HomeBlock;image:string;initial:MapTool;host?:HTMLElement|null;close:()=>void;
-  backLabel?:string;onPick?:()=>void;showTools?:()=>void;persist:(next:MapAtlas)=>boolean};
-export function CanvasMapStudio({block,image,initial,host,close,backLabel='Back to canvas',onPick,showTools,persist}:Props){
+  initialPinId?:string;backLabel?:string;onPick?:()=>void;showTools?:()=>void;persist:(next:MapAtlas)=>boolean};
+export function CanvasMapStudio({block,image,initial,host,close,initialPinId,backLabel='Back to canvas',onPick,showTools,persist}:Props){
   const atlas=atlasOf(block);
   const [movingPin,setMovingPin]=useState<string|null>(null);
   const [tool,setTool]=useState<MapTool>(initial),[points,setPoints]=useState<Point[]>([]),[name,setName]=useState('');
-  const [category,setCategory]=useState<PinKind>('Location'),[color,setColor]=useState('#cc963e'),[selected,setSelected]=useState('');
+  const [category,setCategory]=useState<PinKind>('Location'),[color,setColor]=useState('#cc963e'),[selected,setSelected]=useState(initialPinId??'');
   const [unit,setUnit]=useState<'km'|'mi'>('km'),[known,setKnown]=useState(''),[aspect,setAspect]=useState(0),[error,setError]=useState('');
   const [zoom,setZoom]=useState(1),[localTools,setLocalTools]=useState(false);
   const scroll=useRef<HTMLDivElement>(null),lastFocus=useRef<Element|null>(null),back=useRef<HTMLButtonElement>(null);
@@ -53,6 +44,12 @@ export function CanvasMapStudio({block,image,initial,host,close,backLabel='Back 
     el.addEventListener('wheel',wheel,{passive:false});
     return ()=>{reset();el.removeEventListener('wheel',wheel);if(lastFocus.current instanceof HTMLElement&&lastFocus.current.isConnected)lastFocus.current.focus({preventScroll:true});};
   },[]);
+  useEffect(()=>{
+    const area=scroll.current;
+    if(!initialPinId||!aspect||!area)return;
+    const pin=Array.from(area.querySelectorAll<HTMLElement>('[data-feature-id]')).find(el=>el.dataset.featureId===initialPinId);
+    if(pin){const a=area.getBoundingClientRect(),p=pin.getBoundingClientRect();area.scrollTop+=p.top-a.top-area.clientHeight/2+p.height/2;area.scrollLeft+=p.left-a.left-area.clientWidth/2+p.width/2;}
+  },[initialPinId,aspect]);
   const active=atlas.features.find(f=>f.id===selected);
   const km=mapDistance(points,atlas,aspect),scaled=!!(atlas.geo||atlas.kmPerWidth);
   function choose(next:MapTool){
@@ -114,7 +111,7 @@ export function CanvasMapStudio({block,image,initial,host,close,backLabel='Back 
       <button type="button" aria-label="Zoom out of map" disabled={zoom<=.5} onClick={()=>setZoom(Math.max(.5,zoom/1.25))}><Minus size={15}/></button>
       <button type="button" title="Fit map width" onClick={()=>setZoom(1)}>{Math.round(zoom*100)}%</button>
       <button type="button" aria-label="Zoom into map" disabled={zoom>=4} onClick={()=>setZoom(Math.min(4,zoom*1.25))}><Plus size={15}/></button>
-      <button type="button" className={host?'lg:hidden':''} onClick={()=>{if(!host)setLocalTools(v=>!v);else showTools?.();}}>Tools</button>
+      <button type="button" className={host?'lg:hidden':''} onClick={()=>{if(showTools)showTools();else setLocalTools(v=>!v);}}>Tools</button>
     </header>
     {!host&&localTools&&<div className="atlas-local-tools">{controls}</div>}
     {host&&createPortal(controls,host)}

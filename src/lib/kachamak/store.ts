@@ -27,6 +27,8 @@ import { uid, findNode, findNodeInNovel, canPlaceNote } from "./utils";
 import { toast } from 'sonner';
 import { cleanAliases, contentText, rebaseChoices, flattenNotes, validLinkChoices } from "./note-links";
 import {DETAIL_BLOCKS,type DetailBlockKey,validHiddenDetailBlocks,validDetailBlockOrder} from './detail-blocks';
+import {migrateProjectMaps} from './project-maps';
+import {validAtlas} from './canvas-map';
 import {validNoteMap} from './note-map';
 import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
 import {type CanvasInspectorTab, changeInspectorTab, clampInspectorWidth, inspectorOpen, withInspectorLayout} from './inspector-tabs';
@@ -317,7 +319,7 @@ function touch(novel: Novel): Novel {
 
 function updateInspectorTab(s: KachamakState, projectId: string, tab: InspectorTabKey, action: 'hide' | 'show' | 'select') {
   const workspace = s.activeTab;
-  if (s.activeNovelId !== projectId || s.view === 'homepage' || workspace === 'gallery' || workspace === 'finance' || workspace === 'kanban' || workspace === 'publish') return s;
+  if (s.activeNovelId !== projectId || s.view === 'homepage' || workspace === 'gallery' || workspace === 'finance' || workspace === 'kanban' || workspace === 'publish' || workspace === 'maps') return s;
   const book = s.novels.find(n => n.id === projectId);
   if (!book) return s;
   const settings = changeInspectorTab(book, workspace, tab, action);
@@ -772,7 +774,7 @@ export const useKachamak = create<KachamakState>()(
         if(!result)return false;
         const page={...result.page,viewKey:crypto.randomUUID()};
         const updated=pageId===HOME_ROOT?{...book,homepage:page}:{...book,homePages:book.homePages!.map(p=>p.id===pageId?{...p,...page}:p)};
-        set({novels:state.novels.map(n=>n===book?touch({...updated,gallery:result.gallery}):n)});
+        set({novels:state.novels.map(n=>n===book?touch(migrateProjectMaps({...updated,gallery:result.gallery})):n)});
         return true;
       },
       changeHomepage: (projectId, action, pageId = HOME_ROOT, unified=false) => {
@@ -783,7 +785,8 @@ export const useKachamak = create<KachamakState>()(
         if (!next || next.blocks.some(block=>!availableProjectImage(novel.gallery,block.image))) return false;
         const updated = pageId === HOME_ROOT ? {...novel, homepage: next} :
           {...novel, homePages: novel.homePages!.map(p => p.id === pageId ? {...p, ...next} : p)};
-        set({novels: state.novels.map(n => n === novel ? touch(updated) : n)});
+        const book=next.blocks.some(block=>block.layout==='map'&&!block.mapId&&block.image)?migrateProjectMaps(updated):updated;
+        set({novels: state.novels.map(n => n === novel ? touch(book) : n)});
         return true;
       },
 
@@ -808,7 +811,7 @@ export const useKachamak = create<KachamakState>()(
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return null;
         const roots = novel.sections[section];
-        if(section==="publish" && parentId && findNode(roots,parentId)?.kind!=="folder") return null;
+        if((section==="publish" || section==='maps') && parentId && findNode(roots,parentId)?.kind!=="folder") return null;
         if(section==="finance" && parentId && findNode(roots,parentId)?.transaction) return null;
         let created: NoteNode | null = null;
 
@@ -825,6 +828,7 @@ export const useKachamak = create<KachamakState>()(
           if (n.kind === 'folder') n.icon = 'folder';
           else n.bookStyle = structuredClone(preset ?? baseStyle);
         }
+        if (section === 'maps') n.icon=n.kind==='folder'?'folder':'map';
         if (section === 'kanban') {
           n.kanban = newKanbanBoard();
           n.icon = 'kanban-board';
@@ -867,6 +871,7 @@ export const useKachamak = create<KachamakState>()(
         if (patch.bookStyle && (section!=="publish" || target.kind==="folder" || !validBookStyle(patch.bookStyle) || !availableProjectImage(novel.gallery,patch.bookStyle.chapterImage))) return;
         if (patch.kanban !== undefined && (!validKanban(patch.kanban) || patch.kanban.columns.some(col => col.cards.some(card => !availableProjectImage(novel.gallery,card.cover))))) return;
         if(patch.transaction!==undefined && !validTransaction(patch.transaction))return;
+        if(patch.mapAtlas!==undefined&&(section!=='maps'||!validAtlas(patch.mapAtlas)))return;
         if(!validNoteMap(patch.noteMap) || (patch.noteMap?.kind==='gallery' && !availableProjectImage(novel.gallery,patch.noteMap.image)))return;
         if(!validFamilyMembers(patch.familyMembers))return;
         if(patch.event!==undefined&&!validEvent(patch.event))return;
@@ -951,7 +956,7 @@ export const useKachamak = create<KachamakState>()(
       /* Move — the note becomes the last child of the destination (or a section root) */
       moveTreeNotes: (bookId,section,sources,parentId,position) => set(state=>{
         const novel=state.novels.find(n=>n.id===bookId);
-        if (novel && section==='publish' && parentId && findNode(novel.sections.publish,parentId)?.kind!=='folder') return state;
+        if (novel && (section==='publish'||section==='maps') && parentId && findNode(novel.sections[section],parentId)?.kind!=='folder') return state;
         if (!novel || state.activeNovelId!==bookId) throw new Error('Choose notes from the open book.');
         if(section==="finance" && parentId && findNode(novel.sections.finance,parentId)?.transaction) throw new Error("Choose a financial folder as the destination.");
         const nodes=moveNoteBranches(novel.sections[section],sources,parentId,position);
@@ -961,6 +966,7 @@ export const useKachamak = create<KachamakState>()(
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
         if ((fromSection === 'publish') !== (destSection === 'publish')) return;
+        if ((fromSection === 'maps') !== (destSection === 'maps')) return;
         if ((fromSection === 'kanban') !== (destSection === 'kanban')) return;
         const fromRoots = novel.sections[fromSection];
         const moving = findNode(fromRoots, id);
@@ -974,7 +980,7 @@ export const useKachamak = create<KachamakState>()(
           return;
         const destination = novel.sections[destSection];
         if (destParentId && !findNode(destination, destParentId)) return;
-        if (destSection==="publish" && destParentId && findNode(destination,destParentId)?.kind!=="folder") return;
+        if ((destSection==="publish"||destSection==="maps") && destParentId && findNode(destination,destParentId)?.kind!=="folder") return;
         if (destSection==="finance" && destParentId && findNode(destination,destParentId)?.transaction) return;
         if (!canPlaceNote(destination, destParentId, moving)) {
           toast.error('This branch would be nested too deeply to save. Choose a higher-level parent.');
@@ -1134,7 +1140,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 71,
+      version: 72,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1239,6 +1245,7 @@ export const useKachamak = create<KachamakState>()(
         }
         // Version 6 only adds optional Trash metadata. Do not rerun older
         // migrations on an already migrated version 5 library.
+        if(version<72 && s.novels) s.novels=s.novels.map(book=>migrateProjectMaps({...book,sections:{...book.sections,maps:book.sections?.maps??[]}}));
         if (version >= 5) return s;
         if ((s as { view?: string }).view === "grid") s.view = "corkboard";
         const OLD_DEFAULT_STATUSES = [

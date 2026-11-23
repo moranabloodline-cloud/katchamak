@@ -1,5 +1,6 @@
 'use client';
 import {useMemo} from 'react';
+import {atlasBlock,findProjectMap} from '@/lib/kachamak/project-maps';
 import {CanvasMapSurface} from './CanvasMapSurface';
 import {ExternalLink,SquareCheck,ArrowUpRight} from 'lucide-react';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
@@ -12,8 +13,9 @@ import {InkPaths} from './CanvasInk';
 
 export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle,openMap}:{block:HomeBlock;novel:Novel;source?:NoteNode;locked:boolean;
   openMap:(id:string)=>void;open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;toggle:(index:number,done:boolean)=>void}){
-  const title=b.title || (b.target?describe(b.target):'');
-  const image=b.imageCutout||projectImageSrc(novel.gallery,b.image || (b.layout==='note'?source?.image:undefined));
+  const map=b.layout==='map'?findProjectMap(novel,b.mapId):undefined;
+  const title=b.title || map?.title || (b.target?describe(b.target):'');
+  const image=b.imageCutout||projectImageSrc(novel.gallery,map?.image || b.image || (b.layout==='note'?source?.image:undefined));
   const video=b.videoUrl&&canvasVideo(b.videoUrl);
   const destination=b.target && (b.target.kind==='web'?<a className="cv-link" href={b.target.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>{b.title||describe(b.target)}</a>:
     <button type="button" className="cv-link" onClick={()=>b.target&&open(b.target)}><ArrowUpRight size={14}/>{describe(b.target)}</button>);
@@ -21,7 +23,7 @@ export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle
   const body=b.text || excerpt;
   return <div className={'cv-face cv-face-'+b.layout}>
     {b.layout==='color'&&<div className="cv-swatch" style={{backgroundColor:b.color}}/>}
-    {image&&b.layout==='map'&&<CanvasMapSurface block={b} image={image} open={()=>openMap(b.id)}/>}
+    {b.layout==='map'&&(map&&image?<CanvasMapSurface block={atlasBlock(map)} image={image} open={()=>openMap(map.id)} openLabel="Open in Maps"/>:<p className="text-xs text-muted-foreground">Map unavailable</p>)}
     {image&&b.layout!=='map'&&<div className="cv-picture">{b.imageFrame?<HomeArtwork src={image} frame={b.imageFrame} alt={b.title||b.layout}/>:<img src={image} alt={b.title||b.layout} draggable={false}/>}</div>}
     {(b.layout==='sketch'||b.layout==='draw')&&<svg viewBox="0 0 320 180" preserveAspectRatio="none" aria-label={b.title||'Drawing'} style={b.extent?{aspectRatio:b.extent.w+'/'+b.extent.h}:undefined}><InkPaths strokes={b.ink??[]} color={b.color??'#d4b487'}/></svg>}
     {title&&b.layout!=='link'&&<h3>{title}</h3>}

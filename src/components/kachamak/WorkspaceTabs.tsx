@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { BookOpenCheck, SquareKanban, Wallet, Images, Workflow, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
+import { Map as MapIcon, BookOpenCheck, SquareKanban, Wallet, Images, Workflow, Plus, FolderOpen, BookOpen, LibraryBig, CalendarRange, Network, PanelsTopLeft, NotebookPen, Telescope, MessageSquareQuote } from 'lucide-react';
 import { useKachamak } from '@/lib/kachamak/store';
 import { type Novel, type TabKey } from '@/lib/kachamak/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -9,12 +9,14 @@ import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertD
 import {DndContext,closestCenter,PointerSensor,KeyboardSensor,useSensors,useSensor,type Modifier} from '@dnd-kit/core';
 import {SortableContext,useSortable,horizontalListSortingStrategy,sortableKeyboardCoordinates} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
+import {clearMapVisit} from '@/lib/kachamak/map-navigation';
 import {findNode} from '@/lib/kachamak/utils';
 import {workspaceTabs,visibleTabLocation} from '@/lib/kachamak/workspace-tabs';
 import {cloneableWorkspaceTabs} from '@/lib/kachamak/clone-workspace-tab';
 import {CloneWorkspaceTabDialog} from './CloneWorkspaceTabDialog';
 
 const tabStyles = {
+  maps: { icon: MapIcon, color: "#82bba7" },
   publish: { icon: BookOpenCheck, color: "#d6b58e" },
   kanban: { icon: SquareKanban, color: '#83c4bb' },
   finance: { icon: Wallet, color: "#a3c69a" },
@@ -51,14 +53,15 @@ function SortableWorkspaceTab({tab,active,onOpen,onHide,onDelete,onClone}:{tab:{
 export function useOpenWorkspaceTab(novel: Novel | undefined) {
   const setTab=useKachamak(s=>s.setTab);
   const view=useKachamak(s=>s.view), setView=useKachamak(s=>s.setView);
-  const inGallery=useKachamak(s=>s.activeTab==='gallery'||s.activeTab==='finance'||s.activeTab==='kanban'||s.activeTab==='publish');
+  const inGallery=useKachamak(s=>s.activeTab==='gallery'||s.activeTab==='finance'||s.activeTab==='kanban'||s.activeTab==='publish'||s.activeTab==='maps');
   const specialView=inGallery||view==='timeline'||view==='family'||view==='homepage';
   const lastNoteView=useRef(specialView?'write':view);
   useEffect(()=>{if(!specialView)lastNoteView.current=view;},[view,specialView]);
   return (key:TabKey)=>{
     if(!novel)return;
-    if (key === 'kanban') {
-      const state = useKachamak.getState(), roots = novel.sections.kanban ?? [];
+    if (key === 'kanban' || key === 'maps') {
+      if(key==='maps')clearMapVisit(novel.id);
+      const state = useKachamak.getState(), roots = novel.sections[key] ?? [];
       const current = state.selectedNodeId ? findNode(roots, state.selectedNodeId) : null;
       setTab(key); setView('write'); state.select(current?.id ?? roots.find(n => !n.hidden)?.id ?? null);
       return;

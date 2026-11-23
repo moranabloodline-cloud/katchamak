@@ -8,6 +8,7 @@ import {FinanceWorkspace, FinanceEditor} from "./Finance";
 import { NoteTree } from "./NoteTree";
 import { DocumentOutline } from "./DocumentOutline";
 import { Corkboard } from "./Corkboard";
+import {MapsWorkspace} from './MapsWorkspace';
 import {KanbanWorkspace} from './KanbanWorkspace';
 import { EditorToolbar, WriteArea } from "./WriteArea";
 import {GalleryCanvas, GalleryTree, type GalleryDrag} from './Gallery';
@@ -316,9 +317,10 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const select = useKachamak((s) => s.select);
   const storedView = useKachamak((s) => s.view);
   const finance=section==='finance' && !trash && !gallery && storedView!=='homepage';
+  const maps = section==='maps' && !trash && !gallery && storedView!=='homepage';
   const kanban = section === 'kanban' && !trash && !gallery && storedView !== 'homepage';
   const publish = section==='publish' && !trash && !gallery && storedView!=='homepage';
-  const view = publish ? 'publish' : kanban ? 'kanban' : finance ? (storedView==='list'?'finance-list':'finance-dashboard') : trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
+  const view = maps ? 'maps' : publish ? 'publish' : kanban ? 'kanban' : finance ? (storedView==='list'?'finance-list':'finance-dashboard') : trash ? 'trash' : gallery ? 'gallery' : storedView==='family' && section!=='family' ? 'write' : storedView;
   const selectedNodeId = useKachamak((s) => {
     if (section === "binder" && view === "split") {
       return s.activePane === "a" ? s.paneAId : s.paneBId;
@@ -378,7 +380,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
       return next;
     });
   };
-  const selected = wideCanvas || view==='trash' || (section!=='publish' && hit?.section==='publish') || (section!=='finance' && hit?.section==='finance') || (section!=='kanban' && hit?.section==='kanban') ? null : ((view==="timeline"&&section==="timeline")||view==='family'||finance||kanban||publish)&&hit?.section!==section?null:hit?.node ?? null;
+  const selected = wideCanvas || view==='trash' || (section!=='maps' && hit?.section==='maps') || (section!=='publish' && hit?.section==='publish') || (section!=='finance' && hit?.section==='finance') || (section!=='kanban' && hit?.section==='kanban') ? null : ((view==="timeline"&&section==="timeline")||view==='family'||finance||kanban||publish||maps)&&hit?.section!==section?null:hit?.node ?? null;
   const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
@@ -394,7 +396,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const [mobilePages,setMobilePages]=useState(false);
   useEffect(()=>{setClosedFolders(new Set());setCollapsedPages(new Set());setMobilePages(false);},[activeNovelId]);
   useEffect(()=>{if(view!=='homepage')setMobilePages(false);},[view]);
-  useEffect(()=>{if (kanban || publish) setMobilePages(false);},[kanban,publish,selectedNodeId]);
+  useEffect(()=>{if (kanban || publish || maps) setMobilePages(false);},[kanban,publish,maps,selectedNodeId]);
 
   return (
     <div className="relative flex min-h-0 flex-1">
@@ -407,7 +409,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             style={{ width: leftPanelWidth }}
             className={'hidden shrink-0 flex-col bg-black/20 md:flex '+(mobilePages?'max-md:bottom-0 max-md:max-h-[80dvh] max-md:top-auto max-md:border max-md:border-border max-md:shadow-xl':'')}
           >
-            {(kanban || publish) && mobilePages && <button type="button" className="self-end px-3 py-2 text-xs md:hidden" onClick={()=>setMobilePages(false)}>Close tree</button>}
+            {(kanban || publish || maps) && mobilePages && <button type="button" className="self-end px-3 py-2 text-xs md:hidden" onClick={()=>setMobilePages(false)}>Close tree</button>}
             <CtrlZoom panel="left" targetRef={leftPanelRef} />
             <div className="min-h-0 flex-1">
               {view==='gallery' && novel ? <GalleryTree key={novel.id} novel={novel} drag={galleryDrag} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder} collapsed={closedFolders} setCollapsed={setClosedFolders}/> : view==='trash' && novel ? <TrashSections novel={novel}/> : view==='homepage' && novel ? <HomepageTree key={novel.id} novel={novel} selected={homeId} collapsed={collapsedPages} setCollapsed={setCollapsedPages} onDismiss={()=>setMobilePages(false)}/> :
@@ -463,7 +465,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} />
         {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} toolsHost={canvasToolsHost}
-          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : publish && novel ? <PublishWorkspace key={novel.id} novel={novel} selected={selected} rootId={rootId} zoom={canvasZoom} toolsHost={canvasToolsHost} inspector={publishInspector} onInspect={setPublishInspector} onShowTree={()=>setMobilePages(true)} onShowTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}}/> : kanban && novel ? <KanbanWorkspace key={novel.id+':'+(selected?.id??rootId??'')} novel={novel} rootId={rootId} selected={selected} zoom={canvasZoom} onShowTree={()=>setMobilePages(true)} /> : <>
+          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : maps && novel ? <MapsWorkspace novel={novel} selected={selected} host={canvasToolsHost} showTree={()=>setMobilePages(true)} showTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)}/> : publish && novel ? <PublishWorkspace key={novel.id} novel={novel} selected={selected} rootId={rootId} zoom={canvasZoom} toolsHost={canvasToolsHost} inspector={publishInspector} onInspect={setPublishInspector} onShowTree={()=>setMobilePages(true)} onShowTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}}/> : kanban && novel ? <KanbanWorkspace key={novel.id+':'+(selected?.id??rootId??'')} novel={novel} rootId={rootId} selected={selected} zoom={canvasZoom} onShowTree={()=>setMobilePages(true)} /> : <>
         <div style={{zoom:view==="split"?undefined:canvasZoom}} className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {finance && novel && <FinanceWorkspace key={treeScopeKey} novel={novel} rootId={rootId} selected={selected} list={view==='finance-list'}/>}
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
@@ -518,16 +520,16 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
             data-workspace-chrome
             ref={rightPanelRef}
             style={{width: `var(--inspector-drag-width, ${rightPanelWidth}px)`}}
-            className={(homePage || publish) && compactCanvas || view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
+            className={(homePage || publish || maps) && compactCanvas || view==='family' && compactFamily && familySettings ? "absolute right-0 top-10 bottom-0 z-30 flex max-w-[95vw] flex-col border-l border-border bg-background lg:static lg:z-auto lg:shrink-0" : "col-start-3 row-start-1 hidden min-w-0 shrink-0 flex-col bg-black/20 lg:flex"}
           >
             <CtrlZoom panel="right" targetRef={rightPanelRef} />
             {novel && <div className="min-h-0 flex-1">
-              <RightPanel publishTools={publish?{host:setCanvasToolsHost,tab:publishInspector,select:setPublishInspector}:undefined} canvas={homePage?{page:homePage,toolsRef:setCanvasToolsHost}:undefined} key={homePage?'canvas:'+novel.id+':'+homeId:finance?'finance:'+novel.id+':'+(selected?.id??''):novel.id}
+              <RightPanel mapTools={maps?setCanvasToolsHost:undefined} publishTools={publish?{host:setCanvasToolsHost,tab:publishInspector,select:setPublishInspector}:undefined} canvas={homePage?{page:homePage,toolsRef:setCanvasToolsHost}:undefined} key={homePage?'canvas:'+novel.id+':'+homeId:finance?'finance:'+novel.id+':'+(selected?.id??''):novel.id}
                 novel={novel} node={selected} section={selectedSection} familySettings={familySettings} infoOnly={finance}
                 infoEditor={finance && selected?.transaction ? <FinanceEditor key={selected.id} node={selected} currency={novel.financeCurrency??'EUR'}/> : undefined}
                 emptyInfo={trash ? <TrashInfo/> : finance ? <p>Select a transaction to edit its details.</p> : undefined}
                 onHide={()=>{
-                  if((homePage || publish) && !window.matchMedia('(min-width:64rem)').matches){setCompactCanvas(false);return;}
+                  if((homePage || publish || maps) && !window.matchMedia('(min-width:64rem)').matches){setCompactCanvas(false);return;}
                   setCompactFamily(false);
                   if(!compactFamily || window.matchMedia('(min-width:64rem)').matches)toggleRightPanel();
                 }}
@@ -539,7 +541,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
                   : undefined}
               />
             </div>}
-            {!trash && !homePage && !publish && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
+            {!trash && !homePage && !publish && !maps && (selected ? <NoteMetaBar section={selectedSection} node={selected}/> : <div className="h-10 shrink-0 border-t border-amber-500/25"/>)}
           </aside>
         </>
       ) : (

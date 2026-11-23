@@ -9,7 +9,7 @@ export type CanvasFields = {
   positionLocked?:boolean; stack?:number; groupId?:string;
   at?: Point; columnId?: string; edge?: {from:string; to:string};
   color?: string; tasks?: {text:string; done:boolean}[]; cells?: string[][];
-  atlas?:MapAtlas; audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
+  mapId?:string; atlas?:MapAtlas; audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
 };
 export const isPoint=(p:Point|undefined):p is Point=>!!p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const isInk=(ink:Stroke[]|undefined)=>Array.isArray(ink) && ink.length>0 && ink.every(stroke=>
@@ -26,7 +26,8 @@ export function validCanvasFields(b:HomeBlock) {
     case 'table': return Array.isArray(b.cells) && b.cells.length>0 && b.cells.every(row=>Array.isArray(row) && row.length>0 && row.length===b.cells![0].length && row.every(v=>typeof v==='string'));
     case 'sketch': case 'draw': return isInk(b.ink);
     case 'line': return !!b.edge && typeof b.edge.from==='string' && typeof b.edge.to==='string' && b.edge.from!==b.edge.to;
-    case 'map': return !!b.image && (b.atlas===undefined||validAtlas(b.atlas)) && (!b.pin || isPoint(b.pin) && [b.pin.x,b.pin.y].every(v=>v>=0&&v<=1));
+    case 'map': if(b.mapId!==undefined)return typeof b.mapId==='string'&&!!b.mapId&&!b.image&&!b.atlas&&!b.pin;
+      return !!b.image && (b.atlas===undefined||validAtlas(b.atlas)) && (!b.pin || isPoint(b.pin) && [b.pin.x,b.pin.y].every(v=>v>=0&&v<=1));
     case 'color': return !!b.color;
     case 'link': return !!b.target;
     default: return true;

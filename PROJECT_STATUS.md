@@ -1,3 +1,5 @@
+> **2026-11-23 — Maps.** Svaka knjiga ima opcioni tab sa stablom mapa, folderima i alatima za pinove, putanje, oblasti i merenje. Canvas i Codex prikazuju istu projektnu mapu. Codex može da veže belešku za pojedinačni pin.
+
 > **2026-11-23 — Mape u Codex beleškama.** U panelu Details može da se doda blok Map. Izbor mape sa Canvasa deli anotacije sa izvornom mapom. Slika iz Galerije može da posluži kao zasebna mapa beleške.
 
 > **2026-11-23 — Anotacije na zaključanom rasporedu.** Add pin, Draw path i Draw region rade i kada je raspored kartica zaključan. Dvoklik i Enter završavaju crtanje.
@@ -713,6 +715,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- 2026-11-23 — Prethodne Canvas i Codex mape prelaze u biblioteku Maps. Sačuvani su položaji kartica, anotacije i razmera. Open in Maps otvara editor i vodi nazad na izvornu karticu ili belešku.
 
 - 2026-11-23 — Codex Details pamti izabranu mapu po belešci. Skrivanje i ponovno dodavanje bloka čuvaju izbor.
 

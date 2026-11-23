@@ -12,6 +12,8 @@ import type {Novel} from '@/lib/kachamak/types';
 import type {CanvasTool} from '@/lib/kachamak/canvas-board';
 import {GalleryImagePicker} from './GalleryImagePicker';
 import {HomeDestinationFields} from './HomeDestinationFields';
+import {ProjectMapSelect} from './ProjectMapSelect';
+import {findProjectMap} from '@/lib/kachamak/project-maps';
 import {CanvasInk} from './CanvasInk';
 import {toolsByKind} from './CanvasTools';
 
@@ -34,7 +36,8 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
   function save(){
     if(kind==='video'&&!canvasVideo(draft.videoUrl))return setError('Enter a YouTube, MP4 or WebM address.');
     if(kind==='audio'&&!canvasAudio(draft.audio))return setError('Enter a direct audio file address.');
-    if((kind==='image'||kind==='map')&&!draft.image)return setError('Choose an image from this book’s Gallery.');
+    if(kind==='map'&&!findProjectMap(novel,draft.mapId)?.image)return setError('Choose a map from this book.');
+    if(kind==='image'&&!draft.image)return setError('Choose an image from this book’s Gallery.');
     if((kind==='draw'||kind==='sketch')&&!draft.ink?.length)return setError('Draw at least one stroke.');
     if(draft.target){const t=draft.target;
       if(t.kind==='note'&&!notes.some(n=>n.node.id===t.id)||t.kind==='page'&&!pages.some(p=>p.id===t.id)||t.kind==='web'&&!isWebsite(t.url))return setError('Choose a valid destination.');
@@ -47,16 +50,17 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
     if(onSave(clean))onClose();else setError('This item changed. Reopen it to edit the latest version.');
   }
   return <Dialog open onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="cv-dialog max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-    <DialogHeader><DialogTitle>{creating?'Add':'Edit'} {name}</DialogTitle></DialogHeader>
+    <DialogHeader><DialogTitle>{kind==='map'?(creating?'Insert map':'Change map'):(creating?'Add ':'Edit ')+name}</DialogTitle></DialogHeader>
     <form onSubmit={e=>{e.preventDefault();save();}} className="grid gap-4">
       <label>Title<Input autoFocus value={draft.title} onChange={e=>patch({title:e.target.value})} placeholder={kind==='column'?'Chapter name':undefined}/></label>
       {text&&kind!=='heading'&&<label>{kind==='comment'?'Comment':'Text'}<Textarea rows={3} value={draft.text} onChange={e=>patch({text:e.target.value})}/></label>}
       {(kind==='link'||kind==='note')&&<HomeDestinationFields notes={notes} pages={pages} optional={kind==='note'} target={draft.target} onChange={target=>patch({target})}/>}
-      {(kind==='image'||kind==='map')&&<div className="grid gap-2">{galleryImage&&<div className="relative justify-self-start">
-        <img src={galleryImage} alt={kind==='map'?'Map preview':'Image preview'} className="block max-h-56 max-w-full rounded object-contain"/>
+      {kind==='map'&&<ProjectMapSelect book={novel} value={draft.mapId} onChange={mapId=>patch({mapId})}/>}
+      {kind==='image'&&<div className="grid gap-2">{galleryImage&&<div className="relative justify-self-start">
+        <img src={galleryImage} alt="Image preview" className="block max-h-56 max-w-full rounded object-contain"/>
         </div>}
-        <GalleryImagePicker novel={novel} onPick={image=>{if(image===draft.image)return;if(kind==='map'&&(draft.atlas||draft.pin)&&!window.confirm('Replace the map image and clear its features and scale?'))return;patch({image,pin:undefined,atlas:undefined});}}><Button type="button" variant="outline"><ImagePlus/>{galleryImage?'Replace image':'Choose from Gallery'}</Button></GalleryImagePicker>
-        {kind==='map'&&galleryImage&&<small className="text-muted-foreground">Open this map on the canvas to place pins, draw and measure.</small>}</div>}
+        <GalleryImagePicker novel={novel} onPick={image=>patch({image})}><Button type="button" variant="outline"><ImagePlus/>{galleryImage?'Replace image':'Choose from Gallery'}</Button></GalleryImagePicker>
+        </div>}
       {kind==='video'&&<label>Video address<Input type="text" required={!draft.videoUrl} placeholder={draft.videoUrl?.startsWith('data:')?'Embedded video · enter a URL to replace':'YouTube, MP4 or WebM URL'} value={draft.videoUrl?.startsWith('data:')?'':draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></label>}
       {kind==='audio'&&<label>Audio file address<Input type="text" required={!draft.audio} value={draft.audio?.startsWith('data:')?'':draft.audio??''} onChange={e=>patch({audio:e.target.value})} placeholder={draft.audio?.startsWith('data:')?'Embedded audio · enter a URL to replace':'https://…/recording.mp3'}/></label>}
       {['color','column','sketch','draw'].includes(kind)&&<label>Color<div className="flex items-center gap-2"><input type="color" value={draft.color??'#deb679'} onChange={e=>patch({color:e.target.value})}/><code>{draft.color}</code></div></label>}

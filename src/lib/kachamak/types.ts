@@ -13,7 +13,8 @@ export type SectionKey =
   | "family"
   | "finance"
   | "kanban"
-  | "publish";
+  | "publish"
+  | "maps";
 
 export const SECTION_KEYS: SectionKey[] = [
   "binder",
@@ -27,6 +28,7 @@ export const SECTION_KEYS: SectionKey[] = [
   "finance",
   "kanban",
   "publish",
+  "maps",
 ];
 
 export type TabKey = SectionKey | "gallery" | "trash" | `note:${string}`;
@@ -56,6 +58,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "timeline", label: "Timeline" },
   { key: "family", label: "Relationships" },
   { key: "kanban", label: "Kanban" },
+  { key: "maps", label: "Maps" },
   { key: "publish", label: "Publish" },
   { key: "finance", label: "Finance" },
   { key: "trash", label: "Trash" },
@@ -89,6 +92,7 @@ export interface NoteNode {
   label: string; // free text, "" = no label
   color?: string; // document colour (the dot in the right panel), "" = none
   image?: string; // optional portable raster portrait in Details
+  mapAtlas?: import("./canvas-map").MapAtlas;
   noteMap?: import('./note-map').NoteMap;
   documentTarget?: DocumentTarget;
   hiddenDetailBlocks?: DetailBlockKey[]; // presentation only; hiding never deletes data
@@ -126,6 +130,7 @@ export interface TrashItem {
 }
 
 export interface Novel {
+  mapsEnabled?: boolean;
   publishEnabled?: boolean;
   publishStylesInstalled?: boolean;
   publishStyleCatalogVersion?: number;

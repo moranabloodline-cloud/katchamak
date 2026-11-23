@@ -207,7 +207,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
   };
 
   const renderDest = (n: NoteNode, d: number, sec: SectionKey): React.ReactNode => {
-    const invalid = (sec === section && subtreeIds.has(n.id)) || (sec==="finance" && !!n.transaction) || (sec==="publish" && n.kind!=="folder");
+    const invalid = (sec === section && subtreeIds.has(n.id)) || (sec==="finance" && !!n.transaction) || ((sec==="publish"||sec==="maps") && n.kind!=="folder");
     return (
       <div key={n.id}>
         <button
@@ -377,7 +377,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                  icon picker that "Change icon" just opened */
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              {section==="publish" ? node.kind==="folder" && <><DropdownMenuItem onSelect={()=>addNode(section,node.id,"doc","New style")}>New style</DropdownMenuItem><DropdownMenuItem onSelect={()=>addNode(section,node.id,"folder","New folder")}>New folder</DropdownMenuItem></> : section==="kanban" ? <DropdownMenuItem onSelect={()=>addNode(section,node.id,"doc","New board")}>New sub-board</DropdownMenuItem> : section==="finance" ? !node.transaction && <>
+              {section==="maps" ? node.kind==="folder" && <><DropdownMenuItem onSelect={()=>addNode(section,node.id,"doc","New map")}>New map</DropdownMenuItem><DropdownMenuItem onSelect={()=>addNode(section,node.id,"folder","New folder")}>New folder</DropdownMenuItem></> : section==="publish" ? node.kind==="folder" && <><DropdownMenuItem onSelect={()=>addNode(section,node.id,"doc","New style")}>New style</DropdownMenuItem><DropdownMenuItem onSelect={()=>addNode(section,node.id,"folder","New folder")}>New folder</DropdownMenuItem></> : section==="kanban" ? <DropdownMenuItem onSelect={()=>addNode(section,node.id,"doc","New board")}>New sub-board</DropdownMenuItem> : section==="finance" ? !node.transaction && <>
                 <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'folder')}>New folder</DropdownMenuItem>
                 <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'income')}>+ Income</DropdownMenuItem>
                 <DropdownMenuItem onSelect={()=>addFinanceNote(node.id,'expense')}>+ Expense</DropdownMenuItem>
@@ -508,7 +508,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             Pick a destination — the note goes to the end of the chosen spot.
           </p>
           <div className="max-h-72 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-1.5">
-            {moveOpen && SECTION_LABELS.filter(t=>(section==="publish")===(t.key==="publish") && (section==="kanban") === (t.key==="kanban")).map((t) => {
+            {moveOpen && SECTION_LABELS.filter(t=>(section==="maps")===(t.key==="maps") && (section==="publish")===(t.key==="publish") && (section==="kanban") === (t.key==="kanban")).map((t) => {
               const sec = t.key as SectionKey;
               const roots = novel?.sections[sec] ?? [];
               return (
@@ -586,7 +586,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal, onActivate 
     return fraction<0.3?'before':fraction>0.7?'after':'onto';
   };
   const allowed=(id:string,mode:DropMode)=>drag && !insideBranches(id,drag.ids,drag.parents) &&
-    (id!==rootId || mode==='onto') && (section!=='publish' || mode!=='onto' || findNode(roots,id)?.kind==='folder') && (section!=='finance' || mode!=='onto' || !findNode(roots,id)?.transaction);
+    (id!==rootId || mode==='onto') && ((section!=='publish'&&section!=='maps') || mode!=='onto' || findNode(roots,id)?.kind==='folder') && (section!=='finance' || mode!=='onto' || !findNode(roots,id)?.transaction);
   const finish=(event:React.DragEvent,id:string|null,mode:DropMode)=>{
     event.preventDefault();
     event.stopPropagation();
@@ -675,14 +675,14 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal, onActivate 
         ))}
         {visibleRoots.length === 0 && (
           <p className="px-2 py-4 text-xs text-muted-foreground">
-            {section==='publish'?'Right-click to add a style or folder.':section==='kanban'?'Right-click to create a board.':'Empty. Right-click here to create your first note.'}
+            {section==='maps'?'Right-click to add a map or folder.':section==='publish'?'Right-click to add a style or folder.':section==='kanban'?'Right-click to create a board.':'Empty. Right-click here to create your first note.'}
           </p>
         )}
       </div>
       </ContextMenuTrigger>
       <ContextMenuContent aria-label="Tree actions" className="w-56 border-white/10 bg-[#1b1b1b] font-serif">
         {section==="timeline"&&<><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"event")}><Zap className="mr-2 h-4 w-4"/>Add Event</ContextMenuItem><ContextMenuItem onSelect={()=>addTimelineNote(section,rootId??null,"period")}><Hourglass className="mr-2 h-4 w-4"/>Add Time Period</ContextMenuItem></>}
-              {section==="publish" ? <><ContextMenuItem onSelect={()=>addNode(section,rootId??null,"doc","New style")}>New style</ContextMenuItem><ContextMenuItem onSelect={()=>addNode(section,rootId??null,"folder","New folder")}>New folder</ContextMenuItem></> : section==="kanban" ? <ContextMenuItem onSelect={()=>addNode(section,rootId??null,"doc","New board")}>{rootId?"New sub-board":"New board"}</ContextMenuItem> : section==="finance" ? <>
+              {section==="maps" ? <><ContextMenuItem onSelect={()=>addNode(section,rootId??null,"doc","New map")}>New map</ContextMenuItem><ContextMenuItem onSelect={()=>addNode(section,rootId??null,"folder","New folder")}>New folder</ContextMenuItem></> : section==="publish" ? <><ContextMenuItem onSelect={()=>addNode(section,rootId??null,"doc","New style")}>New style</ContextMenuItem><ContextMenuItem onSelect={()=>addNode(section,rootId??null,"folder","New folder")}>New folder</ContextMenuItem></> : section==="kanban" ? <ContextMenuItem onSelect={()=>addNode(section,rootId??null,"doc","New board")}>{rootId?"New sub-board":"New board"}</ContextMenuItem> : section==="finance" ? <>
                 <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'folder')}>New folder</ContextMenuItem>
                 <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'income')}>+ Income</ContextMenuItem>
                 <ContextMenuItem onSelect={()=>addFinanceNote(rootId??null,'expense')}>+ Expense</ContextMenuItem>

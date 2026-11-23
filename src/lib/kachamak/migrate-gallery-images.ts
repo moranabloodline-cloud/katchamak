@@ -1,3 +1,4 @@
+import {migrateProjectMaps} from './project-maps';
 import { v5 as namedUuid } from 'uuid';
 import type { GalleryEntry } from './gallery';
 import type { Homepage } from './homepage';
@@ -16,7 +17,11 @@ function mapChanged<T>(items: T[], transform: (item: T) => T): T[] {
   return result;
 }
 
+
 export function migrateBookArtwork(book: Novel): Novel {
+  return normalizeArtwork(migrateProjectMaps(book));
+}
+function normalizeArtwork(book: Novel): Novel {
   const added: GalleryEntry[] = [];
   const byImage = new Map<string, string>();
   const occupied = new Set<string>();

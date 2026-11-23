@@ -170,7 +170,7 @@ function validBlock(block: HomeBlock) {
   return !!block && typeof block.id === 'string' && !!block.id &&
     HOME_LAYOUTS.includes(block.layout) && ['standard','wide','full'].includes(block.width) &&
     validCanvasFields(block) && (block.layout!=='audio' || canvasAudio(block.audio)) && typeof block.title === 'string' && typeof block.text === 'string' &&
-    validProjectImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image) && validTarget(block.target) &&
+    validProjectImage(block.image) && validFrame(block.imageFrame) && validCoverImage(block.imageCutout) && (!block.imageCutout || !!block.image || !!block.mapId) && validTarget(block.target) &&
     (block.cell===undefined || (!!block.cell && typeof block.cell.rowId==='string' && Number.isInteger(block.cell.column))) &&
     (block.manualPosition===undefined||block.manualPosition===true&&block.layout==='row'&&isPoint(block.at)) &&
     (block.layout!=='row' || (!block.cell && Number.isInteger(block.columns) && block.columns!>=1 && block.columns!<=6)) &&

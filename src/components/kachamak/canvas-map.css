@@ -13,7 +13,6 @@
 .atlas-target span.atlas-pin,.atlas-vertex { pointer-events:none; }
 .atlas-vertex { position:absolute; border-radius:50%; transform:translate(-50%,-50%); width:8px; height:8px; background:#ffdc8b; border:1px solid #332819; }
 .atlas-studio { position:absolute; inset:0; z-index:30; display:flex; flex-direction:column; min-width:0; background:var(--background); }
-.cv-viewport:has(.atlas-studio) > :is(.cv-surface,.cv-board-dock,.cv-mode-message) { visibility:hidden; }
 .atlas-bar { display:flex; align-items:center; gap:5px; flex:none; min-height:41px; padding:3px 9px; border-bottom:1px solid var(--border); }
 .atlas-bar h3 { margin:0 auto 0 5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:600; }
 .atlas-bar button,.atlas-command button,.atlas-actions button,.atlas-editor > button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:29px; padding:3px 7px; border-radius:4px; font:13px/1.25 system-ui,sans-serif; }
@@ -26,13 +25,11 @@
 .atlas-command button,.atlas-actions button,.atlas-editor > button { border:1px solid var(--border); }
 .atlas-command button:disabled,.atlas-panel button:disabled,.atlas-bar button:disabled { opacity:.42; cursor:default; }
 .atlas-panel { color:var(--foreground); display:grid; gap:10px; font:14px/1.35 system-ui,sans-serif; min-width:0; }
-.atlas-launch { padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--border); }
 .atlas-panel h3,.atlas-panel h4 { font-weight:600; margin:0; }
 .atlas-panel h3 { font-size:15px; }
 .atlas-panel h4 { margin-bottom:5px; }
 .atlas-panel h4 small { color:var(--muted-foreground); margin-left:4px; }
-.atlas-launch-name,.atlas-register > button { min-width:0; display:flex; align-items:center; gap:6px; text-align:left; }
-.atlas-launch-name { justify-content:space-between; color:var(--muted-foreground); }
+.atlas-register > button { min-width:0; display:flex; align-items:center; gap:6px; text-align:left; }
 .atlas-tool-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(115px,100%),1fr)); gap:5px; }
 .atlas-tool-grid button,.atlas-register > button { display:flex; align-items:center; gap:7px; padding:7px; border-radius:5px; }
 .atlas-tool-grid button { border:1px solid var(--border); background:var(--card); text-align:left; }

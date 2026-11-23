@@ -1,3 +1,4 @@
+import {findProjectMap} from './project-maps';
 import {galleryImage, galleryImageRef} from './project-image';
 import { v5 as namedUuid } from 'uuid';
 import { TABS, type NoteNode, type Novel, type SectionKey, type TabKey } from './types';
@@ -8,8 +9,8 @@ import { noteLinkInstructions, noteLinkTitle } from './note-links';
 
 export function cloneableWorkspaceTabs(novel: Novel) {
   return workspaceTabs(novel).filter(({key}) => {
-    if (key === 'publish' || key === 'kanban' || key === 'finance' || key === 'timeline' || key === 'family' || key === 'trash' || key === 'gallery') return false;
-    return !key.startsWith('note:') || !['timeline','family','finance','kanban','publish'].includes(findNodeInNovel(novel, key.slice(5))?.section ?? '');
+    if (key === 'publish' || key === 'kanban' || key === 'maps' || key === 'finance' || key === 'timeline' || key === 'family' || key === 'trash' || key === 'gallery') return false;
+    return !key.startsWith('note:') || !['timeline','family','finance','kanban','publish','maps'].includes(findNodeInNovel(novel, key.slice(5))?.section ?? '');
   });
 }
 
@@ -113,9 +114,23 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
     }
     return galleryImageRef(match.id);
   };
+  const mapCopies=new Map<string,NoteNode>();
+  function copyMap(id:string){
+    const known=mapCopies.get(id);
+    if(known)return known;
+    const sourceMap=findProjectMap(source,id);
+    if(!sourceMap)return;
+    const map=structuredClone({...sourceMap,id:newId('map:'+id),image:transferImage(sourceMap.image),children:[],createdAt:now,updatedAt:now});
+    mapCopies.set(id,map);
+    return map;
+  }
   const copy = (original: NoteNode, depth: number): NoteNode => {
     if (depth >= CLOUD_NOTE_LEVELS) throw new Error('The copied notes would be nested too deeply. Choose a higher-level destination tab.');
     const node = structuredClone({ ...original, children: [] });
+    if(node.noteMap?.kind==='map'){
+      const map=copyMap(node.noteMap.mapId);
+      if(map)node.noteMap={...node.noteMap,mapId:map.id};else delete node.noteMap;
+    }
     if (node.image) node.image=transferImage(node.image);
     if (node.event?.banner) node.event.banner=transferImage(node.event.banner);
     if (node.status) statuses.add(node.status);
@@ -151,7 +166,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
     novel: {
       ...destination, updatedAt: now, statuses: [...statuses],
       ...(gallery.length!==(destination.gallery?.length??0)?{gallery}:{}),
-      sections: {...destination.sections, [to.section]: parentId ? insert(destinationRoots) : nextSiblings},
+      sections: {...destination.sections,...(mapCopies.size?{maps:[...(destination.sections.maps??[]),...mapCopies.values()]}:{}), [to.section]: parentId ? insert(destinationRoots) : nextSiblings},
     },
   };
 }

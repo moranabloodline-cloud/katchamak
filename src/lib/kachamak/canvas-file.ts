@@ -2,6 +2,7 @@ import {type GalleryEntry} from './gallery';
 import {type HomeBlock,type Homepage,type HomeTarget,HOME_ROOT,validHomepage} from './homepage';
 import {flattenNotes} from './note-links';
 import {availableProjectImage,galleryImageRef,validCoverImage} from './project-image';
+import {findProjectMap} from './project-maps';
 import {boardRects} from './canvas-board';
 import {worldRows,legacyRowLeft} from './canvas-layout';
 import type {Novel} from './types';
@@ -41,6 +42,16 @@ export function importCanvasFile(book:Novel,current:Homepage,raw:unknown){
     if(bound&&!note)return null;
     let image=note?.image??(block.image&&(refs.get(block.image)??block.image));
     if(image?.startsWith('data:'))image=addImage(note?.title||block.title||'Canvas image',image);
+    // Re-importing the original composition keeps annotations edited in Maps.
+    if(block.layout==='map'&&image&&!block.mapId){
+      const previous=current.blocks.find(item=>item.id===block.id&&item.layout==='map');
+      const map=findProjectMap(book,previous?.mapId);
+      if(map&&map.image===image){
+        const {image:_,atlas,pin,...card}=block;
+        blocks.push({...card,mapId:map.id});
+        continue;
+      }
+    }
     blocks.push({...block,image});
   }
   const page:Homepage={...current,mode:'canvas',blocks,locked:file.layout.locked,width:file.layout.width,legacyRowX:file.layout.legacyRowX};

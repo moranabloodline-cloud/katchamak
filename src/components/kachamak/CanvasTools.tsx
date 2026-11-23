@@ -9,7 +9,7 @@ export const toolsByKind={
   todo:{name:'To-do',icon:ListChecks,color:'#acd597'}, line:{name:'Line',icon:Spline,color:'#82b9d7'},
   column:{name:'Column',icon:Columns3,color:'#b6a2d9'}, heading:{name:'Heading',icon:Heading,color:'#dbbe86'},
   image:{name:'Image',icon:Image,color:'#7bc8a8'}, video:{name:'Video',icon:Film,color:'#b699d5'},
-  map:{name:'Map',icon:MapPinned,color:'#7fbca2'}, audio:{name:'Audio',icon:AudioLines,color:'#7bbadd'},
+  map:{name:'Insert map',icon:MapPinned,color:'#7fbca2'}, audio:{name:'Audio',icon:AudioLines,color:'#7bbadd'},
   color:{name:'Color',icon:Pipette,color:'#e4a88b'}, table:{name:'Table',icon:Table2,color:'#9cbacb'},
   comment:{name:'Comment',icon:MessageCircle,color:'#e4b478'}, sketch:{name:'Sketch',icon:PenTool,color:'#af9fd7'},
   draw:{name:'Draw',icon:Pencil,color:'#de9195'}

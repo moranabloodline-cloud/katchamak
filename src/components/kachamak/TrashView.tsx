@@ -34,6 +34,7 @@ const SECTION_NAMES: Record<SectionKey, string> = {
   finance: "Finance",
   publish: "Publish",
   kanban: "Kanban",
+  maps: "Maps",
 };
 
 export function TrashSections({novel}: {novel: Novel}) {

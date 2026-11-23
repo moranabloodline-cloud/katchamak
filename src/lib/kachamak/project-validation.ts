@@ -7,6 +7,7 @@ import { validHiddenInspectorTabs, validInspectorByTab } from './inspector-tabs'
 import { SECTION_KEYS } from './types';
 import { validNovelMetadata } from './project-settings';
 import { validHiddenDetailBlocks, validDetailBlockOrder } from './detail-blocks';
+import {validAtlas,type MapAtlas} from './canvas-map';
 import {validNoteMap} from './note-map';
 import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validNoteFontSize, validNotePageSettings, validTabPageSettings } from './page-format';
@@ -29,6 +30,7 @@ export function isReadableProject(value: unknown): boolean {
   if (!n.cover || typeof n.cover !== "object" || Array.isArray(n.cover)) return false;
   if(!validPublishManuscript(n.publishManuscript) || (n.publishStylesInstalled!==undefined && typeof n.publishStylesInstalled!=='boolean'))return false;
   if(n.publishStyleCatalogVersion!==undefined && !(typeof n.publishStyleCatalogVersion==='number' && Number.isSafeInteger(n.publishStyleCatalogVersion) && n.publishStyleCatalogVersion>=1))return false;
+  if(n.mapsEnabled!==undefined && typeof n.mapsEnabled!=='boolean')return false;
   if(n.publishEnabled!==undefined && typeof n.publishEnabled!=='boolean')return false;
   if(n.financeCurrency!==undefined && !validCurrency(n.financeCurrency))return false;
   const cover = n.cover as Record<string, unknown>;
@@ -44,7 +46,7 @@ export function isReadableProject(value: unknown): boolean {
       (node.aliases === undefined || Array.isArray(node.aliases) && node.aliases.every(v => typeof v === 'string')) &&
       (node.bookStyle===undefined || validBookStyle(node.bookStyle)) && (node.kanban===undefined || validKanban(node.kanban)) && (node.transaction===undefined || validTransaction(node.transaction)) && validFamilyMembers(node.familyMembers) && validProjectImage(node.image) && validDocumentTarget(node.documentTarget) &&
       validNotePageSettings(node.pageSettings) && validNoteFontSize(node.bodyFontSize) && validHiddenDetailBlocks(node.hiddenDetailBlocks) &&
-      validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) && validNoteMap(node.noteMap) &&
+      validHiddenDetailBlocks(node.collapsedDetailBlocks) && validDetailBlockOrder(node.detailBlockOrder) && validNoteMap(node.noteMap) && (node.mapAtlas===undefined || validAtlas(node.mapAtlas as MapAtlas)) &&
       (node.event === undefined || validEvent(node.event)) &&
       (node.timelineKind === undefined || (node.timelineKind==="event"||node.timelineKind==="period")) &&
       (node.linkChoices === undefined || Array.isArray(node.linkChoices) && node.linkChoices.every(c => c && Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 0 && c.end > c.start && typeof c.text === 'string' && (c.targetId === null || typeof c.targetId === 'string'))) &&
@@ -67,7 +69,7 @@ export function isReadableProject(value: unknown): boolean {
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && !validHiddenInspectorTabs(n.hiddenInspectorTabs)) return false;
   if (!validInspectorByTab(n.inspectorByTab)) return false;
-  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance','kanban','publish'].includes(k)))) return false;
+  if (n.hiddenSections !== undefined && (!Array.isArray(n.hiddenSections) || !n.hiddenSections.every(k => ['planning','research','templates','prompts','family','finance','kanban','publish','maps'].includes(k)))) return false;
   if (n.timeline !== undefined) {
     const t = n.timeline as Novel['timeline'];
     if (!t || typeof t !== 'object' || (t.rootId !== null && typeof t.rootId !== 'string') || !['titles','synopsis'].includes(t.detail) || typeof t.compact !== 'boolean') return false;

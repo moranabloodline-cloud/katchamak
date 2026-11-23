@@ -23,7 +23,7 @@ import {CanvasBoard} from './CanvasBoard';
 import type {CanvasFile} from '@/lib/kachamak/canvas-file';
 import {toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
-import type {MapTool} from '@/lib/kachamak/canvas-map';
+import {openProjectMap} from '@/lib/kachamak/map-navigation';
 import {CanvasItemFace} from './CanvasItemFace';
 import {CANVAS_TOOLS} from '@/lib/kachamak/canvas-board';
 import {useOpenWorkspaceTab} from './WorkspaceTabs';
@@ -75,11 +75,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const updatePage=useKachamak(s=>s.changeHomepage);
   const change=(action:HomeChange)=>updatePage(novel.id,action,page.id,true);
   const openTab=useOpenWorkspaceTab(novel);
-  const [mapSession,setMapSession]=useState<{id:string;tool:MapTool}|null>(null);
-  function openMap(id:string,tool:MapTool='inspect'){
-    setMapSession({id,tool});useKachamak.getState().selectCanvasInspectorTab(novel.id,'tools');
-    if(window.matchMedia('(min-width:1024px)').matches)onShowInspector?.();
-  }
+  const openMap=(id:string)=>openProjectMap(novel,id);
   const [picked,setSelection]=useState<string[]>([]);
   const selectedIds=useMemo(()=>expandCardGroups(page.blocks,new Set(picked)),[page.blocks,picked]);
   const selection=useMemo(()=>[...selectedIds],[selectedIds]);
@@ -272,7 +268,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       : <button type="button" className="absolute inset-0 w-full" aria-label={display.name} onClick={()=>activate(b)}/>}</div>;
   };
   return <>
-    <CanvasBoard key={page.id+':'+(page.viewKey??'')} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} mapSession={mapSession} openMap={openMap} closeMap={()=>setMapSession(null)} showInspector={onShowInspector} onToolPicked={onToolPicked}
+    <CanvasBoard key={page.id+':'+(page.viewKey??'')} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} openMap={openMap} showInspector={onShowInspector} onToolPicked={onToolPicked}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={placement=>{captureOpener();setEditor(placement);}}/>
     {incoming&&incoming.page===page.id&&incoming.project===novel.id&&<Dialog open onOpenChange={open=>{if(!open)setIncoming(null);}}><DialogContent><DialogHeader><DialogTitle>Replace this canvas layout?</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Open {incoming.name} in {page.title}. Undo restores the previous layout.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setIncoming(null)}>Cancel</Button><Button onClick={installLayout}>Replace layout</Button></div></DialogContent></Dialog>}
