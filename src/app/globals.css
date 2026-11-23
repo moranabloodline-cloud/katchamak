@@ -280,6 +280,14 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 .kachamak-editor a[href^="#note/"] { color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 
+.kachamak-editor a:is([href^="https://" i], [href^="http://" i], [href^="mailto:" i]) {
+  color: var(--editor-web-link, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+  cursor: pointer;
+}
+html[data-theme="light"] .kachamak-editor { --editor-web-link: #1d4ed8; }
+
 /* Heading levels own their typography, even when pasted spans/font tags carry
    source sizes. Body formatting remains unchanged; levels scale with editor size. */
 .kachamak-editor :is(h1,h2,h3,h4,h5,h6) {

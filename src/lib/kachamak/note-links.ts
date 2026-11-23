@@ -1,5 +1,19 @@
 import type { LinkChoice, NoteNode, Novel, SectionKey } from './types';
 
+export function isWebsiteLink(href: string) {
+  return /^(?:https?:\/\/|mailto:)/i.test(href) && URL.canParse(href);
+}
+
+export function openEditorWebsite(event: MouseEvent) {
+  if (event.defaultPrevented || event.button !== 0 || event.altKey || event.shiftKey) return;
+  if (event.detail > 0 && window.getSelection()?.isCollapsed === false) return;
+  const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+  const href = anchor?.getAttribute('href');
+  if (!href || !isWebsiteLink(href)) return;
+  event.preventDefault();
+  window.open(href, '_blank', 'noopener,noreferrer');
+}
+
 export type TextPart = { node: Text; start: number; end: number };
 export type NoteMatch = LinkChoice & { candidates: NoteNode[]; explicit: boolean; missing: boolean; context: string };
 const blocks = new Set(['P','DIV','LI','H1','H2','H3','H4','H5','H6','TR','BLOCKQUOTE']);

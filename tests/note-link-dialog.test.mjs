@@ -53,5 +53,31 @@ const legacyText=editor.querySelector('a strong');
 const legacyRule=Array.from(box.querySelector('style').sheet.cssRules).find(rule=>legacyText.matches(rule.selectorText));
 assert.equal(legacyRule.style.getPropertyValue('-webkit-text-fill-color'),'rgb(57, 197, 207)');
 assert.equal(findNodeInNovel(useKachamak.getState().novels[0],source).node.content,legacyHtml);
+
+// A website link created from selected text survives reopening and follows the
+// saved destination from inside the contenteditable, including nested markup.
+const website='https://www.autocrit.com/';
+await React.act(async()=>actions.updateNode('binder',source,{content:'<p>Visit <strong>AutoCrit</strong> today.</p>'}));
+const word=document.createRange();word.selectNode(editor.querySelector('strong'));
+dom.getSelection().removeAllRanges();dom.getSelection().addRange(word);
+await React.act(async()=>document.dispatchEvent(new dom.Event('katchamak-link')));
+const urlInput=document.getElementById('external-link');
+await React.act(async()=>{
+  Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype,'value').set.call(urlInput,website);
+  urlInput.dispatchEvent(new dom.Event('input',{bubbles:true}));
+});
+await React.act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Insert').click());
+const linkedHtml=findNodeInNovel(useKachamak.getState().novels[0],source).node.content;
+assert.equal(editor.querySelector('a')?.getAttribute('href'),website);
+assert.equal(editor.textContent,'Visit AutoCrit today.');
+await React.act(async()=>root.render(React.createElement(App,{key:'reopened'})));
+const linkedText=box.querySelector('[contenteditable] a strong');
+assert.equal(linkedText?.textContent,'AutoCrit');
+const opened=[];dom.open=(...args)=>opened.push(args);
+const webClick=new dom.MouseEvent('click',{bubbles:true,cancelable:true});
+await React.act(async()=>linkedText.dispatchEvent(webClick));
+assert.equal(webClick.defaultPrevented,true);
+assert.deepEqual(opened,[[website,'_blank','noopener,noreferrer']]);
+assert.equal(findNodeInNovel(useKachamak.getState().novels[0],source).node.content,linkedHtml);
 await React.act(async()=>root.unmount());
 console.log('Note-link dialog passed: selected name, ordinary blank Codex note, immediate source save, bold and blank lines, click preview, Open beside and return to manuscript.');

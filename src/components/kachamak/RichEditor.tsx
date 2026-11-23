@@ -6,7 +6,7 @@ import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { toast } from "sonner";
 import { insertHeadingFragment, preparePastedContent } from "@/lib/kachamak/paste-content";
 import { useEffect, useId, useRef, useState } from "react";
-import {noteAnchorStyles} from '@/lib/kachamak/note-links';
+import {noteAnchorStyles,openEditorWebsite} from '@/lib/kachamak/note-links';
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
 import {repairListWrappers,backspaceListMarker} from '@/lib/kachamak/editor-lists';
@@ -132,7 +132,7 @@ export function RichEditor({
         }}
         onClick={event => {
           const anchor=(event.target as Element).closest('a[href^="#note/"]');
-          if (!anchor) return;
+          if (!anchor) { openEditorWebsite(event.nativeEvent); return; }
           event.preventDefault();
           const id=anchor.getAttribute('href')?.slice(6);
           const state=useKachamak.getState(), novel=state.novels.find(n=>n.id===state.activeNovelId);

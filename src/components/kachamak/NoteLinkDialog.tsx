@@ -5,7 +5,7 @@ import {indexNotes,searchNotes,type IndexedNote} from '@/lib/kachamak/knowledge'
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {createLinkedCodexNote} from '@/lib/kachamak/create-linked-note';
 import {toast} from 'sonner';
-import {noteLinkColor,noteLinkTitle} from '@/lib/kachamak/note-links';
+import {isWebsiteLink,noteLinkColor,noteLinkTitle} from '@/lib/kachamak/note-links';
 export function NoteLinkDialog() {
   const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[url,setUrl]=useState(''),[canInsert,setCanInsert]=useState(false);
   const range=useRef<Range|null>(null),editor=useRef<HTMLElement|null>(null);
@@ -31,7 +31,7 @@ export function NoteLinkDialog() {
   const insert=(href:string,target?:IndexedNote)=>{
     if(!range.current||!editor.current?.isConnected)return false;
     if(context.current&&useKachamak.getState().activeNovelId!==context.current.projectId){toast.error('Return to the original project to insert this link.');return false;}
-    if(!target&&!/^https?:\/\/|^mailto:/i.test(href)){toast.error('Use an https://, http:// or mailto: link.');return;}
+    if(!target&&!isWebsiteLink(href)){toast.error('Use an https://, http:// or mailto: link.');return false;}
     const selection=window.getSelection();editor.current.focus();selection?.removeAllRanges();selection?.addRange(range.current);
     const link=document.createElement('a');link.setAttribute('href',href);if(!range.current.collapsed){link.append(range.current.cloneContents());link.querySelectorAll('a').forEach(a=>a.replaceWith(...Array.from(a.childNodes)));}else link.textContent=target?.node.title||href;
     // Chromium trims ordinary boundary spaces in insertHTML. Keep the selected separation intact.

@@ -1,3 +1,5 @@
+> **2026-11-23 — Ručni linkovi ka veb-stranicama.** Adrese umetnute u tekst beleške vide se kao podvučeni linkovi. Klik otvara odredište i ostavlja belešku otvorenu.
+
 > **2026-11-23 — Izbor linkova posle čuvanja.** Prozor zadržava širinu i položaj gornje ivice, a dugmad ostaju na istom mestu dok korisnik prolazi kroz predloge.
 
 > **2026-11-23 — Kartice na Canvasu.** Zaključano platno prikazuje sadržaj bez zaglavlja sa tipom kartice. U redu pojedinačnih kartica donje ivice se poravnavaju po najvišoj kartici.
@@ -719,6 +721,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23.** Uređivanje i Continuous prikaz podržavaju otvaranje postojećih i novih veb-linkova iz teksta. U probnoj Planning belešci proveren je izbor reči, umetanje preko ikonice Link, čuvanje, osvežavanje stranice i otvaranje odredišta u novom tabu.
 
 - **2026-11-23.** Prozor za automatske linkove širi se naniže. Kad tekst i moguća odredišta pređu raspoloživu visinu, samo taj deo prozora može da se skroluje. Provereni su kratki predlozi i predlog sa osam odredišta na dve širine ekrana.
 
