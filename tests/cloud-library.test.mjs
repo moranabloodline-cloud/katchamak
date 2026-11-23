@@ -33,6 +33,9 @@ const {newNovel}=await import('../src/lib/kachamak/seed.ts');
 const novel=newNovel('Cloud test','Tester');novel.sections.binder.push({id:'note-1',title:'First note',content:'<p>Saved text čćš</p>',children:[],kind:'doc',synopsis:'',notes:'',status:'',label:'',createdAt:1,updatedAt:1});
 novel.series='Cloud Saga';novel.seriesIndex='Book 1';novel.archived=false;novel.cover.image='data:image/png;base64,aGVsbG8=';
 novel.sections.timeline=[{...structuredClone(novel.sections.binder[0]),id:'cosmic-period',timelineKind:'period',event:{type:'period',start:-7258098600000000,end:1000,precision:'year',endPrecision:'day'},children:[{...structuredClone(novel.sections.binder[0]),id:'nested-period',timelineKind:'period',children:[]}]}];
+novel.homepage={mode:'canvas',locked:false,blocks:['a','b'].map((id,i)=>({
+  id,layout:'note',title:id,text:'Chapter',width:'standard',at:{x:40+i*112,y:25+i*17},groupId:'chapters'
+}))};
 const snapshot={novels:[novel],collections:[{id:'collection-1',name:'My collection',projectIds:[novel.id],parentId:null}]};
 assert.equal((await call(a,'/api/library','POST',{revision:0,snapshot},'https://evil.local')).status,403);
 assert.equal((await call(a,'/api/library','POST',{revision:0,snapshot})).status,200);

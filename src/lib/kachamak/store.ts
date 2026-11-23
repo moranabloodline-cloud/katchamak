@@ -1132,7 +1132,7 @@ export const useKachamak = create<KachamakState>()(
     },get),
     {
       name: STORAGE_KEY,
-      version: 68,
+      version: 69,
       storage: createJSONStorage(() => projectStorage),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
@@ -1145,6 +1145,7 @@ export const useKachamak = create<KachamakState>()(
          (no data migration; older stores simply lack the field) */
       migrate: (persisted, version) => {
         const s = persisted as KachamakState;
+        if (version < 69) { /* Cards without a group ID remain independent. */ }
         if (version < 68) { /* Genre samples are associated on opening Publish, including imported books. */ }
         if (version < 67) { /* Install the genre catalog on first use, including books restored from a cloud snapshot. */ }
         if (version < 66) { /* Publish follows Binder until customized. Starter notes are installed on first opening. */ }

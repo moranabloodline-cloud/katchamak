@@ -2,6 +2,7 @@ import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
 import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,worldRows,type CanvasTransfer} from './canvas-layout';
+import {changeCardGroup,clearSingletonGroups,type CardGroupChange} from './canvas-groups';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
 import {validCanvasFields,validBoard,moveOnBoard,isPoint,type Point,type CanvasFields,type BoardMove} from './canvas-board';
 
@@ -197,7 +198,7 @@ export function validHomepage(value: unknown): boolean {
 
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
-export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer
+export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange
   | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
   | {type:'moveRow';id:string;at:Point;heights:[string,number][]}
@@ -219,13 +220,15 @@ export function changeHomepage(page: Homepage, action: HomeChange): Homepage | n
     return {...page,[action.field]:action.value};
   }
   if(action.type==='appearance')return action.value===''||validAppearance(action.field,action.value)?{...page,[action.field]:action.value||undefined}:null;
-  if(page.mode==='canvas')return changeUnifiedCanvas(page,action);
-  const next=applyHomeChange(page,action);
-  return next && validBoard(next) ? next : null;
+  const next=page.mode==='canvas'?changeUnifiedCanvas(page,action):applyHomeChange(page,action);
+  if(!next||page.mode!=='canvas'&&!validBoard(next))return null;
+  return action.type==='remove'||action.type==='removeBoardItem'||action.type==='deleteItems'||action.type==='place'||action.type==='into'
+    ?clearSingletonGroups(next):next;
 }
 // Operate on the appropriate layout in isolation so a free-board command cannot move a fixed row.
 export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|null {
   const page=unifiedCanvas(saved);
+  if(action.type==='cardGroup')return changeCardGroup(page,action);
   if(action.type==='lock')return {...page,locked:action.locked};
   if(page.locked)return null;
   if(action.type==='width')return {...page,width:action.width};
@@ -299,11 +302,21 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
+  if(action.type==='cardGroup')return changeCardGroup(page,action);
   if(action.type==='deleteItems'||action.type==='moveRow'||action.type==='info'||action.type==='appearance'||action.type==='moveCellCards'||action.type==='dockCards'||action.type==='releaseCards')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
   if (page.locked) return null;
   if(action.type==='boardSelection')return applySelection(page,action);
-  if(action.type==='boardMove')return page.mode==='board'?moveOnBoard(page,action):null;
+  if(action.type==='boardMove'){
+    if(page.mode!=='board'||!isPoint(action.at))return null;
+    const item=page.blocks.find(b=>b.id===action.id);
+    if(item?.groupId){
+      if(!item.at||item.columnId||action.columnId)return null;
+      return applySelection(page,{type:'boardSelection',ids:[item.id],command:{kind:'translate',
+        delta:{x:action.at.x-item.at.x,y:action.at.y-item.at.y}}});
+    }
+    return moveOnBoard(page,action);
+  }
   if(action.type==='removeBoardItem'){
     const original=page.blocks.find(b=>b.id===action.original.id);
     if(page.mode!=='board'||!original||JSON.stringify(original)!==JSON.stringify(action.original))return null;
@@ -349,7 +362,7 @@ function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
       to=blocks.indexOf(adjacent)+(action.offset>0?1:0);
     }
     if(to===index && sameCell(cell,current.cell))return null;
-    blocks.splice(to,0,sameCell(cell,current.cell)?current:{...current,cell});
+    blocks.splice(to,0,sameCell(cell,current.cell)?current:{...current,cell,groupId:undefined});
   } else {
     if (JSON.stringify(current)!==JSON.stringify(action.original))return null;
     if(action.type==='remove'){
@@ -365,7 +378,7 @@ function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
     } else {
       const next=action.block;
       if(next.id!==current.id || !validBlock(next) || !sameCell(current.cell,next.cell) || (current.layout==='row')!==(next.layout==='row'))return null;
-      blocks[index]=next;
+      blocks[index]=current.groupId?{...next,groupId:current.groupId}:next;
       if(next.layout==='row' && next.columns! < current.columns!){
         const displaced=(b:HomeBlock)=>b.cell?.rowId===current.id && b.cell.column>=next.columns!;
         const children=blocks.filter(displaced).sort((a,b)=>a.cell!.column-b.cell!.column);

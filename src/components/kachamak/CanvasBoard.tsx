@@ -2,9 +2,10 @@
 
 import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode,type PointerEvent as PEvent} from 'react';
 import {createPortal} from 'react-dom';
-import {Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
+import {Group,Ungroup,Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {canvasOpeningView} from '@/lib/kachamak/canvas-file';
+import {canGroupCards,expandCardGroups} from '@/lib/kachamak/canvas-groups';
 import {alignCanvas,canvasDragFrame,type AlignmentGuide,type GuideItem} from '@/lib/kachamak/canvas-guides';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
@@ -69,7 +70,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       previewCardMove(g,{x:p.x-dx/zoom,y:p.y-dy/zoom},clientX,clientY);
     }
   });
-  const [menu,setMenu]=useState<{block:HomeBlock;column?:number}|{at:Point}|null>(null);
+  const [menu,setMenu]=useState<(({block:HomeBlock;column?:number}|{at:Point})&{cards:HomeBlock[]})|null>(null);
   const [movingRow,setMovingRow]=useState<{id:string;at:Point}|null>(null);
   const [cellRects,setCellRects]=useState(new Map<string,BoardRect & {rowId:string}>());
   const rowWidth=page.width==='reading'?736:1160;
@@ -90,8 +91,11 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const guideScene=useMemo(()=>[...rects,...rowRects].map(([id,rect])=>({id,rect,columnId:blocks.get(id)?.columnId})),[rects,rowRects,blocks]);
   function toggleFreeCard(id:string){
     setSelection(previous=>{
-      const active=previous.filter(key=>blocks.has(key));
-      return active.includes(id)?active.filter(key=>key!==id):[...active,id];
+      const active=expandCardGroups(page.blocks,new Set(previous.filter(key=>blocks.has(key))));
+      const unit=expandCardGroups(page.blocks,new Set([id]));
+      if(active.has(id))for(const key of unit)active.delete(key);
+      else for(const key of unit)active.add(key);
+      return [...active];
     });
   }
   const items=useMemo(()=>selectionRoots(page.blocks,new Set(selection)),[page.blocks,selection]);
@@ -117,7 +121,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const layers=useMemo(()=>boardLayers(page.blocks),[page.blocks]);
   const highlighted=useMemo(()=>{
     if(!marquee)return new Set(selection);
-    return new Set([...(gesture.current?.base??[]),...framedItems(page.blocks,rects,marquee)]);
+    return expandCardGroups(page.blocks,new Set([...(gesture.current?.base??[]),...framedItems(page.blocks,rects,marquee)]));
   },[selection,marquee,rects,page.blocks]);
   const fixed=(b:HomeBlock)=>!!(b.layout==='column'||b.positionLocked || b.columnId&&blocks.get(b.columnId)?.positionLocked);
   const batch=(command:SelectionCommand)=>save({type:'boardSelection',ids:items.map(b=>b.id),command,heights:[...heights]});
@@ -219,9 +223,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     const card=rowContents.find(b=>b.id===el.dataset.homeBlock);
     if(!card?.cell||page.locked){e.preventDefault();return;}
     const from=card.cell;
-    const moving=selection.includes(card.id)
-      ?rowContents.filter(b=>b.cell?.rowId===from.rowId&&b.cell.column===from.column&&selection.includes(b.id))
-      :[card];
+    const idsInDrag=expandCardGroups(rowContents,new Set(selection.includes(card.id)?selection:[card.id]));
+    const moving=rowContents.filter(b=>b.cell?.rowId===from.rowId&&b.cell.column===from.column&&idsInDrag.has(b.id));
     if(moving.some(b=>b.positionLocked)){e.preventDefault();return;}
     const ids=moving.map(b=>b.id);
     setSelection(ids);toolDrop.startCards(e,ids,from);
@@ -261,7 +264,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     }
     return best!;
   }
-  function releaseCards(cards:HomeBlock[]){
+  function releaseCards(picked:HomeBlock[]){
+    const members=expandCardGroups(rowContents,new Set(picked.map(b=>b.id)));
+    const cards=rowContents.filter(b=>members.has(b.id));
     const first=cards[0];
     if(!first?.cell)return;
     const ids=cards.map(b=>b.id);
@@ -318,6 +323,11 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       for(const child of children){positions[child.id]={x,y:start.y};x+=(child.extent?.w??CARD_WIDTH)+24;}
     }
     return positions;
+  }
+  function changeMenuGroup(groupId:string|null){
+    if(!menu)return;
+    const ids=menu.cards.map(b=>b.id);
+    if(save({type:'cardGroup',ids,groupId}))setSelected('block' in menu?menu.block.id:ids[0]);
   }
   function deleteSelection(){
     if(page.locked||!selection.length)return;
@@ -377,9 +387,10 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
         e.preventDefault();return;
       }
       const member=items.find(b=>b.id===id || b.id===blocks.get(id)?.columnId);
-      const group=items.length>1 && member?items:undefined;
-      const anchor=group?member!.id:id;
-      if(!group)setSelected(id);
+      const moving=member?items:selectionRoots(page.blocks,expandCardGroups(page.blocks,new Set([id])));
+      const group=moving.length>1?moving:undefined;
+      const anchor=member?.id??id;
+      if(!member||!group)setSelected(id);
       if((group??[blocks.get(id)!]).some(fixed)){e.preventDefault();return;}
       const dockable=group?group.every(b=>b.layout!=='column'):blocks.get(id)?.layout!=='column';
       gesture.current={kind:'move',start,boardStart:p,origin:rects.get(anchor)!,id:anchor,group:group?.map(b=>b.id),dockable};
@@ -494,8 +505,14 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       const id=hit?.dataset.boardEdgeCopy??hit?.dataset.boardEdge??hit?.dataset.boardCard??hit?.dataset.homeBlock??hit?.dataset.homeCell;
       const block=id&&(blocks.get(id)??rowContents.find(b=>b.id===id)??heldLines.find(b=>b.id===id));
       if(page.locked||!surface.current?.contains(e.target as Node)){e.preventDefault();return;}
-      if(block)setMenu({block,column:hit?.hasAttribute('data-home-cell')?Number(hit.dataset.column):undefined});
-      else setMenu({at:boardPoint(local(e.clientX,e.clientY))});
+      const scene=[...page.blocks,...rowContents];
+      const ids=block&&!selection.includes(block.id)?[block.id]:selection;
+      const members=expandCardGroups(scene,new Set(ids));
+      const cards=scene.filter(b=>members.has(b.id));
+      if(block){
+        if(!selection.includes(block.id))setSelected(block.id);
+        setMenu({block,cards,column:hit?.hasAttribute('data-home-cell')?Number(hit.dataset.column):undefined});
+      }else setMenu({at:boardPoint(local(e.clientX,e.clientY)),cards});
     }}>
     <div {...toolDrop.events} onDragStart={startColumnDrag} onDragEnd={toolDrop.clear} onFocus={e=>{
       const target=e.target as Element;
@@ -552,7 +569,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
               <g transform={'translate('+(-r.x)+' '+(-r.y)+')'}>{columnEdges.get(b.id)!.map(id=>
                 <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked){setSelected(id);surface.current?.focus({preventScroll:true});}}}/>)}</g>
             </svg>}
-            {!looseInk&&<div className="cv-card-cap"><Icon size={13}/>{column?<strong>{b.title||'Column'}</strong>:<span>{name}</span>}{(column||b.positionLocked)&&<LockKeyhole size={11} aria-label="Position locked"/>}{column&&<small>{page.blocks.filter(x=>x.columnId===b.id).length}</small>}
+            {!looseInk&&<div className="cv-card-cap"><Icon size={13}/>{column?<strong>{b.title||'Column'}</strong>:<span>{name}</span>}{b.groupId&&<Group size={12} aria-label="Grouped card"/>}{(column||b.positionLocked)&&<LockKeyhole size={11} aria-label="Position locked"/>}{column&&<small>{page.blocks.filter(x=>x.columnId===b.id).length}</small>}
               {!page.locked&&<button aria-label={'Edit '+(b.title||name)} type="button" onClick={()=>editBlock(b)}><Pencil size={13}/></button>}</div>}
             {column?(!page.locked&&<button type="button" className="cv-column-add" aria-label={'Add note to '+b.title} onClick={()=>{setTool('select');setEditor({initial:{...newCanvasBlock('note'),at:{x:r.x+14,y:r.y+56},columnId:b.id}});}}><Plus size={13}/> Note</button>):
             !(kind in toolsByKind)?renderClassic(b):<CanvasItemFace block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
@@ -572,6 +589,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       {marquee&&<div className="cv-marquee" aria-hidden="true" style={{left:pan.x+marquee.x*zoom,top:pan.y+marquee.y*zoom,width:marquee.w*zoom,height:marquee.h*zoom}}/>}
       {!rows.length&&!page.blocks.length&&!page.locked&&tool==='select'&&<button type="button" className="cv-first" onClick={()=>pick('note')}><Plus size={18}/>Add your first note</button>}
     </div></ContextMenuTrigger>{menu&&<ContextMenuContent>
+      {canGroupCards(menu.cards)&&<ContextMenuItem onSelect={()=>changeMenuGroup(crypto.randomUUID())}><Group size={14}/>Group cards</ContextMenuItem>}
+      {menu.cards.some(b=>b.groupId)&&<ContextMenuItem onSelect={()=>changeMenuGroup(null)}><Ungroup size={14}/>Ungroup cards</ContextMenuItem>}
       {'at' in menu?<>
         <ContextMenuItem onSelect={()=>addRow(menu.at)}><Rows3 size={14}/>Add row here</ContextMenuItem>
         <ContextMenuItem onSelect={()=>pick('column',menu.at)}><Columns3 size={14}/>Add column here</ContextMenuItem>

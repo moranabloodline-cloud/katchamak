@@ -5,7 +5,7 @@ export type Stroke = [number, number][];
 export const CANVAS_TOOLS = ['note','link','todo','line','column','heading','image','video','map','audio','color','table','comment','sketch','draw'] as const;
 export type CanvasTool = typeof CANVAS_TOOLS[number];
 export type CanvasFields = {
-  positionLocked?:boolean; stack?:number;
+  positionLocked?:boolean; stack?:number; groupId?:string;
   at?: Point; columnId?: string; edge?: {from:string; to:string};
   color?: string; tasks?: {text:string; done:boolean}[]; cells?: string[][];
   audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
@@ -14,6 +14,8 @@ export const isPoint=(p:Point|undefined):p is Point=>!!p && Number.isFinite(p.x)
 export const isInk=(ink:Stroke[]|undefined)=>Array.isArray(ink) && ink.length>0 && ink.every(stroke=>
   Array.isArray(stroke) && stroke.length>0 && stroke.every(p=>Array.isArray(p) && p.length===2 && p.every(Number.isFinite)));
 export function validCanvasFields(b:HomeBlock) {
+  if (b.groupId!==undefined && (typeof b.groupId!=='string'||!b.groupId.trim()||b.groupId.length>128||
+      b.layout==='row'||b.layout==='line'||b.layout==='column'))return false;
   if (b.positionLocked!==undefined && typeof b.positionLocked!=='boolean' || b.stack!==undefined && !Number.isSafeInteger(b.stack))return false;
   if (b.at!==undefined && !isPoint(b.at) || b.columnId!==undefined && typeof b.columnId!=='string' ||
       b.color!==undefined && !/^#[0-9a-f]{6}$/i.test(b.color)) return false;

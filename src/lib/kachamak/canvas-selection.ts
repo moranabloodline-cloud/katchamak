@@ -1,4 +1,5 @@
 import type {HomeBlock, HomePageEntry, Homepage} from './homepage';
+import {expandCardGroups} from './canvas-groups';
 import {boardRects, isPoint, type BoardRect, type Point} from './canvas-board';
 
 export type Alignment='left'|'center'|'right'|'top'|'middle'|'bottom';
@@ -43,7 +44,7 @@ function ordered(items:HomeBlock[],rects:Map<string,BoardRect>,axis:'x'|'y'){
 
 export function applySelection(page:Homepage,action:BoardSelectionChange):Homepage|null {
   if(page.mode!=='board'||page.locked)return null;
-  const ids=new Set(action.ids), byId=new Map(page.blocks.map(b=>[b.id,b]));
+  const ids=expandCardGroups(page.blocks,new Set(action.ids)), byId=new Map(page.blocks.map(b=>[b.id,b]));
   if(!ids.size || action.ids.some(id=>!byId.has(id)||byId.get(id)!.layout==='line'))return null;
   const items=selectionRoots(page.blocks,ids), chosen=new Set(items.map(b=>b.id)), cmd=action.command;
   const patch=(fn:(b:HomeBlock)=>HomeBlock)=>({...page,blocks:page.blocks.map(b=>chosen.has(b.id)?fn(b):b)});
@@ -98,7 +99,7 @@ export function applySelection(page:Homepage,action:BoardSelectionChange):Homepa
 
 export function extractBoard(page:HomePageEntry,ids:string[],name:string,childId:string,linkId:string,heights:[string,number][]){
   if(page.mode!=='board'||page.locked||!name.trim())return null;
-  const selected=new Set(ids), roots=selectionRoots(page.blocks,selected), byId=new Map(page.blocks.map(b=>[b.id,b]));
+  const selected=expandCardGroups(page.blocks,new Set(ids)), roots=selectionRoots(page.blocks,selected), byId=new Map(page.blocks.map(b=>[b.id,b]));
   if(!roots.length||ids.some(id=>!byId.has(id)) || roots.some(b=>b.positionLocked || b.columnId&&byId.get(b.columnId)?.positionLocked))return null;
   const moved=new Set(roots.map(b=>b.id));
   for(const b of page.blocks)if(b.columnId && moved.has(b.columnId))moved.add(b.id);

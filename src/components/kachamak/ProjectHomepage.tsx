@@ -9,6 +9,7 @@ import {canvasParts,unifiedCanvas} from '@/lib/kachamak/canvas-layout';
 import {HOME_ROOT, homepageEntry, homepageRows, type HomeChange, type HomeBlock, type HomeCell, type HomeTarget} from '@/lib/kachamak/homepage';
 import {flattenNotes} from '@/lib/kachamak/note-links';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
+import {expandCardGroups} from '@/lib/kachamak/canvas-groups';
 import {useKachamak} from '@/lib/kachamak/store';
 import {TABS, type Novel, type NoteNode} from '@/lib/kachamak/types';
 import {HomeArtwork} from './HomeArtwork';
@@ -73,8 +74,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const updatePage=useKachamak(s=>s.changeHomepage);
   const change=(action:HomeChange)=>updatePage(novel.id,action,page.id,true);
   const openTab=useOpenWorkspaceTab(novel);
-  const [selection,setSelection]=useState<string[]>([]);
-  const selectedIds=useMemo(()=>new Set(selection),[selection]);
+  const [picked,setSelection]=useState<string[]>([]);
+  const selectedIds=useMemo(()=>expandCardGroups(page.blocks,new Set(picked)),[page.blocks,picked]);
+  const selection=useMemo(()=>[...selectedIds],[selectedIds]);
   const rowAnchor=useRef<string|null>(null);
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;manualPosition?:true;at?:HomeBlock['at'];before?:string}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
@@ -146,7 +148,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       rowAnchor.current=anchor??block.id;
     }else{
       rowAnchor.current=block.id;
-      setSelection(toggle?(selectedIds.has(block.id)?previous.filter(id=>id!==block.id):[...previous,block.id]):[block.id]);
+      const unit=expandCardGroups(siblings,new Set([block.id]));
+      setSelection(toggle&&selectedIds.has(block.id)?previous.filter(id=>!unit.has(id)):toggle?[...previous,block.id]:[block.id]);
     }
   }
   function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[],removeRow?:()=>void,selectedColumn?:number):React.ReactNode {

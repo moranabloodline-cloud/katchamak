@@ -1,3 +1,5 @@
+> **2026-11-23 — Sačuvane grupe kartica na Canvasu.** Desni klik na izabrane kartice nudi Group cards. Povlačenje bilo koje članice pomera celu grupu uz postojeće vodiče. Ungroup cards čuva položaje i veze.
+
 > **2026-11-23 — Grupno poravnanje na Canvasu.** Tokom povlačenja više izabranih kartica, tanak okvir pokazuje granice cele grupe za vodiče po ivicama, sredini i jednakim razmacima.
 
 > **2026-11-23 — Centriranje i jednaki razmaci na Canvasu.** Isprekidana zlatna linija označava zajedničku sredinu kartica. Dve oznake između tri uzastopne kartice prikazuju jednake horizontalne ili vertikalne razmake.
@@ -703,6 +705,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23 — Trajno grupisanje.** Članstvo je deo knjige (store v69) i važi unutar konkretnog Canvasa. U probnom Canvasu proveren je desni klik, osvežavanje, povlačenje jedne članice uz zajedničku sredinu i dva jednaka razmaka, pa razgrupisavanje i samostalno pomeranje. Test knjižnice potvrđuje da se oznake grupe vraćaju pri ponovnom učitavanju sa servera.
 
 - **2026-11-23 — Vodiči za više kartica.** Poravnanje tokom povlačenja i pri puštanju koristi isti zajednički okvir i isti pomak za sve članove. Mišem su provereni pravougaoni izbor, povlačenje za oba člana, podudaranje spoljnih ivica i sredina i jednaki razmaci na 100% i 120% zuma. Pomak između kartica u probnom primeru ostao je 115 × 28 jedinica.
 

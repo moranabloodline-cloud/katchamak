@@ -1,4 +1,5 @@
 import type {HomeBlock,HomeCell,Homepage} from './homepage';
+import {expandCardGroups} from './canvas-groups';
 import {boardRects,CARD_WIDTH,COLUMN_WIDTH,isPoint,type BoardRect,type Point} from './canvas-board';
 
 export const inFixedRow=(b:HomeBlock)=>b.layout==='row'||!!b.cell;
@@ -22,9 +23,10 @@ export type CanvasTransfer =
   | {type:'releaseCards'; ids:string[]; cell:HomeCell; at:Point};
 
 export function transferCanvasCards(page:Homepage, action:CanvasTransfer):Homepage|null {
-  const ids=new Set(action.ids);
+  const requested=new Set(action.ids);
+  const ids=expandCardGroups(page.blocks,requested);
   const cards=page.blocks.filter(b=>ids.has(b.id));
-  if(!ids.size||ids.size!==action.ids.length||cards.length!==ids.size)return null;
+  if(!ids.size||requested.size!==action.ids.length||cards.length!==ids.size)return null;
   if(cards.some(b=>b.positionLocked||b.layout==='line'||b.layout==='row'||b.layout==='column'))return null;
   const rest=page.blocks.filter(b=>!ids.has(b.id));
   if(action.type==='moveCellCards'){

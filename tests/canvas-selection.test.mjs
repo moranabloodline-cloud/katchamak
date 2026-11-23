@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {applySelection,boardLayers,extractBoard,framedItems,frameBetween} from '../src/lib/kachamak/canvas-selection.ts';
+import {expandCardGroups,clearSingletonGroups} from '../src/lib/kachamak/canvas-groups.ts';
 import {alignCanvas,canvasDragFrame} from '../src/lib/kachamak/canvas-guides.ts';
 import {boardRects} from '../src/lib/kachamak/canvas-board.ts';
 import {changeHomepage,validHomepage} from '../src/lib/kachamak/homepage.ts';
@@ -85,5 +86,37 @@ for(const zoom of [.25,1,2.5]){
   }
   for(const neighbor of [left,right,linked])assert.deepEqual(dropped.blocks.find(b=>b.id===neighbor.id),neighbor);
 }
+
+const groupChange=(page,ids,groupId)=>changeHomepage(page,{type:'cardGroup',ids,groupId});
+const memberIds=pair.map(b=>b.id);
+const savedGroup=groupChange(sheet,memberIds,'duo');
+assert.ok(validHomepage(savedGroup));
+const restored=JSON.parse(JSON.stringify(savedGroup));
+assert.deepEqual([...expandCardGroups(restored.blocks,new Set(['two']))].sort(),memberIds);
+assert.deepEqual(restored.blocks.map(b=>b.at),sheet.blocks.map(b=>b.at));
+assert.equal(groupChange(restored,['two'],'duplicate'),null);
+assert.equal(groupChange(sheet,['one','missing'],'ghost'),null);
+assert.equal(groupChange({...restored,locked:true},['two'],null),null);
+const movedGroup=changeHomepage(restored,{type:'boardMove',id:'two',at:{x:0.5,y:-35}});
+const translated=movedGroup.blocks.find(b=>b.id==='one').at;
+assert.deepEqual(translated,{x:0.5+pair[0].at.x-pair[1].at.x,y:-35+pair[0].at.y-pair[1].at.y});
+const independent=groupChange(movedGroup,['two'],null);
+assert.deepEqual(independent.blocks.map(b=>b.at),movedGroup.blocks.map(b=>b.at));
+assert.deepEqual(independent.blocks.find(b=>b.id==='linked'),linked);
+const single=changeHomepage(independent,{type:'boardMove',id:'two',at:{x:50,y:75}});
+assert.deepEqual(single.blocks.find(b=>b.id==='one').at,translated);
+assert.ok(single.blocks.every(b=>!b.groupId));
+const joined=groupChange(restored,['one','left'],'larger');
+assert.deepEqual(joined.blocks.filter(b=>b.groupId==='larger').map(b=>b.id).sort(),['left','one','two']);
+assert.equal(clearSingletonGroups(joined),joined);
+const removed=changeHomepage(restored,{type:'deleteItems',originals:[restored.blocks.find(b=>b.id==='one')],positions:{}});
+assert.ok(removed.blocks.every(b=>!b.groupId));
+const container=card('row','row',500,0,{columns:2,width:'full'});
+const docked=changeHomepage({...restored,blocks:[container,...restored.blocks]},{type:'dockCards',ids:['two'],cell:{rowId:'row',column:0}});
+assert.ok(validHomepage(docked));
+assert.ok(docked.blocks.filter(b=>b.groupId==='duo').every(b=>b.cell?.column===0));
+assert.equal(groupChange(docked,['left','one'],'mixed'),null);
+const released=changeHomepage(docked,{type:'releaseCards',ids:['one'],cell:{rowId:'row',column:0},at:{x:300,y:100}});
+assert.ok(released.blocks.filter(b=>b.groupId==='duo').every(b=>b.at&&!b.cell));
 
 console.log('Canvas marquee, six alignments, equal spacing, group moves, layer order, locks and linked board conversion passed.');
