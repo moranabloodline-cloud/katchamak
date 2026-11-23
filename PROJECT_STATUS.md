@@ -1,3 +1,5 @@
+> **2026-11-23 — Centriranje i jednaki razmaci na Canvasu.** Isprekidana zlatna linija označava zajedničku sredinu kartica. Dve oznake između tri uzastopne kartice prikazuju jednake horizontalne ili vertikalne razmake.
+
 > **2026-11-22 — Canvas, poravnanje i raspored demo atlasa.** Canvas sada prikazuje privremene linije za poravnanje pri pomeranju kartica, grupa i redova. U zaključanom prikazu kolone više ne rezervišu prostor za kontrole uređivanja.
 
 > **2026-11-22 — Brojač u Binder Splitu.** Klik ili prelazak fokusa na editor prikazuje broj reči otvorene scene ili zbir poglavlja u tom panelu.
@@ -699,6 +701,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23 — Canvas vodiči.** Pri pomeranju bilo koje od tri kartice poravnanje koristi njihove ivice i sredine u koordinatama platna. Prag je pet ekranskih piksela. Provereni su različite širine, oba smera, četiri nivoa zuma u testovima geometrije i povlačenje mišem na 100% i 120% uz nestanak linija po otpuštanju.
 
 - **2026-11-22 — Canvas, poravnanje i raspored demo atlasa.** Canvas sada prikazuje privremene linije za poravnanje pri pomeranju kartica, grupa i redova. U zaključanom prikazu kolone više ne rezervišu prostor za kontrole uređivanja. Uvoz rasporeda ažurira jednu stranicu i njene galerijske reference u jednom koraku istorije.
 

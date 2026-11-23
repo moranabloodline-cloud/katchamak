@@ -5,7 +5,7 @@ import {createPortal} from 'react-dom';
 import {Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {canvasOpeningView} from '@/lib/kachamak/canvas-file';
-import {alignCanvasEdges,type AlignmentGuide} from '@/lib/kachamak/canvas-guides';
+import {alignCanvas,type AlignmentGuide} from '@/lib/kachamak/canvas-guides';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -36,7 +36,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   const surface=useRef<HTMLDivElement>(null),world=useRef<HTMLDivElement>(null);
   const positionKey='kachamak-board:'+novel.id+':'+page.id+(page.viewKey?':'+page.viewKey:'');
   const cameraKey=positionKey+':world';
-  const snapEdges=useZoomSetting(positionKey,'snap-edges')!=='off';
+  const snapping=useZoomSetting(positionKey,'snap-edges')!=='off';
   const showGrid=useZoomSetting(positionKey,'grid')!=='hidden';
   const storedZoom=Number(useZoomSetting(positionKey,'zoom'));
   const zoom=storedZoom>=0.02&&storedZoom<=3?storedZoom:1;
@@ -386,7 +386,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   function dragPlacement(g:Gesture,p:Point,clientX:number,clientY:number){
     const delta={x:p.x-g.boardStart!.x,y:p.y-g.boardStart!.y};
     const raw={x:g.origin.x+delta.x,y:g.origin.y+delta.y};
-    if(!snapEdges||g.kind==='move'&&g.dockable&&(rowDrop.target(clientX,clientY)||!g.group&&columnAt(p,g.id!)))return {at:raw,guides:[]};
+    if(!snapping||g.kind==='move'&&g.dockable&&(rowDrop.target(clientX,clientY)||!g.group&&columnAt(p,g.id!)))return {at:raw,guides:[]};
     const ids=new Set(g.group??[g.id!]);
     const moving:BoardRect[]=[],targets:BoardRect[]=[];
     for(const [id,r] of [...rects,...rowRects]){
@@ -398,7 +398,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     const x=Math.min(...moving.map(r=>r.x)),y=Math.min(...moving.map(r=>r.y));
     const bounds={x:x+delta.x,y:y+delta.y,w:Math.max(...moving.map(r=>r.x+r.w))-x,h:Math.max(...moving.map(r=>r.y+r.h))-y};
     const el=surface.current!,scale=zoom*el.getBoundingClientRect().width/el.clientWidth;
-    const aligned=alignCanvasEdges(bounds,targets,5/scale);
+    const aligned=alignCanvas(bounds,targets,5/scale);
     return {at:{x:raw.x+aligned.at.x-bounds.x,y:raw.y+aligned.at.y-bounds.y},guides:aligned.guides};
   }
   function track(e:PEvent<HTMLDivElement>){
@@ -450,7 +450,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     }else if(g.kind==='move'&&(move||dragged)){
       const col=columnAt(p,g.id!),before=col?page.blocks.find(b=>b.columnId===col&&b.id!==g.id&&p.y<rects.get(b.id)!.y+rects.get(b.id)!.h/2)?.id:undefined;
       const {at}=dragPlacement(g,p,e.clientX,e.clientY);
-      save({type:'boardMove',id:g.id!,at:{x:Math.round(at.x),y:Math.round(at.y)},columnId:col,before});
+      save({type:'boardMove',id:g.id!,at,columnId:col,before});
     }
     if(g.kind==='ink'&&g.points?.length){
       const points=g.points;
@@ -550,7 +550,11 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
             !(kind in toolsByKind)?renderClassic(b):<CanvasItemFace block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
           </article>;
         })}
-        {!page.locked&&(move||movingRow)&&guides.length>0&&<svg aria-hidden="true" className="cv-guides">{guides.map((guide,i)=><line key={i} {...guide} vectorEffect="non-scaling-stroke"/>)}</svg>}
+        {!page.locked&&(move||movingRow)&&guides.length>0&&<svg aria-hidden="true" className="cv-guides"><defs><marker id={edgePrefix+'-gap-cap'} markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M4 0v8"/></marker></defs>
+          {guides.map(({kind,...segment},i)=>{
+            const cap=kind==='gap'?'url(#'+edgePrefix+'-gap-cap)':undefined;
+            return <line key={i} data-guide={kind} {...segment} markerStart={cap} markerEnd={cap} vectorEffect="non-scaling-stroke"/>;
+          })}</svg>}
         {liveInk.length>0&&<svg className="cv-live-ink"><InkPaths strokes={[liveInk]} color={inkColor}/></svg>}
       </div>
       {toolDrop.preview&&<div aria-hidden="true" className={toolDrop.preview.cell?'cv-tool-slot':'cv-tool-origin'}
@@ -572,7 +576,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       <span className="cv-dock-divider"/>{btn('Zoom out',Minus,()=>{lastPointer.current=null;setZoom(zoom/1.2);})}
       <button className="cv-zoom-level" title="Reset zoom" onClick={()=>{lastPointer.current=null;setZoom(1);}}>{Math.round(zoom*100)}%</button>
       {btn('Zoom in',Plus,()=>{lastPointer.current=null;setZoom(zoom*1.2);})}{btn('Fit board',Focus,fit)}
-      {!page.locked&&btn('Snap to edges',Magnet,()=>saveZoomSetting(positionKey,'snap-edges',snapEdges?'off':'on'),snapEdges)}
+      {!page.locked&&btn('Snap to alignment guides',Magnet,()=>saveZoomSetting(positionKey,'snap-edges',snapping?'off':'on'),snapping)}
       {btn(showGrid?'Hide grid':'Show grid',showGrid?Grid2X2:Grid2X2X,()=>saveZoomSetting(positionKey,'grid',showGrid?'hidden':'visible'))}
     </div>
     {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}{tool==='draw'&&<input aria-label="Drawing color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/>}<button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
