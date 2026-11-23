@@ -54,6 +54,7 @@ export function canvasOpeningView(page:Homepage,viewportWidth:number){
   const bounds=[...rows.values(),...free.values()];
   if(!bounds.length)return {level:1,x:20,y:20};
   const left=Math.min(...bounds.map(r=>r.x)),top=Math.min(...bounds.map(r=>r.y)),width=Math.max(...bounds.map(r=>r.x+r.w))-left;
-  const level=Math.min(1,Math.max(.02,Math.floor((viewportWidth-40)/width*100)/100));
+  const maxLevel=page.width==='wide'&&rows.size?3:1;
+  const level=Math.min(maxLevel,Math.max(.02,Math.floor((viewportWidth-40)/width*100)/100));
   return {level,x:Math.max(16,(viewportWidth-width*level)/2)-left*level,y:20-top*level};
 }

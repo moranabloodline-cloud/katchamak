@@ -2,7 +2,7 @@
 
 import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode,type PointerEvent as PEvent} from 'react';
 import {createPortal} from 'react-dom';
-import {Group,Ungroup,Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
+import {Copy,Group,Ungroup,Magnet,PanelRightOpen,Check,Columns3,Focus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {canvasOpeningView} from '@/lib/kachamak/canvas-file';
 import {canGroupCards,expandCardGroups} from '@/lib/kachamak/canvas-groups';
@@ -47,6 +47,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
   });
   const setZoom=(level:number)=>saveZoomSetting(positionKey,'zoom',String(Math.min(3,Math.max(.02,Math.round(level*100)/100))));
   const zoomRef=useRef(zoom);zoomRef.current=zoom;
+  const panRef=useRef(pan);panRef.current=pan;
   const [heights,setHeights]=useState(new Map<string,number>());
   const [tool,setTool]=useState<'select'|'pan'|'line'|'draw'>('select');
   const [inkColor,setInkColor]=useState('#dfac74');
@@ -150,6 +151,29 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       setPan({x:24-(first.at?.x??page.legacyRowX??legacyRowLeft)*level,y:32-(first.at?.y??0)*level});
     }
   },[cameraKey]);
+  useLayoutEffect(()=>{
+    const el=surface.current;
+    if(!el||!page.viewKey||page.width!=='wide'||!rows.length||typeof ResizeObserver==='undefined')return;
+    const composition={...page,blocks:[...rows,...page.blocks]};
+    const widthKey=cameraKey+':width';
+    let previousWidth=el.clientWidth;
+    try{previousWidth=Number(sessionStorage.getItem(widthKey))||previousWidth;}catch{}
+    const observer=new ResizeObserver(()=>{
+      const width=el.clientWidth;
+      if(width<=40)return;
+      try{sessionStorage.setItem(widthKey,String(width));}catch{}
+      if(width===previousWidth)return;
+      const prior=canvasOpeningView(composition,previousWidth);
+      previousWidth=width;
+      // Follow a resized workspace while the reader is at the fitted width, preserving scroll depth.
+      if(prior.level!==zoomRef.current||Math.abs(prior.x-panRef.current.x)>2)return;
+      const next=canvasOpeningView(composition,width);
+      const y=next.y+(panRef.current.y-prior.y)*next.level/prior.level;
+      previousZoom.current=next.level;setZoom(next.level);setPan({x:next.x,y});
+    });
+    observer.observe(el);
+    return ()=>observer.disconnect();
+  },[cameraKey,page,rows]);
   useLayoutEffect(()=>{
     if(!world.current || typeof ResizeObserver==='undefined')return;
     const observer=new ResizeObserver(entries=>setHeights(prev=>{
@@ -328,6 +352,13 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
     if(!menu)return;
     const ids=menu.cards.map(b=>b.id);
     if(save({type:'cardGroup',ids,groupId}))setSelected('block' in menu?menu.block.id:ids[0]);
+  }
+  const menuGroup=menu&&('block' in menu?menu.block.groupId:
+    menu.cards.every(b=>b.groupId===menu.cards[0]?.groupId)&&menu.cards[0]?.groupId);
+  function duplicateMenuGroup(){
+    if(!menuGroup)return;
+    const copyId=crypto.randomUUID();
+    if(save({type:'duplicateGroup',groupId:menuGroup,copyId}))setSelected(copyId+'-card-0');
   }
   function deleteSelection(){
     if(page.locked||!selection.length)return;
@@ -590,6 +621,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,tools
       {!rows.length&&!page.blocks.length&&!page.locked&&tool==='select'&&<button type="button" className="cv-first" onClick={()=>pick('note')}><Plus size={18}/>Add your first note</button>}
     </div></ContextMenuTrigger>{menu&&<ContextMenuContent>
       {canGroupCards(menu.cards)&&<ContextMenuItem onSelect={()=>changeMenuGroup(crypto.randomUUID())}><Group size={14}/>Group cards</ContextMenuItem>}
+      {menuGroup&&<ContextMenuItem onSelect={duplicateMenuGroup}><Copy size={14}/>Duplicate group</ContextMenuItem>}
       {menu.cards.some(b=>b.groupId)&&<ContextMenuItem onSelect={()=>changeMenuGroup(null)}><Ungroup size={14}/>Ungroup cards</ContextMenuItem>}
       {'at' in menu?<>
         <ContextMenuItem onSelect={()=>addRow(menu.at)}><Rows3 size={14}/>Add row here</ContextMenuItem>

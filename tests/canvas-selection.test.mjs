@@ -119,4 +119,25 @@ assert.equal(groupChange(docked,['left','one'],'mixed'),null);
 const released=changeHomepage(docked,{type:'releaseCards',ids:['one'],cell:{rowId:'row',column:0},at:{x:300,y:100}});
 assert.ok(released.blocks.filter(b=>b.groupId==='duo').every(b=>b.at&&!b.cell));
 
+// Only the cloned subgraph travels with a duplicate. Free copies also get their own drag geometry.
+const duplicate=(p,copyId='copy')=>changeHomepage(p,{type:'duplicateGroup',groupId:'duo',copyId});
+const original={...restored,blocks:[...restored.blocks,edge('external-link','two','right')]};
+const duplicated=duplicate(original);
+assert.ok(validHomepage(duplicated));
+assert.deepEqual(duplicated.blocks.slice(0,original.blocks.length),original.blocks);
+const copies=duplicated.blocks.filter(b=>b.groupId==='copy');
+assert.deepEqual(copies.map(b=>b.at),pair.map(b=>({x:b.at.x+32,y:b.at.y+32})));
+assert.deepEqual(duplicated.blocks.slice(-1)[0].edge,{from:copies[0].id,to:copies[1].id});
+assert.equal(duplicated.blocks.length,original.blocks.length+3);
+const copyMoved=changeHomepage(JSON.parse(JSON.stringify(duplicated)),{type:'boardMove',id:copies[1].id,at:{x:10,y:20}});
+assert.deepEqual(copyMoved.blocks.filter(b=>b.groupId==='duo'),original.blocks.filter(b=>b.groupId==='duo'));
+assert.deepEqual(copyMoved.blocks.find(b=>b.id===copies[0].id).at,{x:10+pair[0].at.x-pair[1].at.x,y:20+pair[0].at.y-pair[1].at.y});
+assert.equal(duplicate(duplicated),null);
+assert.notDeepEqual(duplicate(duplicated,'again').blocks.find(b=>b.groupId==='again').at,copies[0].at);
+assert.equal(duplicate({...original,locked:true}),null);
+const dockCopy=duplicate(docked);
+assert.ok(validHomepage(dockCopy));
+assert.deepEqual(dockCopy.blocks.filter(b=>b.cell).map(b=>b.groupId),['duo','duo','copy','copy']);
+assert.deepEqual(dockCopy.blocks.at(-1).edge,{from:'copy-card-0',to:'copy-card-1'});
+
 console.log('Canvas marquee, six alignments, equal spacing, group moves, layer order, locks and linked board conversion passed.');

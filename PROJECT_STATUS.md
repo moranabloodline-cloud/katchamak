@@ -1,3 +1,5 @@
+> **2026-11-23 — Dupliranje grupe i široki Homepage.** Duplicate group kopira raspored i unutrašnje veze kartica. Široki uvezeni raspored otvara se prema širini radne površine.
+
 > **2026-11-23 — Sačuvane grupe kartica na Canvasu.** Desni klik na izabrane kartice nudi Group cards. Povlačenje bilo koje članice pomera celu grupu uz postojeće vodiče. Ungroup cards čuva položaje i veze.
 
 > **2026-11-23 — Grupno poravnanje na Canvasu.** Tokom povlačenja više izabranih kartica, tanak okvir pokazuje granice cele grupe za vodiče po ivicama, sredini i jednakim razmacima.
@@ -705,6 +707,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23** — Kopija grupe dobija sopstvene kartice i veze u jednoj izmeni. Canvas u proračunu prikaza i rasporedu poštuje širinu pojedinačnog reda.
 
 - **2026-11-23 — Trajno grupisanje.** Članstvo je deo knjige (store v69) i važi unutar konkretnog Canvasa. U probnom Canvasu proveren je desni klik, osvežavanje, povlačenje jedne članice uz zajedničku sredinu i dva jednaka razmaka, pa razgrupisavanje i samostalno pomeranje. Test knjižnice potvrđuje da se oznake grupe vraćaju pri ponovnom učitavanju sa servera.
 

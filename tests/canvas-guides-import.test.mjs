@@ -52,4 +52,10 @@ assert.deepEqual(again,first);assert.equal(current.blocks.length,0);
 assert.equal(importCanvasFile(book,current,{...file,projectId:'another'}),null);
 assert.equal(importCanvasFile(book,current,{...file,images:[]}),null);
 const view=canvasOpeningView(first.page,510);assert.equal(view.level,1);assert.equal(35+view.y,20);
+const wide={locked:true,width:'wide',mode:'canvas',blocks:[{id:'opening',layout:'row',extent:{w:1480,h:112},at:{x:0,y:0},columns:1}]};
+for(const width of [600,1440,2400]){
+  const camera=canvasOpeningView(wide,width);
+  assert.ok(Math.abs(width-40-1480*camera.level)<16);
+  assert.equal(camera.y,20);
+}
 console.log('Edge and center alignment, equal gaps on both axes, zoom tolerance, Canvas import, Gallery deduplication and opening view passed.');

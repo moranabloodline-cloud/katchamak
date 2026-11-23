@@ -94,10 +94,11 @@ export function unifiedCanvas<T extends Homepage>(page:T):T {
 }
 
 export const legacyRowLeft=-1240;
-export function worldRows(rows:HomeBlock[],width:number,heights:ReadonlyMap<string,number>,originX=legacyRowLeft){
+export function worldRows(rows:HomeBlock[],defaultWidth:number,heights:ReadonlyMap<string,number>,originX=legacyRowLeft){
   const rects=new Map<string,BoardRect>();
   const stack:BoardRect[]=[];
   for(const row of rows){
+    const width=row.extent?.w??defaultWidth;
     const {x,y:anchor}=row.at??{x:originX,y:0};
     let y=anchor;
     const h=heights.get(row.id)??112;

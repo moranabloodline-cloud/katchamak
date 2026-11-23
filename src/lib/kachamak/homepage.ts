@@ -2,7 +2,7 @@ import { SECTION_KEYS, type SectionKey, type Novel } from './types';
 import {validProjectImage, validCoverImage} from './project-image';
 
 import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,worldRows,type CanvasTransfer} from './canvas-layout';
-import {changeCardGroup,clearSingletonGroups,type CardGroupChange} from './canvas-groups';
+import {changeCardGroup,clearSingletonGroups,duplicateCardGroup,type CardGroupChange,type DuplicateGroupChange} from './canvas-groups';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
 import {validCanvasFields,validBoard,moveOnBoard,isPoint,type Point,type CanvasFields,type BoardMove} from './canvas-board';
 
@@ -198,7 +198,7 @@ export function validHomepage(value: unknown): boolean {
 
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
-export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange
+export type HomeChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange | DuplicateGroupChange
   | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
   | {type:'moveRow';id:string;at:Point;heights:[string,number][]}
@@ -228,6 +228,7 @@ export function changeHomepage(page: Homepage, action: HomeChange): Homepage | n
 // Operate on the appropriate layout in isolation so a free-board command cannot move a fixed row.
 export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|null {
   const page=unifiedCanvas(saved);
+  if(action.type==='duplicateGroup')return duplicateCardGroup(page,action);
   if(action.type==='cardGroup')return changeCardGroup(page,action);
   if(action.type==='lock')return {...page,locked:action.locked};
   if(page.locked)return null;
@@ -302,6 +303,7 @@ export function changeUnifiedCanvas(saved:Homepage,action:HomeChange):Homepage|n
 }
 
 function applyHomeChange(page:Homepage,action:HomeChange):Homepage|null {
+  if(action.type==='duplicateGroup')return duplicateCardGroup(page,action);
   if(action.type==='cardGroup')return changeCardGroup(page,action);
   if(action.type==='deleteItems'||action.type==='moveRow'||action.type==='info'||action.type==='appearance'||action.type==='moveCellCards'||action.type==='dockCards'||action.type==='releaseCards')return null;
   if (action.type === 'lock') return { ...page, locked: action.locked };
