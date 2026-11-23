@@ -1,3 +1,5 @@
+> **2026-11-23 — Kartice na Canvasu.** Zaključano platno prikazuje sadržaj bez zaglavlja sa tipom kartice. U redu pojedinačnih kartica donje ivice se poravnavaju po najvišoj kartici.
+
 > **2026-11-23 — Maps.** Svaka knjiga ima opcioni tab sa stablom mapa, folderima i alatima za pinove, putanje, oblasti i merenje. Canvas i Codex prikazuju istu projektnu mapu. Codex može da veže belešku za pojedinačni pin.
 
 > **2026-11-23 — Mape u Codex beleškama.** U panelu Details može da se doda blok Map. Izbor mape sa Canvasa deli anotacije sa izvornom mapom. Slika iz Galerije može da posluži kao zasebna mapa beleške.
@@ -715,6 +717,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-23.** Tip kartice na Canvasu vidi se tokom uređivanja. U zaključanom prikazu ostaju korisnički naslovi i sadržaj. Grid i flex poravnavaju portretne kartice unutar istog reda pri prelamanju opisa.
 
 - 2026-11-23 — Prethodne Canvas i Codex mape prelaze u biblioteku Maps. Sačuvani su položaji kartica, anotacije i razmera. Open in Maps otvara editor i vodi nazad na izvornu karticu ili belešku.
 

@@ -157,6 +157,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[],removeRow?:()=>void,selectedColumn?:number):React.ReactNode {
     const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
+    const rowLanes=lanes.get(block.id);
+    const cardRow=rowLanes?.every(items=>items.length===0 || (items.length===1 && items[0].layout==='card'));
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
     const editButton={type:'button' as const,'aria-label':'Edit '+name,title:row?'Edit row':'Edit '+name,onClick:()=>edit(block)};
     const classic=['card','banner','image','text'].includes(block.layout);
@@ -189,8 +191,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
           <button {...editButton} id={'home-edit-row-'+block.id} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3"/>Edit row</button>
           <button type="button" onClick={removeRow} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button>
         </div>}</div>}
-        <div className="grid grid-cols-1 gap-2 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
-          {lanes.get(block.id)?.map((children,column)=>{
+        <div data-card-row={cardRow||undefined} className="grid grid-cols-1 gap-2 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
+          {rowLanes?.map((children,column)=>{
             const selectedSiblings=children.filter(b=>selectedIds.has(b.id));
             const active=selectedIds.has(block.id)&&selectedColumn===column;
             return <div key={column} data-home-cell={block.id} data-column={column} tabIndex={page.locked?undefined:0} aria-label={'Column '+(column+1)} className={`relative flex min-w-0 flex-col gap-2 rounded ${page.locked?'':'min-h-14 pb-6'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>

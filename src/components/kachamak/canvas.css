@@ -6,6 +6,8 @@
 .cv-guides [data-guide=center] { stroke-dasharray:5 3; }
 .cv-guides [data-guide=gap],.cv-guides marker path { stroke:#ffe09b; }
 .cv-world-row { position:absolute; }
+.cv-fixed-section [data-card-row] > [data-home-cell] > article { flex:auto; display:grid; }
+.cv-fixed-section [data-card-row] > [data-home-cell] > article > :is(a,button[data-card-face]) { justify-content:flex-start; }
 .cv-card[data-dragging],.cv-card[data-dragging] * { pointer-events:none; }
 .cv-fixed-section [data-fixed-selected] { outline:2px solid #d6a95e; outline-offset:2px; border-radius:6px; }
 .cv-fixed-section [data-home-block][draggable=true] { cursor:grab; user-select:none; }
