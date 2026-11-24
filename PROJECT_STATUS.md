@@ -1,3 +1,5 @@
+> **2026-11-25 — Undo i Redo u poljima Synopsis i Notes.** Tastatura i gornja traka koriste istoriju aktivnog polja. Kad se istorija polja iscrpi, komanda se zaustavlja u tom polju.
+
 > **2026-11-23 — Formatiranje u poljima Synopsis i Notes.** Gornja traka prati označeni tekst u desnom panelu, uključujući Info na Canvasu. Promena beleške poništava prethodni izbor teksta.
 
 > **2026-11-23 — Ručni linkovi ka veb-stranicama.** Adrese umetnute u tekst beleške vide se kao podvučeni linkovi. Klik otvara odredište i ostavlja belešku otvorenu.
@@ -723,6 +725,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-25.** U probnoj Planning belešci provereni su Undo i Redo formatiranja po jedne reči u oba Info polja, prečicama i ikonicama. Proveren je i prelazak iz Write u List dok postoji ranija izmena rukopisa.
 
 - **2026-11-23.** U probnoj Planning belešci provereni su podebljanje i boja u sinopsisu, kurziv, veličina, prored i umetanje veb-linka u Notes, zatim Save i ponovno učitavanje. Tekst rukopisa ostao je isti. Regresioni test prolazi i za Info na Canvasu, prelazak između polja i izbor druge beleške.
 

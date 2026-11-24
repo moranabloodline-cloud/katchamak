@@ -4,6 +4,7 @@ import {editorCanStep,otherMountedEditor} from '@/lib/kachamak/editor-history';
 import {historyAvailable,historyGroup,listenHistory,markNativeEdit,type HistoryDirection} from '@/lib/kachamak/workspace-history';
 
 const nativeText='textarea:not([readonly]),input:not([type]):not([readonly]),input:is([type=text],[type=number],[type=search],[type=email],[type=url],[type=tel],[type=password]):not([readonly])';
+const isInspectorField=(editor:HTMLElement|null)=>!!editor?.closest('[data-inspector-prose]');
 function observe(update:()=>void){
   const off=listenHistory(update);
   const events=['focusin','focusout','input','selectionchange'];
@@ -26,6 +27,7 @@ export function useWorkspaceHistory(){
   function permitted(direction:HistoryDirection,editor:HTMLElement|null){
     if(editor?.matches(nativeText)&&nativeHistory(direction,editor))return true;
     if(editor&&editorCanStep(editor,direction))return true;
+    if(isInspectorField(editor))return false;
     const noteId=editor?.dataset.noteId;
     return historyAvailable(direction,noteId)&&!(editor&&otherMountedEditor(historyGroup(direction,noteId),editor));
   }
@@ -40,7 +42,7 @@ export function useWorkspaceHistory(){
       editor.dispatchEvent(new CustomEvent('kachamak-history',{detail}));
       if(detail.applied)return;
     }
-    stepWorkspaceHistory(direction,editor?.dataset.noteId);
+    if(!isInspectorField(editor))stepWorkspaceHistory(direction,editor?.dataset.noteId);
   }
   const available=useSyncExternalStore(observe,()=>{
     const editor=field();
