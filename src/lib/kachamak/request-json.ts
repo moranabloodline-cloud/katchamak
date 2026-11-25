@@ -2,6 +2,8 @@ export class RequestTimeoutError extends Error {
   constructor() { super('The request timed out. Retry when the connection is available.'); this.name = 'RequestTimeoutError'; }
 }
 
+export class InvalidResponseError extends Error {}
+
 // Fetch cannot report upload progress. A library snapshot can contain several MB of images.
 function transferSnapshot(path: string, init: RequestInit, body: string | null, signal: AbortSignal, onProgress: () => void): Promise<Response> {
   return new Promise((resolve, reject) => {
@@ -68,10 +70,13 @@ export async function requestJson(path: string, init: RequestInit = {}, timeoutM
       const raw = await response.text();
       let data;
       try { data = JSON.parse(raw); } catch {
-        if (response.ok) throw new Error('The server returned an unreadable response. Please retry.');
+        if (response.ok) throw new InvalidResponseError('The server returned an unreadable response. Please retry.');
         data = {};
       }
-      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('The server returned an invalid response. Please retry.');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        if (response.ok) throw new InvalidResponseError('The server returned an invalid response. Please retry.');
+        data = {};
+      }
       return { response, data };
     })()]);
   } finally {

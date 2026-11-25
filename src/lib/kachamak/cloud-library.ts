@@ -14,7 +14,7 @@ import { isWebSession, registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
-import { requestJson, RequestTimeoutError } from './request-json';
+import { requestJson, RequestTimeoutError, InvalidResponseError } from './request-json';
 import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
 import {runWorkspaceAction,setHistoryOwner,historyStoreChanged,flushBookHistories,discardBookHistory} from './workspace-history';
 import { cloneWorkspaceTab } from './clone-workspace-tab';
@@ -178,7 +178,10 @@ async function api(path: string, init?: RequestInit) {
   const headers=new Headers(init?.headers);
   if(path.startsWith('/api/library')&&accountId)headers.set('X-Katchamak-Account',accountId);
   const { response, data } = await requestJson(path, { ...init, headers }, path.includes('/demo/') || init?.body instanceof FormData ? 60000 : 30000).catch(error => {
-    if (!init?.signal?.aborted && (error instanceof RequestTimeoutError || error instanceof TypeError)) throw new TemporaryCloudError(error.message);
+    const invalidLibraryResponse = error instanceof InvalidResponseError && path.split('?')[0] === '/api/library';
+    if (!init?.signal?.aborted && (error instanceof RequestTimeoutError || error instanceof TypeError || invalidLibraryResponse)) {
+      throw new TemporaryCloudError(error.message);
+    }
     throw error;
   });
   if (epoch !== accountEpoch) throw new Error('The account session changed. Please sign in again.');
@@ -311,6 +314,11 @@ export async function flushWebLibrary() {
     if (unconfirmedWrite) {
       const attempt = unconfirmedWrite;
       const remote = await api('/api/library?revision='+revision);
+      if (!Number.isSafeInteger(remote.revision) || remote.revision < revision ||
+          (remote.unchanged === true ? remote.revision !== revision
+            : !Array.isArray(remote.snapshot?.novels) || !Array.isArray(remote.snapshot?.collections))) {
+        throw new TemporaryCloudError('The server did not confirm the saved library revision.');
+      }
       // A failed response may follow a committed write. Confirm its exact payload
       // before retrying newer edits against the acknowledged revision.
       if (remote.revision === revision + 1 && JSON.stringify(remote.snapshot) === attempt.value) {
@@ -333,14 +341,18 @@ export async function flushWebLibrary() {
       if (!useWebLibrary.getState().ready) throw new Error('Sign in again before saving.');
       useWebLibrary.setState({ busy: true, pending: true });
       let data;
-      try{data=await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });}
+      try {
+        data = await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });
+        if (!Number.isSafeInteger(data.revision) || data.revision !== revision + 1) {
+          throw new TemporaryCloudError('The server did not confirm this save. Your edits are kept in this window.');
+        }
+      }
       catch(error){
         if (error instanceof TemporaryCloudError && useWebLibrary.getState().ready) unconfirmedWrite = { value, draft: checkpoint };
         if(!(error instanceof LibraryConflictError))throw error;
         if(retries++>=2){useWebLibrary.setState({conflict:true});throw error;}
         await reconcileRevision();continue;
       }
-      if(!Number.isSafeInteger(data.revision)||data.revision!==revision+1)throw new Error('The server did not confirm this save. Your edits are kept in this window. Retry saving.');
       revision = data.revision; saved = value;
       await removeAcknowledgedDraft(checkpoint, value);
     }

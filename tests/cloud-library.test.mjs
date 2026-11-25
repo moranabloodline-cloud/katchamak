@@ -332,13 +332,26 @@ assert.equal(automaticWrites,2);
 assert.equal(cloud.useWebLibrary.getState().retrying,false);
 assert.deepEqual(await draftStorage.list(a),[]);
 assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,newerDraft);
-// A lost response after a committed write recovers through revision reconciliation.
-useKachamak.getState().updateNode('binder','note-1',{content:'<p>Committed before connection dropped</p>'});
-globalThis.fetch=async(path,init)=>{const r=await realFetch(path,init);if(path==='/api/library'&&init?.method==='POST')throw new TypeError('Lost acknowledgement');return r;};
-await assert.rejects(()=>cloud.saveWebLibrary());assert.equal(cloud.useWebLibrary.getState().pending,true);
-useKachamak.getState().updateNode('binder','note-1',{content:'<p>New text after lost acknowledgement</p>'});
-globalThis.fetch=realFetch;await cloud.saveWebLibrary();assert.equal(cloud.useWebLibrary.getState().pending,false);
-assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>New text after lost acknowledgement</p>');
+// A committed write with a lost or malformed confirmation still permits newer edits.
+for (const [label, brokenAck] of [
+  ['lost', () => {throw new TypeError('Lost acknowledgement');}],
+  ['unreadable', () => new Response('<html>Gateway</html>')],
+  ['missing revision', () => Response.json({})],
+]) {
+  useKachamak.getState().updateNode('binder','note-1',{content:`<p>Committed before ${label} confirmation</p>`});
+  globalThis.fetch=async(path,init)=>{
+    const response=await realFetch(path,init);
+    return path==='/api/library'&&init?.method==='POST'?brokenAck():response;
+  };
+  await assert.rejects(()=>cloud.saveWebLibrary());
+  assert.equal(cloud.useWebLibrary.getState().retrying,true);
+  const edited=`<p>New text after ${label} confirmation</p>`;
+  useKachamak.getState().updateNode('binder','note-1',{content:edited});
+  globalThis.fetch=realFetch;
+  await cloud.saveWebLibrary();
+  assert.equal(cloud.useWebLibrary.getState().pending,false);
+  assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,edited);
+}
 // Reload may only replace the snapshot that was present when the user requested it.
 for(const discard of [false,true]) {
  let releaseRead,readStarted;

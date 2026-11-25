@@ -10,6 +10,7 @@ for (const file of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()
   for (const statement of readFileSync('drizzle/' + file, 'utf8').split('--> statement-breakpoint')) if (statement.trim()) sql.exec(statement);
 let queries = 0, reads = 0, writes = 0;
 const DB = { prepare(query) {
+  assert.doesNotMatch(query, /^\s*CREATE\b/i, 'Incoming requests use the migrated schema');
   let values = [];
   const run = async fn => { queries++; await Bun.sleep(1); return fn(); };
   const stmt = { bind(...v) { values = v; return stmt; },
@@ -19,7 +20,10 @@ const DB = { prepare(query) {
   return stmt;
 } };
 const body = JSON.stringify({ novels: [], collections: [] });
-const env = { DB, KATCHAMAK_ADMIN_EMAIL: 'owner@test.local', BUCKET: { async get() { reads++; return { text: async () => body }; } } };
+const env = { DB, KATCHAMAK_ADMIN_EMAIL: 'owner@test.local', BUCKET: {
+  async get() { reads++; return { text: async () => body }; },
+  async put() {},
+} };
 const headers = { 'oai-authenticated-user-id': 'owner', 'oai-authenticated-user-email': 'owner@test.local', 'X-Katchamak-Account': 'owner' };
 const request = path => new Request('https://test.local' + path, { headers });
 await accountApi(request('/api/account'), env);
@@ -57,6 +61,20 @@ if (process.env.AUDIT_BASELINE !== '1') {
     assert.deepEqual(result.snapshot, { novels: [], collections: [] });
   }
   assert.equal(reads, 3);
+  const save = new Request('https://test.local/api/library', {
+    method: 'POST', headers: { ...headers, Origin: 'https://test.local', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ revision: 7, snapshot: JSON.parse(body) }),
+  });
+  const binding = { ...env, DB: { ...DB } };
+  const poll = request('/api/library?revision=7');
+  const [polled, saved] = await Promise.all([
+    traceApiRequest(poll, measure => cloudLibraryApi(poll, binding, measure)),
+    traceApiRequest(save, measure => cloudLibraryApi(save, binding, measure)),
+  ]);
+  assert.equal(polled.status, 200, 'A cold worker can check the library revision during a save');
+  assert.equal(saved.status, 200, 'A cold worker can save while handling a concurrent library read');
+  assert.equal((await saved.json()).revision, 8);
+  assert.match(saved.headers.get('Server-Timing'), /3 queries/, 'An existing library row is updated without another insert');
   headers['oai-authenticated-user-id'] = 'member'; headers['oai-authenticated-user-email'] = 'member@test.local';
   await accountApi(request('/api/account'), env);
   sql.exec("INSERT INTO account_access VALUES ('member@test.local','','suspended','manual',0,0,'owner')");

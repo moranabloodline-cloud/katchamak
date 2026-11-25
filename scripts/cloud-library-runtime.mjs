@@ -30,7 +30,9 @@ export async function cloudLibraryApi(request, env, measure) {
       if (request.headers.get('Origin') !== url.origin) return json({ error: 'Invalid request origin.' }, 403);
     }
     const writeSnapshot=async(value,baseRevision)=>{
-      await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
+      if (!record) {
+        await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
+      }
       const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + '.json';
       const write = () => env.BUCKET.put(key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } });
       await (measure ? measure('r2.writeSnapshot', write) : write());

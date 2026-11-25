@@ -17,6 +17,8 @@ try {
   await assert.rejects(requestJson('/api/library'), /invalid response/);
   globalThis.fetch = async () => new Response('Gateway unavailable', { status: 503 });
   assert.equal((await requestJson('/api/library')).response.status, 503);
+  globalThis.fetch = async () => Response.json(null, { status: 503 });
+  assert.equal((await requestJson('/api/library')).response.status, 503, 'A malformed error body retains the HTTP status');
   globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
   await assert.rejects(requestJson('/api/library'), /Failed to fetch/);
   globalThis.fetch = async () => new Promise(() => {});

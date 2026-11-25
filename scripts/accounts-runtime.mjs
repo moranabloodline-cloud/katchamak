@@ -1,14 +1,5 @@
 import { measuredQuery, measuredBatch } from './request-trace.mjs';
 const accountJson = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
-// Cache schema setup only. Authorization and suspension are read on every request.
-const accountSchema = new WeakMap();
-async function ensureAccountSchema(db, measure) {
-  if (!accountSchema.has(db)) accountSchema.set(db, (async () => {
-    await measuredQuery(db, "CREATE TABLE IF NOT EXISTS account_access (email TEXT PRIMARY KEY NOT NULL,display_name TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'active',source TEXT NOT NULL DEFAULT 'manual',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL)", [], measure).run();
-    await measuredQuery(db, 'CREATE INDEX IF NOT EXISTS accounts_email_idx ON accounts(email)', [], measure).run();
-  })().catch(error => { accountSchema.delete(db); throw error; }));
-  await accountSchema.get(db);
-}
 export async function accountApi(request, env, measure) {
   const url = new URL(request.url), id = request.headers.get('oai-authenticated-user-id');
   const email = (request.headers.get('oai-authenticated-user-email') ?? '').trim().toLowerCase();
@@ -17,7 +8,7 @@ export async function accountApi(request, env, measure) {
   const admin = Boolean(env.KATCHAMAK_ADMIN_EMAIL && email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase());
   const db = env.DB, now = Date.now();
   const q = (sql, ...values) => measuredQuery(db, sql, values, measure);
-  await ensureAccountSchema(db, measure);
+  // The D1 migrations provision account_access and its indexes before serving requests.
   const readUser = () => q('SELECT a.*,x.status AS access_status,l.plan AS license_plan,l.expires_at AS license_expires_at,l.updated_at AS license_updated_at FROM accounts a LEFT JOIN account_access x ON x.email=? LEFT JOIN licenses l ON l.email=? WHERE a.id=?', email,email,id).first();
   let user = await readUser();
   if (!user || user.email !== email || user.last_seen < now - 60000) {

@@ -1,3 +1,5 @@
+> **2026-11-25 — Stabilnija provera naloga pri čuvanju.** Čitanje i čuvanje koriste postojeću D1 šemu direktno. Nečitljiva ili nepotpuna potvrda upisa pokreće proveru revizije i ponovni pokušaj uz lokalni nacrt.
+
 > **2026-11-25 — Dugački naslovi u Write i Split.** Polje naslova se prilagođava broju redova pri sužavanju stranice ili okna. Naslov se uređuje na samoj stranici.
 
 > **2026-11-25 — Draftopus.** Vidljivi naziv i logo zamenjeni su u aplikaciji. Hobotnica iz Nikolinog priloga koristi postojeća mesta logotipa, uključujući ikonu taba u pregledaču.
@@ -733,6 +735,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-25.** Produkcijski 503 prekidao je čitanje i upis biblioteke tokom inicijalizacije šeme naloga. Uklonjeno je deljenje nezavršene D1 operacije među zahtevima. Provereni su paralelno čitanje i čuvanje, ovlašćenja i nastavak čuvanja nakon neispravne potvrde.
 
 - **2026-11-25.** Provereno prelamanje dužeg naslova u Write i Split, uključujući jednu dugačku reč, kao i uređivanje i čuvanje naslova.
 

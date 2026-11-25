@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { accountApi } from '../scripts/accounts-runtime.mjs';
 import { traceApiRequest } from '../scripts/request-trace.mjs';
 globalThis.traceApiRequest=traceApiRequest;
 const sql = new Database(':memory:');
-for (const statement of readFileSync('drizzle/0000_cold_spyke.sql','utf8').split('--> statement-breakpoint')) if(statement.trim())sql.exec(statement);
+for (const file of readdirSync('drizzle').filter(name => name.endsWith('.sql')).sort())
+  for (const statement of readFileSync('drizzle/'+file,'utf8').split('--> statement-breakpoint')) if(statement.trim())sql.exec(statement);
 const DB={ prepare(query){let values=[];const obj={bind(...v){values=v;return obj;},async run(){return sql.query(query).run(...values);},async first(){return sql.query(query).get(...values);},async all(){return {results:sql.query(query).all(...values)};}};return obj;},async batch(statements){return Promise.all(statements.map(s=>s.run()));}};
 const env={DB,KATCHAMAK_ADMIN_EMAIL:'owner@test.local'};
 async function call(email,path='/api/account',method='GET',body){const headers={};if(email){headers['oai-authenticated-user-id']=email;headers['oai-authenticated-user-email']=email;}if(body){headers.Origin='https://test.local';headers['Content-Type']='application/json';}return accountApi(new Request('https://test.local'+path,{method,headers,body:body?JSON.stringify(body):undefined}),env);}
