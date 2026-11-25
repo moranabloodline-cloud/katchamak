@@ -738,7 +738,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
-- **2026-11-25.** Produkcijska merenja pokazala su prenos oko 8,7 MB i pri malim izmenama. Uveden je gzip za prenos i upis uz postojeću proveru revizije. Provere obuhvataju otvaranje ranijih i kompresovanih zapisa, povratak na običan JSON i odbijanje oštećenih ili prevelikih upisa.
+- **2026-11-25.** Produkcijska merenja pokazala su prenos oko 8,7 MB i pri malim izmenama. Uveden je gzip za prenos i upis uz postojeću proveru revizije. Provere obuhvataju otvaranje ranijih i kompresovanih zapisa, povratak na običan JSON i odbijanje oštećenih ili prevelikih upisa. Posle prolaznog 404 za JavaScript pri objavi, sledeći Sites paket zadržava datoteke prethodne verzije koje su potrebne otvorenim tabovima.
 
 - **2026-11-25.** Produkcijski 503 prekidao je čitanje i upis biblioteke tokom inicijalizacije šeme naloga. Uklonjeno je deljenje nezavršene D1 operacije među zahtevima. Provereni su paralelno čitanje i čuvanje, ovlašćenja i nastavak čuvanja nakon neispravne potvrde.
 

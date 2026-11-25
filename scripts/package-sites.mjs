@@ -5,6 +5,18 @@ import path from "node:path";
 import { sourceVersion } from "./source-version.mjs";
 import { build as bundle } from "esbuild";
 
+async function previousStaticAssets(workerPath, currentAssets) {
+  if (!workerPath) return {};
+  const worker = await readFile(workerPath, "utf8");
+  const start = "const ASSETS=";
+  const end = worker.indexOf(";\nconst APP_BUILD=");
+  if (!worker.startsWith(start) || end < 0) throw new Error("Previous Sites Worker asset manifest was not found.");
+  const previousAssets = JSON.parse(worker.slice(start.length, end));
+  return Object.fromEntries(Object.entries(previousAssets).filter(([file]) =>
+    file.startsWith("/_next/static/") && !Object.hasOwn(currentAssets, file)
+  ));
+}
+
 export async function packageSite(manifest) {
   const version = sourceVersion();
   await writeFile("out/app-version.json", JSON.stringify(version));
@@ -18,6 +30,10 @@ export async function packageSite(manifest) {
   }
   await visit("out");
   const build = createHash("sha256").update(JSON.stringify(assets)).digest("hex");
+  const fallbackAssets = await previousStaticAssets(process.env.KATCHAMAK_PREVIOUS_SITES_WORKER, assets);
+  const fallback = Object.keys(fallbackAssets).length
+    ? "Object.assign(ASSETS," + JSON.stringify(fallbackAssets) + ");\n"
+    : "";
   const runtime = await readFile("scripts/sites-runtime.mjs", "utf8");
   const requestTrace = await readFile("scripts/request-trace.mjs", "utf8");
   const accounts = await readFile("scripts/accounts-runtime.mjs", "utf8");
@@ -34,12 +50,15 @@ export async function packageSite(manifest) {
   const modules = projectValidation + requestTrace.replace(/^export /gm, "") + "\n" + demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^(?:import|export \{)[^\r\n]*(?:demo-projects|cloud-write-validation|request-trace)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + accounts.replace(/^import[^\r\n]*request-trace[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
   await mkdir("dist/server", { recursive: true });
   await mkdir("dist/.openai", { recursive: true });
-  await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + modules + "\n" + runtime);
+  // Keep the previous build's extra immutable files out of the active build
+  // fingerprint and GitHub manifest. They are available to open tabs only.
+  await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + fallback + modules + "\n" + runtime);
   const syntax = spawnSync(process.execPath, ["--check", "dist/server/index.js"], { stdio: "inherit" });
   if (syntax.status !== 0) throw new Error("Sites Worker syntax validation failed.");
   await cp(".openai/hosting.json", "dist/.openai/hosting.json");
   await mkdir(".sites-runtime", { recursive: true });
   await writeFile(".sites-runtime/github-release.json", JSON.stringify({ version, buildId: build, runtimeHash: deployConfig.runtimeHash, assets: Object.entries(assets).map(([file, data]) => ({ path: file, data, hash: createHash("sha256").update(Buffer.from(data, "base64")).digest("hex") })) }));
   console.log(`Packaged GitHub application for Sites: ${Object.keys(assets).length} assets, build ${build.slice(0, 12)}`);
+  if (fallback) console.log(`Retained ${Object.keys(fallbackAssets).length} immutable assets from the previous Sites Worker.`);
 }
 
