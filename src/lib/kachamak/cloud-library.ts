@@ -590,7 +590,7 @@ export async function importWebProject(file: string | Blob, collectionId: string
   if (owner !== accountId || epoch !== accountEpoch || !useWebLibrary.getState().ready)
     throw new Error('Your account session changed. Choose the backup again.');
   const input = JSON.parse(json), value = input?.format === 'katchamak-project' ? input.novel : input;
-  if (!isUsableBackup(value)) throw new Error('Not a Katchamak project.');
+  if (!isUsableBackup(value)) throw new Error('Not a Draftopus project.');
   // Match the established store.importNovel defaults for older JSON backups.
   const novel: Novel = { ...value, id: crypto.randomUUID(), author: value.author ?? '', trash: value.trash ?? [], statuses: value.statuses ?? [], labels: value.labels ?? [] };
   normalizeNovelSections(novel);

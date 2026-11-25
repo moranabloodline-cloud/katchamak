@@ -12,7 +12,7 @@ export function importTimeline(projectId:string,json:string) {
   const state=useKachamak.getState(),novel=state.novels.find(n=>n.id===projectId);
   if(!novel||state.activeNovelId!==projectId)throw new Error('The active project changed. Reopen Import timeline.');
   const file=JSON.parse(json);
-  if(file?.format!=='kachamak-timeline'||file.version!==1||!validCalendar(file.calendar)||!Array.isArray(file.notes)||!file.notes.length)throw new Error('Choose a Kachamak timeline JSON file.');
+  if(file?.format!=='kachamak-timeline'||file.version!==1||!validCalendar(file.calendar)||!Array.isArray(file.notes)||!file.notes.length)throw new Error('Choose a Draftopus timeline JSON file.');
   if(calendarRules(file.calendar)!==calendarRules(novel.timeline?.calendar??GREGORIAN))throw new Error('This timeline uses different calendar rules. The project calendar has not been changed.');
   let count=0;const now=Date.now();
   const maxLevels=process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP==='1'?100:CLOUD_NOTE_LEVELS;

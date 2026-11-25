@@ -16,5 +16,5 @@ fn main() {
             }
         }))
         .run(tauri::generate_context!())
-        .expect("Katchamak could not start");
+        .expect("Draftopus could not start");
 }

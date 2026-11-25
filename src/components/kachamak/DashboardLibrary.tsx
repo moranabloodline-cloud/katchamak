@@ -185,7 +185,7 @@ export function DashboardLibrary(props: Props) {
 
   return <div className="flex h-dvh flex-col overflow-hidden bg-[#0a0c10] text-foreground">
     <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#a97f33]/25 bg-[#0c0906] px-4 py-1.5">
-      <button type="button" aria-label="KACHAMAK — Library home" onClick={() => navigate(null)} className="flex items-center gap-2.5 py-1 text-[#e8c265]"><img src="/kachamak-logo.png" alt="" width={28} height={28} className="h-7 w-7 shrink-0 object-contain"/><span className="font-serif text-lg font-semibold tracking-[0.25em]">KACHAMAK</span></button>
+      <button type="button" aria-label="Draftopus — Library home" onClick={() => navigate(null)} className="flex items-center gap-2.5 py-1 text-[#e8c265]"><img src="/draftopus-logo.png" alt="" width={28} height={28} className="h-7 w-7 shrink-0 object-contain"/><span className="font-serif text-lg font-semibold tracking-[0.25em]">DRAFTOPUS</span></button>
       <div className="ml-auto flex items-center gap-1">
         <HelpCenter />
         <span className="mx-1 h-5 w-px bg-white/10" />

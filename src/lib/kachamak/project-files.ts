@@ -144,7 +144,7 @@ export async function removeFileProject(id: string) {
 // JSON backup import is copied to a user-selected project folder before it is added.
 export async function importFileProject(json: string): Promise<string | null> {
   const parsed: unknown = JSON.parse(json);
-  if (!isUsableBackup(parsed)) throw new Error("Not a Katchamak project backup.");
+  if (!isUsableBackup(parsed)) throw new Error("Not a Draftopus project backup.");
   normalizeNovelSections(parsed);
   const novel = { ...parsed, id: newNovel("", "").id, author: parsed.author ?? "", trash: parsed.trash ?? [], statuses: parsed.statuses ?? [], labels: parsed.labels ?? [] } as Novel;
   const loaded = await invoke<Loaded | null>("create_disk_project", { document: wrap(migrateBookArtwork(novel)) });

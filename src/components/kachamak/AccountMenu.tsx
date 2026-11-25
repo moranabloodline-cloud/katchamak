@@ -12,7 +12,7 @@ const entries = [
   { tab: "profile", label: "Profile", icon: UserRound },
   { tab: "appearance", label: "Appearance", icon: Palette },
   { tab: "storage", label: "Cloud storage", icon: Folder },
-  { tab: "about", label: "About Katchamak", icon: Info },
+  { tab: "about", label: "About Draftopus", icon: Info },
 ] as const;
 
 export function AccountAvatar({ photo, className = "h-10 w-10" }: { photo: string | null; className?: string }) {

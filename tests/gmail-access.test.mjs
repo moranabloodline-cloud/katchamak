@@ -31,7 +31,7 @@ try{
   const body={email:'recipient@test.local',requestId:'11111111-1111-4111-8111-111111111111'};
   const sent=await (await call('/api/admin/send-access-link',body)).json();assert.equal(sent.ok,true);assert.equal(sendCount,1);
   const raw=JSON.parse(calls.find(c=>c.url.includes('/messages/send')).init.body).raw;const message=Buffer.from(raw,'base64url').toString('utf8');
-  assert.ok(message.includes('From: Katchamak <sender@test.local>'));assert.ok(message.includes('To: recipient@test.local'));assert.ok(message.includes('https://test.local/#library'));assert.ok(!message.includes('test-access'));
+  assert.ok(message.includes('From: Draftopus <sender@test.local>'));assert.ok(message.includes('To: recipient@test.local'));assert.ok(message.includes('https://test.local/#library'));assert.ok(!message.includes('test-access'));
   assert.equal((await (await call('/api/admin/send-access-link',body)).json()).ok,true);assert.equal(sendCount,1,'Double click cannot resend');
   failSend=true;const uncertain={...body,requestId:'22222222-2222-4222-8222-222222222222'};assert.equal((await call('/api/admin/send-access-link',uncertain)).status,502);assert.equal(sendCount,2);assert.equal((await call('/api/admin/send-access-link',uncertain)).status,409);assert.equal(sendCount,2,'Uncertain send cannot be replayed');
   await call('/api/admin/status',{email:body.email,status:'suspended'});assert.equal((await call('/api/admin/send-access-link',{...body,requestId:crypto.randomUUID()})).status,400);

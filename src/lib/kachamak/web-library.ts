@@ -203,7 +203,7 @@ export async function createWebProject(title: string, author: string, collection
 export async function prepareWebImport(_collectionId: string | null) { await ensureVault(); }
 export async function importWebProject(json: string, collectionId: string | null) {
   const input = JSON.parse(json); const value = input?.format === 'katchamak-project' ? input.novel : input;
-  if (!isUsableBackup(value)) throw new Error('Not a Katchamak project.');
+  if (!isUsableBackup(value)) throw new Error('Not a Draftopus project.');
   normalizeNovelSections(value);
   const novel = migrateBookArtwork({ ...value, id: noteId() } as Novel);
   await ensureVault();
@@ -362,7 +362,7 @@ async function saveSnapshot() {
   for (const [token, text] of expected) {
     const colon = token.indexOf(':'); const id = token.slice(0, colon), path = token.slice(colon + 1);
     const loc = old.get(id);
-    if (loc && await readText(loc.handle, path) !== text) throw new Error(`A file was changed outside Katchamak (${loc.name}/${path}). Reopen the library before saving.`);
+    if (loc && await readText(loc.handle, path) !== text) throw new Error(`A file was changed outside Draftopus (${loc.name}/${path}). Reopen the library before saving.`);
   }
   const pending = [...collections];
   while (pending.length) {

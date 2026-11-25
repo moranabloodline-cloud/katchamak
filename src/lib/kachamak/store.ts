@@ -515,7 +515,7 @@ export const useKachamak = create<KachamakState>()(
           const input = JSON.parse(json);
           const parsed: unknown = input?.format === "katchamak-project" && input?.version === 1 ? input.novel : input;
           if (!isUsableBackup(parsed)) {
-            return { ok: false, error: "Not a Kachamak novel backup." };
+            return { ok: false, error: "Not a Draftopus novel backup." };
           }
           const n: LegacyNovel = {
             ...parsed,

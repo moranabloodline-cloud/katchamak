@@ -203,7 +203,7 @@ for (const [label, source] of [['current', modern], ['missing author', missingAu
   }
 }
 const beforeInvalidImport = clone(useKachamak.getState().novels), savedBeforeInvalidImport = await (await call()).json();
-await assert.rejects(() => cloud.importWebProject(JSON.stringify({...modern, author:42}), null), /Not a Katchamak project/);
+await assert.rejects(() => cloud.importWebProject(JSON.stringify({...modern, author:42}), null), /Not a Draftopus project/);
 assert.deepEqual(useKachamak.getState().novels, beforeInvalidImport, 'Invalid author is rejected before changing the open library');
 assert.deepEqual(await (await call()).json(), savedBeforeInvalidImport, 'Invalid author leaves saved library and revision unchanged');
 const duplicate = clone(modern);

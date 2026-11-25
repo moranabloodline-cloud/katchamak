@@ -1,7 +1,7 @@
 // Web adaptation of desktop 0.2.3: invalidate older remote application packages.
 const uiUri = (build) => "ui://kachamak/github-" + build + ".html";
 const studioTool = (resourceUri) => ({
-  name: "open_novel_studio", title: "Open Kachamak",
+  name: "open_novel_studio", title: "Open Draftopus",
   description: "Open the writing workspace. Projects are saved privately to your account in the cloud; this tool shares no manuscript.",
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
   annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
@@ -42,15 +42,15 @@ export default {
         case "ping": return rpc(id, {});
         case "tools/list": return rpc(id, { tools: [TOOL] });
         case "tools/call": return params.name === TOOL.name
-          ? rpc(id, { content: [{ type: "text", text: "Kachamak opened from the GitHub codebase. Projects are saved privately to your account." }], structuredContent: { status: "ready", appBuild: buildId, ...version, sharedManuscript: false, automation: { storageReady: Boolean(env.BUCKET), runtimeHash: DEPLOY_CONFIG.runtimeHash, releaseRunId: release?.order?.run ?? null } }, _meta: TOOL._meta })
+          ? rpc(id, { content: [{ type: "text", text: "Draftopus opened from the GitHub codebase. Projects are saved privately to your account." }], structuredContent: { status: "ready", appBuild: buildId, ...version, sharedManuscript: false, automation: { storageReady: Boolean(env.BUCKET), runtimeHash: DEPLOY_CONFIG.runtimeHash, releaseRunId: release?.order?.run ?? null } }, _meta: TOOL._meta })
           : rpc(id, { isError: true, content: [{ type: "text", text: "Unknown tool" }] });
-        case "resources/list": return rpc(id, { resources: [{ uri: UI_URI, name: "Kachamak", mimeType: "text/html;profile=mcp-app" }] });
+        case "resources/list": return rpc(id, { resources: [{ uri: UI_URI, name: "Draftopus", mimeType: "text/html;profile=mcp-app" }] });
         case "resources/templates/list": return rpc(id, { resourceTemplates: [] });
         case "resources/read": {
           if (!/^ui:\/\/kachamak\/github-[a-f0-9]{64}\.html$/.test(params.uri)) return rpc(id, null, { code: -32602, message: "Unknown resource" });
           const origin = url.origin;
-          const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;width:100%;height:100%;background:#0d0d0d}iframe{border:0;width:100%;height:100vh;min-height:700px;display:block}</style></head><body><iframe title="Kachamak writing workspace" src="${origin}/" allow="clipboard-read; clipboard-write; fullscreen"></iframe></body></html>`;
-          return rpc(id, { contents: [{ uri: UI_URI, mimeType: "text/html;profile=mcp-app", text: html, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [origin], resourceDomains: [origin], frameDomains: [origin] } }, "openai/widgetCSP": { connect_domains: [origin], resource_domains: [origin], frame_domains: [origin] }, "openai/widgetDescription": "Kachamak writing workspace from GitHub. Projects are saved privately to your account." } }] });
+          const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;width:100%;height:100%;background:#0d0d0d}iframe{border:0;width:100%;height:100vh;min-height:700px;display:block}</style></head><body><iframe title="Draftopus writing workspace" src="${origin}/" allow="clipboard-read; clipboard-write; fullscreen"></iframe></body></html>`;
+          return rpc(id, { contents: [{ uri: UI_URI, mimeType: "text/html;profile=mcp-app", text: html, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [origin], resourceDomains: [origin], frameDomains: [origin] } }, "openai/widgetCSP": { connect_domains: [origin], resource_domains: [origin], frame_domains: [origin] }, "openai/widgetDescription": "Draftopus writing workspace from GitHub. Projects are saved privately to your account." } }] });
         }
         default: return rpc(id, null, { code: -32601, message: "Method not found" });
       }

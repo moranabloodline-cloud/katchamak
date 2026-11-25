@@ -60,7 +60,7 @@ pub async fn create_disk_project(app: AppHandle, document: Value) -> Result<Opti
 #[tauri::command]
 pub async fn open_disk_project(app: AppHandle) -> Result<Option<Loaded>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let Some(path) = app.dialog().file().set_title("Open project.json inside a .katchamak folder").add_filter("Katchamak project", &["json"]).blocking_pick_file() else { return Ok(None); };
+        let Some(path) = app.dialog().file().set_title("Open project.json inside a .katchamak folder").add_filter("Draftopus project", &["json"]).blocking_pick_file() else { return Ok(None); };
         let path = path.into_path().map_err(|e| e.to_string())?;
         project_store::ensure_user_folder(path.parent().ok_or("Invalid project path.")?)?;
         let _guard = IO.lock().map_err(|e| e.to_string())?;
@@ -85,7 +85,7 @@ pub async fn save_disk_project(app: AppHandle, id: String, expected_revision: St
         let _guard = IO.lock().map_err(|e| e.to_string())?;
         let current = project_store::entries(&registry(&app)?)?.into_iter().find(|entry| entry.id == id).ok_or("Unknown project path.")?;
         let loaded = project_store::read(&current.path)?;
-        if loaded.revision != expected_revision { return Err("The project file changed outside Katchamak. Reopen or export before replacing the file.".into()); }
+        if loaded.revision != expected_revision { return Err("The project file changed outside Draftopus. Reopen or export before replacing the file.".into()); }
         if project_store::validate(&document)? != id { return Err("Project ID mismatch.".into()); }
         backup_project(&app, &loaded.document)?;
         backup_project(&app, &document)?;

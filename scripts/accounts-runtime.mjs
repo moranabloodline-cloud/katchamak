@@ -97,7 +97,7 @@ export async function accountApi(request, env, measure) {
     const link=url.origin+'/#library';
     let sent;
     try{
-      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'katchamak-access-'+body.requestId},body:JSON.stringify({from:env.KATCHAMAK_MAIL_FROM,to:[target],subject:'Your Katchamak access link',text:'Your Katchamak license is ready.\n\nOpen your private library: '+link+'\n\nSign in with the ChatGPT account for '+target+'. Your projects are private to your account. This link does not sign anyone in or share any manuscript.'}),signal:AbortSignal.timeout(15000)});
+      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'katchamak-access-'+body.requestId},body:JSON.stringify({from:env.KATCHAMAK_MAIL_FROM,to:[target],subject:'Your Draftopus access link',text:'Your Draftopus license is ready.\n\nOpen your private library: '+link+'\n\nSign in with the ChatGPT account for '+target+'. Your projects are private to your account. This link does not sign anyone in or share any manuscript.'}),signal:AbortSignal.timeout(15000)});
       sent=await response.json();if(!response.ok||typeof sent.id!=='string')return accountJson({error:'The email provider did not accept the message. Check your Resend key and verified sender address.'},502);
     }catch{return accountJson({error:'Could not confirm email sending. Retry this same request to avoid sending a duplicate.'},502);}
     await audit(target,'access-link',{providerId:sent.id}).run();
@@ -121,7 +121,7 @@ async function gmailTables(q){
 }
 const gmailChanged=result=>(result.meta?.changes??result.changes??0)>0;
 const gmailFetch=(url,options)=>fetch(url,{...options,signal:AbortSignal.timeout(15000)});
-function gmailPage(ok){return new Response('<!doctype html><html><head><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width"><title>Katchamak email</title></head><body style="background:#151515;color:#eee;font-family:system-ui;padding:3rem"><h1>'+ (ok?'Gmail connected':'Gmail was not connected')+'</h1><p>'+(ok?'Access links will be sent from your approved Gmail account.':'Return to Admin and connect the approved sender account again.')+'</p><a style="color:#f5d16c" href="/#library">Return to Katchamak</a></body></html>',{status:ok?200:400,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}});}
+function gmailPage(ok){return new Response('<!doctype html><html><head><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width"><title>Draftopus email</title></head><body style="background:#151515;color:#eee;font-family:system-ui;padding:3rem"><h1>'+ (ok?'Gmail connected':'Gmail was not connected')+'</h1><p>'+(ok?'Access links will be sent from your approved Gmail account.':'Return to Admin and connect the approved sender account again.')+'</p><a style="color:#f5d16c" href="/#library">Return to Draftopus</a></body></html>',{status:ok?200:400,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}});}
 async function gmailConnection(request,env,{q,id,body,audit}){
   const url=new URL(request.url),route=url.pathname;
   if(!env.KATCHAMAK_GMAIL_CLIENT_ID||!env.KATCHAMAK_GMAIL_CLIENT_SECRET||!env.KATCHAMAK_GMAIL_SENDER)return accountJson({error:'Email sender setup is not ready.'},503);
@@ -174,7 +174,7 @@ async function gmailAccessLink(env,{q,audit,target,body,link}){
     if(previous?.email===target&&previous.status==='sent')return accountJson({ok:true,email:target,providerId:previous.provider_id,link});
     return accountJson({error:'This send request is still pending or its result is uncertain. Check Sent in Gmail before sending again.'},409);
   }
-  const message=['From: Katchamak <'+connection.email+'>','To: '+target,'Subject: Your Katchamak access link','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','','Your Katchamak license is ready.','','Open Katchamak: '+link,'','Sign in with the ChatGPT account for '+target+'. Your projects are private to your account.'].join('\r\n');
+  const message=['From: Draftopus <'+connection.email+'>','To: '+target,'Subject: Your Draftopus access link','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','','Your Draftopus license is ready.','','Open Draftopus: '+link,'','Sign in with the ChatGPT account for '+target+'. Your projects are private to your account.'].join('\r\n');
   let sent;
   try{
     const response=await gmailFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:gmailBase64(new TextEncoder().encode(message))})});

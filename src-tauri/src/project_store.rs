@@ -18,7 +18,7 @@ fn error(e: impl std::fmt::Display) -> String { e.to_string() }
 fn revision(bytes: &[u8]) -> String { format!("{:x}", Sha256::digest(bytes)) }
 
 pub fn validate(document: &Value) -> Result<&str, String> {
-    if document["format"] != "katchamak-project" || document["version"] != 1 { return Err("Unsupported Katchamak project format.".into()); }
+    if document["format"] != "katchamak-project" || document["version"] != 1 { return Err("Unsupported Draftopus project format.".into()); }
     let novel = &document["novel"];
     let id = novel["id"].as_str().filter(|id| !id.is_empty()).ok_or("Missing project ID.")?;
     fn tree(nodes: &Value) -> bool {
@@ -122,7 +122,7 @@ pub fn save(registry: &Path, id: &str, expected: &str, document: &Value) -> Resu
     if validate(document)? != id { return Err("Project ID mismatch.".into()); }
     let entry = entries(registry)?.into_iter().find(|entry| entry.id == id).ok_or("Project has no registered file path.")?;
     let current = read(&entry.path)?;
-    if current.revision != expected { return Err("The project file changed outside Katchamak. Your edit is kept in recovery storage; reopen or export it before replacing the file.".into()); }
+    if current.revision != expected { return Err("The project file changed outside Draftopus. Your edit is kept in recovery storage; reopen or export it before replacing the file.".into()); }
     atomic_write(&entry.path, &serde_json::to_vec_pretty(document).map_err(error)?)?;
     read(&entry.path)
 }

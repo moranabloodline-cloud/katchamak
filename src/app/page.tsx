@@ -41,8 +41,8 @@ export default function Page() {
     // localStorage store hydrates on the client only
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#0d0d0d] text-foreground">
-        <span className="text-4xl">🍲</span>
-        <p className="text-sm text-muted-foreground">Warming up the Kachamak…</p>
+        <img src="/draftopus-logo.png" alt="" width={40} height={40} className="size-10 object-contain" />
+        <p className="text-sm text-muted-foreground">Opening Draftopus…</p>
       </div>
     );
   }

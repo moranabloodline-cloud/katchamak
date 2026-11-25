@@ -13,7 +13,7 @@ export function FolderAccessWindow() {
   const requestId = new URLSearchParams(window.location.search).get('request');
   const send = (data: Record<string, unknown>) => window.opener?.postMessage({ type: FOLDER_ACCESS, requestId, ...data }, window.location.origin);
   useEffect(() => {
-    if (!window.opener || !requestId) { setError('This window must be opened from Choose library root in Katchamak.'); return; }
+    if (!window.opener || !requestId) { setError('This window must be opened from Choose library root in Draftopus.'); return; }
     let active = true;
     const receive = async (event: MessageEvent) => {
       const data = event.data;
