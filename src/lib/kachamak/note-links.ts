@@ -67,6 +67,10 @@ export function cleanAliases(values: string[], title = '') {
   });
 }
 
+export function splitAliases(values: string[]) {
+  return values.flatMap(value => value.split(/[,\r\n]+/));
+}
+
 /** Editing only validates existing decisions. Name discovery belongs to Save. */
 export function validLinkChoices(text: string, choices: LinkChoice[] = []) {
   return choices.filter(c => c.start >= 0 && c.end > c.start && !c.text.includes('\ufffc') && text.slice(c.start,c.end) === c.text);
@@ -80,7 +84,7 @@ export function explicitLinks(text: string, notes: NoteNode[], choices: LinkChoi
   const targets = new Map(notes.map(note => [note.id,note]));
   for(const note of notes){
     if(note.id===sourceId)continue;
-    for(const term of cleanAliases([note.title,...(note.aliases||[])])){
+    for(const term of cleanAliases([note.title,...splitAliases(note.aliases ?? [])])){
       const key=term.toLocaleLowerCase();
       if(wanted.has(key)){const candidates=aliases.get(key)||[];candidates.push(note);aliases.set(key,candidates);}
     }
@@ -93,11 +97,11 @@ export function explicitLinks(text: string, notes: NoteNode[], choices: LinkChoi
   }).sort((a,b)=>a.start-b.start);
 }
 
-export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[] = [], sourceId?: string, names: 'titles' | 'titles-and-aliases' = 'titles-and-aliases'): NoteMatch[] {
+export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[] = [], sourceId?: string): NoteMatch[] {
   const terms = new Map<string, NoteNode[]>();
   for (const note of codex) {
     if (note.id === sourceId) continue;
-    const aliases = names === 'titles' ? [] : (note.aliases ?? []);
+    const aliases = splitAliases(note.aliases ?? []);
     for (const term of cleanAliases([note.title, ...aliases])) {
       const key = term.toLocaleLowerCase();
       const list = terms.get(key) || [];

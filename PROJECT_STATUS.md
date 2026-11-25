@@ -1,3 +1,5 @@
+> **2026-11-25 — Alijasi u automatskom linkovanju.** Save skenira naslove i alijase iz Codexa. Zarez i novi red razdvajaju alijase i u ranije sačuvanim unosima.
+
 > **2026-11-25 — Undo i Redo u poljima Synopsis i Notes.** Tastatura i gornja traka koriste istoriju aktivnog polja. Kad se istorija polja iscrpi, komanda se zaustavlja u tom polju.
 
 > **2026-11-23 — Formatiranje u poljima Synopsis i Notes.** Gornja traka prati označeni tekst u desnom panelu, uključujući Info na Canvasu. Promena beleške poništava prethodni izbor teksta.
@@ -725,6 +727,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-25.** „E. Roche“, „Mr. Roche“ i „Roche“ iz starog unosa sa zarezima nude istu Codex belešku kad se sačuva probni tekst. Provera obuhvata pojedinačno prihvatanje predloga i čuvanje njihovih odredišta.
 
 - **2026-11-25.** U probnoj Planning belešci provereni su Undo i Redo formatiranja po jedne reči u oba Info polja, prečicama i ikonicama. Proveren je i prelazak iz Write u List dok postoji ranija izmena rukopisa.
 

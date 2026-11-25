@@ -102,5 +102,5 @@ const {validCloudLibrary}=await import('../scripts/cloud-library-runtime.mjs');
 assert.ok(validCloudLibrary({novels:[reloaded],collections:[]}));
 assert.deepEqual(pendingLinkReview(novel(),{...findNodeInNovel(novel(),a).node,content:'<p>Gateway</p>'}).map(hit=>hit.targetId),[gate]);
 s.updateNode('codex',a,{ignoreAutoLinking:false});
-assert.deepEqual(pendingLinkReview(novel(),node()).map(hit=>hit.text),['People','Morrigan','Gateway']);
-console.log('Link review passed: Codex titles only, duplicate titles, preserved older alias and cross-tab links, individual decisions, preserved HTML, stable IDs, rebasing, roundtrip and stale-content rejection.');
+assert.deepEqual(pendingLinkReview(novel(),node()).map(hit=>hit.text),['Cast','People','Morrigan','Gateway']);
+console.log('Link review passed: Codex targets, duplicate titles, preserved alias and cross-tab links, individual decisions, preserved HTML, stable IDs, rebasing, roundtrip and stale-content rejection.');

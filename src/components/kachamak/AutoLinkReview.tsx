@@ -164,7 +164,7 @@ export function AutoLinkReview() {
       className="[--review-top:clamp(0.75rem,12dvh,10rem)] top-[var(--review-top)] flex max-h-[calc(100dvh-var(--review-top)-0.75rem)] w-[calc(100%-2rem)] translate-y-0 flex-col overflow-clip border-white/15 bg-[#161618] font-sans text-foreground sm:max-w-4xl">
       <DialogHeader className="shrink-0 pr-5">
         <DialogTitle>Automatic link detection</DialogTitle>
-        <DialogDescription className="break-words">{session?.title} · Matches Codex note titles in this book.</DialogDescription>
+        <DialogDescription className="break-words">{session?.title} · Matches Codex titles and aliases in this book.</DialogDescription>
       </DialogHeader>
       {session&&match&&<div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1fr)_208px] md:grid-rows-[minmax(0,1fr)]">
       <div ref={reviewDetails} className="row-start-2 min-h-0 min-w-0 space-y-4 overflow-y-auto overscroll-contain p-0.5 [scrollbar-gutter:stable] md:col-start-1 md:row-start-1">

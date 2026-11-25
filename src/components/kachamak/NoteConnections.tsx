@@ -9,7 +9,7 @@ import {NoteImage} from './NoteImage';
 import {NoteMapBlock} from './NoteMapBlock';
 import {DetailsBlock,DetailsBlocks,AddDetailsBlock} from './DetailsBlock';
 import {DEFAULT_HIDDEN_TIMELINE_BLOCKS,detailBlockOrder,moveDetailBlock,type DetailBlockKey} from '@/lib/kachamak/detail-blocks';
-import {cleanAliases} from '@/lib/kachamak/note-links';
+import {cleanAliases,splitAliases} from '@/lib/kachamak/note-links';
 import {noteRelationships} from '@/lib/kachamak/family-tree';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 
@@ -21,7 +21,7 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
   const update=useKachamak(s=>s.updateNode);
   const saveAliases=(value:string,finish=false)=>{
     if(useKachamak.getState().activeNovelId!==novel?.id)return;
-    const next=cleanAliases(value.split('\n').map(alias=>alias.slice(0,500)),node.title).slice(0,100).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+    const next=cleanAliases(splitAliases([value]).map(alias=>alias.trim().slice(0,500)),node.title).slice(0,100).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
     if(next.join('\n')!==(node.aliases??[]).join('\n'))update(section,node.id,{aliases:next});
     if(finish){setAliases(next.join('\n'));setAliasDirty(false);}
   };

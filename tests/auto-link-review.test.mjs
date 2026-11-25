@@ -8,7 +8,7 @@ const {newNovel}=await import('../src/lib/kachamak/seed.ts');
 const novel=newNovel('Review response QA','Tester');
 const note=(id,title,content='')=>({id,title,content,synopsis:'',notes:'',status:'',label:'',kind:'doc',children:[],createdAt:1,updatedAt:1});
 novel.sections.binder.push(note('source','Opening','<p>Ada met Ada near Gate.</p>'));
-novel.sections.codex.push({...note('ada','Ada'),aliases:['Local edit']},note('gate','Gate'));
+novel.sections.codex.push(note('ada','Ada'),note('gate','Gate'),{...note('roche','Eamonn Roche'),aliases:['E. Roche, Mr. Roche, Roche']});
 novel.sections.research.push(note('outside','Ada'),note('quiet','quiet dawn'));
 let snapshot={novels:[novel],collections:[],navigation:{activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'source',paneAId:'source',paneBId:null,activePane:'a'}},revision=0,gate,release,writes=0,fail=false;
 globalThis.fetch=async(path,init={})=>{
@@ -101,5 +101,15 @@ await React.act(async()=>cloud.saveWebLibrary());
 assert.ok(!snapshot.novels[0].sections.binder[0].content.includes('#note/deleted'),'Save persists the repaired stale anchor');
 assert.deepEqual(snapshot.novels[0].sections.binder[0].linkChoices,[{start:8,end:11,text:'Ada',targetId:'ada'}],'The valid neighboring choice is retained and rebased');
 await React.act(async()=>button('Decide later').click());
+await React.act(async()=>cloud.saveWebLibrary());
+await React.act(async()=>useKachamak.getState().updateNode('binder','source',{content:'<p>E. Roche met Mr. Roche. Morrigan says Roche filed arbitration. </p>',linkChoices:[]}));
+await request();
+for(const alias of ['E. Roche','Mr. Roche','Roche']){
+  assert.equal(document.querySelector('[role="dialog"] mark')?.textContent,alias);
+  assert.match(remaining(),/Eamonn Roche/);
+  await React.act(async()=>button('Create link').click());
+}
+await React.act(async()=>cloud.saveWebLibrary());
+assert.deepEqual(snapshot.novels[0].sections.binder[0].linkChoices.map(c=>[c.text,c.targetId]),[['E. Roche','roche'],['Mr. Roche','roche'],['Roche','roche']]);
 await React.act(async()=>root.unmount());dom.close();
 console.log('Auto link review passed: immediate manual Save feedback, review before initial acknowledgement, repeated command coalescing, responsive decisions, no-link saves, failure retention and retry.');
