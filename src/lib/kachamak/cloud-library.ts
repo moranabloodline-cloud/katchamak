@@ -14,7 +14,7 @@ import { isWebSession, registerFolderStorage } from './session-storage';
 import { useAppearancePreferences } from './appearance-preferences';
 import { useAccountPreferences } from './account-preferences';
 import {DEFAULT_EDITOR_APPEARANCE,validEditorAppearance,type EditorAppearance} from './page-format';
-import { requestJson } from './request-json';
+import { requestJson, RequestTimeoutError } from './request-json';
 import { draftStorage, lockLocalRecovery, recoveryStorageError, useLocalRecovery, type LocalDraft, type DraftSummary } from './local-recovery';
 import {runWorkspaceAction,setHistoryOwner,historyStoreChanged,flushBookHistories,discardBookHistory} from './workspace-history';
 import { cloneWorkspaceTab } from './clone-workspace-tab';
@@ -22,10 +22,13 @@ import { cloneLayout, withExistingTexts } from './clone-text-recovery';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'> & {activeHomePageId?: string};
 type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
-export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, error: null, conflict: false }));
+export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; retrying: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, retrying: false, error: null, conflict: false }));
 let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
+let saveRetry: ReturnType<typeof setTimeout> | null = null;
+let retryDelay = 1000;
+let unconfirmedWrite: { value: string; draft: LocalDraft | null } | null = null;
 let accountId='';
 let accountEpoch = 0, writerId = crypto.randomUUID();
 let activeDraft: LocalDraft | null = null, localTimer: ReturnType<typeof setTimeout> | null = null;
@@ -50,6 +53,23 @@ export function checkGalleryUploadSize(entries:import('./gallery').GalleryEntry[
   if (bytes + 128 > 20 * 1024 * 1024) throw new Error('These images would exceed the 20 MB library save limit. Choose fewer or smaller images.');
 }
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
+
+function clearSaveRetry() {
+  if (saveRetry !== null) clearTimeout(saveRetry);
+  saveRetry = null;
+}
+
+function scheduleSaveRetry() {
+  if (timer !== null) { clearTimeout(timer); timer = null; }
+  const epoch = accountEpoch;
+  saveRetry = setTimeout(() => {
+    saveRetry = null;
+    const state = useWebLibrary.getState();
+    if (epoch === accountEpoch && state.ready && state.pending && !state.conflict) void flushWebLibrary().catch(() => {});
+  }, retryDelay);
+  retryDelay = Math.min(retryDelay * 2, 30000);
+  useWebLibrary.setState({ retrying: true });
+}
 // Recovery protects project/collection data, not transient navigation or account preferences.
 const projectPayload = (value: string) => { const data = JSON.parse(value); return JSON.stringify({ novels: data.novels, collections: data.collections }); };
 let recoveryBase = '', recoveryBasePayload = '';
@@ -60,10 +80,10 @@ async function fingerprint(serialized: string) {
 // Throttled independently of cloud debounce: continuous typing still checkpoints.
 export function checkpointLocalDraft(clone?: { key: string; base: Novel }) {
   if (localTimer) { clearTimeout(localTimer); localTimer = null; }
-  if (!accountId || !saved || snapshot() === saved) return localWrites;
+  if (!accountId || !saved || !unconfirmedWrite && snapshot() === saved) return localWrites;
   if (recoveryBase !== saved) { recoveryBase = saved; recoveryBasePayload = projectPayload(saved); }
   const value = projectPayload(snapshot());
-  if (value === recoveryBasePayload) return localWrites;
+  if (!unconfirmedWrite && value === recoveryBasePayload) return localWrites;
   if (activeDraft?.snapshot === value) return localWrites;
   const draft: LocalDraft = { version: 1, owner: accountId, id: writerId, generation: crypto.randomUUID(), updatedAt: Date.now(), revision, snapshot: value };
   if (clone) draft.clone = { key: clone.key, destinationId: clone.base.id, baseHash: '' };
@@ -85,9 +105,12 @@ function lockAccount() {
   setHistoryOwner(null);
   void checkpointLocalDraft();
   accountEpoch++;
+  clearSaveRetry();
+  retryDelay = 1000;
+  unconfirmedWrite = null;
   if (timer) { clearTimeout(timer); timer = null; }
   lockLocalRecovery();
-  useWebLibrary.setState({ ready: false, busy: false, email: '', error: 'Sign in again to access your library and local recovery drafts.' });
+  useWebLibrary.setState({ ready: false, busy: false, retrying: false, email: '', error: 'Sign in again to access your library and local recovery drafts.' });
 }
 type ConfirmedLibrary = { revision: number; snapshot: Snapshot };
 async function checkClone(draft: LocalDraft, source: Snapshot, remote: ConfirmedLibrary) {
@@ -149,19 +172,24 @@ async function removeAcknowledgedDraft(draft: LocalDraft | null, value: string) 
   catch (error) { if (useLocalRecovery.getState().owner === draft.owner) recoveryStorageError(error); }
 }
 class LibraryConflictError extends Error {}
+class TemporaryCloudError extends Error {}
 async function api(path: string, init?: RequestInit) {
   const epoch = accountEpoch;
   const headers=new Headers(init?.headers);
   if(path.startsWith('/api/library')&&accountId)headers.set('X-Katchamak-Account',accountId);
-  const { response, data } = await requestJson(path, { ...init, headers }, path.includes('/demo/') || init?.body instanceof FormData ? 60000 : 30000);
+  const { response, data } = await requestJson(path, { ...init, headers }, path.includes('/demo/') || init?.body instanceof FormData ? 60000 : 30000).catch(error => {
+    if (!init?.signal?.aborted && (error instanceof RequestTimeoutError || error instanceof TypeError)) throw new TemporaryCloudError(error.message);
+    throw error;
+  });
+  if (epoch !== accountEpoch) throw new Error('The account session changed. Please sign in again.');
   if(data.accountChanged || response.status === 401 || response.status === 403) {
     lockAccount();
     throw new Error(data.accountChanged ? 'Your signed-in account changed. Sign in again to access your library and local recovery drafts.' : 'Sign in again to access your library and local recovery drafts.');
   }
-  if (epoch !== accountEpoch) throw new Error('The account session changed. Please sign in again.');
   if (!response.ok) {
     const message=data.error || 'Cloud storage could not be reached. Retry saving.';
     if(response.status===409&&data.conflict===true)throw new LibraryConflictError(message);
+    if(response.status===408||response.status===429||response.status>=500)throw new TemporaryCloudError(message);
     throw new Error(message);
   }
   return data;
@@ -253,6 +281,7 @@ export async function initializeWebLibrary() {
         writeWorkspaceRoute();
         useWebLibrary.setState({ pending: true });
         if (!localTimer) localTimer = setTimeout(() => { void checkpointLocalDraft(); }, 150);
+        if (useWebLibrary.getState().retrying) return;
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
@@ -271,6 +300,7 @@ export async function initializeWebLibrary() {
 export async function flushWebLibrary() {
   if (timer) { clearTimeout(timer); timer = null; }
   if (running) return running;
+  clearSaveRetry();
   running = (async () => {
     if (!useWebLibrary.getState().ready) throw new Error('Open your account library before saving.');
     // Saving takes priority over a background read. CAS still checks the latest server revision.
@@ -278,10 +308,26 @@ export async function flushWebLibrary() {
     if (!useWebLibrary.getState().ready) throw new Error('Open your account library before saving.');
     let retries=0;
     if(useWebLibrary.getState().conflict)await reconcileRevision();
+    if (unconfirmedWrite) {
+      const attempt = unconfirmedWrite;
+      const remote = await api('/api/library?revision='+revision);
+      // A failed response may follow a committed write. Confirm its exact payload
+      // before retrying newer edits against the acknowledged revision.
+      if (remote.revision === revision + 1 && JSON.stringify(remote.snapshot) === attempt.value) {
+        revision = remote.revision;
+        saved = attempt.value;
+        await removeAcknowledgedDraft(attempt.draft, attempt.value);
+      }
+      unconfirmedWrite = null;
+    }
     while (true) {
       const value = snapshot();
       await flushBookHistories();
-      if(value===saved){if(snapshot()===value)break;continue;}
+      if(value===saved){
+        await removeAcknowledgedDraft(activeDraft, value);
+        if(snapshot()===value)break;
+        continue;
+      }
       await checkpointLocalDraft();
       const checkpoint = activeDraft;
       if (!useWebLibrary.getState().ready) throw new Error('Sign in again before saving.');
@@ -289,6 +335,7 @@ export async function flushWebLibrary() {
       let data;
       try{data=await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });}
       catch(error){
+        if (error instanceof TemporaryCloudError && useWebLibrary.getState().ready) unconfirmedWrite = { value, draft: checkpoint };
         if(!(error instanceof LibraryConflictError))throw error;
         if(retries++>=2){useWebLibrary.setState({conflict:true});throw error;}
         await reconcileRevision();continue;
@@ -297,8 +344,22 @@ export async function flushWebLibrary() {
       revision = data.revision; saved = value;
       await removeAcknowledgedDraft(checkpoint, value);
     }
-    useWebLibrary.setState({ busy: false, pending: false, error: null });
-  })().catch(error => { fail(error); throw error; }).finally(() => { running = null; });
+    retryDelay = 1000;
+    useWebLibrary.setState({ busy: false, pending: false, retrying: false, error: null });
+  })().catch(error => {
+    fail(error);
+    const state = useWebLibrary.getState();
+    if (error instanceof TemporaryCloudError && state.ready && (state.pending || unconfirmedWrite) && !state.conflict) {
+      useWebLibrary.setState({ pending: true });
+      scheduleSaveRetry();
+      void checkpointLocalDraft();
+    }
+    else {
+      retryDelay = 1000;
+      useWebLibrary.setState({ retrying: false });
+    }
+    throw error;
+  }).finally(() => { running = null; });
   return running;
 }
 export const saveWebLibrary = flushWebLibrary;
@@ -386,7 +447,7 @@ export async function refreshWebLibrary() {
     if(!Number.isSafeInteger(data.revision)||data.revision<0)throw new Error('The saved library could not be read.');
     if(data.unchanged===true){if(data.revision!==revision)throw new Error('The saved library revision could not be verified.');return;}
     if (snapshot() === before && !useWebLibrary.getState().pending && data.revision !== revision) apply(data);
-  })().catch(error => { if (!controller.signal.aborted) lockAccount(); throw error; }).finally(() => { refreshing = null; refreshController = null; });
+  })().catch(error => { if (!controller.signal.aborted && !(error instanceof TemporaryCloudError)) lockAccount(); throw error; }).finally(() => { refreshing = null; refreshController = null; });
   return refreshing;
 }
 async function verifyRecoveryOwner() {
@@ -394,7 +455,7 @@ async function verifyRecoveryOwner() {
   if (!owner || owner !== accountId) throw new Error('Sign in again to access local recovery.');
   let account;
   try { account = await api('/api/account'); }
-  catch (error) { lockAccount(); throw error; } // No offline unlock from a remembered identity.
+  catch (error) { if (!(error instanceof TemporaryCloudError)) lockAccount(); throw error; } // No offline unlock from a remembered identity.
   if (account.id !== owner) { lockAccount(); throw new Error('Your signed-in account changed. Sign in again to access local recovery.'); }
   return owner;
 }
@@ -494,11 +555,22 @@ export async function recoverLocalDraft(summary: DraftSummary) {
 export async function reloadWebLibrary(discard = false) {
   if (running) await running;
   if (snapshot() !== saved && !discard) throw new Error('Save or export your unsaved edits before reloading.');
-  const before = snapshot(), discardedDraft = activeDraft, data = await api('/api/library');
-  // Discard applies only to edits present at the click, never to text typed while waiting.
-  if (snapshot() !== before || data.revision < revision) throw new Error('The library changed while reloading. Your current edits were kept. Save them before retrying.');
-  apply(data);
-  if (discard) await removeAcknowledgedDraft(discardedDraft, before);
+  const before = snapshot(), discardedDraft = activeDraft;
+  const pausedRetry = saveRetry !== null;
+  if (pausedRetry) clearSaveRetry();
+  try {
+    const data = await api('/api/library');
+    // Discard applies only to edits present at the click, never to text typed while waiting.
+    if (snapshot() !== before || data.revision < revision) throw new Error('The library changed while reloading. Your current edits were kept. Save them before retrying.');
+    apply(data);
+    retryDelay = 1000;
+    unconfirmedWrite = null;
+    useWebLibrary.setState({ retrying: false });
+    if (discard) await removeAcknowledgedDraft(discardedDraft, before);
+  } catch (error) {
+    if (pausedRetry && useWebLibrary.getState().retrying && saveRetry === null && !running) scheduleSaveRetry();
+    throw error;
+  }
 }
 export async function createWebCollection(name: string, parentId: string | null) {
   const id = useCollections.getState().addCollection(name, parentId); await flushWebLibrary(); return id;

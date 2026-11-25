@@ -5,6 +5,7 @@ import {calendarPreset} from '../src/lib/kachamak/story-calendar.ts';
 import { Database } from 'bun:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { Window } from 'happy-dom';
+import { indexedDB } from 'fake-indexeddb';
 import { accountApi } from '../scripts/accounts-runtime.mjs';
 import { cloudLibraryApi, validCloudLibrary } from '../scripts/cloud-library-runtime.mjs';
 globalThis.accountApi = accountApi;
@@ -297,11 +298,47 @@ await blockedRefresh;assert.equal(readCancelled,true);assert.equal(cloud.useWebL
 globalThis.fetch=async(path,init)=>{requests.push(path);return realFetch(path,init);};requests=[];
 await cloud.refreshWebLibrary();assert.equal(requests.length,1);assert.match(requests[0],/^\/api\/library\?revision=/);
 globalThis.fetch=realFetch;
+// A temporary outage queues a retry without another edit or a Save click.
+globalThis.indexedDB=indexedDB;
+const {draftStorage}=await import('../src/lib/kachamak/local-recovery.ts');
+const duringOutage='<p>Local checkpoint during temporary outage</p>';
+const newerDraft='<p>Newer text before automatic retry</p>';
+let automaticWrites=0, retryStarted, releaseRetry;
+const reachedRetry=new Promise(resolve=>{retryStarted=resolve;});
+const holdRetry=new Promise(resolve=>{releaseRetry=resolve;});
+globalThis.fetch=async(path,init)=>{
+ if(path==='/api/library'&&init?.method==='POST'){
+   if(++automaticWrites===1)return Response.json({error:'Temporary storage outage'},{status:503});
+   retryStarted();
+   await holdRetry;
+ }
+ return realFetch(path,init);
+};
+useKachamak.getState().updateNode('binder','note-1',{content:duringOutage});
+await assert.rejects(()=>cloud.saveWebLibrary(),/Temporary storage outage/);
+assert.equal(cloud.useWebLibrary.getState().retrying,true);
+assert.match((await draftStorage.list(a))[0].snapshot,/Local checkpoint during temporary outage/);
+useKachamak.getState().updateNode('binder','note-1',{content:newerDraft});
+await reachedRetry;
+assert.match((await draftStorage.list(a))[0].snapshot,/Newer text before automatic retry/);
+assert.equal(cloud.useWebLibrary.getState().pending,true);
+const fullySaved=new Promise(resolve=>{
+ const off=cloud.useWebLibrary.subscribe(state=>{if(!state.pending){off();resolve();}});
+});
+releaseRetry();
+await fullySaved;
+globalThis.fetch=realFetch;
+assert.equal(automaticWrites,2);
+assert.equal(cloud.useWebLibrary.getState().retrying,false);
+assert.deepEqual(await draftStorage.list(a),[]);
+assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,newerDraft);
 // A lost response after a committed write recovers through revision reconciliation.
 useKachamak.getState().updateNode('binder','note-1',{content:'<p>Committed before connection dropped</p>'});
 globalThis.fetch=async(path,init)=>{const r=await realFetch(path,init);if(path==='/api/library'&&init?.method==='POST')throw new TypeError('Lost acknowledgement');return r;};
 await assert.rejects(()=>cloud.saveWebLibrary());assert.equal(cloud.useWebLibrary.getState().pending,true);
+useKachamak.getState().updateNode('binder','note-1',{content:'<p>New text after lost acknowledgement</p>'});
 globalThis.fetch=realFetch;await cloud.saveWebLibrary();assert.equal(cloud.useWebLibrary.getState().pending,false);
+assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>New text after lost acknowledgement</p>');
 // Reload may only replace the snapshot that was present when the user requested it.
 for(const discard of [false,true]) {
  let releaseRead,readStarted;

@@ -1,3 +1,5 @@
+> **2026-11-25 — Automatski ponovni pokušaj čuvanja.** Posle privremene greške Kachamak pokušava ponovo u istom prozoru, uz rastući razmak do 30 sekundi. Lokalni nacrt ostaje do potvrde odgovarajuće verzije.
+
 > **2026-11-25 — Alijasi u automatskom linkovanju.** Save skenira naslove i alijase iz Codexa. Zarez i novi red razdvajaju alijase i u ranije sačuvanim unosima.
 
 > **2026-11-25 — Undo i Redo u poljima Synopsis i Notes.** Tastatura i gornja traka koriste istoriju aktivnog polja. Kad se istorija polja iscrpi, komanda se zaustavlja u tom polju.
@@ -727,6 +729,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-25.** Proveren privremeni 503, čuvanje novijih izmena tokom čekanja, zadržavanje nacrta do potvrde i oporavak kada server upiše izmene, ali se potvrda izgubi.
 
 - **2026-11-25.** „E. Roche“, „Mr. Roche“ i „Roche“ iz starog unosa sa zarezima nude istu Codex belešku kad se sačuva probni tekst. Provera obuhvata pojedinačno prihvatanje predloga i čuvanje njihovih odredišta.
 
