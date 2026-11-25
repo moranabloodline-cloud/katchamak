@@ -1,3 +1,5 @@
+> **2026-11-25 — Brže čuvanje u cloudu.** Velike biblioteke se šalju i upisuju kompresovano kada pregledač to podržava i kompresija smanjuje veličinu. Čuvanje i dalje čeka potvrdu revizije pre uklanjanja lokalnog nacrta.
+
 > **2026-11-25 — Stabilnija provera naloga pri čuvanju.** Čitanje i čuvanje koriste postojeću D1 šemu direktno. Nečitljiva ili nepotpuna potvrda upisa pokreće proveru revizije i ponovni pokušaj uz lokalni nacrt.
 
 > **2026-11-25 — Dugački naslovi u Write i Split.** Polje naslova se prilagođava broju redova pri sužavanju stranice ili okna. Naslov se uređuje na samoj stranici.
@@ -735,6 +737,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-25.** Produkcijska merenja pokazala su prenos oko 8,7 MB i pri malim izmenama. Uveden je gzip za prenos i upis uz postojeću proveru revizije. Provere obuhvataju otvaranje ranijih i kompresovanih zapisa, povratak na običan JSON i odbijanje oštećenih ili prevelikih upisa.
 
 - **2026-11-25.** Produkcijski 503 prekidao je čitanje i upis biblioteke tokom inicijalizacije šeme naloga. Uklonjeno je deljenje nezavršene D1 operacije među zahtevima. Provereni su paralelno čitanje i čuvanje, ovlašćenja i nastavak čuvanja nakon neispravne potvrde.
 

@@ -5,7 +5,7 @@ export class RequestTimeoutError extends Error {
 export class InvalidResponseError extends Error {}
 
 // Fetch cannot report upload progress. A library snapshot can contain several MB of images.
-function transferSnapshot(path: string, init: RequestInit, body: string | null, signal: AbortSignal, onProgress: () => void): Promise<Response> {
+function transferSnapshot(path: string, init: RequestInit, body: string | Blob | null, signal: AbortSignal, onProgress: () => void): Promise<Response> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open(init.method ?? 'GET', path);
@@ -63,8 +63,9 @@ export async function requestJson(path: string, init: RequestInit = {}, timeoutM
     return await Promise.race([cancelled, (async () => {
       const route = path.split('?')[0];
       const snapshot = route === '/api/library' || route === '/api/library/demo/install';
-      response = snapshot && typeof XMLHttpRequest !== 'undefined' && (init.body == null || typeof init.body === 'string')
-        ? await transferSnapshot(path, init, init.body ?? null, controller.signal, progress)
+      const body = init.body;
+      response = snapshot && typeof XMLHttpRequest !== 'undefined' && (body == null || typeof body === 'string' || body instanceof Blob)
+        ? await transferSnapshot(path, init, body ?? null, controller.signal, progress)
         : await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init, signal: controller.signal });
       // HTTP error pages may be HTML; a successful non-JSON response must never acknowledge a save.
       const raw = await response.text();

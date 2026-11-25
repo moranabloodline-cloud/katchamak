@@ -2,6 +2,34 @@ import {demoLibraryApi} from './demo-projects.mjs';
 import {validCloudLibrary} from '../src/lib/kachamak/cloud-write-validation.mjs';
 import { measuredQuery } from './request-trace.mjs';
 export {validCloudLibrary} from '../src/lib/kachamak/cloud-write-validation.mjs';
+
+const librarySaveLimit = 20 * 1024 * 1024;
+const libraryGzipType = 'application/vnd.katchamak.snapshot+gzip';
+class LibrarySizeError extends Error {}
+
+async function readLibraryBytes(stream, limit = librarySaveLimit) {
+  if (!stream) return new ArrayBuffer(0);
+  const reader = stream.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) {
+        // Cancellation can also fail when the connection has already closed.
+        await reader.cancel().catch(() => {});
+        throw new LibrarySizeError();
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return new Blob(chunks).arrayBuffer();
+}
+
 // Included in the Sites Worker with accountApi; all keys are private to the authenticated account.
 export async function cloudLibraryApi(request, env, measure) {
   const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
@@ -24,17 +52,22 @@ export async function cloudLibraryApi(request, env, measure) {
       const read = () => env.BUCKET.get(record.snapshot_key);
       const object = await (measure ? measure('r2.readSnapshot', read) : read());
       if (!object) throw new Error('The saved library could not be read. Please retry.');
+      if (record.snapshot_key.endsWith('.json.gz')) {
+        const bytes = await readLibraryBytes(object.body.pipeThrough(new DecompressionStream('gzip')));
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }
       return JSON.parse(await object.text());
     };
     if (request.method !== 'GET') {
       if (request.headers.get('Origin') !== url.origin) return json({ error: 'Invalid request origin.' }, 403);
     }
-    const writeSnapshot=async(value,baseRevision)=>{
+    const writeSnapshot=async(value,baseRevision,compressed)=>{
       if (!record) {
         await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
       }
-      const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + '.json';
-      const write = () => env.BUCKET.put(key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } });
+      const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + (compressed ? '.json.gz' : '.json');
+      const httpMetadata = compressed ? { contentType: 'application/json', contentEncoding: 'gzip' } : { contentType: 'application/json' };
+      const write = () => env.BUCKET.put(key, compressed ?? JSON.stringify(value), { httpMetadata });
       await (measure ? measure('r2.writeSnapshot', write) : write());
       const updatedAt = Date.now();
       const result = await q('UPDATE cloud_libraries SET snapshot_key = ?, revision = revision + 1, updated_at = ? WHERE account_id = ? AND revision = ?', key, updatedAt, id, baseRevision).run();
@@ -49,13 +82,39 @@ export async function cloudLibraryApi(request, env, measure) {
         return json({ revision, snapshot: await readSnapshot(), updatedAt: record?.updated_at ?? 0 });
       }
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
-      if (!request.headers.get('Content-Type')?.startsWith('application/json')) return json({ error: 'JSON required.' }, 415);
-      const text = await request.text();
-      if (new TextEncoder().encode(text).length > 20 * 1024 * 1024) return json({ error: 'Library exceeds the 20 MB save limit. Export a backup before making further edits.' }, 413);
-      let body; try { body = JSON.parse(text); } catch { return json({ error: 'Invalid JSON.' }, 400); }
-      if (!Number.isSafeInteger(body.revision) || body.revision < 0 || !validCloudLibrary(body.snapshot)) return json({ error: 'Invalid library. Existing data was preserved.' }, 400);
+      const contentType = request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase();
+      if (contentType !== 'application/json' && contentType !== libraryGzipType) return json({ error: 'Unsupported library encoding.' }, 415);
+      const invalidLibrary = () => json({ error: 'Invalid library. Existing data was preserved.' }, 400);
+      const libraryTooLarge = () => json({ error: 'Library exceeds the 20 MB save limit. Export a backup before making further edits.' }, 413);
+      let wireBytes;
+      try {
+        wireBytes = await readLibraryBytes(request.body);
+      } catch (error) {
+        if (error instanceof LibrarySizeError) return libraryTooLarge();
+        throw error;
+      }
+      let body;
+      let compressed;
+      try {
+        if (contentType === libraryGzipType) {
+          const header = request.headers.get('X-Katchamak-Revision') ?? '';
+          const baseRevision = Number(header);
+          if (!/^\d+$/.test(header) || !Number.isSafeInteger(baseRevision)) return invalidLibrary();
+          const overhead = JSON.stringify({ revision: baseRevision, snapshot: null }).length - 4;
+          const decoded = new Blob([wireBytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+          const bytes = await readLibraryBytes(decoded, librarySaveLimit - overhead);
+          body = { revision: baseRevision, snapshot: JSON.parse(new TextDecoder().decode(bytes)) };
+          if (wireBytes.byteLength < bytes.byteLength) compressed = wireBytes;
+        } else {
+          body = JSON.parse(new TextDecoder().decode(wireBytes));
+        }
+      } catch (error) {
+        if (error instanceof LibrarySizeError) return libraryTooLarge();
+        return json({ error: 'Invalid library data.' }, 400);
+      }
+      if (!Number.isSafeInteger(body?.revision) || body.revision < 0 || !validCloudLibrary(body.snapshot)) return invalidLibrary();
       if (body.revision !== revision) return json({ error: 'Another window saved newer changes. Export your unsaved edits, then reload the library.', conflict: true }, 409);
-      const saved=await writeSnapshot(body.snapshot,body.revision);
+      const saved=await writeSnapshot(body.snapshot,body.revision,compressed);
       return saved?json(saved):json({error:'Another window saved newer changes. Export your edits before reloading.',conflict:true},409);
     }
     const match = url.pathname.match(/^\/api\/library\/files\/([a-zA-Z0-9_-]{1,128})(?:\/([a-zA-Z0-9_-]{1,128}))?$/);

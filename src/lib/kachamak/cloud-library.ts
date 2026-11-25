@@ -30,6 +30,7 @@ let saveRetry: ReturnType<typeof setTimeout> | null = null;
 let retryDelay = 1000;
 let unconfirmedWrite: { value: string; draft: LocalDraft | null } | null = null;
 let accountId='';
+let gzipLibrarySave = false;
 let accountEpoch = 0, writerId = crypto.randomUUID();
 let activeDraft: LocalDraft | null = null, localTimer: ReturnType<typeof setTimeout> | null = null;
 let localWrites: Promise<void> = Promise.resolve();
@@ -105,6 +106,7 @@ function lockAccount() {
   setHistoryOwner(null);
   void checkpointLocalDraft();
   accountEpoch++;
+  gzipLibrarySave = false;
   clearSaveRetry();
   retryDelay = 1000;
   unconfirmedWrite = null;
@@ -173,6 +175,8 @@ async function removeAcknowledgedDraft(draft: LocalDraft | null, value: string) 
 }
 class LibraryConflictError extends Error {}
 class TemporaryCloudError extends Error {}
+class UnsupportedLibraryEncodingError extends Error {}
+const GZIP_LIBRARY_TYPE = 'application/vnd.katchamak.snapshot+gzip';
 async function api(path: string, init?: RequestInit) {
   const epoch = accountEpoch;
   const headers=new Headers(init?.headers);
@@ -191,11 +195,49 @@ async function api(path: string, init?: RequestInit) {
   }
   if (!response.ok) {
     const message=data.error || 'Cloud storage could not be reached. Retry saving.';
+    if(response.status===415&&headers.get('Content-Type')===GZIP_LIBRARY_TYPE)throw new UnsupportedLibraryEncodingError(message);
     if(response.status===409&&data.conflict===true)throw new LibraryConflictError(message);
     if(response.status===408||response.status===429||response.status>=500)throw new TemporaryCloudError(message);
     throw new Error(message);
   }
   return data;
+}
+async function writeLibrarySnapshot(value: string, baseRevision: number) {
+  if (gzipLibrarySave && value.length >= 256 * 1024 && typeof CompressionStream !== 'undefined') {
+    const owner = accountId, epoch = accountEpoch;
+    const checkSession = () => {
+      if (owner !== accountId || epoch !== accountEpoch || !useWebLibrary.getState().ready) {
+        throw new Error('The account session changed. Please sign in again.');
+      }
+    };
+    let body: Blob | undefined;
+    try {
+      const raw = new Blob([value]);
+      const compressed = await new Response(raw.stream().pipeThrough(new CompressionStream('gzip'))).blob();
+      if (compressed.size < raw.size) body = compressed;
+    } catch {
+      // Compression is optional. Keep the exact same snapshot for a JSON upload.
+    }
+    checkSession();
+    if (body) {
+      try {
+        return await api('/api/library', {
+          method: 'POST',
+          headers: { 'Content-Type': GZIP_LIBRARY_TYPE, 'X-Katchamak-Revision': String(baseRevision) },
+          body,
+        });
+      } catch (error) {
+        if (!(error instanceof UnsupportedLibraryEncodingError)) throw error;
+        checkSession();
+        gzipLibrarySave = false;
+      }
+    }
+  }
+  return api('/api/library', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: `{"revision":${baseRevision},"snapshot":${value}}`,
+  });
 }
 function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=false) {
   if (!Number.isSafeInteger(data.revision) || data.revision < 0 || !Array.isArray(data.snapshot?.novels) || !data.snapshot.novels.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
@@ -261,6 +303,7 @@ export async function initializeWebLibrary() {
     }
     if (accountId !== account.id) { writerId = crypto.randomUUID(); activeDraft = null; }
     accountId=account.id;
+    gzipLibrarySave = account.librarySaveEncoding === 'gzip';
     useLocalRecovery.setState({ owner: account.id, drafts: [], error: null });
     await loadLocalDrafts();
     useWebLibrary.setState({ email: account.email });
@@ -342,7 +385,7 @@ export async function flushWebLibrary() {
       useWebLibrary.setState({ busy: true, pending: true });
       let data;
       try {
-        data = await api('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: `{"revision":${revision},"snapshot":${value}}` });
+        data = await writeLibrarySnapshot(value, revision);
         if (!Number.isSafeInteger(data.revision) || data.revision !== revision + 1) {
           throw new TemporaryCloudError('The server did not confirm this save. Your edits are kept in this window.');
         }

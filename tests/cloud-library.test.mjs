@@ -4,6 +4,7 @@ import {migrateLibraryArtwork} from '../src/lib/kachamak/migrate-gallery-images.
 import {calendarPreset} from '../src/lib/kachamak/story-calendar.ts';
 import { Database } from 'bun:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { Window } from 'happy-dom';
 import { indexedDB } from 'fake-indexeddb';
 import { accountApi } from '../scripts/accounts-runtime.mjs';
@@ -15,7 +16,7 @@ const DB = { prepare(query) { let values=[]; const statement={bind(...v){values=
 const objects = new Map(); let failPut=false;
 const BUCKET = {
  async put(key,data,options={}) { if(failPut)throw new Error('simulated outage'); objects.set(key,{data:typeof data==='string'?Buffer.from(data):Buffer.from(data),...options}); },
- async get(key) {const o=objects.get(key);return o?{...o,text:async()=>o.data.toString(),arrayBuffer:async()=>o.data.buffer.slice(o.data.byteOffset,o.data.byteOffset+o.data.byteLength)}:null;},
+ async get(key) {const o=objects.get(key);return o?{...o,body:new Blob([o.data]).stream(),text:async()=>o.data.toString(),arrayBuffer:async()=>o.data.buffer.slice(o.data.byteOffset,o.data.byteOffset+o.data.byteLength)}:null;},
  async delete(key) {objects.delete(key);},
  async list({prefix}) {return {objects:[...objects].filter(([k])=>k.startsWith(prefix)).map(([key,o])=>({key,customMetadata:o.customMetadata,size:o.data.length})),truncated:false};}
 };
@@ -416,7 +417,42 @@ assert.equal(upgradedAccount.snapshot.novels[0].sections.binder[0].content,'<p>C
 await cloud.reloadWebLibrary();
 await cloud.saveWebLibrary();
 assert.equal((await (await call(b)).json()).revision,upgradedAccount.revision,'Reload never migrates the same artwork twice');
-console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, nested library, Unicode manuscript roundtrip, attachments, failed-save recovery, two-view refresh and conflict preservation.');
+const compressedFixture = structuredClone(snapshot);
+compressedFixture.novels[0].sections.binder[0].content = '<p>Rukopis: čćš žđ — 🌊</p>';
+const compressedBytes = gzipSync(JSON.stringify(compressedFixture));
+const beforeCompressedSave = await (await call(a)).json();
+const objectCountBeforeCompressedSave = objects.size;
+const postCompressed = (body, revision = String(beforeCompressedSave.revision)) => cloudLibraryApi(new Request('https://test.local/api/library', {
+  method: 'POST',
+  headers: {
+    'Origin': 'https://test.local',
+    'oai-authenticated-user-id': a,
+    'oai-authenticated-user-email': a,
+    'X-Katchamak-Account': a,
+    'X-Katchamak-Revision': revision,
+    'Content-Type': 'application/vnd.katchamak.snapshot+gzip',
+  },
+  body,
+}), env);
+assert.equal((await postCompressed(compressedBytes, '')).status, 400);
+assert.equal((await postCompressed(Buffer.from('not gzip'))).status, 400);
+assert.equal((await postCompressed(compressedBytes.subarray(0, -4))).status, 400);
+assert.equal((await postCompressed(gzipSync(' '.repeat(20 * 1024 * 1024)))).status, 413);
+assert.equal(objects.size, objectCountBeforeCompressedSave);
+assert.deepEqual(await (await call(a)).json(), beforeCompressedSave);
+const compressedSave = await postCompressed(compressedBytes);
+assert.equal(compressedSave.status, 200);
+assert.equal((await compressedSave.json()).revision, beforeCompressedSave.revision + 1);
+assert.equal((await postCompressed(compressedBytes)).status, 409);
+assert.deepEqual((await (await call(a)).json()).snapshot, compressedFixture);
+
+const savedKey = sql.query('SELECT snapshot_key FROM cloud_libraries WHERE account_id = ?').get(a).snapshot_key;
+assert.match(savedKey, /\.json\.gz$/);
+assert.deepEqual(objects.get(savedKey).data, compressedBytes);
+assert.equal(objects.get(savedKey).httpMetadata.contentEncoding, 'gzip');
+assert.equal((await (await call(a, '/api/library?revision=' + (beforeCompressedSave.revision + 1))).json()).unchanged, true);
+
+console.log('Cloud storage passed: migrations, authenticated isolation, CSRF, nested library, Unicode manuscript roundtrip, attachments, failed-save recovery, two-view refresh, conflict preservation and gzip snapshots.');
 
 const invalidBannerLibrary={novels:structuredClone(useKachamak.getState().novels),collections:[]};
 invalidBannerLibrary.novels[0].sections.binder[0].event={start:0,precision:'day',banner:'data:image/svg+xml;base64,PHN2Zz4='};

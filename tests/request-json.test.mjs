@@ -51,7 +51,18 @@ class SnapshotRequest {
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 try {
   globalThis.XMLHttpRequest = SnapshotRequest;
-  const saving = requestJson('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }, 250);
+  const json = requestJson('/api/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(current.body, '{}');
+  assert.equal(current.headers.get('Content-Type'), 'application/json');
+  current.finish();
+  await json;
+
+  const body = await new Response(new Blob(['{}']).stream().pipeThrough(new CompressionStream('gzip'))).blob();
+  const saving = requestJson('/api/library', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/vnd.katchamak.snapshot+gzip', 'X-Katchamak-Revision': '1' },
+    body,
+  }, 250);
   for (const direction of [current.upload, current]) {
     for (const loaded of [8, 16, 24]) {
       await delay(60);
@@ -60,9 +71,10 @@ try {
   }
   current.finish();
   const saved = await saving;
-  assert.equal(current.body, '{}');
+  assert.equal(current.body, body);
   assert.equal(current.method, 'POST');
-  assert.equal(current.headers.get('Content-Type'), 'application/json');
+  assert.equal(current.headers.get('Content-Type'), 'application/vnd.katchamak.snapshot+gzip');
+  assert.equal(current.headers.get('X-Katchamak-Revision'), '1');
   assert.equal(saved.response.headers.get('X-Katchamak-Request'), 'test');
   assert.equal(saved.data.revision, 2);
 
@@ -73,7 +85,7 @@ try {
     await Promise.race([stalled, delay(500).then(() => { throw Error('Repeated byte counts kept a stalled transfer alive'); })]);
   } finally { clearInterval(heartbeat); }
   assert.equal(stalledRequest.aborted, true);
-  assert.equal(sends, 2, 'A stalled snapshot must not trigger another write');
+  assert.equal(sends, 3, 'A stalled snapshot must not trigger another write');
 
   const controller = new AbortController();
   const cancelled = requestJson('/api/library', { signal: controller.signal });

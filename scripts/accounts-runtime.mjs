@@ -26,7 +26,7 @@ export async function accountApi(request, env, measure) {
   if (route.startsWith('/api/admin/gmail/')) return gmailConnection(request, env, {q,id,body,audit});
   if (route === '/api/account' && method === 'GET') {
     const license = user.license_plan === null ? null : {plan:user.license_plan,expires_at:user.license_expires_at,updated_at:user.license_updated_at};
-    return accountJson({ id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active: license.plan !== 'none' && (license.expires_at === null || license.expires_at > now) } : { plan: 'none', active: false } });
+    return accountJson({ id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active: license.plan !== 'none' && (license.expires_at === null || license.expires_at > now) } : { plan: 'none', active: false } });
   }
   if (route === '/api/account' && method === 'PATCH') {
     if (Object.keys(body).some(k => !['displayName','avatar','preferences'].includes(k))) return accountJson({ error: 'Profile fields only' }, 400);
