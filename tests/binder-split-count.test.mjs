@@ -48,7 +48,7 @@ try {
   }));
   assert.equal(count(), '4 words');
   await clickPane('a', '10 words');
-  await React.act(async () => document.querySelector('[data-pane="b"] input[aria-label="Title"]').focus());
+  await React.act(async () => document.querySelector('[data-pane="b"] [aria-label="Title"]').focus());
   assert.equal(count(), '4 words', 'Keyboard focus follows the same pane as a click');
   assert.equal(editor('a').dataset.noteId, chapter.id);
   assert.equal(editor('b').dataset.noteId, scene.id);

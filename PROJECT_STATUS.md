@@ -1,3 +1,5 @@
+> **2026-11-25 — Dugački naslovi u Write i Split.** Polje naslova se prilagođava broju redova pri sužavanju stranice ili okna. Naslov se uređuje na samoj stranici.
+
 > **2026-11-25 — Draftopus.** Vidljivi naziv i logo zamenjeni su u aplikaciji. Hobotnica iz Nikolinog priloga koristi postojeća mesta logotipa, uključujući ikonu taba u pregledaču.
 
 > **2026-11-25 — Automatski ponovni pokušaj čuvanja.** Posle privremene greške Kachamak pokušava ponovo u istom prozoru, uz rastući razmak do 30 sekundi. Lokalni nacrt ostaje do potvrde odgovarajuće verzije.
@@ -731,6 +733,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-25.** Provereno prelamanje dužeg naslova u Write i Split, uključujući jednu dugačku reč, kao i uređivanje i čuvanje naslova.
 
 - **2026-11-25.** Postojeći raspored zaglavlja koristi znak hobotnice uz naziv Draftopus. Promenjeni su naslov taba, ikona pregledača i naziv u korisničkom interfejsu. Identitet projekta, rute i format rezervnih kopija ostaju kompatibilni.
 

@@ -285,15 +285,24 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
         {/* min(48rem, 100%) — stubac nikad ne buje iz panela ni pri uvećanom
             zoomu (100% je u koordinatama zoomovanog elementa) */}
         <PageSurface appearance={appearance}>
-          <input
-            value={node.title}
-            onChange={(e) => updateNode(section, node.id, { title: e.target.value })}
-            aria-label="Title"
-            title={node.title}
-            style={{color:node.color || undefined}}
-            className="mb-4 w-full bg-transparent note-page-title text-center text-ellipsis font-bold focus:text-clip text-foreground outline-none placeholder:text-muted-foreground"
-            placeholder="Title"
-          />
+          <div className="note-page-title relative mb-4 text-center font-bold text-foreground">
+            <div aria-hidden="true" className="invisible whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {node.title || "Title"}{"\u200b"}
+            </div>
+            <textarea
+              rows={1}
+              value={node.title}
+              onChange={(e) => updateNode(section, node.id, { title: e.target.value.replace(/[\r\n]+/g, " ") })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) e.preventDefault();
+              }}
+              aria-label="Title"
+              title={node.title}
+              style={{color:node.color || undefined}}
+              className="absolute inset-0 size-full resize-none overflow-hidden whitespace-pre-wrap bg-transparent text-center [overflow-wrap:anywhere] outline-none placeholder:text-muted-foreground"
+              placeholder="Title"
+            />
+          </div>
           <div>
             <RichEditor
               colorizeAnnotations={appearance.page.colorizeAnnotations}
