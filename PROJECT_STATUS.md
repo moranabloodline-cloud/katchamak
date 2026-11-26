@@ -1,3 +1,5 @@
+> **2026-11-26 — Zum na Story Boardu.** Dugmad za zum i Ctrl + točkić menjaju veličinu mreže. Procenat i Ctrl + 0 vraćaju prikaz na 100%.
+
 > **2026-11-26 — Canvas pregled, Story Board i Mind Map.** Page preview prikazuje Canvas stranicu za desktop i telefon i omogućava pregled internih veza. Story Board planira scene po poglavljima i linijama radnje. Mind Map dodaje povezane kartice komandom Add branch.
 
 > **2026-11-26 — Canvas šabloni.** New canvas i New nested canvas nude praznu stranicu, Project cover, Character overview, Research board, Author Page i popunjen Project example iz otvorene knjige. Izbor dodaje novu stranicu sa zasebnim blokovima za uređivanje.
@@ -773,6 +775,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Story Board pamti zum svake table lokalno u pregledaču. Zum ne pokreće čuvanje projekta.
 
 - **2026-11-26.** Story Board i Mind Map dodati su u izbor šablona za novi Canvas. Scene mogu da vode na beleške u Binderu, a kartice mape uma na beleške, stranice i tabove projekta. Pregled stranica koristi postojeći sadržaj i navigaciju bez upisa u biblioteku.
 
