@@ -66,7 +66,10 @@ export function isReadableProject(value: unknown): boolean {
     !Object.entries(n.tabFormats).every(([tab,settings])=>
       (tab==='homepage' || SECTION_KEYS.includes(tab as SectionKey) || (tab.startsWith('note:') && tab.length>5)) && validTabPageSettings(settings))))return false;
   if(!validGallery(n.gallery) || !validHomepage(n.homepage) || !validHomePages(n.homePages))return false;
-  if(n.homepageRemoved!==undefined && (n.homepageRemoved!==true || n.homepage!==undefined || n.homePages?.some(p=>p.parentId===HOME_ROOT)))return false;
+  if(n.homepageRemoved!==undefined){
+    if(n.homepageRemoved!==true || n.homepage!==undefined) return false;
+    if(Array.isArray(n.homePages) && n.homePages.some(p=>p.parentId===HOME_ROOT)) return false;
+  }
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && !validHiddenInspectorTabs(n.hiddenInspectorTabs)) return false;
   if (!validInspectorByTab(n.inspectorByTab)) return false;
