@@ -113,8 +113,8 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     if(gallery||!hasStyle)return '';
     const book=styleProof(novel,s,proof,comparison,genre);
     if(!book.sections.length)return '';
-    return proofDocument(book,s,print);
-  },[novel,s,proof,print,gallery,comparison,genre,hasStyle]);
+    return proofDocument(book,s,print,previewMode === 'Print' ? undefined : previewMode);
+  },[novel,s,proof,print,previewMode,gallery,comparison,genre,hasStyle]);
   const compare=(id:string|null)=>{
     setComparisonId(id);setProof('Chapter opening');setPdfStyleId(null);
   };
