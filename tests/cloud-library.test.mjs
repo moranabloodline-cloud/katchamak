@@ -73,22 +73,38 @@ globalThis.fetch=async(path,init={})=>{
 const cloud=await import('../src/lib/kachamak/cloud-library.ts');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
 const {useCollections}=await import('../src/lib/kachamak/collections-store.ts');
+const {useLibraryPreferences}=await import('../src/lib/kachamak/library-preferences.ts');
 await cloud.initializeWebLibrary();assert.equal(cloud.useWebLibrary.getState().ready,true,'Cloud library opens when browser storage is full and blocked');assert.equal(useKachamak.getState().novels[0].title,'Cloud test');
-useKachamak.setState({activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'note-1',paneAId:'note-1'});
-useKachamak.getState().setView('write');
-await cloud.saveWebLibrary();
-assert.equal((await (await call(a)).json()).snapshot.view,'write');
+await cloud.saveWebLibrary(); // Establish a baseline after startup artwork migration.
 // Cloud serialization is lazy: UI-only actions do no cloud work and a typing
 // burst serializes once at Save, while edits made during a request are drained.
 const stringify=JSON.stringify;let serializations=0;
-JSON.stringify=function(value,...args){if(value?.novels===useKachamak.getState().novels&&value?.collections&&value?.navigation&&value?.location)serializations++;return stringify(value,...args);};
+JSON.stringify=function(value,...args){if(value?.novels===useKachamak.getState().novels&&value?.collections&&value?.editorAppearance)serializations++;return stringify(value,...args);};
 try {
+ const beforeNavigation = (await (await call(a)).json()).revision;
+ useKachamak.setState({activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'note-1',paneAId:'note-1'});
+ useKachamak.getState().setTab('codex');
+ useKachamak.getState().setView('split');
+ useKachamak.getState().setActivePane('b');
+ useLibraryPreferences.getState().setLocation('collection-1');
+ useLibraryPreferences.getState().toggleExpanded('collection-1');
+ assert.match(window.location.hash, /tab=codex&view=split/);
+ assert.match(window.location.hash, /pane=b/);
+ assert.equal(cloud.useWebLibrary.getState().pending,false,'Navigation does not mark library content pending');
+ await new Promise(resolve=>setTimeout(resolve,650));
+ await cloud.saveWebLibrary();
+ assert.equal((await (await call(a)).json()).revision,beforeNavigation,'Navigation and explicit Save without edits do not send the library');
+ assert.equal(serializations,0,'Navigation does not serialize manuscript content, even after the debounce window');
+ useKachamak.getState().setTab('binder');
+ useKachamak.getState().setView('write');
+ useKachamak.getState().setActivePane('a');
  const beforeUI=(await (await call(a)).json()).revision;
  useKachamak.getState().setEditorSpellCheck(false);
  assert.equal(cloud.useWebLibrary.getState().pending,true,'Spelling changes schedule an authenticated preference save');
  await cloud.saveWebLibrary();assert.equal(serializations,1,'The spelling choice is serialized once at Save');
  assert.ok((await (await call(a)).json()).revision>beforeUI);
  assert.equal((await (await call(a)).json()).snapshot.editorAppearance.spellCheck,false,'Off is stored as false');
+ assert.equal((await (await call(a)).json()).snapshot.view,'write','Real saves still include the current workspace view');
  const manuscriptBeforeFormat=JSON.stringify(useKachamak.getState().novels);
  useKachamak.getState().setEditorSize(18);
  useKachamak.getState().setPageFormat({indent:1.5,paragraphGap:0.5,width:60,layout:'stacked',colorizeAnnotations:false});
@@ -122,6 +138,16 @@ try {
  assert.equal(writes,2,'Save drains a newer edit arriving during the first request');
  assert.equal((await (await call(a)).json()).snapshot.novels[0].sections.binder[0].content,'<p>Typed during save</p>');
  assert.equal(cloud.useWebLibrary.getState().pending,false);
+ writes=0;
+ globalThis.fetch=async(path,init)=>{
+   const response=await fetch(path,init);
+   if(path==='/api/library'&&init?.method==='POST'&&++writes===1)useKachamak.getState().setTab('planning');
+   return response;
+ };
+ try{useKachamak.getState().updateNode('binder','note-1',{content:'<p>Save while navigating</p>'});await cloud.saveWebLibrary();}
+ finally{globalThis.fetch=fetch;}
+ assert.equal(writes,1,'Navigation during an in-flight save does not queue another upload');
+ useKachamak.getState().setTab('binder');
 }finally{JSON.stringify=stringify;}
 cloud.useWebLibrary.setState({ready:false});
 useKachamak.setState({view:'split',activeNovelId:null,activeTab:'codex',selectedNodeId:null,paneAId:null});
@@ -142,15 +168,20 @@ assert.equal(useKachamak.getState().view,'list','Library reload preserves the cu
 // Reload immediately after navigation, before the debounce/cloud save completes.
 const beforeRoute=(await (await call(a)).json()).revision;
 useKachamak.getState().setView('write');
+useLibraryPreferences.getState().setLocation(null);
+useLibraryPreferences.getState().toggleExpanded('collection-1');
 useKachamak.setState({activeNovelId:novel.id,activeTab:'binder',selectedNodeId:'note-1',paneAId:'note-1'});
 assert.ok(window.location.hash.includes('project='+novel.id));
 assert.equal((await (await call(a)).json()).revision,beforeRoute);
 cloud.useWebLibrary.setState({ready:false});
 useKachamak.setState({activeNovelId:null,selectedNodeId:null,paneAId:null,view:'split'});
+useLibraryPreferences.setState({selectedCollection:'collection-1',expanded:['collection-1']});
 await cloud.initializeWebLibrary();
-assert.equal(useKachamak.getState().activeNovelId,novel.id,'URL restores project before a cloud navigation save');
+assert.equal(useKachamak.getState().activeNovelId,novel.id,'URL restores project without a cloud navigation save');
 assert.equal(useKachamak.getState().selectedNodeId,'note-1');
 assert.equal(useKachamak.getState().view,'write');
+assert.equal(useLibraryPreferences.getState().selectedCollection,null,'This tab restores its latest library location');
+assert.deepEqual(useLibraryPreferences.getState().expanded,[],'This tab restores its collection expansion without a cloud save');
 // New workspace metadata must survive the same authenticated cloud save as prose.
 const writer=useKachamak.getState();
 writer.moveWorkspaceTab(novel.id,'research','binder');
@@ -245,7 +276,7 @@ assert.equal(useKachamak.getState().view,'list');assert.equal(cloud.useWebLibrar
 // Conversely, a window that only navigated can adopt newer content safely.
 const editRemote=await (await call(a)).json();editRemote.snapshot.novels[0].title='Remote content with local navigation';
 await call(a,'/api/library','POST',editRemote);useKachamak.getState().setView('split');
-await cloud.saveWebLibrary();
+await cloud.refreshWebLibrary();
 assert.equal(useKachamak.getState().novels[0].title,'Remote content with local navigation');
 assert.equal(useKachamak.getState().view,'split');assert.equal(cloud.useWebLibrary.getState().pending,false);
 // A completed write whose response was lost may already contain our exact edit.

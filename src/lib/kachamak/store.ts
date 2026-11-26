@@ -1,10 +1,10 @@
 "use client";
 import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-images';
-import { projectStorage, isWebSession, folderSaved } from "./session-storage";
+import { createSessionStorage, isWebSession, folderSaved } from "./session-storage";
 
 import {trackWorkspaceActions,historyStoreChanged,stepBookHistory,type HistoryDirection} from './workspace-history';
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import type {
   FamilyRelationship,
   NoteNode,
@@ -1141,7 +1141,7 @@ export const useKachamak = create<KachamakState>()(
     {
       name: STORAGE_KEY,
       version: 72,
-      storage: createJSONStorage(() => projectStorage),
+      storage: createSessionStorage<KachamakState>(),
       /* v0 → v1: original-style statuses, free-text labels instead of label ids
          v2 → v3: every note gets its icon + colour (like the original app —
          acts and chapters as solid coloured folders)

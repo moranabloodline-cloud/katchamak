@@ -1,7 +1,7 @@
 import type { NoteNode, Novel, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { continuousSelection } from "@/lib/kachamak/continuous-manuscript";
 import { documentTargetProgress } from "@/lib/kachamak/document-target";
-import { countWords, manuscriptTreeWords, novelWords, ownWords } from "@/lib/kachamak/utils";
+import { manuscriptNoteWords, manuscriptTreeWords, novelWords, ownWords } from "@/lib/kachamak/utils";
 
 interface Props {
   novel?: Novel;
@@ -21,13 +21,13 @@ function footerCount({ novel, section, selectedSection, selected, view, rootId }
     const notes = continuousSelection(novel?.sections[section] ?? [], selected?.id ?? null, rootId);
     // Continuous can show a folder tab whose selection still belongs to another branch.
     if (!binderNote || notes[0]?.id !== binderNote.id) {
-      const count = notes.reduce((total, note) => total + countWords(note.content), 0);
+      const count = notes.reduce((total, note) => total + manuscriptNoteWords(note), 0);
       return { value: words(count), title: "Words in the current manuscript view" };
     }
   }
   if (binderNote) {
     if (binderNote.kind === "scene" || !binderNote.children.length) {
-      return { value: words(countWords(binderNote.content)), title: "Words in this document’s text" };
+      return { value: words(manuscriptNoteWords(binderNote)), title: "Words in this document’s text" };
     }
     return { value: words(manuscriptTreeWords([binderNote])), title: "Words in this document and its descendants" };
   }

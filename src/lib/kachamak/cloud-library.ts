@@ -21,14 +21,16 @@ import { cloneWorkspaceTab } from './clone-workspace-tab';
 import { cloneLayout, withExistingTexts } from './clone-text-recovery';
 
 type Navigation = Pick<ReturnType<typeof useKachamak.getState>, 'activeNovelId' | 'activeTab' | 'selectedNodeId' | 'paneAId' | 'paneBId' | 'activePane'> & {activeHomePageId?: string};
-type Snapshot = { novels: Novel[]; collections: Collection[]; editorAppearance?:EditorAppearance; view?: ViewMode; navigation?: Navigation; location?: { selectedCollection: string | null; expanded: string[] } };
+type LibraryLocation = { selectedCollection: string | null; expanded: string[] };
+type LibraryContent = { novels: Novel[]; collections: Collection[]; editorAppearance?: EditorAppearance };
+type Snapshot = LibraryContent & { view?: ViewMode; navigation?: Navigation; location?: LibraryLocation };
 export const useWebLibrary = create<{ email: string; ready: boolean; busy: boolean; pending: boolean; retrying: boolean; error: string | null; conflict: boolean }>(() => ({ email: '', ready: false, busy: false, pending: false, retrying: false, error: null, conflict: false }));
 let revision = 0, saved = '', applying = false, subscribed = false;
 let initializing: Promise<void> | null = null, running: Promise<void> | null = null, refreshing: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let saveRetry: ReturnType<typeof setTimeout> | null = null;
 let retryDelay = 1000;
-let unconfirmedWrite: { value: string; draft: LocalDraft | null } | null = null;
+let unconfirmedWrite: { payload: string; value: string; draft: LocalDraft | null } | null = null;
 let accountId='';
 let gzipLibrarySave = false;
 let accountEpoch = 0, writerId = crypto.randomUUID();
@@ -36,21 +38,42 @@ let activeDraft: LocalDraft | null = null, localTimer: ReturnType<typeof setTime
 let localWrites: Promise<void> = Promise.resolve();
 let refreshController: AbortController | null = null;
 let snapshotDirty=true,cachedSnapshot='';
-// Serialize at save/verification boundaries, not for each keystroke or panel resize.
+const serializeLibrary = ({novels,collections,editorAppearance}: LibraryContent) =>
+  JSON.stringify({novels,collections,editorAppearance});
+// Only content and account-wide editor appearance participate in cloud dirty checks.
 const snapshot = () => {
   if(subscribed&&!snapshotDirty)return cachedSnapshot;
-  const { novels, view, activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane } = useKachamak.getState();
-  const {selectedCollection, expanded} = useLibraryPreferences.getState();
-  const {editorFont:font,editorSize:size,editorSpacing:spacing,pageFormat:page,editorSpellCheck:spellCheck}=useKachamak.getState();
-  const homeId=useKachamak.getState().activeHomePageId;
-  cachedSnapshot=JSON.stringify({novels, collections: useCollections.getState().collections, editorAppearance:{font,size,spacing,page,spellCheck}, view, navigation: {activeNovelId, activeTab, selectedNodeId, paneAId, paneBId, activePane, ...(view==='homepage' && homeId!==HOME_ROOT ? {activeHomePageId:homeId} : {})}, location: {selectedCollection, expanded}});
+  const {novels,editorFont:font,editorSize:size,editorSpacing:spacing,pageFormat:page,editorSpellCheck:spellCheck}=useKachamak.getState();
+  cachedSnapshot=serializeLibrary({novels,collections:useCollections.getState().collections,editorAppearance:{font,size,spacing,page,spellCheck}});
   snapshotDirty=false;
   return cachedSnapshot;
 };
+function libraryLocation(): LibraryLocation {
+  const {selectedCollection,expanded}=useLibraryPreferences.getState();
+  return {selectedCollection,expanded};
+}
+function locationStorageKey() { return 'kachamak-library-location:' + accountId; }
+function rememberLibraryLocation() {
+  try { window.sessionStorage.setItem(locationStorageKey(),JSON.stringify(libraryLocation())); }
+  catch { /* Navigation stays usable when browser storage is blocked. */ }
+}
+function rememberedLibraryLocation(): LibraryLocation | undefined {
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(locationStorageKey()) ?? 'null');
+    if (value && Array.isArray(value.expanded)) return value;
+  } catch { /* Older cloud locations remain the fallback. */ }
+}
+function snapshotWithNavigation(value: string) {
+  const {view,activeNovelId,activeTab,selectedNodeId,paneAId,paneBId,activePane,activeHomePageId} = useKachamak.getState();
+  const navigation = {activeNovelId,activeTab,selectedNodeId,paneAId,paneBId,activePane,
+    ...(view==='homepage' && activeHomePageId!==HOME_ROOT ? {activeHomePageId} : {})};
+  // Add the latest navigation to a real save without re-encoding the manuscript.
+  return value.slice(0,-1) + ',' + JSON.stringify({view,navigation,location:libraryLocation()}).slice(1);
+}
 // Check a whole upload before changing the book, including the other books in its cloud save.
 export function checkGalleryUploadSize(entries:import('./gallery').GalleryEntry[],replaced?:import('./gallery').GalleryEntry) {
   if (!isWebSession()) return;
-  const bytes = new Blob([snapshot(),JSON.stringify(entries)]).size-(replaced?new Blob([JSON.stringify(replaced)]).size:0);
+  const bytes = new Blob([snapshotWithNavigation(snapshot()),JSON.stringify(entries)]).size-(replaced?new Blob([JSON.stringify(replaced)]).size:0);
   if (bytes + 128 > 20 * 1024 * 1024) throw new Error('These images would exceed the 20 MB library save limit. Choose fewer or smaller images.');
 }
 const fail = (error: unknown) => useWebLibrary.setState({ busy: false, pending: snapshot() !== saved, error: error instanceof Error ? error.message : String(error) });
@@ -263,8 +286,8 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
     navigation.paneAId = note(saved.paneAId); navigation.paneBId = note(saved.paneBId);
     navigation.activePane = saved.activePane === 'b' ? 'b' : 'a';
   }
-  if (!useWebLibrary.getState().ready && data.snapshot.location) {
-    const location = data.snapshot.location;
+  const location = !useWebLibrary.getState().ready && (rememberedLibraryLocation() ?? data.snapshot.location);
+  if (location) {
     const exists = (id: string) => data.snapshot.collections.some(c => c.id === id);
     useLibraryPreferences.setState({selectedCollection: location.selectedCollection && exists(location.selectedCollection) ? location.selectedCollection : null, expanded: Array.isArray(location.expanded) ? location.expanded.filter(exists) : []});
   }
@@ -324,17 +347,22 @@ export async function initializeWebLibrary() {
       const changed = () => {
         snapshotDirty=true;
         if (applying || !useWebLibrary.getState().ready) return;
-        writeWorkspaceRoute();
         useWebLibrary.setState({ pending: true });
         if (!localTimer) localTimer = setTimeout(() => { void checkpointLocalDraft(); }, 150);
         if (useWebLibrary.getState().retrying) return;
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { timer = null; if (!useWebLibrary.getState().conflict) void flushWebLibrary().catch(() => {}); }, 600);
       };
-      const fields=['novels','view','activeNovelId','activeHomePageId','activeTab','selectedNodeId','paneAId','paneBId','activePane','editorFont','editorSize','editorSpacing','pageFormat','editorSpellCheck'] as const;
-      useKachamak.subscribe((state,before)=>{if(fields.some(field=>state[field]!==before[field]))changed();});
+      const navigationFields=['view','activeNovelId','activeHomePageId','activeTab','selectedNodeId','paneAId','paneBId','activePane'] as const;
+      const savedFields=['novels','editorFont','editorSize','editorSpacing','pageFormat','editorSpellCheck'] as const;
+      useKachamak.subscribe((state,before)=>{
+        if(!applying && useWebLibrary.getState().ready && navigationFields.some(field=>state[field]!==before[field]))writeWorkspaceRoute();
+        if(savedFields.some(field=>state[field]!==before[field]))changed();
+      });
       useCollections.subscribe((state,before)=>{if(state.collections!==before.collections)changed();});
-      useLibraryPreferences.subscribe((state,before)=>{if(state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded)changed();});
+      useLibraryPreferences.subscribe((state,before)=>{
+        if(!applying && useWebLibrary.getState().ready && (state.selectedCollection!==before.selectedCollection||state.expanded!==before.expanded))rememberLibraryLocation();
+      });
     }
     setHistoryOwner(account.id);
     apply(confirmed);
@@ -364,7 +392,7 @@ export async function flushWebLibrary() {
       }
       // A failed response may follow a committed write. Confirm its exact payload
       // before retrying newer edits against the acknowledged revision.
-      if (remote.revision === revision + 1 && JSON.stringify(remote.snapshot) === attempt.value) {
+      if (remote.revision === revision + 1 && JSON.stringify(remote.snapshot) === attempt.payload) {
         revision = remote.revision;
         saved = attempt.value;
         await removeAcknowledgedDraft(attempt.draft, attempt.value);
@@ -382,16 +410,17 @@ export async function flushWebLibrary() {
       await checkpointLocalDraft();
       const checkpoint = activeDraft;
       if (!useWebLibrary.getState().ready) throw new Error('Sign in again before saving.');
+      const payload = snapshotWithNavigation(value);
       useWebLibrary.setState({ busy: true, pending: true });
       let data;
       try {
-        data = await writeLibrarySnapshot(value, revision);
+        data = await writeLibrarySnapshot(payload, revision);
         if (!Number.isSafeInteger(data.revision) || data.revision !== revision + 1) {
           throw new TemporaryCloudError('The server did not confirm this save. Your edits are kept in this window.');
         }
       }
       catch(error){
-        if (error instanceof TemporaryCloudError && useWebLibrary.getState().ready) unconfirmedWrite = { value, draft: checkpoint };
+        if (error instanceof TemporaryCloudError && useWebLibrary.getState().ready) unconfirmedWrite = { payload, value, draft: checkpoint };
         if(!(error instanceof LibraryConflictError))throw error;
         if(retries++>=2){useWebLibrary.setState({conflict:true});throw error;}
         await reconcileRevision();continue;
@@ -486,7 +515,7 @@ async function reconcileRevision(){
     useWebLibrary.setState({conflict:true});
     throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
   }
-  revision=remote.revision;saved=JSON.stringify(remote.snapshot);
+  revision=remote.revision;saved=serializeLibrary(remote.snapshot);
   if(!keepAppearance){const appearance=remote.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;applying=true;try{useKachamak.setState({editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page},editorSpellCheck:appearance.spellCheck??true});}finally{applying=false;}snapshotDirty=true;}
   useWebLibrary.setState({conflict:false,error:null});
 }

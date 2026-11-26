@@ -113,19 +113,10 @@ interface TreeRowProps {
 }
 
 function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissReveal, onTemplate }: TreeRowProps) {
-  const selectedNodeId = useKachamak((s) => s.selectedNodeId);
-  const selectNode = useKachamak((s) => s.select);
+  const selected = useKachamak((s) => s.selectedNodeId === node.id);
+  const renaming = useKachamak((s) => s.renamingNodeId === node.id);
+  const { select: selectNode, updateNode, addNode, deleteNode, moveNodeTo, duplicateNode, sortChildren, setRenamingNode } = useKachamak.getState();
   const select=(id:string|null)=>{selectNode(id);dnd.onActivate?.();if(section==="timeline" || section==="family")useKachamak.getState().setView(section);};
-  const updateNode = useKachamak((s) => s.updateNode);
-  const addNode = useKachamak((s) => s.addNode);
-  const deleteNode = useKachamak((s) => s.deleteNode);
-  const moveNodeTo = useKachamak((s) => s.moveNodeTo);
-  const duplicateNode = useKachamak((s) => s.duplicateNode);
-  const sortChildren = useKachamak((s) => s.sortChildren);
-  const renamingNodeId = useKachamak((s) => s.renamingNodeId);
-  const setRenamingNode = useKachamak((s) => s.setRenamingNode);
-  const novels = useKachamak((s) => s.novels);
-  const activeNovelId = useKachamak((s) => s.activeNovelId);
 
   const [draft, setDraft] = useState(node.title);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -133,17 +124,17 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [deleteInBook, setDeleteInBook] = useState<string | null>(null);
-  const novel = novels.find((n) => n.id === activeNovelId);
+  const needsBook = menuOpen || moveOpen || deleteInBook !== null;
+  const novel = useKachamak((s) => needsBook ? s.novels.find((n) => n.id === s.activeNovelId) : undefined);
   const impact = novel && section === 'family' && deleteInBook === novel.id
     ? familyDeletionImpact(novel, node.id) : null;
   const sharedCount = impact ? impact.related.length - impact.exclusive.size : 0;
   const rowRef = useRef<HTMLDivElement>(null);
+  const iconRef = useRef<HTMLButtonElement>(null);
   const requestDelete = () => {
-    if (section === 'family') setDeleteInBook(activeNovelId);
+    if (section === 'family') setDeleteInBook(useKachamak.getState().activeNovelId);
     else deleteNode(section, node.id);
   };
-  const renaming = renamingNodeId === node.id;
-  const selected = selectedNodeId === node.id;
   const selectedIcon = noteIconKey(node);
   const open = !node.collapsed || !!revealed?.has(node.id);
   const setCollapsed = (collapsed: boolean) => {
@@ -152,6 +143,27 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
   };
   const hasChildren = node.children.length > 0;
   const dropHere = dnd.drop && dnd.drop.id === node.id ? dnd.drop.mode : null;
+  const iconButton = (
+    <button ref={iconRef} type="button" aria-label="Change icon" title="Change icon"
+      aria-haspopup="dialog" aria-expanded={pickerOpen}
+      onClick={e => { e.stopPropagation(); if (!pickerOpen) setPickerOpen(true); }}
+      className="shrink-0 rounded p-0.5 transition-colors hover:bg-white/10">
+      {rowIcon(node, open)}
+    </button>
+  );
+  const actionsButton = (
+    <button type="button" aria-label="Note actions" aria-haspopup="menu" aria-expanded={menuOpen}
+      onClick={e => { e.stopPropagation(); if (!menuOpen) setMenuOpen(true); }}
+      onKeyDown={e => {
+        if (menuOpen || e.key !== "ArrowDown") return;
+        e.preventDefault();
+        e.stopPropagation();
+        setMenuOpen(true);
+      }}
+      className="p-0.5 rounded transition-colors hover:bg-white/10 text-muted-foreground hover:text-foreground">
+      <MoreVertical className="h-3.5 w-3.5" />
+    </button>
+  );
 
   /* sync the draft every time the rename starts (menu or right after create)
      and grab the caret — closing the dropdown menu steals focus for a moment,
@@ -322,19 +334,15 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           )}
         </button>
-        {/* note icon — click it to pick a different icon or colour */}
-        <TreeIconPicker open={pickerOpen} onOpenChange={setPickerOpen} icon={selectedIcon} color={node.color}
+        {pickerOpen ? <TreeIconPicker open onOpenChange={show => {
+          setPickerOpen(show);
+          if (!show) requestAnimationFrame(() => {
+            if (document.activeElement === document.body) iconRef.current?.focus({ preventScroll: true });
+          });
+        }} icon={selectedIcon} color={node.color}
           onIcon={icon=>updateNode(section,node.id,{icon})} onColor={color=>updateNode(section,node.id,{color})}>
-            <button
-              type="button"
-              aria-label="Change icon"
-              title="Change icon"
-              onClick={(e) => e.stopPropagation()}
-              className="shrink-0 rounded p-0.5 transition-colors hover:bg-white/10"
-            >
-              {rowIcon(node, open)}
-            </button>
-        </TreeIconPicker>
+          {iconButton}
+        </TreeIconPicker> : iconButton}
         {renaming ? (
           <input
             ref={renameRef}
@@ -359,16 +367,8 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             menuOpen || pickerOpen ? "flex" : "hidden group-hover:flex group-focus-within:flex"
           } shrink-0 items-center`}
         >
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                aria-label="Note actions"
-                className="p-0.5 rounded transition-colors hover:bg-white/10 text-muted-foreground hover:text-foreground"
-              >
-                <MoreVertical className="h-3.5 w-3.5" />
-              </button>
-            </DropdownMenuTrigger>
+          {menuOpen ? <DropdownMenu open onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>{actionsButton}</DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
               sideOffset={4}
@@ -401,7 +401,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                 Move
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={!menuOpen || !novel || locateNode(novel.sections[section],node.id)?.parentId == null}
+                disabled={!novel || locateNode(novel.sections[section],node.id)?.parentId == null}
                 onSelect={() => {
                   moveNodeTo(section,node.id,section,null);
                   const state=useKachamak.getState();
@@ -461,7 +461,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
                 Change icon
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> : actionsButton}
         </span>
       </div>
       {open && hasChildren && (
@@ -499,7 +499,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
       )}
 
       {/* Move — pick any section root or any other note as the new parent */}
-      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
+      {moveOpen && <Dialog open onOpenChange={setMoveOpen}>
         <DialogContent className="border-white/10 bg-[#1b1b1b] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Move “<span style={{color:node.color || undefined}}>{node.title}</span>”</DialogTitle>
@@ -508,7 +508,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             Pick a destination — the note goes to the end of the chosen spot.
           </p>
           <div className="max-h-72 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-1.5">
-            {moveOpen && SECTION_LABELS.filter(t=>(section==="maps")===(t.key==="maps") && (section==="publish")===(t.key==="publish") && (section==="kanban") === (t.key==="kanban")).map((t) => {
+            {SECTION_LABELS.filter(t=>(section==="maps")===(t.key==="maps") && (section==="publish")===(t.key==="publish") && (section==="kanban") === (t.key==="kanban")).map((t) => {
               const sec = t.key as SectionKey;
               const roots = novel?.sections[sec] ?? [];
               return (
@@ -530,7 +530,7 @@ function TreeRow({ node, section, depth, novelTitle, dnd, revealed, onDismissRev
             })}
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
     </div>
   );
 }

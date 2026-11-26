@@ -1,3 +1,5 @@
+> **2026-11-26 — Brži prelazak između tabova.** Navigacija se pamti u adresi i sesiji pregledača. Prelazak između tabova ne pretvara knjigu u JSON niti pokreće cloud upis.
+
 > **2026-11-26 — Poliranje biblioteke i radnog prostora.** Pomoć opisuje trenutne komande. Save information prikazuje stanje čuvanja, ponovnog pokušaja ili greške. Ispravljeni su broj stavki u biblioteci, naziv Continuous i oznake komandi za mape.
 
 > **2026-11-25 — Brže čuvanje u cloudu.** Velike biblioteke se šalju i upisuju kompresovano kada pregledač to podržava i kompresija smanjuje veličinu. Čuvanje i dalje čeka potvrdu revizije pre uklanjanja lokalnog nacrta.
@@ -739,6 +741,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Podaci u memoriji ostaju objekti. Kada se rukopis ili podešavanje menja, cloud i dalje potvrđuje reviziju i čuva lokalni nacrt. Stablo otvara menije bez kreiranja dijaloga za svaku stavku unapred. Broj reči koristi već izračunate vrednosti za neizmenjen tekst. Prikaz veza obrađuje povezane beleške, a Mentions pretražuje u kratkim koracima. Provera prelazaka na probnoj knjizi od 8,94 MB odvojena je od provere čuvanja nakon stvarne izmene.
 
 - **2026-11-26.** Uklonjeni su neaktivni prozor za lokalni folder, nekadašnji dijalog Timeline grupa, zaostala komanda za otvaranje lokalnog fajla i tri zastarele javne slike. Uputstva, prikaz statusa čuvanja i komande Canvas mapa usklađeni su sa trenutnim funkcijama. Stari projekti, mape, grupe i rezervne kopije ostaju čitljivi.
 

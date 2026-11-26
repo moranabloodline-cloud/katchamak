@@ -91,9 +91,21 @@ export function WorkspaceTabs({novel,openTab}:{novel:Novel;openTab:(key:TabKey)=
     const nav=ribbon.current;
     const current=nav?.querySelector<HTMLElement>('button[aria-current="page"]');
     if(!nav || !current)return;
-    const tab=current.getBoundingClientRect(), viewport=nav.getBoundingClientRect();
-    if(tab.right>viewport.right)nav.scrollLeft+=tab.right-viewport.right;
-    else if(tab.left<viewport.left)nav.scrollLeft-=viewport.left-tab.left;
+    const reveal = (tab: DOMRectReadOnly, viewport: DOMRectReadOnly) => {
+      if (tab.right > viewport.right) nav.scrollLeft += tab.right - viewport.right;
+      else if (tab.left < viewport.left) nav.scrollLeft += tab.left - viewport.left;
+    };
+    if (typeof IntersectionObserver === 'undefined') {
+      reveal(current.getBoundingClientRect(), nav.getBoundingClientRect());
+      return;
+    }
+    // Reuse the browser's layout result instead of forcing layout while the new tab mounts.
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.rootBounds) reveal(entry.boundingClientRect, entry.rootBounds);
+      observer.disconnect();
+    }, { root: nav });
+    observer.observe(current);
+    return () => observer.disconnect();
   },[active,view,novel.id]);
   const [name,setName]=useState(''), [open,setOpen]=useState(false);
   const [pendingDelete,setPendingDelete]=useState<{key:TabKey;label:string;projectId:string}|null>(null);

@@ -13,10 +13,24 @@ Object.defineProperty(globalThis, "localStorage", { configurable: true, value: s
 
 const { useKachamak, projectsSavedLocally, saveProjectsLocally } = await import("../src/lib/kachamak/store.ts");
 const key = "kachamak-store-v1";
-// Exercise legacy schema migration in an explicitly injected recovery adapter.
-// Production projectStorage is memory-only; the account cloud API owns persistence.
-useKachamak.persist.setOptions({storage:{getItem:key=>{const raw=storage.getItem(key);return raw?JSON.parse(raw):null;},setItem:(key,value)=>storage.setItem(key,JSON.stringify(value)),removeItem:key=>storage.removeItem(key)}});
 
+// Navigation must not turn the in-memory project state into JSON on the UI thread.
+const stringify = JSON.stringify;
+let sessionSerializations = 0;
+try {
+  JSON.stringify = (value, ...args) => {
+    if (value?.state?.novels === useKachamak.getState().novels) sessionSerializations++;
+    return stringify(value, ...args);
+  };
+  useKachamak.getState().setTab("planning");
+  useKachamak.getState().setTab("binder");
+} finally {
+  JSON.stringify = stringify;
+}
+assert.equal(sessionSerializations, 0);
+
+// Exercise legacy schema migration in an explicitly injected recovery adapter.
+useKachamak.persist.setOptions({storage:{getItem:key=>{const raw=storage.getItem(key);return raw?JSON.parse(raw):null;},setItem:(key,value)=>storage.setItem(key,JSON.stringify(value)),removeItem:key=>storage.removeItem(key)}});
 
 assert.deepEqual(useKachamak.getState().novels, [], "new installation has no bundled user projects");
 assert.equal(useKachamak.getState().defaultAuthor, "", "new installation has no owner identity");

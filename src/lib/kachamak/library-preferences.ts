@@ -1,8 +1,8 @@
 "use client";
-import { projectStorage } from "./session-storage";
+import { createSessionStorage } from "./session-storage";
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import type {LibrarySort,LibraryGroup} from './library-order';
 
 interface LibraryPreferences {
@@ -34,7 +34,7 @@ export const useLibraryPreferences = create<LibraryPreferences>()(persist((set) 
   setLayout: (layout) => set({ layout }),
   setSort: (sort) => set({ sort }),
   setGroup: (group) => set({ group }),
-}), { name: "kachamak-library-preferences-v1", version: 2, storage: createJSONStorage(() => projectStorage), migrate: persisted => {
+}), { name: "kachamak-library-preferences-v1", version: 2, storage: createSessionStorage<LibraryPreferences>(), migrate: persisted => {
   // v2 extends the choices while preserving existing location, layout and zoom.
   const previous=persisted as LibraryPreferences;
   return {...previous,sort:['updated','title','created','series','author'].includes(previous.sort)?previous.sort:'updated',group:['none','author','series','date'].includes(previous.group)?previous.group:'none'} as LibraryPreferences;

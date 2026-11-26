@@ -28,6 +28,16 @@ export function countWords(html: string): number {
   return text.split(/\s+/).length;
 }
 
+const manuscriptCounts = new WeakMap<NoteNode, { content: string; words: number }>();
+
+export function manuscriptNoteWords(note: NoteNode): number {
+  const cached = manuscriptCounts.get(note);
+  if (cached && cached.content === note.content) return cached.words;
+  const words = countWords(note.content);
+  manuscriptCounts.set(note, { content: note.content, words });
+  return words;
+}
+
 export function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", {
     month: "short",
@@ -107,7 +117,7 @@ export function forEachNode(
 /* reči samog teksta jedne note — sve što je na njoj napisano: sadržaj u
    editoru + Synopsis + Notes (polja u desnom panelu) */
 export function ownWords(n: NoteNode): number {
-  return countWords(n.content) + countWords(n.synopsis) + countWords(n.notes);
+  return manuscriptNoteWords(n) + countWords(n.synopsis) + countWords(n.notes);
 }
 
 export function nodeWords(n: NoteNode): number {
@@ -129,7 +139,7 @@ export function sectionWords(novel: Novel, key: SectionKey): number {
 export function manuscriptTreeWords(roots: NoteNode[]): number {
   let words = 0;
   forEachNode(roots, (node) => {
-    words += countWords(node.content);
+    words += manuscriptNoteWords(node);
   });
   return words;
 }

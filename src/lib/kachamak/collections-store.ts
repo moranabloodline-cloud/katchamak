@@ -1,8 +1,8 @@
 "use client";
-import { projectStorage, isWebSession } from "./session-storage";
+import { createSessionStorage, isWebSession } from "./session-storage";
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { uid } from "./utils";
 
 export interface Collection {
@@ -82,7 +82,7 @@ export const useCollections = create<CollectionsState>()(persist((set, get) => (
     }),
   })),
 }), {
-  name: "kachamak-collections-v1", version: 2, storage: createJSONStorage(() => projectStorage),
+  name: "kachamak-collections-v1", version: 2, storage: createSessionStorage<{ collections: Collection[] }>(),
   migrate: (persisted, version) => {
     const state = persisted as { collections: Collection[] };
     if (version < 2) return { ...state, collections: state.collections.map((c) => ({ ...c, parentId: c.parentId ?? null })) };

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { BookOpen, Link2, PanelsLeftRight, X } from 'lucide-react';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import { useKachamak } from '@/lib/kachamak/store';
-import { contentText, flattenNotes, indexText, rangeForMatch, explicitLinks, type NoteMatch } from '@/lib/kachamak/note-links';
+import { contentText, flattenNotes, indexText, rangeForMatch, explicitLinks, validLinkChoices, type NoteMatch } from '@/lib/kachamak/note-links';
 import { findNodeInNovel, stripHtml } from '@/lib/kachamak/utils';
 import {groupLinkedNotes,inlineNoteIds} from '@/lib/kachamak/knowledge';
 import {NotePreview} from './NotePreview';
@@ -20,9 +20,11 @@ export function LinkHighlights({ editorRef, noteId, colorize=true }: { editorRef
   const boxRef=useRef<HTMLDivElement>(null);
   const groups=useMemo(()=>{
     if(!novel||!hit)return [];
-    const accepted=explicitLinks(contentText(hit.node.content),flattenNotes(novel).map(n=>n.node),hit.node.linkChoices,noteId);
-    const ids=[...accepted.flatMap(match=>match.targetId&&!match.missing?[match.targetId]:[]),...inlineNoteIds(hit.node.content)];
-    return groupLinkedNotes(novel,ids).map(group=>({...group,entries:group.entries.filter(entry=>entry.target)})).filter(group=>group.entries.length);
+    const {content,linkChoices}=hit.node;
+    const accepted=linkChoices?.length
+      ? validLinkChoices(contentText(content),linkChoices).sort((a,b)=>a.start-b.start).flatMap(choice=>choice.targetId?[choice.targetId]:[])
+      : [];
+    return groupLinkedNotes(novel,[...accepted,...inlineNoteIds(content)]).map(group=>({...group,entries:group.entries.filter(entry=>entry.target)})).filter(group=>group.entries.length);
   },[novel,hit?.node.content,hit?.node.linkChoices,noteId]);
 
   useEffect(()=>{

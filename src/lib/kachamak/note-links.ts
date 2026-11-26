@@ -97,37 +97,68 @@ export function explicitLinks(text: string, notes: NoteNode[], choices: LinkChoi
   }).sort((a,b)=>a.start-b.start);
 }
 
+type LinkTerm = { term: string; pattern: RegExp; candidates: NoteNode[]; positions: number[] };
+
+/** Reuse the same candidate dictionary and patterns across notes in a book. */
+export function prepareLinkScanner(notes: NoteNode[]) {
+  const terms = new Map<string, LinkTerm>();
+  const targets = new Map<string, NoteNode>();
+  const termsByNote = new Map<string, RegExp[]>();
+  let position = 0;
+  for (const note of notes) {
+    if(!targets.has(note.id)) targets.set(note.id,note);
+    for (const alias of cleanAliases([note.title, ...splitAliases(note.aliases ?? [])])) {
+      const term = alias.toLocaleLowerCase();
+      let entry = terms.get(term);
+      if (!entry) {
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp(String.raw`(?<![\p{L}\p{M}\p{N}_])${escaped}(?![\p{L}\p{M}\p{N}_])`, 'giu');
+        entry = { term, pattern, candidates: [], positions: [] };
+        terms.set(term, entry);
+      }
+      if (entry.candidates.some(candidate => candidate.id === note.id)) continue;
+      entry.candidates.push(note);
+      entry.positions.push(position++);
+      const notePatterns = termsByNote.get(note.id) ?? [];
+      notePatterns.push(entry.pattern);
+      termsByNote.set(note.id, notePatterns);
+    }
+  }
+  const byLength = (a: LinkTerm, b: LinkTerm) => b.term.length - a.term.length;
+  const ordered = [...terms.values()].sort(byLength);
+  const sharedOwners = new Set(ordered.filter(term => term.candidates.length > 1).map(term => term.candidates[0].id));
+
+  const mightMatch = (text: string, targetId: string) => termsByNote.get(targetId)?.some(pattern => text.search(pattern) >= 0) ?? false;
+  const scan = (text: string, choices: LinkChoice[] = [], sourceId?: string): NoteMatch[] => {
+    const found: NoteMatch[] = [];
+    const context = (start: number, end: number) => text.slice(Math.max(0, start - 48), Math.min(text.length, end + 64)).replace(/\s+/g, ' ').trim();
+    const candidatesFor = (term?: LinkTerm) => term?.candidates.filter(note => note.id !== sourceId) ?? [];
+    // Explicit choices survive target renaming or deletion.
+    for (const c of validLinkChoices(text,choices)) {
+      const target = c.targetId ? targets.get(c.targetId) : undefined;
+      const candidates = candidatesFor(terms.get(c.text.toLocaleLowerCase()));
+      found.push({...c, candidates:candidates.length?candidates:target?[target]:[], explicit:true, missing:!!c.targetId&&!target, context:context(c.start,c.end)});
+    }
+    // Excluding the source can move a shared term behind an equally long term.
+    const firstPosition = (term: LinkTerm) => term.positions[term.candidates[0].id === sourceId && term.candidates.length > 1 ? 1 : 0];
+    const sourceTerms = sourceId && sharedOwners.has(sourceId) ? ordered.slice().sort((a,b) => byLength(a,b) || firstPosition(a)-firstPosition(b)) : ordered;
+    for (const term of sourceTerms) {
+      if (term.candidates.length === 1 && term.candidates[0].id === sourceId) continue;
+      let candidates: NoteNode[] | undefined;
+      for (const match of text.matchAll(term.pattern)) {
+        const start = match.index!, end = start + match[0].length;
+        if (found.some(result => start < result.end && end > result.start)) continue;
+        candidates ??= candidatesFor(term);
+        found.push({start,end,text:match[0],targetId:candidates.length===1?candidates[0].id:null,candidates,explicit:false,missing:false,context:context(start,end)});
+      }
+    }
+    return found.sort((a,b)=>a.start-b.start);
+  };
+  return { mightMatch, scan };
+}
+
 export function scanLinks(text: string, codex: NoteNode[], choices: LinkChoice[] = [], sourceId?: string): NoteMatch[] {
-  const terms = new Map<string, NoteNode[]>();
-  for (const note of codex) {
-    if (note.id === sourceId) continue;
-    const aliases = splitAliases(note.aliases ?? []);
-    for (const term of cleanAliases([note.title, ...aliases])) {
-      const key = term.toLocaleLowerCase();
-      const list = terms.get(key) || [];
-      if (!list.some(n => n.id === note.id)) list.push(note);
-      terms.set(key, list);
-    }
-  }
-  const found: NoteMatch[] = [];
-  const context = (start: number, end: number) => text.slice(Math.max(0, start - 48), Math.min(text.length, end + 64)).replace(/\s+/g, ' ').trim();
-  // Explicit choices survive target renaming or deletion; never silently retarget.
-  for (const c of validLinkChoices(text,choices)) {
-    const target = codex.find(n => n.id === c.targetId);
-    found.push({...c, candidates: terms.get(c.text.toLocaleLowerCase()) || (target ? [target] : []), explicit: true, missing: !!c.targetId && !target, context: context(c.start,c.end)});
-  }
-  const overlap = (start: number, end: number) => found.some(m => start < m.end && end > m.start);
-  // Long names win over shorter aliases, with Unicode word boundaries.
-  for (const [term, candidates] of [...terms].sort((a,b) => b[0].length-a[0].length)) {
-    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(String.raw`(?<![\p{L}\p{M}\p{N}_])${escaped}(?![\p{L}\p{M}\p{N}_])`, 'giu');
-    for (const match of text.matchAll(re)) {
-      const start = match.index!, end = start + match[0].length;
-      if (overlap(start,end)) continue;
-      found.push({start,end,text:match[0],targetId:candidates.length===1?candidates[0].id:null,candidates,explicit:false,missing:false,context:context(start,end)});
-    }
-  }
-  return found.sort((a,b)=>a.start-b.start);
+  return prepareLinkScanner(codex).scan(text, choices, sourceId);
 }
 
 /** Preserve choices only in unchanged text; edits through an occurrence invalidate

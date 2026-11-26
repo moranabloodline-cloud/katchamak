@@ -1,8 +1,8 @@
 'use client';
-import {Fragment,useDeferredValue,useEffect,useMemo,useState,type ReactNode} from 'react';
+import {Fragment,useEffect,useMemo,useState,type ReactNode} from 'react';
 import {useKachamak} from '@/lib/kachamak/store';
-import {TABS,type NoteNode,type SectionKey} from '@/lib/kachamak/types';
-import {indexNotes,groupLinkedNotes,referenceTo,type IndexedNote} from '@/lib/kachamak/knowledge';
+import {TABS,type NoteNode,type Novel,type SectionKey} from '@/lib/kachamak/types';
+import {groupLinkedNotes,noteReferences,type referenceTo,type IndexedNote} from '@/lib/kachamak/knowledge';
 import {NotePreview} from './NotePreview';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NoteImage} from './NoteImage';
@@ -13,10 +13,28 @@ import {cleanAliases,splitAliases} from '@/lib/kachamak/note-links';
 import {noteRelationships} from '@/lib/kachamak/family-tree';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 
+type IncomingReference=NonNullable<ReturnType<typeof referenceTo>>;
+
 export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteNode;section:SectionKey;timelineSettings?:ReactNode;mode:'details'|'mentions'}) {
   const novel=useKachamak(s=>s.novels.find(n=>n.id===s.activeNovelId));
-  const deferred=useDeferredValue(novel);
-  const index=useMemo(()=>mode==='mentions'&&deferred?indexNotes(deferred):[],[mode,deferred]);
+  const [mentions,setMentions]=useState<{novel:Novel;target:NoteNode;entries:IncomingReference[]}>();
+  useEffect(()=>{
+    if(mode!=='mentions'||!novel)return;
+    const scan=noteReferences(novel,node);
+    const entries:IncomingReference[]=[];
+    let timer:ReturnType<typeof setTimeout>;
+    const scanBatch=()=>{
+      const deadline=performance.now()+6;
+      do {
+        const next=scan.next();
+        if(next.done){setMentions({novel,target:node,entries});return;}
+        if(next.value)entries.push(next.value);
+      } while(performance.now()<deadline);
+      timer=setTimeout(scanBatch,0);
+    };
+    const frame=requestAnimationFrame(()=>{timer=setTimeout(scanBatch,0);});
+    return()=>{cancelAnimationFrame(frame);clearTimeout(timer);};
+  },[mode,novel,node]);
   const [aliases,setAliases]=useState(''),[preview,setPreview]=useState<string|null>(null),[aliasDirty,setAliasDirty]=useState(false);
   const update=useKachamak(s=>s.updateNode);
   const saveAliases=(value:string,finish=false)=>{
@@ -43,8 +61,8 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
   const showCodex=mode==='details'&&!hidden.includes('codex');
   const outgoing=useMemo(()=>showCodex&&novel&&node.links?.length?groupLinkedNotes(novel,node.links):[],[showCodex,novel,node.links]);
   const relatives=useMemo(()=>mode==='details'&&section==='codex'&&novel?noteRelationships(novel,node.id):[],[mode,section,novel,node.id]);
-  const incoming=useMemo(()=>mode==='mentions'?index.filter(n=>n.node.id!==node.id).map(n=>referenceTo(n,node,deferred)).filter(n=>n!==null):[],[mode,index,node,deferred]);
-  const mentionGroups=TABS.flatMap(tab=>{const entries=incoming.filter(ref=>ref.source.section===tab.key);return entries.length?[{...tab,entries}]:[];});
+  const incoming=mentions?.novel===novel && mentions?.target===node ? mentions.entries : undefined;
+  const mentionGroups=TABS.flatMap(tab=>{const entries=incoming?.filter(ref=>ref.source.section===tab.key);return entries?.length?[{...tab,entries}]:[];});
   const row=(entry:IndexedNote,detail?:string)=><button type="button" onClick={()=>setPreview(entry.node.id)} className={mode==='details'?"inline text-left align-baseline text-xs hover:underline":"w-full rounded-lg border border-white/10 px-3 py-2 text-left text-xs hover:bg-white/5"}><span className={mode==='details'?"font-medium":"block font-medium"} style={{color:entry.node.color && /^#[0-9a-f]{3,8}$/i.test(entry.node.color)?entry.node.color:'#60a5fa'}}>{entry.node.title}</span>{mode==='mentions'&&<span className="mt-1 block truncate text-muted-foreground">{entry.path}</span>}{detail&&<span className="mt-1 block line-clamp-2 text-muted-foreground">{detail}</span>}</button>;
   return <div className={mode==='details'?'flex min-h-0 flex-1 flex-col gap-1':'space-y-5'}>
     {mode==='details'?<>
@@ -62,7 +80,7 @@ export function NoteConnections({node,section,mode,timelineSettings}:{node:NoteN
       </section>}</Fragment>)}</DetailsBlocks></div>
       <AddDetailsBlock available={canAddMap?[...available,'map']:available} hidden={canAddMap?[...hidden,'map']:hidden} onAdd={key=>setBlockVisible(key,true)}/>
     </>:<>
-      <section><div className="space-y-5">{mentionGroups.map(group=><section key={group.key} aria-label={group.label}><h3 className="mb-2 flex items-center gap-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground">{group.label}<span aria-label={`${group.entries.length} references`} className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground">{group.entries.length}</span></h3><ul className="space-y-2">{group.entries.map(ref=><li key={ref.source.node.id}>{row(ref.source,(ref.explicit?'Linked · ':'Mention · ')+ref.snippet)}</li>)}</ul></section>)}</div>{!incoming.length&&<p className="text-xs text-muted-foreground">No mentions yet. This note’s title, aliases and links will be found across all project notes.</p>}</section>
+      <section><div className="space-y-5">{mentionGroups.map(group=><section key={group.key} aria-label={group.label}><h3 className="mb-2 flex items-center gap-2 border-b border-white/10 pb-2 text-xs font-semibold text-muted-foreground">{group.label}<span aria-label={`${group.entries.length} references`} className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground">{group.entries.length}</span></h3><ul className="space-y-2">{group.entries.map(ref=><li key={ref.source.node.id}>{row(ref.source,(ref.explicit?'Linked · ':'Mention · ')+ref.snippet)}</li>)}</ul></section>)}</div>{!incoming?<p role="status" className="text-xs text-muted-foreground">Finding mentions…</p>:!incoming.length&&<p className="text-xs text-muted-foreground">No mentions yet. This note’s title, aliases and links will be found across all project notes.</p>}</section>
 
     </>}
     <NotePreview noteId={preview} onClose={()=>setPreview(null)} />

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {newNovel} from '../src/lib/kachamak/seed.ts';
-import {indexNotes,groupLinkedNotes,matchName,referenceTo,searchNotes,searchNoteTitles,inlineNoteIds} from '../src/lib/kachamak/knowledge.ts';
+import {indexNotes,groupLinkedNotes,matchName,noteReferences,referenceTo,searchNotes,searchNoteTitles,inlineNoteIds} from '../src/lib/kachamak/knowledge.ts';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM().window;globalThis.window=dom;globalThis.document=dom.document;globalThis.DOMParser=dom.DOMParser;
 const {manuscriptHtml,manuscriptMarkdown,manuscriptNotes,manuscriptWords}=await import('../src/lib/kachamak/manuscript-export.ts');
@@ -72,6 +72,17 @@ assert.deepEqual(chosen,['z','ten','b','two','a']);assert.equal(JSON.stringify(s
 sortedNovel.sections.codex[0].children[0].title='Aaron';
 assert.deepEqual(groupLinkedNotes(sortedNovel,chosen)[0].entries.map(e=>e.id),['z','a','b'],'A renamed target automatically moves to its alphabetical position');
 
+const linkedTarget=note('linked-target','Target','<p>Linked prose.</p>');
+const linkedParent={...note('linked-parent','Folder','',[linkedTarget]),color:'#cf8'};
+const unrelated={...note('unlinked','Unlinked'),get content(){throw new Error('Unlinked note content should not be read');}};
+const sparseNovel=newNovel('Sparse links','');
+sparseNovel.sections.binder=[unrelated];
+sparseNovel.sections.codex=[linkedParent];
+assert.deepEqual(groupLinkedNotes(sparseNovel,[]),[]);
+const [linkedGroup]=groupLinkedNotes(sparseNovel,['linked-target','linked-target']);
+assert.equal(linkedGroup.color,'#cf8');
+assert.deepEqual(linkedGroup.entries,[{id:'linked-target',target:{node:linkedTarget,section:'codex',path:'Codex / Folder',text:'Linked prose.\n  '}}]);
+
 const mentionsNovel=newNovel('Universal mentions','');
 const chapterTarget=note('target-chapter','Ch 1 - The Query');
 const personTarget=note('target-person','Mrs. Gallagher');
@@ -87,8 +98,19 @@ assert.deepEqual(chapterReferences.map(ref=>ref.source.node.id),['body-source','
 assert.ok(!chapterReferences.some(ref=>ref.source.node.id==='unrelated'),'A character mentioned in the selected chapter is not an incoming chapter mention');
 assert.deepEqual(mentionIndex.map(source=>referenceTo(source,personTarget,mentionsNovel)).filter(Boolean).map(ref=>ref.source.node.id),['codex-source','unrelated'],'Each note has its own incoming mentions');
 assert.equal(chapterReferences.find(ref=>ref.source.node.id==='planning-source').snippet,'Ch 1 - The Query opens here.');
+assert.deepEqual([...noteReferences(mentionsNovel,chapterTarget)].filter(Boolean),chapterReferences);
 for (const field of ['synopsis','notes']) {
   const source = {...note('source','Notes'),[field]:'<p>See <a href="#note/target-chapter">the opening</a>.</p>'};
   const ref = referenceTo({node:source,text:'See the opening.',section:'planning',path:'Planning'},chapterTarget,mentionsNovel);
   assert.equal(ref?.explicit,true,'An existing link in '+field+' survives a different caption or renamed target');
 }
+
+const overlapNovel=newNovel('Overlapping phrases','');
+const competing=note('second-owner','BB CC');
+const shared=note('third-owner','AA BB');
+const first={...note('first-owner','First owner','<p>AA BB CC</p>'),aliases:['AA BB']};
+const decided={...note('explicit','Explicit','<p>A different name</p>'),linkChoices:[{start:0,end:16,text:'A different name',targetId:shared.id}]};
+const skipped={...note('ignored','Ignored','<p>AA BB</p>'),linkChoices:[{start:0,end:5,text:'AA BB',targetId:null}]};
+overlapNovel.sections.binder=[first,competing,shared,decided,skipped];
+assert.deepEqual([...noteReferences(overlapNovel,shared)].filter(Boolean).map(ref=>ref.source.node.id),['explicit'],'Keep accepted choices and skip ignored or overlapping names');
+assert.deepEqual([...noteReferences(overlapNovel,competing)].filter(Boolean).map(ref=>ref.source.node.id),['first-owner'],'Excluding the source preserves priority of equally long overlapping names');
