@@ -26,6 +26,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   novel:Novel; selected:string; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>; onDismiss:()=>void;
 }) {
   const [dialog,setDialog]=useState<PageDialog|null>(null);
+  const [moving,setMoving]=useState<{source:BranchSource; title:string; destination:string}|null>(null);
   const [picking,setPicking]=useState<string|null>(null);
   const [title,setTitle]=useState('');
   const customTitle=useRef(false);
@@ -45,6 +46,29 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const draggedIds=useMemo(()=>new Set(drag?.map(source=>source.id)),[drag]);
   const topSources=useMemo(()=>drag?.filter(source=>!insideBranches(source.parentId,draggedIds,parents)),[drag,draggedIds,parents]);
   const finishDrag=()=>{setDrag(null);setOver(undefined);};
+  function movePages(sources:BranchSource[],destination:string|null) {
+    useKachamak.getState().moveHomePages(novel.id,sources,destination);
+    selection.clear();
+    if (destination) setCollapsed(previous=>{
+      if (!previous.has(destination)) return previous;
+      const next=new Set(previous);
+      next.delete(destination);
+      return next;
+    });
+  }
+  function showMove(id:string,name:string) {
+    setError('');
+    setMoving({source:{id,parentId:parents.get(id)??null},title:name,destination:parents.get(id)??''});
+  }
+  function submitMove() {
+    if (!moving) return;
+    try {
+      movePages([moving.source],moving.destination||null);
+      setMoving(null);
+    } catch (error) {
+      setError(error instanceof Error?error.message:'The canvas could not be moved.');
+    }
+  }
   function dropTarget(id:string|null) {
     const allowed=!!topSources?.some(page=>page.parentId!==id) && !insideBranches(id,draggedIds,parents);
     return {
@@ -63,9 +87,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
         finishDrag();
         if (!allowed || event.dataTransfer.getData('application/x-kachamak-home-pages')!==JSON.stringify(drag)) return;
         try {
-          useKachamak.getState().moveHomePages(novel.id,drag,id);
-          selection.clear();
-          if (id && collapsed.has(id)) setCollapsed(previous=>{const next=new Set(previous);next.delete(id);return next;});
+          movePages(drag,id);
         } catch(error) {toast.error(error instanceof Error?error.message:'The pages could not be moved.');}
       }
     };
@@ -160,16 +182,42 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
           </DropdownMenuTrigger><DropdownMenuContent align="start">
             <DropdownMenuItem onSelect={()=>show('create',row.id,row.title)}>New nested canvas</DropdownMenuItem>
             <DropdownMenuItem onSelect={()=>show('rename',row.id,row.title)}>Rename</DropdownMenuItem>
+            {row.id!==HOME_ROOT && <DropdownMenuItem onSelect={()=>showMove(row.id,row.title)}>Move to…</DropdownMenuItem>}
             <DropdownMenuItem disabled={clearDisabled} onSelect={()=>removePage(row.id,row.title)}>{deleteLabel}</DropdownMenuItem>
           </DropdownMenuContent></DropdownMenu>
         </div></ContextMenuTrigger><ContextMenuContent>
           <ContextMenuItem onSelect={()=>show('create',row.id)}>New nested canvas</ContextMenuItem>
           <ContextMenuItem onSelect={()=>show('rename',row.id,row.title)}>Rename</ContextMenuItem>
+          {row.id!==HOME_ROOT && <ContextMenuItem onSelect={()=>showMove(row.id,row.title)}>Move to…</ContextMenuItem>}
           <ContextMenuItem disabled={clearDisabled} onSelect={()=>removePage(row.id,row.title)}>{deleteLabel}</ContextMenuItem>
         </ContextMenuContent></ContextMenu>;
       })}
     </nav>
     {drag && <div {...dropTarget(null)} className={'shrink-0 rounded border border-dashed border-teal-400/60 p-2 text-center text-xs '+(over===null?'bg-teal-400/15':'')}>Move to top level</div>}
+    {moving&&<Dialog open onOpenChange={open=>{if(!open)setMoving(null);}}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Move canvas</DialogTitle>
+          <DialogDescription>Choose where to place {moving.title} and its nested pages.</DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={event=>{event.preventDefault();submitMove();}}>
+          <label className="grid gap-1.5 text-sm">
+            Destination
+            <select className="h-9 min-w-0 rounded-md border border-input bg-background px-2" value={moving.destination}
+              onChange={event=>setMoving({...moving,destination:event.target.value})}>
+              <option value="">Top level</option>
+              {rows.filter(row=>!insideBranches(row.id,new Set([moving.source.id]),parents))
+                .map(row=><option key={row.id} value={row.id}>{row.path}</option>)}
+            </select>
+          </label>
+          {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={()=>setMoving(null)}>Cancel</Button>
+            <Button type="submit" disabled={(moving.destination||null)===moving.source.parentId}>Move canvas</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>}
     {dialog&&<Dialog open onOpenChange={open=>{if(!open)setDialog(null);}}><DialogContent className={dialog.action==='create'?'max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl':'sm:max-w-sm'}>
       <DialogHeader className={dialog.action==='create'?'pr-6':undefined}>
         <DialogTitle>{dialogTitle}</DialogTitle>

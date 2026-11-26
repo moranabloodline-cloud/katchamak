@@ -1,3 +1,5 @@
+> **2026-11-26 — Premeštanje Canvas stranica.** Move to… u meniju stranice bira novi nadređeni Canvas ili najviši nivo.
+
 > **2026-11-26 — Prvi prikaz Story Boarda.** Tabla se pri prvom otvaranju uklapa u prozor, a zatim koristi poslednji zum sačuvan za tu tablu u pregledaču.
 
 > **2026-11-26 — Fit board na Story Boardu.** Komanda uklapa mrežu poglavlja i linija radnje u raspoloživu širinu i visinu.
@@ -779,6 +781,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Canvas stablo podržava premeštanje kroz meni, uz zadržavanje veza, sadržaja i podstranica.
 
 - **2026-11-26.** Podrazumevani prikaz Story Boarda koristi Fit board kad tabla nema sačuvan zum. Postojeći izbor zuma se zadržava.
 
