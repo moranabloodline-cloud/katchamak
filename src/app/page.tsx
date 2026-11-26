@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useKachamak } from "@/lib/kachamak/store";
+import { DraftopusLoading } from "@/components/kachamak/DraftopusLoading";
 import { Dashboard } from "@/components/kachamak/Dashboard";
 import { ProjectFileStorage } from "@/components/kachamak/ProjectFileStorage";
 import { Workspace } from "@/components/kachamak/Workspace";
@@ -37,15 +38,7 @@ export default function Page() {
     () => false
   );
 
-  if (!mounted || !hydrated) {
-    // localStorage store hydrates on the client only
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#0d0d0d] text-foreground">
-        <img src="/draftopus-logo.png" alt="" width={40} height={40} className="size-10 object-contain" />
-        <p className="text-sm text-muted-foreground">Opening Draftopus…</p>
-      </div>
-    );
-  }
+  if (!mounted || !hydrated) return <DraftopusLoading />;
 
   return <ProjectFileStorage>{activeNovelId ? <Workspace /> : <Dashboard />}</ProjectFileStorage>;
 }

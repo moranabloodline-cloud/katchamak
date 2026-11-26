@@ -4,6 +4,7 @@ import { initializeWebLibrary, useWebLibrary, saveWebLibrary, reloadWebLibrary, 
 import { useKachamak } from '@/lib/kachamak/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { DraftopusLoading } from './DraftopusLoading';
 import { LocalRecovery, LocalRecoveryNotice } from './LocalRecovery';
 import { useLocalRecovery } from '@/lib/kachamak/local-recovery';
 import { checkpointLocalDraft, exportPendingBackups } from '@/lib/kachamak/cloud-library';
@@ -19,7 +20,22 @@ export function WebLibraryStorage({ children }: { children: ReactNode }) {
     window.addEventListener('beforeunload', closing);
     return () => { clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('beforeunload', closing); };
   }, []);
-  if (!state.ready) return <main className="flex min-h-screen items-center justify-center bg-[#0d0d0d] p-8 text-foreground"><section className="max-w-lg space-y-5 rounded-xl border border-amber-500/30 bg-[#151515] p-7"><h1 className="font-serif text-2xl text-[#f3d589]">Draftopus</h1><p>{state.busy ? 'Opening your account library…' : 'Could not open your cloud library'}</p>{state.error && <p role="alert" className="text-sm text-red-300">{state.error}</p>}{!state.busy && <><button onClick={() => void initializeWebLibrary().catch(() => {})} className="rounded bg-amber-400 px-4 py-2 text-black">Retry</button><a href="/signin-with-chatgpt?return_to=%2F" target="_top" className="ml-4 underline">Sign in</a></>}{hasRecoveryIssue && <LocalRecovery />}</section></main>;
+  if (!state.ready && (state.busy || !state.error)) return <DraftopusLoading />;
+  if (!state.ready) return <main className="grid min-h-dvh place-items-center bg-[#0d0d0d] px-6 py-10 text-stone-100">
+    <section className="w-full max-w-md space-y-4 rounded-xl border border-white/10 bg-[#151515] p-6 sm:p-8">
+      <img src="/draftopus-logo.png" alt="" width={36} height={36} className="size-9 object-contain" />
+      <h1 className="font-serif text-xl font-semibold">Could not open your cloud library</h1>
+      <p role="alert" className="break-words text-sm text-stone-300">{state.error}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => void initializeWebLibrary().catch(() => {})} className="rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-black hover:bg-amber-300">Retry</button>
+        <a href="/signin-with-chatgpt?return_to=%2F" target="_top" className="rounded-md px-3 py-2 text-sm text-stone-200 hover:bg-white/10">Sign in</a>
+      </div>
+      {hasRecoveryIssue && <details className="text-sm">
+        <summary className="cursor-pointer text-amber-200">Local draft options</summary>
+        <div className="mt-3"><LocalRecovery /></div>
+      </details>}
+    </section>
+  </main>;
   return <>
     <LocalRecoveryNotice />
     {children}

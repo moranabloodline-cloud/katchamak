@@ -1,3 +1,5 @@
+> **2026-11-26 — Ekran učitavanja.** Pokretanje i ponovno učitavanje prikazuju isti kompaktan Draftopus ekran. Ako se biblioteka ne otvori, opcije za lokalne nacrte su u sklopivom odeljku.
+
 > **2026-11-26 — Print preview i PDF.** Contents čita stvarne početne strane poglavlja nakon preloma, uključujući redosled rukopisa, prednje strane i prazne recto strane. PDF koristi isti pripremljeni prikaz kao Print preview.
 
 > **2026-11-26 — Publish, pregled i prenos formatiranja.** Linkovi iz Contents vode na stavku unutar pregleda. Rukopis prenosi podvlačenje, precrtavanje i indekse, a EPUB čita projektni omot i izlaže brze prečice do sadržaja i glavnog teksta.
@@ -749,6 +751,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Oporavak se ne prikazuje tokom učitavanja biblioteke. Pri grešci su dostupni Retry, Sign in i sklopive opcije za potvrđene lokalne nacrte.
 
 - **2026-11-26.** [Byte-Sized print pipeline](https://github.com/bytesizedbooksmith/byte-sized-book-formatter/blob/32a1a1924f09203bfa8c33f342cb94ae4c46c645/server/pipeline/render-print.ts#L75-L120) poslužio je kao referenca za čitanje brojeva iz završenog preloma. Draftopus rezerviše prostor za brojeve pre preloma i popunjava ih pre prikaza ili otvaranja štampe. Izabrane margine, nativni format stranice i fizičko numerisanje određuje isti pripremljeni dokument. Promena formata papira u dijalogu pregledača može promeniti geometriju PDF-a.
 
