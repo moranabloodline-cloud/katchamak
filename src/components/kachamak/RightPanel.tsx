@@ -22,7 +22,8 @@ import { finishTimelineAdd, usesTimelineDialog, useTimelineAddRequest } from "@/
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type {HomePageEntry} from '@/lib/kachamak/homepage';
-import { inspectorSettings, selectedInspectorTab } from "@/lib/kachamak/inspector-tabs";
+import { selectedInspectorTab, type InspectorTabAction } from "@/lib/kachamak/inspector-tabs";
+import { changeNoteInspectorTab, useNoteInspectorSettings } from "@/lib/kachamak/note-inspector-settings";
 import { INSPECTOR_TABS, type InspectorTabKey, type Novel, type NoteNode, type SectionKey } from "@/lib/kachamak/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -139,7 +140,8 @@ export function RightPanel({
   const infoRatio = useKachamak((s) => s.infoSynopsisRatio ?? 0.5);
   const setInfoSynopsisRatio = useKachamak((s) => s.setInfoSynopsisRatio);
   const workspace = useKachamak(s => s.activeTab);
-  const settings = inspectorSettings(novel, workspace);
+  const inspectorNoteId = canvas || infoOnly || mapTools || publishTools ? undefined : node?.id;
+  const settings = useNoteInspectorSettings(novel, workspace, inspectorNoteId);
   const visibleTabs = INSPECTOR_TABS.filter(t => infoOnly ? t.key === 'info' : !settings.hidden.includes(t.key));
   const hiddenTabs = INSPECTOR_TABS.filter(t => settings.hidden.includes(t.key));
   const selectCanvasTab = useKachamak(s=>s.selectCanvasInspectorTab);
@@ -154,8 +156,13 @@ export function RightPanel({
   const selectInspectorTab = useKachamak(s => s.selectInspectorTab);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const restoringTab = useRef(false);
+  const changeTab = (key: InspectorTabKey, action: InspectorTabAction) => {
+    if (inspectorNoteId && changeNoteInspectorTab(novel, workspace, inspectorNoteId, key, action)) return;
+    if (action === "select") selectInspectorTab(novel.id,key);
+    else setInspectorTabHidden(novel.id,key,action === "hide");
+  };
   const hideTab = (key:InspectorTabKey) => {
-    setInspectorTabHidden(novel.id,key,true);
+    changeTab(key,"hide");
     requestAnimationFrame(()=>toolbarRef.current?.querySelector<HTMLButtonElement>(
       '[role="tab"][aria-selected="true"], button[aria-label="Show hidden inspector tabs"]'
     )?.focus());
@@ -167,10 +174,13 @@ export function RightPanel({
   useEffect(() => {
     if (!hasTimelineSettings || !addRequest || addRequest.novelId !== activeNovelId || addRequest.section !== section
       || addRequest.noteId !== node?.id || usesTimelineDialog()) return;
-    if(activeTab!=='details'){selectInspectorTab(novel.id, 'details');return;}
+    if(activeTab!=='details'){
+      if (!changeNoteInspectorTab(novel, workspace, addRequest.noteId, 'details', 'select')) selectInspectorTab(novel.id, 'details');
+      return;
+    }
     detailsRef.current?.querySelector('[aria-label="Timeline block"]')?.scrollIntoView?.({block:"nearest"});
     finishTimelineAdd(addRequest);
-  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node?.id, section, novel.id, selectInspectorTab]);
+  }, [addRequest, activeNovelId, activeTab, hasTimelineSettings, node?.id, section, novel, workspace, selectInspectorTab]);
 
 
   /* Info razdelnik — meri se nad kontejnerom oba polja (vidi SynopsisResizer) */
@@ -184,7 +194,7 @@ export function RightPanel({
     <Tabs value={activeTab} onValueChange={value => {
       if(publishTools){if(value==='tools'||value==='manuscript')publishTools.select(value);}
       else if(canvas){if(value==='info'||value==='tools')selectCanvasTab(novel.id,value);}
-      else if (!infoOnly)selectInspectorTab(novel.id,value as InspectorTabKey);
+      else if (!infoOnly)changeTab(value as InspectorTabKey,"select");
     }} className="flex h-full flex-col gap-0">
       {/* traka 2 (desno) — ista donja linija kao header stabla i editor toolbar;
           „Hide panel“ skroz desno u istom redu, ne zalepljen uz tabove */}
@@ -214,7 +224,7 @@ export function RightPanel({
           }}>
             {hiddenTabs.map(t=><DropdownMenuItem key={t.key} onSelect={()=>{
               restoringTab.current=true;
-              setInspectorTabHidden(novel.id,t.key,false);
+              changeTab(t.key,"show");
             }}>Show {t.label}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>}

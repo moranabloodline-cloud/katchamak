@@ -27,6 +27,7 @@ import { ListView } from "./ListView";
 import { clampInspectorWidth, inspectorOpen, inspectorWidth } from "@/lib/kachamak/inspector-tabs";
 import { PublishWorkspace } from "./PublishWorkspace";
 import { RightPanel } from "./RightPanel";
+import { changeNoteInspectorTab } from "@/lib/kachamak/note-inspector-settings";
 import { TrashInfo, TrashSections, TrashView } from "./TrashView";
 import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
 import { ProjectFileStatus } from "./ProjectFileStorage";
@@ -376,7 +377,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   const familySettings=selected && novel && hit?.section==='family'
     ? <FamilyTreeEditor key={selected.id} novel={novel} tree={selected}/> : undefined;
   const openFamilyInspector=()=>{
-    if(novel)useKachamak.getState().setInspectorTabHidden(novel.id,'family',false);
+    if(novel && selected)changeNoteInspectorTab(novel,workspaceTab,selected.id,'family','show');
     if(!rightPanelOpen)toggleRightPanel();
     setCompactFamily(true);
   };

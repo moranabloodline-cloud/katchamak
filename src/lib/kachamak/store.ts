@@ -31,7 +31,7 @@ import {migrateProjectMaps} from './project-maps';
 import {validAtlas} from './canvas-map';
 import {validNoteMap} from './note-map';
 import {DEFAULT_PAGE_FORMAT,validNotePageSettings,validNoteFontSize,validPageFormat,validTabPageSettings,type FormatTab,type TabPageSettings,type PageFormat} from './page-format';
-import {type CanvasInspectorTab, changeInspectorTab, clampInspectorWidth, inspectorOpen, withInspectorLayout} from './inspector-tabs';
+import {type CanvasInspectorTab, changeInspectorTab, clampInspectorWidth, inspectorOpen, inspectorSettings, withInspectorLayout} from './inspector-tabs';
 import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspaceTab,visibleTabLocation} from './workspace-tabs';
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
@@ -322,7 +322,7 @@ function updateInspectorTab(s: KachamakState, projectId: string, tab: InspectorT
   if (s.activeNovelId !== projectId || s.view === 'homepage' || workspace === 'gallery' || workspace === 'finance' || workspace === 'kanban' || workspace === 'publish' || workspace === 'maps') return s;
   const book = s.novels.find(n => n.id === projectId);
   if (!book) return s;
-  const settings = changeInspectorTab(book, workspace, tab, action);
+  const settings = changeInspectorTab(inspectorSettings(book, workspace), workspace, tab, action);
   if (!settings) return s;
   const updated = touch({...book, inspectorByTab: {...book.inspectorByTab, [workspace]: settings}});
   return {novels: s.novels.map(n => n === book ? updated : n)};

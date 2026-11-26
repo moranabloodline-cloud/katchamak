@@ -1,3 +1,5 @@
+> **2026-11-26 — Tabovi desnog panela po belešci.** Hide tab i + sada pamte izbor za otvorenu belešku u lokalnim podešavanjima pregledača. Beleške bez sopstvenog izbora nasleđuju postojeća podešavanja radnog taba.
+
 > **2026-11-26 — Razmak ispod Search trake.** Prvi red stabla ima 12 px gornjeg razmaka pri podrazumevanom zumu u svim tabovima levog panela.
 
 > **2026-11-26 — Search preko cele širine.** Siva traka pretrage se proteže od ivice do ivice levog panela. Folderi i beleške zadržavaju bočni razmak.
@@ -763,6 +765,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Prilagođavanje tabova beleške radi bez upisa u cloud biblioteku.
 
 - **2026-11-26.** Odmaknut prvi red beležaka i foldera od Search trake.
 

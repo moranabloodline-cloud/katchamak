@@ -9,7 +9,8 @@ import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {iconForNote} from '@/lib/kachamak/icons';
 import {useKachamak} from '@/lib/kachamak/store';
-import {inspectorOpen,inspectorSettings,selectedInspectorTab} from '@/lib/kachamak/inspector-tabs';
+import {inspectorOpen,selectedInspectorTab} from '@/lib/kachamak/inspector-tabs';
+import {useNoteInspectorSettings} from '@/lib/kachamak/note-inspector-settings';
 import {registerZoomReset,saveZoomSetting,useZoomSetting,zoomScope} from '@/lib/kachamak/workspace-zoom';
 import {CodexNotePicker} from './CodexNotePicker';
 import {NotePreview} from './NotePreview';
@@ -136,7 +137,8 @@ export function FamilyTreeGraph({novel,tree,onCreate,onEdit}:{novel:Novel;tree:N
   const {width:w,height:h}=familyCard;
   const rightOpen=useKachamak(inspectorOpen);
   const workspace=useKachamak(s=>s.activeTab);
-  const familyInspectorOpen=rightOpen && selectedInspectorTab(inspectorSettings(novel,workspace),workspace)==='family';
+  const settings=useNoteInspectorSettings(novel,workspace,tree?.id);
+  const familyInspectorOpen=rightOpen && selectedInspectorTab(settings,workspace)==='family';
   return <section aria-label="Family tree graph" className="flex h-full min-h-72 flex-col">
     <header className="grid shrink-0 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-border px-5 py-3">
       <h2 className="relative col-start-2 min-w-0 px-6 text-center text-lg font-semibold"><Network aria-hidden="true" className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/><span className="block truncate" title={tree?.title} style={{color:tree?.color || undefined}}>{tree?.title||'Family Tree'}</span></h2>

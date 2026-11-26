@@ -1,5 +1,6 @@
 import { INSPECTOR_TABS, SECTION_KEYS, type InspectorTabKey, type Novel, type SectionKey, type TabKey, type ViewMode } from './types';
 
+export type InspectorTabAction = 'hide' | 'show' | 'select';
 export type InspectorSettings = {hidden: InspectorTabKey[]; selected?: InspectorTabKey; width?: number; open?: boolean};
 export type CanvasInspectorTab = 'info' | 'tools';
 export type CanvasInspectorSettings = {selected?: CanvasInspectorTab; width?:number; open?:boolean};
@@ -54,9 +55,8 @@ export function selectedInspectorTab(settings: InspectorSettings, workspace: Tab
 }
 
 export function changeInspectorTab(
-  book: InspectorBook, workspace: TabKey, key: InspectorTabKey, action: 'hide' | 'show' | 'select'
+  settings: InspectorSettings, workspace: TabKey, key: InspectorTabKey, action: InspectorTabAction
 ): InspectorSettings | null {
-  const settings = inspectorSettings(book, workspace);
   if (action === 'hide') {
     if (settings.hidden.includes(key)) return null;
     const visible = INSPECTOR_TABS.filter(tab => !settings.hidden.includes(tab.key));

@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {inspectorSettings} from './inspector-tabs';
+import {getNoteInspectorSettings} from './note-inspector-settings';
 import {useKachamak} from './store';
 import type {SectionKey} from './types';
 
@@ -13,7 +13,7 @@ export function usesTimelineDialog() {
   const state=useKachamak.getState();
   const book=state.novels.find(n=>n.id===state.activeNovelId);
   return window.matchMedia('(max-width: 1023px)').matches ||
-    !!book && inspectorSettings(book,state.activeTab).hidden.includes('details');
+    !!book && getNoteInspectorSettings(book,state.activeTab,state.selectedNodeId ?? undefined).hidden.includes('details');
 }
 
 export function addTimelineNote(section:SectionKey,parentId:string|null,kind:'event'|'period') {
