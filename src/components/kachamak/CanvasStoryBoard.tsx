@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type FormEvent} from 'react';
-import {AlignStartVertical, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ExternalLink, LockKeyhole, Minus, Pencil, Plus, UnlockKeyhole} from 'lucide-react';
+import {AlignStartVertical, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ExternalLink, Focus, LockKeyhole, Minus, Pencil, Plus, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {Input} from '@/components/ui/input';
@@ -188,7 +188,7 @@ function StoryBoardEditor({edit, notes, save, close}: {
   );
 }
 
-const minStoryZoom = .25;
+const minStoryZoom = .02;
 const maxStoryZoom = 2;
 
 export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPages, toggleLock}: Props) {
@@ -197,16 +197,34 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
   const [drop, setDrop] = useState<Destination>();
   const [error, setError] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const matrixRef = useRef<HTMLTableElement>(null);
   const zoomScope = 'kachamak-story-board:' + novel.id + ':' + page.id;
   const savedZoom = Number(useZoomSetting(zoomScope, 'zoom'));
   const zoom = savedZoom >= minStoryZoom && savedZoom <= maxStoryZoom ? savedZoom : 1;
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
 
-  function setZoom(next: number) {
-    const level = Math.max(minStoryZoom, Math.min(maxStoryZoom, Math.round(next * 100) / 100));
+  function setZoom(next: number, precision = 100) {
+    const level = Math.max(minStoryZoom, Math.min(maxStoryZoom, Math.round(next * precision) / precision));
     zoomRef.current = level;
     saveZoomSetting(zoomScope, 'zoom', String(level));
+  }
+
+  function fitBoard() {
+    const grid = gridRef.current;
+    const matrix = matrixRef.current;
+    if (!grid || !matrix || !grid.clientWidth || !grid.clientHeight) return;
+
+    // Measure at 100% so a previous zoom or the table's flexible width cannot distort the fit.
+    const previousZoom = matrix.style.zoom;
+    matrix.style.zoom = '1';
+    const width = matrix.offsetWidth;
+    const height = matrix.offsetHeight;
+    const fit = Math.min(1, (grid.clientWidth - 1) / width, (grid.clientHeight - 1) / height);
+    matrix.style.zoom = previousZoom;
+
+    setZoom(Math.floor(fit * 10_000) / 10_000, 10_000);
+    grid.scrollTo({left: 0, top: 0, behavior: 'instant'});
   }
 
   useEffect(() => {
@@ -219,7 +237,7 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
       event.stopPropagation();
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? grid.clientHeight : 1;
       const delta = Math.max(-400, Math.min(400, event.deltaY * unit));
-      setZoom(zoomRef.current * Math.exp(-delta * .002));
+      setZoom(zoomRef.current * Math.exp(-delta * .002), zoomRef.current < .05 ? 10_000 : 100);
     };
     grid.addEventListener('wheel', onWheel, {passive: false});
     return () => {
@@ -300,7 +318,7 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
         {locked ? 'No scenes on this board.' : 'Add a chapter and a plotline to start placing scenes.'}
       </p>}
       <div ref={gridRef} className="canvas-story-scroll kachamak-scroll" role="region" aria-label="Story grid" tabIndex={0}>
-        <table className="canvas-story-matrix" aria-label="Chapters and plotlines" style={{'--story-chapters': Math.max(1, board.chapters.length), zoom} as CSSProperties}>
+        <table ref={matrixRef} className="canvas-story-matrix" aria-label="Chapters and plotlines" style={{'--story-chapters': Math.max(1, board.chapters.length), zoom} as CSSProperties}>
           <thead>
             <tr>
               <th scope="col" className="canvas-story-axis">Plotlines</th>
@@ -376,11 +394,12 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
         </table>
       </div>
       <div className="flex shrink-0 items-center gap-1 border-t border-border px-3 py-1" role="group" aria-label="Story Board zoom">
-        <Button type="button" variant="ghost" size="icon" aria-label="Zoom out" disabled={zoom <= minStoryZoom} onClick={() => setZoom(zoom / 1.2)}><Minus /></Button>
+        <Button type="button" variant="ghost" size="icon" aria-label="Zoom out" disabled={zoom <= minStoryZoom} onClick={() => setZoom(zoom / 1.2, zoom < .05 ? 10_000 : 100)}><Minus /></Button>
         <Button type="button" variant="ghost" size="sm" title="Reset zoom" aria-label={'Reset zoom, current zoom ' + Math.round(zoom * 100) + '%'} onClick={() => setZoom(1)}>
           {Math.round(zoom * 100)}%
         </Button>
-        <Button type="button" variant="ghost" size="icon" aria-label="Zoom in" disabled={zoom >= maxStoryZoom} onClick={() => setZoom(zoom * 1.2)}><Plus /></Button>
+        <Button type="button" variant="ghost" size="icon" aria-label="Zoom in" disabled={zoom >= maxStoryZoom} onClick={() => setZoom(zoom * 1.2, zoom < .05 ? 10_000 : 100)}><Plus /></Button>
+        <Button type="button" variant="ghost" size="sm" title="Fit board" onClick={fitBoard}><Focus />Fit board</Button>
       </div>
       {!locked && editor && <StoryBoardEditor key={editor.value.id} edit={editor} notes={notes}
         save={next => commit(editor.previous, next)} close={() => setEditor(null)} />}

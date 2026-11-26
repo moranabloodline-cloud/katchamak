@@ -1,3 +1,5 @@
+> **2026-11-26 — Fit board na Story Boardu.** Komanda uklapa mrežu poglavlja i linija radnje u raspoloživu širinu i visinu.
+
 > **2026-11-26 — Zum na Story Boardu.** Dugmad za zum i Ctrl + točkić menjaju veličinu mreže. Procenat i Ctrl + 0 vraćaju prikaz na 100%.
 
 > **2026-11-26 — Canvas pregled, Story Board i Mind Map.** Page preview prikazuje Canvas stranicu za desktop i telefon i omogućava pregled internih veza. Story Board planira scene po poglavljima i linijama radnje. Mind Map dodaje povezane kartice komandom Add branch.
@@ -775,6 +777,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Fit board vraća mrežu na početak i primenjuje zum koji prikazuje celu tablu u raspoloživom prostoru.
 
 - **2026-11-26.** Story Board pamti zum svake table lokalno u pregledaču. Zum ne pokreće čuvanje projekta.
 
