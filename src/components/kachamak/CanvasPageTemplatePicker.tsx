@@ -21,6 +21,14 @@ const previews: Record<CanvasPageTemplateId, string[]> = {
     'col-span-3 row-span-3 border-sky-400/25 bg-sky-400/15',
     'col-span-3 row-span-2 border-border bg-muted-foreground/10',
   ],
+  'book-website': [
+    'col-span-6 row-span-1 border-amber-400/30 bg-amber-400/20',
+    'col-span-3 row-span-3 border-border bg-muted-foreground/15',
+    'col-span-3 row-span-3 border-violet-400/35 bg-violet-400/25',
+    'col-span-2 row-span-2 border-border bg-muted-foreground/10',
+    'col-span-2 row-span-2 border-border bg-muted-foreground/10',
+    'col-span-2 row-span-2 border-border bg-muted-foreground/10',
+  ],
   'author-page': [
     'col-span-2 row-span-4 border-amber-400/30 bg-amber-400/20',
     'col-span-4 row-span-4 border-border bg-muted-foreground/15',
@@ -57,7 +65,7 @@ export function CanvasPageTemplatePicker({value,onChange}:{value:CanvasPageTempl
   const selected = CANVAS_PAGE_TEMPLATES.find(template => template.id === value);
   return <fieldset className="min-w-0">
     <legend className="mb-2 text-sm font-medium">Template</legend>
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {CANVAS_PAGE_TEMPLATES.map(template => <label key={template.id} className="relative min-w-0 cursor-pointer">
         <input className="peer sr-only" type="radio" name="canvas-template" value={template.id}
           checked={template.id === value} onChange={() => onChange(template.id)}/>

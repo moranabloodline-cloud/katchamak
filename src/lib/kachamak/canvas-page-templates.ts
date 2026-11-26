@@ -1,14 +1,15 @@
 import type {HomeBlock, HomeLink, Homepage} from './homepage';
-import {availableProjectImage, validProjectImage} from './project-image';
-import type {NoteNode, Novel, SectionKey} from './types';
+import type {NoteNode, Novel} from './types';
 import {stripHtml, uid} from './utils';
 import {newStoryBoard} from './story-board';
+import {imageFor, row, tabLink, type TemplateBlock} from './canvas-template-layout';
 
 export const CANVAS_PAGE_TEMPLATES = [
   {id:'blank', label:'Blank canvas', description:'Start with an empty page.'},
   {id:'project-cover', label:'Project cover', description:'Cover art, a story pitch and links into the book.'},
   {id:'character-overview', label:'Character overview', description:'Portrait cards for the cast and their relationships.'},
   {id:'research-board', label:'Research board', description:'Sources, open questions and visual references.'},
+  {id:'book-website', label:'Book Website', description:'Create a homepage and six linked pages for your book, excerpts, world, editions, author, and readers.'},
   {id:'author-page', label:'Author Page', description:'A portrait, biography, featured work and public links.'},
   {id:'project-example', label:'Project example', description:'A filled-in showcase using this book’s artwork, cast and notes.'},
   {id:'story-board', label:'Story Board', description:'Plan scenes by chapter and plotline, with links into the Binder.'},
@@ -16,28 +17,8 @@ export const CANVAS_PAGE_TEMPLATES = [
 ] as const;
 
 export type CanvasPageTemplateId = (typeof CANVAS_PAGE_TEMPLATES)[number]['id'];
-type TemplateBlock = Omit<HomeBlock, 'id'|'width'|'cell'>;
-
-function row(title: string, ...columns: TemplateBlock[][]): HomeBlock[] {
-  const rowId = uid();
-  return [
-    {id:rowId, layout:'row', width:'full', title, text:'', columns:columns.length},
-    ...columns.flatMap((blocks, column) => blocks.map(block => ({
-      ...block, id:uid(), width:'full' as const, cell:{rowId,column},
-    }))),
-  ];
-}
-
-function tabLink(label: string, tab: SectionKey): HomeLink {
-  return {id:uid(), label, target:{kind:'tab',tab}};
-}
-
 function noteLink(node: NoteNode): HomeLink {
   return {id:uid(), label:node.title, target:{kind:'note',id:node.id}};
-}
-
-function imageFor(book: Novel, image: string | undefined) {
-  return image && validProjectImage(image) && availableProjectImage(book.gallery,image) ? image : undefined;
 }
 
 function visibleNotes(roots: NoteNode[]): NoteNode[] {
@@ -126,7 +107,7 @@ function projectExample(book: Novel): HomeBlock[] {
   ];
 }
 
-export function buildCanvasPageTemplate(templateId: CanvasPageTemplateId, book: Novel): Homepage {
+export function buildCanvasPageTemplate(templateId: Exclude<CanvasPageTemplateId, 'book-website'>, book: Novel): Homepage {
   if(templateId==='story-board')return {mode:'canvas',locked:false,blocks:[],storyBoard:newStoryBoard(book)};
   if(templateId==='mind-map')return {mode:'canvas',locked:false,viewKey:uid(),blocks:[{
     id:uid(),layout:'note',width:'standard',title:'Central idea',
@@ -136,7 +117,7 @@ export function buildCanvasPageTemplate(templateId: CanvasPageTemplateId, book: 
   const bookTitle = book.title.trim() || 'Book title';
   const author = book.author.trim();
   const cover = imageFor(book,book.cover?.image);
-  function blocks(id: Exclude<CanvasPageTemplateId, 'story-board' | 'mind-map'>): HomeBlock[] {
+  function blocks(id: Exclude<CanvasPageTemplateId, 'story-board' | 'mind-map' | 'book-website'>): HomeBlock[] {
     switch (id) {
       case 'blank':
         return [];

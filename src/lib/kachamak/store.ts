@@ -43,6 +43,7 @@ import {inFixedRow,unifiedCanvas} from './canvas-layout';
 import {extractBoard} from './canvas-selection';
 import {importCanvasFile} from './canvas-file';
 import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, validHomepage, type HomeChange } from './homepage';
+import { buildBookWebsite } from './canvas-book-website';
 import { buildCanvasPageTemplate, CANVAS_PAGE_TEMPLATES, type CanvasPageTemplateId } from './canvas-page-templates';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
@@ -746,11 +747,13 @@ export const useKachamak = create<KachamakState>()(
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (state.activeNovelId !== projectId || !novel || !title.trim() || !['page','board','canvas'].includes(mode) || (parentId !== null && !homepageEntry(novel, parentId))) return false;
         if (!CANVAS_PAGE_TEMPLATES.some(item => item.id === template) || (template !== 'blank' && mode !== 'canvas')) return false;
-        const layout = template === 'blank' ? EMPTY_HOMEPAGE : buildCanvasPageTemplate(template, novel);
-        const page = {...layout, mode, id: uid(), title: title.trim(), parentId};
-        if (!validHomepage(page) || page.blocks.some(block => !availableProjectImage(novel.gallery,block.image))) return false;
-        set({novels: state.novels.map(n => n === novel ? touch({...n, homePages: [...(n.homePages ?? []), page]}) : n),
-          activeHomePageId: page.id, view:'homepage'});
+        const root = {id:uid(), title:title.trim(), parentId};
+        const pages = template === 'book-website' ? buildBookWebsite(novel,root) : [{
+          ...(template === 'blank' ? EMPTY_HOMEPAGE : buildCanvasPageTemplate(template,novel)), ...root, mode,
+        }];
+        if (pages.some(page => !validHomepage(page) || page.blocks.some(block => !availableProjectImage(novel.gallery,block.image)))) return false;
+        set({novels: state.novels.map(n => n === novel ? touch({...n, homePages: [...(n.homePages ?? []), ...pages]}) : n),
+          activeHomePageId: root.id, view:'homepage'});
         return true;
       },
       convertBoardSelection: (projectId,pageId,ids,title,heights) => {
