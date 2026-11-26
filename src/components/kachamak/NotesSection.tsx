@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
+import {Button} from "@/components/ui/button";
 import {DocumentTarget} from './DocumentTarget';
 import { WorkspaceWordCount } from './WorkspaceWordCount';
 import {FinanceWorkspace, FinanceEditor} from "./Finance";
@@ -383,7 +384,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
   };
   const selectedSection = hit?.section ?? section;
   const homeSelection = useKachamak(s=>s.activeHomePageId);
-  const homePage = view==='homepage' && novel ? homepageEntry(novel,homeSelection) ?? homepageEntry(novel,HOME_ROOT) : undefined;
+  const homePage = view==='homepage' && novel ? homepageEntry(novel,homeSelection) ?? homepageEntry(novel,HOME_ROOT) ?? novel.homePages?.[0] : undefined;
   const homeId = homePage?.id ?? HOME_ROOT;
   const [collapsedPages,setCollapsedPages]=useState<Set<string>>(new Set());
   const [mobilePages,setMobilePages]=useState(false);
@@ -457,8 +458,11 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
       <main ref={mainRef} tabIndex={-1} style={{"--workspace-canvas-zoom":canvasZoom} as CSSProperties} className={view==='gallery' ? 'contents' : 'flex min-w-0 flex-1 flex-col outline-none'}>
         <CtrlZoom panel="mid" targetRef={mainRef} />
         <EditorToolbar node={view==='write' || view==='split' ? selected : null} inspectorId={homePage?.id ?? selected?.id} />
-        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} toolsHost={canvasToolsHost}
-          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : maps && novel ? <MapsWorkspace novel={novel} selected={selected} host={canvasToolsHost} showTree={()=>setMobilePages(true)} showTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)}/> : publish && novel ? <PublishWorkspace key={novel.id} novel={novel} selected={selected} rootId={rootId} zoom={canvasZoom} toolsHost={canvasToolsHost} inspector={publishInspector} onInspect={setPublishInspector} onShowTree={()=>setMobilePages(true)} onShowTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}}/> : kanban && novel ? <KanbanWorkspace key={novel.id+':'+(selected?.id??rootId??'')} novel={novel} rootId={rootId} selected={selected} zoom={canvasZoom} onShowTree={()=>setMobilePages(true)} /> : <>
+        {trash ? <TrashView key={activeNovelId}/> : view==='gallery' && novel ? <GalleryCanvas key={novel.id} novel={novel} setDrag={setGalleryDrag} folderId={folderId} openFolder={openFolder}/> : view==='homepage' && novel ? (homePage ? <ProjectHomepage key={novel.id+':'+homeId} novel={novel} pageId={homeId} toolsHost={canvasToolsHost}
+          onShowInspector={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)} onShowPages={()=>setMobilePages(true)} /> : <div className="grid flex-1 content-center justify-items-center gap-3 p-6 text-center">
+          <p className="text-sm text-muted-foreground">No canvas pages. Right-click in the Canvas tree to create one.</p>
+          <Button type="button" variant="outline" size="sm" onClick={()=>{if(!leftPanelOpen)toggleLeftPanel();setMobilePages(true);}}>Show canvas pages</Button>
+        </div>) : maps && novel ? <MapsWorkspace novel={novel} selected={selected} host={canvasToolsHost} showTree={()=>setMobilePages(true)} showTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}} onToolPicked={()=>setCompactCanvas(false)}/> : publish && novel ? <PublishWorkspace key={novel.id} novel={novel} selected={selected} rootId={rootId} zoom={canvasZoom} toolsHost={canvasToolsHost} inspector={publishInspector} onInspect={setPublishInspector} onShowTree={()=>setMobilePages(true)} onShowTools={()=>{setCompactCanvas(true);if(!rightPanelOpen)toggleRightPanel();}}/> : kanban && novel ? <KanbanWorkspace key={novel.id+':'+(selected?.id??rootId??'')} novel={novel} rootId={rootId} selected={selected} zoom={canvasZoom} onShowTree={()=>setMobilePages(true)} /> : <>
         <div style={{zoom:view==="split"?undefined:canvasZoom}} className="min-h-0 flex-1 overflow-y-auto kachamak-scroll">
           {finance && novel && <FinanceWorkspace key={treeScopeKey} novel={novel} rootId={rootId} selected={selected} list={view==='finance-list'}/>}
           {view === "corkboard" && <Corkboard section={section} rootId={rootId} />}
@@ -503,7 +507,7 @@ export function NotesSection({ section, rootId, revealSearch, trash = false, gal
         </>}
       </main>
 
-      {view!=='gallery' && (rightPanelOpen ? (
+      {view!=='gallery' && (view!=='homepage' || homePage) && (rightPanelOpen ? (
         <>
           <Resizer
             key={JSON.stringify([activeNovelId, homePage?'homepage':workspaceTab])}

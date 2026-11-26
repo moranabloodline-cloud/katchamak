@@ -138,6 +138,7 @@ export interface Novel {
   financeCurrency?: import('./finance').FinanceCurrency;
   gallery?: import('./gallery').GalleryEntry[];
   homepage?: import('./homepage').Homepage;
+  homepageRemoved?: true;
   homePages?: import('./homepage').HomePageEntry[];
   familyRelationships?: FamilyRelationship[];
   demo?: { key: string; version: number; edition?: number; source?: boolean; timelineRootId?: string };

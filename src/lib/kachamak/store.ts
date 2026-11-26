@@ -153,6 +153,7 @@ interface KachamakState {
   activeHomePageId: string;
   openHomePage: (projectId: string, pageId: string) => boolean;
   deleteHomePage: (bookId:string,pageId:string)=>boolean;
+  deleteAllHomePages: (bookId:string)=>boolean;
   moveHomePages: (bookId:string,sources:BranchSource[],parentId:string|null)=>void;
   convertBoardSelection: (projectId:string,pageId:string,ids:string[],title:string,heights:[string,number][])=>boolean;
   createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board'|'canvas', template?:CanvasPageTemplateId) => boolean;
@@ -700,8 +701,9 @@ export const useKachamak = create<KachamakState>()(
         const page=homepageEntry(novel,pageId);
         if(!page)return false;
         if(pageId===HOME_ROOT){
-          if(page.locked)return false;
-          set({novels:state.novels.map(n=>n===novel?touch({...n,homepage:{...n.homepage,locked:false,blocks:[]}}):n)});
+          const homePages=novel.homePages?.map(entry=>entry.parentId===HOME_ROOT?{...entry,parentId:null}:entry);
+          set({novels:state.novels.map(n=>n===novel?touch({...n,homepage:undefined,homepageRemoved:true,homePages}):n),
+            activeHomePageId:state.activeHomePageId===HOME_ROOT ? homePages?.[0]?.id ?? HOME_ROOT : state.activeHomePageId});
           return true;
         }
         const pages=novel.homePages??[];
@@ -718,7 +720,16 @@ export const useKachamak = create<KachamakState>()(
           for(const child of children.get(current)??[])pending.push(child);
         }
         set({novels:state.novels.map(n=>n===novel?touch({...n,homePages:pages.filter(p=>!removed.has(p.id))}):n),
-          activeHomePageId:removed.has(state.activeHomePageId)?page.parentId??HOME_ROOT:state.activeHomePageId});
+          activeHomePageId:removed.has(state.activeHomePageId)
+            ? page.parentId ?? (novel.homepageRemoved ? pages.find(entry=>!removed.has(entry.id))?.id : HOME_ROOT) ?? HOME_ROOT
+            : state.activeHomePageId});
+        return true;
+      },
+      deleteAllHomePages: bookId => {
+        const state=get(),novel=state.novels.find(n=>n.id===bookId);
+        if(!novel || state.activeNovelId!==bookId || (novel.homepageRemoved && !novel.homePages?.length))return false;
+        set({novels:state.novels.map(n=>n===novel?touch({...n,homepage:undefined,homepageRemoved:true,homePages:[]}):n),
+          activeHomePageId:HOME_ROOT});
         return true;
       },
       moveHomePages: (bookId,sources,parentId) => set(state=>{
@@ -726,7 +737,7 @@ export const useKachamak = create<KachamakState>()(
         if (!novel || state.activeNovelId!==bookId || sources.some(item=>item.id===HOME_ROOT)) throw new Error('Choose pages from the open book.');
         const pages=novel.homePages??[];
         const parents=new Map(pages.map(page=>[page.id,page.parentId]));
-        parents.set(HOME_ROOT,null);
+        if(!novel.homepageRemoved)parents.set(HOME_ROOT,null);
         const next=reparentEntries(pages,parents,sources,parentId);
         if (next===pages) return state;
         return {novels:state.novels.map(n=>n===novel?touch({...n,homePages:next}):n)};
@@ -771,7 +782,7 @@ export const useKachamak = create<KachamakState>()(
 
       importCanvasLayout:(projectId,pageId,expected,file)=>{
         const state=get(),book=state.novels.find(n=>n.id===projectId);
-        if(!book||state.activeNovelId!==projectId||state.activeHomePageId!==pageId)return false;
+        if(!book||state.activeNovelId!==projectId||state.activeHomePageId!==pageId||!homepageEntry(book,pageId))return false;
         const current=pageId===HOME_ROOT?book.homepage:book.homePages?.find(p=>p.id===pageId);
         if(current!==expected||current?.locked||!current&&pageId!==HOME_ROOT)return false;
         const result=importCanvasFile(book,current??EMPTY_HOMEPAGE,file);
@@ -783,7 +794,7 @@ export const useKachamak = create<KachamakState>()(
       },
       changeHomepage: (projectId, action, pageId = HOME_ROOT, unified=false) => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
-        if (!novel || state.activeNovelId !== projectId) return false;
+        if (!novel || state.activeNovelId !== projectId || (pageId===HOME_ROOT && novel.homepageRemoved)) return false;
         const current = pageId === HOME_ROOT ? novel.homepage ?? EMPTY_HOMEPAGE : novel.homePages?.find(p => p.id === pageId);
         const next = current && changeHomepage(unified?unifiedCanvas(current):current, action);
         if (!next || next.blocks.some(block=>!availableProjectImage(novel.gallery,block.image))) return false;

@@ -13,7 +13,7 @@ import { validWorkspaceTabOrder } from './workspace-tabs';
 import { validNoteFontSize, validNotePageSettings, validTabPageSettings } from './page-format';
 import {validProjectImage, projectImageRefs, availableProjectImage} from './project-image';
 import { validGallery } from './gallery';
-import { validHomepage, validHomePages } from './homepage';
+import { HOME_ROOT, validHomepage, validHomePages } from './homepage';
 import { validDocumentTarget } from './document-target';
 import {validFamilyMembers,validFamilyRelationships} from './family-tree';
 import { validEvent, validTimelineExtra } from './story-calendar';
@@ -66,6 +66,7 @@ export function isReadableProject(value: unknown): boolean {
     !Object.entries(n.tabFormats).every(([tab,settings])=>
       (tab==='homepage' || SECTION_KEYS.includes(tab as SectionKey) || (tab.startsWith('note:') && tab.length>5)) && validTabPageSettings(settings))))return false;
   if(!validGallery(n.gallery) || !validHomepage(n.homepage) || !validHomePages(n.homePages))return false;
+  if(n.homepageRemoved!==undefined && (n.homepageRemoved!==true || n.homepage!==undefined || n.homePages?.some(p=>p.parentId===HOME_ROOT)))return false;
   if(!validFamilyRelationships(n.familyRelationships) || !validWorkspaceTabOrder(n.tabOrder) || !validWorkspaceTabOrder(n.hiddenTabs))return false;
   if (n.hiddenInspectorTabs !== undefined && !validHiddenInspectorTabs(n.hiddenInspectorTabs)) return false;
   if (!validInspectorByTab(n.inspectorByTab)) return false;

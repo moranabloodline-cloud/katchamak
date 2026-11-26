@@ -1,3 +1,5 @@
+> **2026-11-26 — Brisanje i kreiranje u Canvas stablu.** Desni klik na prazno mesto otvara New canvas i Delete all canvases. Pojedinačni meni omogućava brisanje i početne stranice.
+
 > **2026-11-26 — Boje Canvas alata.** Ikonice u paleti su grupisane prema nameni, uz prilagođen kontrast u svetloj i tamnoj temi.
 
 > **2026-11-26 — Premeštanje Canvas stranica.** Move to… u meniju stranice bira novi nadređeni Canvas ili najviši nivo.
@@ -783,6 +785,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Prazno Canvas stablo ostaje dostupno za kreiranje nove stranice. Brisanje samo početne stranice premešta njene podstranice na najviši nivo.
 
 - **2026-11-26.** Paleta Canvas alata koristi pet boja za pisanje, veze, medije, crtanje i strukturu. Boje kartica ostaju nezavisne od palete.
 

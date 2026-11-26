@@ -1,5 +1,5 @@
 import {type GalleryEntry} from './gallery';
-import {type HomeBlock,type Homepage,type HomeTarget,HOME_ROOT,validHomepage} from './homepage';
+import {type HomeBlock,type Homepage,type HomeTarget,homepageEntry,validHomepage} from './homepage';
 import {flattenNotes} from './note-links';
 import {availableProjectImage,galleryImageRef,validCoverImage} from './project-image';
 import {findProjectMap} from './project-maps';
@@ -22,7 +22,7 @@ export function importCanvasFile(book:Novel,current:Homepage,raw:unknown){
     file.layout.mode!=='canvas'||!validHomepage(file.layout)||!Array.isArray(file.images))return null;
   const gallery:GalleryEntry[]=[...(book.gallery??[])],refs=new Map<string,string>();
   const notes=new Map(flattenNotes(book).map(({node})=>[node.id,node]));
-  const hasTarget=(t?:HomeTarget)=>!t||t.kind==='note'&&notes.has(t.id)||t.kind==='page'&&(t.id===HOME_ROOT||book.homePages?.some(p=>p.id===t.id))||t.kind==='tab'||t.kind==='web';
+  const hasTarget=(t?:HomeTarget)=>!t||t.kind==='note'&&notes.has(t.id)||t.kind==='page'&&!!homepageEntry(book,t.id)||t.kind==='tab'||t.kind==='web';
   function addImage(name:string,data:string){
     const known=gallery.find(e=>e.kind==='image'&&e.image===data);
     if(known)return galleryImageRef(known.id);

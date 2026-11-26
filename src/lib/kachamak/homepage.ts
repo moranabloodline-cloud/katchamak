@@ -60,20 +60,21 @@ export interface HomePageEntry extends Homepage {
 
 // Keep the original canvas at the same storage location, including for old backups.
 export function homepageEntry(novel: Novel, id: string): HomePageEntry | undefined {
-  if (id === HOME_ROOT) return {...(novel.homepage ?? EMPTY_HOMEPAGE), id, title:novel.homepage?.title||'Homepage', parentId:null};
+  if (id === HOME_ROOT) return novel.homepageRemoved ? undefined : {...(novel.homepage ?? EMPTY_HOMEPAGE), id, title:novel.homepage?.title||'Homepage', parentId:null};
   return novel.homePages?.find(page => page.id === id);
 }
 
 export function homepageRows(novel: Novel) {
   const children = new Map<string | null, HomePageEntry[]>();
-  children.set(null, [homepageEntry(novel, HOME_ROOT)!]);
+  const root = homepageEntry(novel, HOME_ROOT);
+  if (root) children.set(null, [root]);
   for (const page of novel.homePages ?? []) {
     const siblings = children.get(page.parentId) ?? [];
     siblings.push(page);
     children.set(page.parentId, siblings);
   }
   const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean; mode?:Homepage['mode']; icon?:string; color?:string}[] = [];
-  const pending = children.get(null)!.map(page => ({page, path:page.title, depth:0})).reverse();
+  const pending = (children.get(null) ?? []).map(page => ({page, path:page.title, depth:0})).reverse();
   const visited = new Set<string>();
   while (pending.length) {
     const {page, path, depth} = pending.pop()!;

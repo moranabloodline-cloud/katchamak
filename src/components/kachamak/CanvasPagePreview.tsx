@@ -5,7 +5,7 @@ import {ArrowLeft, ArrowUpRight, Monitor, Smartphone} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogDescription, DialogTitle} from '@/components/ui/dialog';
 import {unifiedCanvas, worldRows} from '@/lib/kachamak/canvas-layout';
-import {HOME_ROOT, homepageEntry, homepageRows, isWebsite, type HomeBlock, type HomePageEntry, type HomeTarget} from '@/lib/kachamak/homepage';
+import {homepageEntry, homepageRows, isWebsite, type HomeBlock, type HomePageEntry, type HomeTarget} from '@/lib/kachamak/homepage';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import type {NoteNode, Novel} from '@/lib/kachamak/types';
 import {CanvasItemFace} from './CanvasItemFace';
@@ -138,7 +138,7 @@ export function CanvasPagePreview({novel, initialPageId, notes, describe, onOpen
   const [message, setMessage] = useState('');
   const scroll = useRef<HTMLDivElement>(null);
   const id = trail.at(-1) ?? initialPageId;
-  const page = useMemo(() => homepageEntry(novel, id) ?? homepageEntry(novel, HOME_ROOT)!, [novel, id]);
+  const page = useMemo(() => homepageEntry(novel, id) ?? homepageEntry(novel, initialPageId)!, [novel, id, initialPageId]);
   const pages = useMemo(() => {
     const boardIds = new Set(novel.homePages?.filter(entry => entry.storyBoard).map(entry => entry.id));
     return homepageRows(novel).filter(entry => !boardIds.has(entry.id));
