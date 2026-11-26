@@ -38,10 +38,12 @@ const control = "inline-flex h-9 shrink-0 items-center justify-center gap-2 roun
 const createControl = `${control} border-[#b78b43]/70 bg-[#211a10] font-medium text-[#f5d99d] hover:bg-[#342615]`;
 
 function modified(ts: number) {
-  const days = Math.floor((Date.now() - ts) / 86400000);
-  if (days < 1) return "Today";
-  if (days === 1) return "Yesterday";
-  return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const date = new Date(ts);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) return "Today";
+  today.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Yesterday";
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function collectionPath(collections: Collection[], id: string | null): Collection[] {
@@ -58,9 +60,9 @@ function collectionPath(collections: Collection[], id: string | null): Collectio
 }
 
 function Cover({ novel, small = false }: { novel: Novel; small?: boolean }) {
-  // The existing project cover is a background + icon; keep that user data intact.
+  const image = projectImageSrc(novel.gallery, novel.cover?.image);
   return <span data-project-cover aria-hidden="true" className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-r-md border border-[#d7b469]/20 shadow-[4px_5px_14px_#0007] ${small ? "h-12 w-8 text-xl" : "aspect-[2/3] w-full text-5xl"}`} style={{ background: novel.cover?.bg || "linear-gradient(135deg,#30291f,#171717)" }}>
-    {novel.cover.image?<img src={projectImageSrc(novel.gallery,novel.cover.image)} alt="" className="absolute inset-0 h-full w-full object-cover"/>:<>
+    {image?<img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover"/>:<>
     <span className="absolute inset-y-0 left-0 w-[7%] border-r border-black/30 bg-black/20" />
     <span className="absolute inset-[8%] border border-white/15" />
     <span className="drop-shadow-lg">{novel.cover?.icon || <BookOpen className={small ? "h-4 w-4" : "h-12 w-12 text-[#dbc38d]"} />}</span>
@@ -102,11 +104,18 @@ export function DashboardLibrary(props: Props) {
     setSearch("");
     libraryRef.current?.scrollTo(0, 0);
   };
+  const alreadyThere = (item: DragItem, destination: string | null) => {
+    if (item.kind === "collection") return collections.some((c) => c.id === item.id && c.parentId === destination);
+    if (destination === null) return !collections.some((c) => c.projectIds.includes(item.id));
+    const hasProject = (id: string | null) => collections.some((c) => c.id === id && c.projectIds.includes(item.id));
+    return hasProject(destination) && (destination === item.sourceId || !hasProject(item.sourceId));
+  };
   const move = (item: DragItem, destination: string | null) => {
+    if (alreadyThere(item, destination)) return;
     if (item.kind === "collection") {
       if (!moveCollection(item.id, destination)) { toast.error("A collection cannot be moved inside itself or its descendants."); return; }
     } else {
-      if (!novels.some((n) => n.id === item.id)) return;
+      if (!novels.some((n) => n.id === item.id) || (destination && !collections.some((c) => c.id === destination))) return;
       moveProject(item.id, destination, item.sourceId);
     }
     if (destination && !expanded.includes(destination)) prefs.toggleExpanded(destination);
@@ -123,7 +132,8 @@ export function DashboardLibrary(props: Props) {
     onDragOver: (event: DragEvent) => {
       if (!event.dataTransfer.types.includes(DRAG_TYPE)) return;
       event.preventDefault(); event.stopPropagation();
-      const allowed = dragItem?.kind !== "collection" || canMoveCollection(collections, dragItem.id, destination);
+      const allowed = !dragItem || (!alreadyThere(dragItem, destination) &&
+        (dragItem.kind !== "collection" || canMoveCollection(collections, dragItem.id, destination)));
       event.dataTransfer.dropEffect = allowed ? "move" : "none";
       setDropTarget(allowed ? destination : undefined);
     },
@@ -142,8 +152,8 @@ export function DashboardLibrary(props: Props) {
   });
   const dragProps = (item: DragItem) => ({ draggable: true, onDragStart: (event: DragEvent) => startDrag(event, item), onDragEnd: () => { setDragItem(null); setDropTarget(undefined); } });
   const destinationMenu = (item: DragItem) => <DropdownMenuSub><DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-72 max-w-80 overflow-y-auto">
-    <DropdownMenuItem onSelect={() => move(item, null)}>Library</DropdownMenuItem>
-    {collections.map((c) => <DropdownMenuItem key={c.id} disabled={item.kind === "collection" && !canMoveCollection(collections, item.id, c.id)} onSelect={() => move(item, c.id)}><span className="truncate">{collectionPath(collections, c.id).map((p) => p.name).join(" / ")}</span></DropdownMenuItem>)}
+    <DropdownMenuItem disabled={alreadyThere(item, null)} onSelect={() => move(item, null)}>Library</DropdownMenuItem>
+    {collections.map((c) => <DropdownMenuItem key={c.id} disabled={alreadyThere(item, c.id) || (item.kind === "collection" && !canMoveCollection(collections, item.id, c.id))} onSelect={() => move(item, c.id)}><span className="truncate">{collectionPath(collections, c.id).map((p) => p.name).join(" / ")}</span></DropdownMenuItem>)}
   </DropdownMenuSubContent></DropdownMenuSub>;
   const folderMenu = (c: Collection) => <LibraryItemMenu><DropdownMenuTrigger asChild><button aria-label={`Options for collection ${c.name}`} className={`${itemActions} shrink-0 rounded p-1.5 text-muted-foreground hover:bg-white/10`}><MoreVertical className="h-4 w-4" /></button></DropdownMenuTrigger><DropdownMenuContent align="end">
     <DropdownMenuItem onSelect={() => navigate(c.id)}>Open collection</DropdownMenuItem>

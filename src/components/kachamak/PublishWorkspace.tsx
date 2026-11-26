@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useReducer,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {BookOpen,Check,Download,FolderTree,Grid2X2,Moon,Settings2,Sun} from 'lucide-react';
 import {toast} from 'sonner';
@@ -77,7 +77,10 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   useEffect(()=>{if(inspector==='manuscript'){setGallery(false);setProof('Manuscript');}},[inspector]);
   const [darkReader,setDarkReader]=useState(false);
   const [saving,setSaving]=useState(false),[styleName,setStyleName]=useState(''),[destination,setDestination]=useState('');
-  const [busy,setBusy]=useState(false),[wantPdf,setWantPdf]=useState(false),[ready,setReady]=useState(false),frame=useRef<HTMLIFrameElement>(null);
+  const [busy,setBusy]=useState(false),[pdfStyleId,setPdfStyleId]=useState<string|null>(null);
+  const [proofAttempt,retryProof]=useReducer((count:number)=>count+1,0);
+  const [loadedProofRevision,notifyProofLoaded]=useReducer((count:number)=>count+1,0);
+  const frame=useRef<HTMLIFrameElement>(null);
   const prev=useRef(selected?.id);
   const roots=novel.sections.publish??[];
   const [galleryStyleId,setGalleryStyleId]=useState<string>();
@@ -89,7 +92,9 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   const entry=saved&&selected?{name:selected.title,style:saved,node:selected}:savedCards.find(card=>card.node.id===galleryStyleId)??savedCards[0];
   const s=entry?.style??baseStyle;
   const hasStyle=!!entry;
+  const styleId=entry?.node.id;
   useEffect(()=>{if(selected?.id!==prev.current){
+    setPdfStyleId(null);
     if(selected){
       if(gallery&&selected.bookStyle&&(comparison||selected.bookStyle.sampleGenre))setProof('Chapter opening');
       setGallery(!selected.bookStyle);
@@ -104,45 +109,58 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     return proofDocument(book,s,print);
   },[novel,s,proof,print,gallery,comparison,genre,hasStyle]);
   const compare=(id:string|null)=>{
-    setComparisonId(id);setProof('Chapter opening');setWantPdf(false);
+    setComparisonId(id);setProof('Chapter opening');setPdfStyleId(null);
   };
   const open=(card:StyleCard)=>{
     useKachamak.getState().select(card.node.id);
-    onInspect('tools');setWantPdf(false);
+    onInspect('tools');setPdfStyleId(null);
     if(comparison||card.style.sampleGenre)setProof('Chapter opening');
     setGallery(false);
   };
   const change=(next:BookStyle)=>{
     const state=useKachamak.getState();
     if(!entry)return;
+    setPdfStyleId(null);
     state.updateNode('publish',entry.node.id,{bookStyle:next});
     if(!saved)state.select(entry.node.id);
     if(gallery){setPrint(true);setProof('Chapter opening');}
     setGallery(false);
   };
   const saveAs=()=>{setDestination(folder?.id??'');setStyleName(entry?entry.name+' copy':'New style');setSaving(true);};
-  const inspect=(v:Proof)=>{setWantPdf(false);setProof(v);setGallery(false);};
+  const inspect=(v:Proof)=>{setPdfStyleId(null);setProof(v);setGallery(false);};
   const download=async(format:'PDF'|'EPUB'|'DOCX'|'HTML')=>{
     if(!entry)return;
     if(!hasContents){toast.error('Select at least one Binder item in Manuscript.');return;}
     if(format==='PDF'){
-      if(!gallery&&print&&proof==='Manuscript'&&ready&&frame.current?.contentDocument?.documentElement?.dataset.ready==='yes'){frame.current.contentWindow?.print();return;}
-      setReady(false);setPrint(true);setProof('Manuscript');setGallery(false);setWantPdf(true);return;
+      if(!gallery&&print&&proof==='Manuscript'){
+        const proofFrame=frame.current;
+        const status=proofFrame?.contentDocument?.documentElement.dataset.ready;
+        if(status==='yes'){proofFrame?.contentWindow?.print();return;}
+        if(status==='error')retryProof();
+      }
+      setPrint(true);setProof('Manuscript');setGallery(false);setPdfStyleId(entry.node.id);return;
     }
     setBusy(true);
     try{await (await import('@/lib/kachamak/publish-export')).exportEdition(format,publication(novel,s),s);}
     catch{toast.error('The edition could not be exported. Please try again.');}finally{setBusy(false);}
   };
-  const onReady=useCallback((v:boolean)=>setReady(v),[]);
-  useEffect(()=>{if(!wantPdf||!ready||!print||gallery||proof!=='Manuscript'||frame.current?.contentDocument?.documentElement?.dataset.ready!=='yes')return;
-    setWantPdf(false);frame.current.contentWindow?.print();
-  },[wantPdf,ready,print,gallery,proof]);
+  useEffect(()=>{
+    if(!pdfStyleId)return;
+    if(pdfStyleId!==styleId||!hasContents){setPdfStyleId(null);return;}
+    if(!print||gallery||proof!=='Manuscript')return;
+    const proofFrame=frame.current;
+    const status=proofFrame?.contentDocument?.documentElement.dataset.ready;
+    if(status!=='yes'&&status!=='error')return;
+    setPdfStyleId(null);
+    if(status==='yes')proofFrame?.contentWindow?.print();
+    else toast.error('PDF pagination failed. Use Print / Save PDF to retry.');
+  },[pdfStyleId,styleId,hasContents,loadedProofRevision,print,gallery,proof]);
   const group=(items:StyleCard[])=>items.length>0&&<section className="mb-7"><div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,232px),1fr))"}}>{items.map(card=><Miniature key={card.node.id} book={novel} entry={card} comparison={comparison} genre={genre} selected={card.node.id===entry?.node.id} choose={()=>open(card)}/>)}</div></section>;
   return <>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2">
         <button className={btn+' md:hidden'} onClick={onShowTree} aria-label="Style folders"><FolderTree className="size-4"/></button>
-        <button className={btn+(gallery?active:'')} onClick={()=>{setWantPdf(false);setGalleryStyleId(entry?.node.id);onInspect('tools');useKachamak.getState().select(folder?.id??null);setGallery(true);}}><Grid2X2 className="size-3.5"/>Styles</button>
+        <button className={btn+(gallery?active:'')} onClick={()=>{setPdfStyleId(null);setGalleryStyleId(entry?.node.id);onInspect('tools');useKachamak.getState().select(folder?.id??null);setGallery(true);}}><Grid2X2 className="size-3.5"/>Styles</button>
         <button disabled={!entry} className={btn+(!gallery?active:'')} onClick={()=>{if(gallery){setProof('Chapter opening');if(entry)useKachamak.getState().select(entry.node.id);}setGallery(false);}}><BookOpen className="size-3.5"/>Proof</button>
         {(gallery||proof==='Chapter opening')&&<div role="group" aria-label="Style samples" className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 border-l border-white/10 pl-2 max-sm:order-last max-sm:w-full max-sm:border-0 max-sm:pl-0">
           <select aria-label="Compare Binder chapter" className={btn+' min-w-0 max-w-full shrink bg-background sm:max-w-64'} value={genre?':genre':selectedChapter?.node.id??''} onChange={e=>compare(e.target.value||null)}>
@@ -156,7 +174,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         {comparison&&!comparison.full&&(gallery||proof==='Chapter opening')&&<span role="status" className="text-xs text-muted-foreground">This chapter has no text yet.</span>}
         <span className="min-w-1 flex-1"/>
         <button className={btn+' lg:hidden'} onClick={onShowTools} aria-label="Show style tools"><Settings2 className="size-4"/></button>
-        <DropdownMenu><DropdownMenuTrigger asChild><button disabled={busy||!hasContents||!entry} title={!entry?'Choose a book style':!hasContents?'Select at least one Binder item in Manuscript':undefined} className={btn}>{busy?'Exporting…':'Export book'}<Download className="size-3.5"/></button></DropdownMenuTrigger>
+        <DropdownMenu><DropdownMenuTrigger asChild><button disabled={busy||!!pdfStyleId||!hasContents||!entry} title={!entry?'Choose a book style':!hasContents?'Select at least one Binder item in Manuscript':undefined} className={btn}>{pdfStyleId?'Preparing PDF…':busy?'Exporting…':'Export book'}<Download className="size-3.5"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">{(['PDF','EPUB','DOCX','HTML'] as const).map(f=><DropdownMenuItem key={f} onSelect={()=>void download(f)}>{f==='PDF'?'Print / Save PDF':f}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
       </div>
       {gallery?<div className="kachamak-scroll min-h-0 flex-1 overflow-auto p-5" style={{zoom}}><div className="mb-5 flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">{folder?.title??'Book styles'}</h1><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>{useKachamak.getState().addNode('publish',folder?.id??null,'folder','New folder');}}>New folder</button>{otherStyles.length>0&&<button className={btn} onClick={()=>setImporting(true)}>Use style from another book</button>}</div></div>
@@ -165,10 +183,10 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
           <strong className="mr-auto truncate">{entry?.name??"Book proof"}</strong>
           <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'&&genre&&s.sampleGenre?'Style sample':v==='Chapter opening'&&!genre?'Project opening':v}</option>)}</select>
-          <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setWantPdf(false);setPrint(m==='Print');}}>{m}</button>)}</div>
+          <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setPdfStyleId(null);setPrint(m==='Print');}}>{m}</button>)}</div>
           {!print&&<button type="button" className={btn} aria-pressed={darkReader} aria-label="Dark reader preview" title={darkReader?'Use light reader background':'Use dark reader background'} onClick={()=>setDarkReader(!darkReader)}>{darkReader?<Sun className="size-3.5"/>:<Moon className="size-3.5"/>}</button>}
         </div>
-        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:!source?<p role="status" className="p-5 text-sm text-muted-foreground">{proof==='Scene break'?'This chapter has no scene break.':proof==='Special blocks'?'This chapter has no special blocks.':'This chapter has no text yet.'}</p>:<PublishProof key={source} anchor={anchor} source={source} print={print} darkReader={darkReader} frameRef={frame} onReady={onReady} zoom={zoom}/>}
+        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:!source?<p role="status" className="p-5 text-sm text-muted-foreground">{proof==='Scene break'?'This chapter has no scene break.':proof==='Special blocks'?'This chapter has no special blocks.':'This chapter has no text yet.'}</p>:<PublishProof key={proofAttempt?proofAttempt+':'+source:source} anchor={anchor} source={source} print={print} darkReader={darkReader} frameRef={frame} onLoaded={notifyProofLoaded} zoom={zoom}/>}
       </>}
     </div>
     {toolsHost&&createPortal(inspector==='manuscript'?<PublishManuscript book={novel} rows={rows} change={action=>{

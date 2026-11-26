@@ -88,6 +88,7 @@ export function changeGallery(entries:GalleryEntry[], change:GalleryChange):Gall
   if (change.type === 'rename') {
     const name = change.name.trim();
     if (!name || name.length > 255) throw new Error('Enter a name of up to 255 characters.');
+    if (name === item.name) return entries;
     return entries.map(entry => entry === item ? {...entry,name} : entry);
   }
   if (change.from !== undefined && item.parentId !== change.from) throw new Error('This item has moved. Drag it again.');
@@ -95,5 +96,6 @@ export function changeGallery(entries:GalleryEntry[], change:GalleryChange):Gall
       galleryPath(entries,change.parentId).some(ancestor => ancestor.id === item.id))) {
     throw new Error('Choose a folder outside this branch.');
   }
+  if (change.parentId === item.parentId) return entries;
   return entries.map(entry => entry === item ? {...entry,parentId:change.parentId} : entry);
 }

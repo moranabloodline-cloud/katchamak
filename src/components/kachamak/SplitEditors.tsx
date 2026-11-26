@@ -28,29 +28,57 @@ function EmptyPaneBody({ section, pane }: { section: SectionKey; pane: Pane }) {
    (isti ponašajući resizer kao između panela; granice 0.2–0.8 u setSplitRatio) */
 function SplitResizer({
   wrapRef,
+  ratio,
 }: {
   wrapRef: React.RefObject<HTMLDivElement | null>;
+  ratio: number;
 }) {
   const setSplitRatio = useKachamak((s) => s.setSplitRatio);
   const [dragging, setDragging] = useState(false);
-  const lastX = useRef(0);
+  const pointer = useRef<{ id: number; x: number } | null>(null);
 
   useEffect(() => {
     if (!dragging) return;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+    const style = document.body.style;
+    const { cursor, userSelect } = style;
+    style.cursor = "col-resize";
+    style.userSelect = "none";
     return () => {
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+      style.cursor = cursor;
+      style.userSelect = userSelect;
     };
   }, [dragging]);
+
+  const endDrag = ({ pointerId }: { pointerId: number }) => {
+    if (pointer.current?.id !== pointerId) return;
+    pointer.current = null;
+    setDragging(false);
+  };
 
   return (
     <div
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize split editors"
+      aria-valuemin={20}
+      aria-valuemax={80}
+      aria-valuenow={Math.round(ratio * 100)}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        const current = useKachamak.getState().splitRatio ?? 0.5;
+        let next: number;
+        switch (e.key) {
+          case "ArrowLeft": next = current - 0.02; break;
+          case "ArrowRight": next = current + 0.02; break;
+          case "Home": next = 0.2; break;
+          case "End": next = 0.8; break;
+          default: return;
+        }
+        e.preventDefault();
+        setSplitRatio(next);
+      }}
       onPointerDown={(e) => {
+        if (e.button !== 0 || pointer.current) return;
         e.preventDefault();
         /* pointerId ne postoji za sintetičke evente — bez capture-a drag i dalje
            radi dok je pokazivač nad razdelnikom */
@@ -59,22 +87,27 @@ function SplitResizer({
         } catch {
           /* ignore */
         }
-        lastX.current = e.clientX;
+        pointer.current = { id: e.pointerId, x: e.clientX };
         setDragging(true);
       }}
       onPointerMove={(e) => {
-        if (!dragging) return;
-        const dx = e.clientX - lastX.current;
-        lastX.current = e.clientX;
+        const active = pointer.current;
+        if (!active || active.id !== e.pointerId) return;
+        const dx = e.clientX - active.x;
+        active.x = e.clientX;
         const w = wrapRef.current?.getBoundingClientRect().width ?? 0;
         if (!w) return;
         /* uvek iz store-a — pointermove može stići pre nego što React re-renderuje */
         const cur = useKachamak.getState().splitRatio ?? 0.5;
         setSplitRatio(cur + dx / w);
       }}
-      onPointerUp={() => setDragging(false)}
-      onPointerCancel={() => setDragging(false)}
-      className={`relative w-px shrink-0 cursor-col-resize bg-white/10 after:absolute after:inset-y-0 after:-left-1.5 after:-right-1.5 after:content-[''] after:hover:bg-orange-500/10 ${
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onLostPointerCapture={endDrag}
+      onPointerLeave={(e) => {
+        if (!e.currentTarget.hasPointerCapture?.(e.pointerId)) endDrag(e);
+      }}
+      className={`relative w-px shrink-0 touch-none cursor-col-resize bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 after:absolute after:inset-y-0 after:-left-1.5 after:-right-1.5 after:content-[''] after:hover:bg-orange-500/10 ${
         dragging ? "bg-orange-500/70" : "hover:bg-orange-500/40"
       }`}
     />
@@ -149,7 +182,7 @@ export function SplitEditors({ section }: { section: SectionKey }) {
       <CtrlZoom panel="paneB" targetRef={paneBRef} />
       <div ref={wrapRef} className="flex min-h-0 flex-1">
         {pane("a", hitA)}
-        <SplitResizer wrapRef={wrapRef} />
+        <SplitResizer wrapRef={wrapRef} ratio={splitRatio} />
         {pane("b", hitB)}
       </div>
     </div>

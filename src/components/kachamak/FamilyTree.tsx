@@ -53,7 +53,7 @@ export function FamilyTreeEditor({novel,tree}:{novel:Novel;tree:NoteNode}){
   const save=(edge:FamilyRelationship,remove=false)=>{
     const message=useKachamak.getState().changeFamilyRelationship(novel.id,tree.id,edge,remove);
     setError(message??'');
-    if(!message){setAdding(false);setFrom('');setTo('');}
+    if(!message&&!remove){setAdding(false);setFrom('');setTo('');}
   };
   const removePerson=(id:string)=>{
     const state=useKachamak.getState();
@@ -77,10 +77,10 @@ export function FamilyTreeEditor({novel,tree}:{novel:Novel;tree:NoteNode}){
         {reasons.has(edge) && <small className="mt-0.5 block text-muted-foreground">Inferred · {reasons.get(edge)}</small>}</span>
       {!reasons.has(edge) && <button type="button" aria-label={'Remove relationship between '+peopleById.get(edge.from)?.title+' and '+peopleById.get(edge.to)?.title} title="Remove shared relationship" className="rounded p-1 text-muted-foreground hover:bg-accent" onClick={()=>{if(window.confirm('Remove this relationship from all family trees in this book?'))save(edge,true);}}><X className="size-3.5"/></button>}</div>)}
     {adding && <form className="mt-3 space-y-2" onSubmit={e=>{e.preventDefault();if(canSave)save(kind==='custom'?{kind,from,to,label:label.trim(),mutual}:{kind,from,to});}}>
-      <select aria-label="First person" className={field} value={from} style={{color:peopleById.get(from)?.color || undefined}} onChange={e=>{setFrom(e.target.value);setError('');}}>{people.map(p=><option key={p.id} style={{color:p.color || "var(--foreground)"}} value={p.id}>{p.title}</option>)}</select>
+      <select aria-label="First person" className={field} value={from} style={{color:peopleById.get(from)?.color || undefined}} onChange={e=>{const next=e.target.value;if(next===to)setTo(from);setFrom(next);setError('');}}>{people.map(p=><option key={p.id} style={{color:p.color || "var(--foreground)"}} value={p.id}>{p.title}</option>)}</select>
       <RelationshipPicker value={kind} onChange={(selected,name)=>{setKind(selected);if(name)setLabel(name.slice(0,customNameLimit));setError('');}}/>
-      {kind==='custom' && <div className="space-y-2"><input aria-label="Relationship name" placeholder="Relationship name" required maxLength={customNameLimit} value={label} onChange={e=>setLabel(e.target.value)} className={field}/>
-        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mutual} onChange={e=>setMutual(e.target.checked)}/>Same role in both directions</label></div>}
+      {kind==='custom' && <div className="space-y-2"><input aria-label="Relationship name" placeholder="Relationship name" required maxLength={customNameLimit} value={label} onChange={e=>{setLabel(e.target.value);setError('');}} className={field}/>
+        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mutual} onChange={e=>{setMutual(e.target.checked);setError('');}}/>Same role in both directions</label></div>}
       <select aria-label="Second person" className={field} value={to} style={{color:peopleById.get(to)?.color || undefined}} onChange={e=>{setTo(e.target.value);setError('');}}>{people.map(p=><option key={p.id} style={{color:p.color || "var(--foreground)"}} value={p.id} disabled={p.id===from}>{p.title}</option>)}</select>
       <div className="flex gap-2"><button type="submit" disabled={!canSave} className={action+' disabled:opacity-40'}>Add relationship</button><button type="button" className="px-1 text-xs text-muted-foreground" onClick={()=>{setAdding(false);setError('');}}>Cancel</button></div>
     </form>}

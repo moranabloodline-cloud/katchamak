@@ -1,6 +1,6 @@
 'use client';
 import {ColourPalette} from './PresetColourPicker';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useKachamak } from '@/lib/kachamak/store';
 import {GalleryImagePicker} from './GalleryImagePicker';
@@ -17,7 +17,11 @@ import { timeButton, timeField } from './CalendarSettings';
 
 export function DateFields({label,calendar:c,value:d,onChange,time=false,precision=time?'time':'day'}:{label:string;calendar:StoryCalendar;value:StoryDate;onChange:(d:StoryDate)=>void;time?:boolean;precision?:DatePrecision}) {
   const era=eraYear(c,d.year);
-  const change=(patch:Partial<StoryDate>)=>{const next={...d,...patch};next.day=Math.min(next.day,monthDays(c,next.year,next.month));onChange(next);};
+  const change=(patch:Partial<StoryDate>)=>{
+    const next={...d,...patch};
+    if(patch.month!==undefined||patch.year!==undefined)next.day=Math.min(next.day,monthDays(c,next.year,next.month));
+    onChange(next);
+  };
   return <fieldset className="space-y-2"><legend className="mb-2 text-xs font-medium text-muted-foreground">{label}</legend><div className="grid grid-cols-2 gap-1.5">
     {(precision==='day'||precision==='time')&&<input aria-label={`${label} day`} className={timeField} type="number" min={1} max={monthDays(c,d.year,d.month)} value={d.day} onChange={e=>change({day:Number(e.target.value)})}/>}
     {precision!=='year'&&<select aria-label={`${label} month`} className={timeField} value={d.month} onChange={e=>change({month:Number(e.target.value)})}>{c.months.map((m,i)=><option key={i} value={i}>{m.name}</option>)}</select>}
@@ -25,12 +29,35 @@ export function DateFields({label,calendar:c,value:d,onChange,time=false,precisi
     <select aria-label={`${label} era`} className={timeField} value={era.key} onChange={e=>change({year:absoluteYear(c,era.year,e.target.value)})}><option value="before">{c.beforeEraName}</option><option value="after">{c.eraName}</option>{c.eras?.map(e=><option key={e.id} value={e.id}>{e.abbreviation}</option>)}</select>
   </div>{precision==='time'&&<div className="flex items-center gap-2"><input aria-label={`${label} hour`} className={`${timeField} w-20`} type="number" min={0} max={c.hoursPerDay-1} value={d.hour} onChange={e=>change({hour:Number(e.target.value)})}/><span>:</span><input aria-label={`${label} minute`} className={`${timeField} w-20`} type="number" min={0} max={c.minutesPerHour-1} value={d.minute} onChange={e=>change({minute:Number(e.target.value)})}/><span className="text-xs text-muted-foreground">{c.hoursPerDay}-hour day</span></div>}</fieldset>;
 }
-function DateButton({label,calendar,value,optional=false,precision,onChange,onClear}:{label:string;calendar:StoryCalendar;value:StoryDate;optional?:boolean;precision:DatePrecision;onChange:(value:StoryDate,precision:DatePrecision)=>void;onClear?:()=>void}) {
+function DateButton({label,calendar,value,optional=false,precision,end=false,onChange,onClear}:{label:string;calendar:StoryCalendar;value:StoryDate;optional?:boolean;precision:DatePrecision;end?:boolean;onChange:(value:StoryDate,precision:DatePrecision)=>void;onClear?:()=>void}) {
   const [open,setOpen]=useState(false),[draft,setDraft]=useState(value),[detail,setDetail]=useState(precision);
+  const [error,setError]=useState('');
   let text='Choose date';
   try{text=optional?text:formatDate(calendar,dateToMinute(calendar,value),precision);}catch{text='Choose a valid date';}
-  const apply=()=>{onChange(draft,detail);setOpen(false);};
-  return <Popover open={open} onOpenChange={valueOpen=>{if(valueOpen){setDraft(value);setDetail(precision);}setOpen(valueOpen);}}><PopoverTrigger asChild><button type="button" aria-label={`${label} date`} className={`flex h-8 w-full min-w-0 items-center gap-2 rounded border border-white/10 bg-black/10 px-2 text-left text-[11px] ${optional?'text-muted-foreground':''}`}><CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground"/><span className="truncate">{text}</span></button></PopoverTrigger><PopoverContent align="end" className="w-[min(320px,calc(100vw-24px))] space-y-3 font-sans" onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();e.stopPropagation();apply();}}}><DateFields label={label} calendar={calendar} value={draft} onChange={setDraft} precision={detail}/><label className="flex items-center gap-2 text-xs">Precision<select aria-label={`${label} precision`} className={timeField} value={detail} onChange={e=>setDetail(e.target.value as DatePrecision)}>{(["year","month","day","time"] as const).map(p=><option key={p} value={p}>{p[0].toUpperCase()+p.slice(1)}</option>)}</select></label><div className="flex items-center justify-between">{onClear?<button type="button" className="text-xs text-muted-foreground" onClick={()=>{onClear();setOpen(false);}}>Clear end date</button>:<span/>}<button type="button" className={timeButton} onClick={apply}>Apply date</button></div></PopoverContent></Popover>;
+  const apply=()=>{
+    const resolved=dateAtPrecision(calendar,draft,detail,end);
+    try { dateToMinute(calendar,resolved); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Choose a valid date.'); return; }
+    onChange(resolved,detail);
+    setOpen(false);
+  };
+  return <Popover open={open} onOpenChange={valueOpen=>{if(valueOpen){setDraft(value);setDetail(precision);setError('');}setOpen(valueOpen);}}>
+    <PopoverTrigger asChild><button type="button" aria-label={`${label} date`} className={`flex h-8 w-full min-w-0 items-center gap-2 rounded border border-white/10 bg-black/10 px-2 text-left text-[11px] ${optional?'text-muted-foreground':''}`}>
+      <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground"/><span className="truncate">{text}</span>
+    </button></PopoverTrigger>
+    <PopoverContent align="end" className="w-[min(320px,calc(100vw-24px))] space-y-3 font-sans" onKeyDown={e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();e.stopPropagation();apply();}
+    }}>
+      <DateFields label={label} calendar={calendar} value={draft} onChange={date=>{setDraft(date);setError('');}} precision={detail}/>
+      <label className="flex items-center gap-2 text-xs">Precision<select aria-label={`${label} precision`} className={timeField} value={detail} onChange={e=>{setDetail(e.target.value as DatePrecision);setError('');}}>
+        {(['year','month','day','time'] as const).map(p=><option key={p} value={p}>{p[0].toUpperCase()+p.slice(1)}</option>)}
+      </select></label>
+      {error&&<p role="alert" className="text-xs text-red-400">{error}</p>}
+      <div className="flex items-center justify-between">{onClear?<button type="button" className="text-xs text-muted-foreground" onClick={()=>{onClear();setOpen(false);}}>Clear end date</button>:<span/>}
+        <button type="button" className={timeButton} onClick={apply}>Apply date</button>
+      </div>
+    </PopoverContent>
+  </Popover>;
 }
 export function TimelineEventEditor({novel,calendar,current,start=0,section,parentId,onClose,onSaved,embedded=false,initialKind="event"}:{novel:Novel;embedded?:boolean;initialKind?:"event"|"period";calendar:StoryCalendar;current?:{node:NoteNode;section:SectionKey};start?:number;section:SectionKey;parentId?:string;onClose:()=>void;onSaved:(value:number)=>void}) {
   const [target,setTarget]=useState(current?.node.id||'');
@@ -54,7 +81,7 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
   const [cardColor,setCardColor]=useState<string|undefined>(current?.node.event?.cardColor);
   const [pickerOpen,setPickerOpen]=useState(false);
   const bannerSrc=projectImageSrc(novel.gallery,banner);
-  const rows=flattenNotes(novel),chosen=rows.find(r=>r.node.id===target);
+  const rows=useMemo(()=>flattenNotes(novel),[novel]),chosen=rows.find(r=>r.node.id===target);
   const choose=(id:string)=>{
     const row=rows.find(r=>r.node.id===id),event=row?.node.event;
     setPickerOpen(false);setError('');
@@ -102,8 +129,8 @@ export function TimelineEventEditor({novel,calendar,current,start=0,section,pare
       <div className="flex gap-1"><Popover open={iconOpen} onOpenChange={setIconOpen}><PopoverTrigger asChild><button type="button" aria-label="Event icon" className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-white/10"><Icon className="h-4 w-4"/></button></PopoverTrigger><PopoverContent align="start" className="max-h-[min(calc(100dvh-1.5rem),var(--radix-popover-content-available-height))] w-[min(36rem,calc(100vw-1.5rem))] overflow-y-auto font-sans"><div className="grid grid-cols-8 gap-1 sm:grid-cols-12">{NOTE_ICONS.map(value=><button key={value.key} type="button" title={value.label} aria-label={`Choose icon ${value.label}`} className="rounded p-2 hover:bg-accent" onClick={()=>{setIcon(value.key);setIconOpen(false);}}><value.Cmp className="h-4 w-4"/></button>)}</div></PopoverContent></Popover><input aria-label="Event title" required maxLength={500} style={{color:chosen?.node.color || undefined}} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Event title" className="h-8 min-w-0 flex-1 rounded border border-white/10 bg-black/10 px-2 text-[11px] outline-none focus:border-white/40"/></div>
       <label className="flex items-center justify-between gap-3 text-xs">Type<select aria-label="Timeline note type" className={timeField} value={kind} onChange={e=>setKind(e.target.value as "event"|"period")}><option value="event">Event</option><option value="period">Time Period</option></select></label>
       <div className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 text-[11px]">
-        <span className="font-semibold">Start</span><DateButton label="Start" calendar={calendar} value={from} optional={!hasStart} precision={precision} onChange={(value,detail)=>{setFrom(value);setPrecision(detail);setStartDirty(true);setHasStart(true);}}/>
-        {hasEnd&&<><span className="font-semibold">End</span><DateButton label="End" calendar={calendar} value={to} optional={!hasEndDate} precision={endPrecision} onChange={(value,detail)=>{setTo(value);setKind('period');setEndPrecision(detail);setEndDirty(true);setHasEndDate(true);}} onClear={()=>setKind('event')}/></>}
+        <span className="font-semibold">Start</span><DateButton label="Start" calendar={calendar} value={from} optional={!hasStart} precision={precision} onChange={(value,detail)=>{setFrom(value);setPrecision(detail);setStartDirty(true);setHasStart(true);setError('');}}/>
+        {hasEnd&&<><span className="font-semibold">End</span><DateButton label="End" calendar={calendar} value={to} optional={!hasEndDate} precision={endPrecision} end onChange={(value,detail)=>{setTo(value);setKind('period');setEndPrecision(detail);setEndDirty(true);setHasEndDate(true);setError('');}} onClear={()=>{setKind('event');setHasEndDate(false);setError('');}}/></>}
       </div>
       <details><summary className="cursor-pointer text-[11px] text-muted-foreground">Appearance & links</summary><div className="mt-2 grid grid-cols-[52px_minmax(0,1fr)] items-center gap-2 text-[11px]">
         <span className="font-semibold">Style</span><Popover><PopoverTrigger asChild><button type="button" aria-label="Event style" className="flex h-8 items-center gap-2 rounded border border-white/10 bg-black/10 px-2">{style==='image'?<ImageIcon className="h-3.5 w-3.5"/>:<Palette className="h-3.5 w-3.5"/>}{style==='image'?'Image':'Color'}<ChevronDown className="ml-auto h-3 w-3 text-muted-foreground"/></button></PopoverTrigger><PopoverContent align="end" className="w-60 space-y-3 font-sans"><div className="flex gap-2">{(['image','color'] as const).map(value=><button type="button" key={value} aria-pressed={style===value} className={`${timeButton} aria-pressed:bg-accent`} onClick={()=>setStyle(value)}>{value==='image'?'Image':'Color'}</button>)}</div>{style==='image'?<><button type="button" className={timeButton} onClick={()=>setPickerOpen(true)}>{banner?'Change image':'Choose from Gallery'}</button>{banner&&<img src={bannerSrc} alt="Event image preview" className="h-20 w-full rounded object-cover"/>}</>:<ColourPalette label="Event card color" value={cardColor} onChange={value=>setCardColor(value||undefined)}/>}</PopoverContent></Popover>

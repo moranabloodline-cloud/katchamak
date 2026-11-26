@@ -32,6 +32,7 @@ export function Dashboard() {
   const setSelectedCollection = useLibraryPreferences((s) => s.setLocation);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [pendingProjectDelete, setPendingProjectDelete] = useState<Novel | null>(null);
+  const [deletingProject, setDeletingProject] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const openNewCollection = () => { setCollectionName(""); setCollectionDialog("new"); };
 
@@ -81,9 +82,64 @@ export function Dashboard() {
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}><DialogContent className="border-white/10 bg-[#1b1b1b]"><DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader><form onSubmit={async (event) => { event.preventDefault(); const name = collectionName.trim(); if (!name) return; if (collectionDialog === "new") { let id: string | null; if (creating) return; setCreating(true); try { id = await createWebCollection(name, selectedCollection); } catch (error) { if ((error as Error).name !== "AbortError") toast.error(String(error)); return; } finally { setCreating(false); } if (id) setSelectedCollection(id, [id, ...(selectedCollection ? [selectedCollection] : [])]); } else if (collectionDialog) renameCollection(collectionDialog, name); setCollectionDialog(null); }}><Label htmlFor="collection-name">Name</Label><Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" /><DialogFooter className="mt-4"><button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button><button type="submit" disabled={creating} className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503]">Save</button></DialogFooter></form></DialogContent></Dialog>
+      <Dialog open={collectionDialog !== null} onOpenChange={(open) => { if (!open) setCollectionDialog(null); }}>
+        <DialogContent className="border-white/10 bg-[#1b1b1b]">
+          <DialogHeader><DialogTitle>{collectionDialog === "new" ? "New collection" : "Rename collection"}</DialogTitle></DialogHeader>
+          <form onSubmit={async (event) => {
+            event.preventDefault();
+            const name = collectionName.trim();
+            if (!name || !collectionDialog) return;
+            if (collectionDialog !== "new") {
+              renameCollection(collectionDialog, name);
+              setCollectionDialog(null);
+              return;
+            }
+            try {
+              const id = await createWebCollection(name, selectedCollection, (createdId) => {
+                setSelectedCollection(createdId, selectedCollection ? [selectedCollection] : []);
+                setCollectionDialog(null);
+              });
+              if (!id) toast.error("The parent collection is no longer available.");
+            } catch (error) {
+              toast.error(String(error));
+            }
+          }}>
+            <Label htmlFor="collection-name">Name</Label>
+            <Input id="collection-name" value={collectionName} onChange={(event) => setCollectionName(event.target.value)} required className="mt-2 bg-black/30" />
+            <DialogFooter className="mt-4">
+              <button type="button" onClick={() => setCollectionDialog(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground">Cancel</button>
+              <button type="submit" disabled={!collectionName.trim()} className="rounded-lg bg-[#f3b64e] px-3 py-1.5 text-sm font-semibold text-[#221503] disabled:opacity-50">Save</button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete collection?</AlertDialogTitle><AlertDialogDescription>The collection will be removed. Its subcollections and projects will move to its parent location. Project contents will be preserved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (pendingDelete) { const parentId = collections.find((c) => c.id === pendingDelete)?.parentId ?? null; removeCollection(pendingDelete); if (selectedCollection === pendingDelete) setSelectedCollection(parentId); } setPendingDelete(null); }}>Delete collection</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-      <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open) setPendingProjectDelete(null); }}><AlertDialogContent className="border-white/10 bg-[#1b1b1b]"><AlertDialogHeader><AlertDialogTitle>Delete {pendingProjectDelete?.title}?</AlertDialogTitle><AlertDialogDescription>This deletes the project from your account library. Export a backup first if you want to keep a copy.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={async () => { if (pendingProjectDelete) { try { await removeWebProject(pendingProjectDelete.id); toast.success("Project deleted from your account library."); } catch (error) { toast.error(String(error)); } } setPendingProjectDelete(null); }}>Delete project</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={pendingProjectDelete !== null} onOpenChange={(open) => { if (!open && !deletingProject) setPendingProjectDelete(null); }}>
+        <AlertDialogContent className="border-white/10 bg-[#1b1b1b]" aria-busy={deletingProject}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="break-words">Delete {pendingProjectDelete?.title}?</AlertDialogTitle>
+            <AlertDialogDescription>This deletes the project from your account library. Export a backup first if you want to keep a copy.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingProject}>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-500" disabled={deletingProject} onClick={async (event) => {
+              event.preventDefault();
+              if (!pendingProjectDelete || deletingProject) return;
+              setDeletingProject(true);
+              try {
+                await removeWebProject(pendingProjectDelete.id);
+                setPendingProjectDelete(null);
+                toast.success("Project deleted from your account library.");
+              } catch (error) {
+                toast.error(String(error));
+                if (!useKachamak.getState().novels.some((novel) => novel.id === pendingProjectDelete.id)) setPendingProjectDelete(null);
+              } finally {
+                setDeletingProject(false);
+              }
+            }}>{deletingProject ? "Deleting…" : "Delete project"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLibrary>
   );
 }

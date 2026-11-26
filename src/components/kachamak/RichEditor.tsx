@@ -5,7 +5,7 @@ import { useKachamak } from "@/lib/kachamak/store";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import { toast } from "sonner";
 import { insertHeadingFragment, preparePastedContent } from "@/lib/kachamak/paste-content";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {noteAnchorStyles,openEditorWebsite} from '@/lib/kachamak/note-links';
 import { LinkHighlights } from './LinkHighlights';
 import {NotePreview} from './NotePreview';
@@ -45,7 +45,9 @@ export function RichEditor({
   const ref = useRef<HTMLDivElement>(null);
   const spellCheck=useKachamak(state=>state.editorSpellCheck??true);
   const linkScope='note'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
-  const novel=useKachamak(state=>state.novels.find(novel=>novel.id===state.activeNovelId));
+  const hasAnchor=/<a[\s/>]/i.test(html);
+  const linkNovel=useKachamak(state=>hasAnchor ? state.novels.find(novel=>novel.id===state.activeNovelId) : undefined);
+  const linkStyles=useMemo(()=>noteAnchorStyles(linkNovel,linkScope,colorizeAnnotations),[linkNovel,linkScope,colorizeAnnotations]);
   const lastHtml = useRef<string>("");
   const convertingDivider=useRef(false);
   const pasting=useRef(false);
@@ -102,7 +104,7 @@ export function RichEditor({
 
   return (
     <div className="relative flex-1 min-h-0">
-      <style>{noteAnchorStyles(novel,linkScope,colorizeAnnotations)}</style>
+      {linkStyles && <style>{linkStyles}</style>}
       <div
         data-note-link-scope={linkScope}
         ref={ref}

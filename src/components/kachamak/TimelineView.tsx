@@ -51,10 +51,11 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
     setEditing({id:addRequest.noteId,start:timelineDefaultStart(novel.sections[section],addRequest.noteId)});
     finishTimelineAdd(addRequest);
   },[addRequest,novel,section,state.selectedNodeId]);
+  const all=useMemo(()=>novel?timelineRows(novel,section,scopeId,true):[],[novel,section,scopeId]);
 
   if(!novel)return null;
   const prefs=novel.timeline,calendar=prefs?.calendar??GREGORIAN,groups=prefs?.groups??[];
-  const all=timelineRows(novel,section,scopeId,true),hiddenButtons=prefs?.hiddenDisplayButtons??[];
+  const hiddenButtons=prefs?.hiddenDisplayButtons??[];
   const level=section==='timeline'&&(mode==='axis'||mode==='chronicle')&&!includeNested?timelineLevelIds(novel.sections.timeline,scopeId):null;
   const inScope=all.filter(r=>(!level||level.has(r.node.id))&&(mode==='axis'||r.node.id!==scopeId||pickedRoot?.id===r.node.id&&eventType(r.event)==='event'));
   const rows=range?inScope.filter(({event})=>event.start<=range.end&&(event.end??event.start)>=range.start):inScope;
@@ -76,7 +77,7 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
   const defaultSpan=scoped?defaultViewport.span:prefs?.span??fit.span;
   const span=local?.span??defaultSpan;
   const date=minuteToDate(calendar,center);
-  const selected=state.selectedNodeId?findNodeInNovel(novel,state.selectedNodeId):null;
+  const selected=selectedScope;
   const current=editing?.id?findNodeInNovel(novel,editing.id):undefined;
   const edit=(r:EventRow)=>{if(eventType(r.event)==='event')setViewSelection({id:r.node.id,scopeId});state.select(r.node.id);if(mode==='calendar')onRevealNote?.(r.node.id);if(usesTimelineDialog())setEditing({id:r.node.id,start:r.event.start});else state.setRightPanelOpen(true);};
   const changeViewport=(patch:Partial<{center:number;span:number}>)=>{
@@ -130,6 +131,6 @@ export function TimelineView({section='binder',rootId,onRevealNote}:{section?:Se
     {hiddenButtons.length<timelineDisplays.length&&<div className="flex shrink-0 justify-center border-t border-border bg-background px-3 py-2"><div role="tablist" aria-label="Timeline display" className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">{timelineDisplays.filter(([key])=>!hiddenButtons.includes(key)).map(([key,label])=><button key={key} role="tab" aria-selected={mode===key} className={`${timeButton} ${mode===key?'border-amber-500/60 bg-amber-500/15 text-amber-300':''}`} onClick={()=>state.setTimeline({display:key})}>{label}</button>)}</div></div>}
     {settings&&<CalendarSettings calendar={calendar} onClose={()=>setSettings(false)} onSave={c=>{state.setTimeline({calendar:c});setSettings(false);}}/>}
     {editing&&<TimelineEventEditor key={editing.id||`new:${editing.start}`} novel={novel} calendar={calendar} current={current??undefined} start={editing.start} section={section} parentId={scopeId} onClose={()=>setEditing(null)} onSaved={value=>{changeCenter(value);}}/>}
-    {jump&&<Dialog open onOpenChange={v=>{if(!v)setJump(null);}}><DialogContent className="border-white/15 bg-background sm:max-w-xl"><DialogHeader><DialogTitle>Go to date</DialogTitle><DialogDescription>Navigate using {calendar.name}.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={e=>{e.preventDefault();try{changeCenter(dateToMinute(calendar,jump));setJump(null);}catch(err){setJumpError(err instanceof Error?err.message:String(err));}}}><DateFields label="Go to" calendar={calendar} value={jump} onChange={setJump}/>{jumpError&&<p role="alert" className="text-red-400">{jumpError}</p>}<button className="rounded-md bg-amber-400 px-4 py-2 text-sm text-black">Go</button></form></DialogContent></Dialog>}
+    {jump&&<Dialog open onOpenChange={v=>{if(!v)setJump(null);}}><DialogContent className="border-white/15 bg-background sm:max-w-xl"><DialogHeader><DialogTitle>Go to date</DialogTitle><DialogDescription>Navigate using {calendar.name}.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={e=>{e.preventDefault();try{changeCenter(dateToMinute(calendar,jump));setJump(null);}catch(err){setJumpError(err instanceof Error?err.message:String(err));}}}><DateFields label="Go to" calendar={calendar} value={jump} onChange={value=>{setJump(value);setJumpError('');}}/>{jumpError&&<p role="alert" className="text-red-400">{jumpError}</p>}<button className="rounded-md bg-amber-400 px-4 py-2 text-sm text-black">Go</button></form></DialogContent></Dialog>}
   </div>;
 }

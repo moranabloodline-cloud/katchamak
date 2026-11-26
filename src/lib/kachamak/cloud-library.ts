@@ -656,14 +656,18 @@ export async function reloadWebLibrary(discard = false) {
     throw error;
   }
 }
-export async function createWebCollection(name: string, parentId: string | null) {
-  const id = useCollections.getState().addCollection(name, parentId); await flushWebLibrary(); return id;
+export async function createWebCollection(name: string, parentId: string | null, onCreated?: (id: string) => void) {
+  const id = useCollections.getState().addCollection(name, parentId);
+  if (!id) return null;
+  onCreated?.(id);
+  await flushWebLibrary();
+  return id;
 }
 export async function createWebProject(title: string, author: string, collectionId: string | null) {
   const novel = newNovel(title, author); addNovel(novel, collectionId); await flushWebLibrary(); return novel.id;
 }
 function addNovel(novel: Novel, collectionId: string | null) {
-  useKachamak.setState(s => ({ novels: [...s.novels, novel], activeNovelId: novel.id, activeTab: 'binder', selectedNodeId: null, paneAId: null, paneBId: null }));
+  useKachamak.setState(s => ({ novels: [...s.novels, novel], activeNovelId: novel.id, activeHomePageId: HOME_ROOT, activeTab: 'binder', selectedNodeId: null, paneAId: null, paneBId: null }));
   if (collectionId) useCollections.getState().setMembership(collectionId, novel.id, true);
 }
 export async function prepareWebImport(_collectionId: string | null) { await flushWebLibrary(); }
@@ -673,7 +677,10 @@ export async function importWebProject(file: string | Blob, collectionId: string
   const json = typeof file === 'string' ? file : await file.text();
   if (owner !== accountId || epoch !== accountEpoch || !useWebLibrary.getState().ready)
     throw new Error('Your account session changed. Choose the backup again.');
-  const input = JSON.parse(json), value = input?.format === 'katchamak-project' ? input.novel : input;
+  let input;
+  try { input = JSON.parse(json); }
+  catch { throw new Error('Could not read this JSON backup.'); }
+  const value = input?.format === 'katchamak-project' ? input.novel : input;
   if (!isUsableBackup(value)) throw new Error('Not a Draftopus project.');
   // Match the established store.importNovel defaults for older JSON backups.
   const novel: Novel = { ...value, id: crypto.randomUUID(), author: value.author ?? '', trash: value.trash ?? [], statuses: value.statuses ?? [], labels: value.labels ?? [] };
@@ -703,7 +710,7 @@ export async function removeWebProject(id:string) {
   await flushWebLibrary();
   const state=useKachamak.getState(),novel=state.novels.find(n=>n.id===id);if(!novel)throw new Error('Project not found.');
   const backup=structuredClone(novel),memberships=useCollections.getState().collections.filter(c=>c.projectIds.includes(id)).map(c=>c.id);
-  const navigation={activeNovelId:state.activeNovelId,activeTab:state.activeTab,selectedNodeId:state.selectedNodeId,paneAId:state.paneAId,paneBId:state.paneBId,activePane:state.activePane};
+  const navigation={activeNovelId:state.activeNovelId,activeHomePageId:state.activeHomePageId,activeTab:state.activeTab,selectedNodeId:state.selectedNodeId,paneAId:state.paneAId,paneBId:state.paneBId,activePane:state.activePane};
   state.deleteNovel(id);memberships.forEach(collectionId=>useCollections.getState().setMembership(collectionId,id,false));
   try{await flushWebLibrary();}catch(error){
     useKachamak.setState(s=>({novels:s.novels.some(n=>n.id===id)?s.novels:[...s.novels,backup],...(!s.activeNovelId&&navigation.activeNovelId===id?navigation:{})}));

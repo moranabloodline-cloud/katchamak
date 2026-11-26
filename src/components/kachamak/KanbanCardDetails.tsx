@@ -48,7 +48,7 @@ function CardDates({card,change}:{card:KanbanCard;change:Change}) {
   const invalid=!!start && !!due && due<start;
   return <form className={css.dateForm} onSubmit={e=>{
     e.preventDefault();
-    if(!invalid)change(c=>({...c,start,due}),'updated the card dates');
+    if(!invalid)change(c=>(c.start??'')===start&&c.due===due ? c : {...c,start,due},'updated the card dates');
   }}>
     <div className={css.fields}><label>Start date<input type="date" max="9999-12-31" value={start} onChange={e=>setStart(e.target.value)}/></label>
       <label>Due date<input type="date" max="9999-12-31" value={due} onChange={e=>setDue(e.target.value)}/></label></div>
@@ -85,6 +85,7 @@ export function KanbanCardDetails({novel, board, card, columnId, existing, autho
   function saveTitle() {
     const trimmed=title.trim();
     if(!trimmed){if(existing)setTitle(card.title);return;}
+    if(trimmed!==title)setTitle(trimmed);
     if(trimmed!==card.title)change(c=>c.title===trimmed?c:{...c,title:trimmed},'renamed this card');
   }
   function saveDescription() {
@@ -126,7 +127,7 @@ export function KanbanCardDetails({novel, board, card, columnId, existing, autho
           {card.cover && <div className={css.cover}><img src={projectImageSrc(novel.gallery,card.cover)} alt="Card cover"/><button aria-label="Remove cover" className={css.icon} onClick={()=>change(c=>({...c,cover:undefined}),'removed the cover')}><X size={15}/></button></div>}
           <div className={css.cardTitle}>
             <button aria-label={card.complete?'Mark incomplete':'Mark complete'} aria-pressed={!!card.complete} onClick={()=>change(c=>({...c,complete:!c.complete}),card.complete?'reopened this card':'completed this card')}>{card.complete?<CircleCheck size={22}/>:<Circle size={22}/>}</button>
-            <input aria-label="Card title" placeholder="Card title" maxLength={240} autoFocus={!existing} value={title} onChange={e=>setTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
+            <input aria-label="Card title" placeholder="Card title" maxLength={240} autoFocus={!existing} value={title} onChange={e=>setTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e=>{if(e.key==='Enter'&&!e.nativeEvent.isComposing)e.currentTarget.blur();}}/>
           </div>
           <div className={css.actionStrip}>
             <DropdownMenu><DropdownMenuTrigger asChild><button className={css.smallButton}><Plus size={14}/>Add</button></DropdownMenuTrigger>
@@ -163,7 +164,7 @@ export function KanbanCardDetails({novel, board, card, columnId, existing, autho
         <aside className={css.activity} aria-label="Comments and activity">
           <header><MessageSquare size={16}/><h3>Comments and activity</h3><button className={css.smallButton} aria-expanded={details} onClick={()=>setDetails(v=>!v)}>{details?'Hide details':'Show details'}</button></header>
           <form className={css.commentForm} onSubmit={e=>{e.preventDefault();postComment();}}>
-            <textarea ref={commentRef} aria-label="Write a comment" rows={2} maxLength={12000} placeholder="Write a comment…" value={comment} onChange={e=>setComment(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();postComment();}}}/>
+            <textarea ref={commentRef} aria-label="Write a comment" rows={2} maxLength={12000} placeholder="Write a comment…" value={comment} onChange={e=>setComment(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&!e.nativeEvent.isComposing){e.preventDefault();postComment();}}}/>
             {comment.trim()&&<button className={css.smallButton}>Post comment</button>}
           </form>
           <ol>{entries.map(entry=><li key={entry.id}><span className={css.avatar} aria-hidden="true">{entry.author.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase()}</span>

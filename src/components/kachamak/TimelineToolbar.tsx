@@ -29,8 +29,8 @@ function RangeFields({calendar, initial, onApply, onClear}: {
       onApply({start, end});
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Choose valid dates.'); }
   }}>
-    <DateFields label="From" calendar={calendar} value={from} onChange={setFrom}/>
-    <DateFields label="Through" calendar={calendar} value={to} onChange={setTo}/>
+    <DateFields label="From" calendar={calendar} value={from} onChange={value=>{setFrom(value);setError('');}}/>
+    <DateFields label="Through" calendar={calendar} value={to} onChange={value=>{setTo(value);setError('');}}/>
     {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
     <div className="flex items-center justify-between">
       <button type="button" disabled={!onClear} className={timeButton} onClick={onClear}>Clear range</button>

@@ -25,19 +25,28 @@ export function FinanceEditor({node,currency}:{node:NoteNode;currency:string}) {
   const [draft,setDraft] = useState<string|null>(null);
   const invalid = draft!==null && parseAmount(draft)===null;
   const change = (patch:Partial<typeof t>)=>{
-    const value = {...t,...patch};
+    const value = {...node.transaction!,...patch};
     if (validTransaction(value)) update('finance',node.id,{transaction:value});
+  };
+  const commitAmount = (input:string)=>{
+    const minor=parseAmount(input);
+    if(minor===null)return;
+    if(minor!==node.transaction?.amountMinor)change({amountMinor:minor});
+    setDraft(null);
   };
   return <div className="space-y-4 text-xs" aria-label="Transaction inspector">
     <h3 className="text-base font-semibold">Transaction</h3>
     <label className="block">Title<input className={field} value={node.title} onChange={e=>update('finance',node.id,{title:e.target.value})} onBlur={()=>{if(!node.title.trim()) update('finance',node.id,{title:'Untitled transaction'});}}/></label>
     <label className="block">Type<select className={field} value={t.type} onChange={e=>change({type:e.target.value==='expense'?'expense':'income'})}><option value="income">Income</option><option value="expense">Expense</option></select></label>
-    <label className="block">Amount · {currency}<input aria-label="Amount" inputMode="decimal" aria-invalid={invalid} className={field} value={draft??String(t.amountMinor/100)} onChange={e=>{
-      setDraft(e.target.value);
-      const minor=parseAmount(e.target.value);
-      if(minor!==null) change({amountMinor:minor});
-    }} onBlur={()=>{if(!invalid)setDraft(null);}}/></label>
-    {invalid && <p role="alert" className="text-amber-300">Enter a positive amount or zero, with up to two decimal places.</p>}
+    <label className="block">Amount · {currency}<input aria-label="Amount" inputMode="decimal" aria-invalid={invalid} className={field} value={draft??String(t.amountMinor/100)}
+      onChange={e=>setDraft(e.target.value)} onBlur={e=>{if(draft!==null)commitAmount(e.currentTarget.value);}}
+      onKeyDown={e=>{
+        if(draft===null||e.nativeEvent.isComposing)return;
+        if(e.key==='Escape'){e.preventDefault();setDraft(null);}
+        if(e.key==='Enter'){e.preventDefault();commitAmount(e.currentTarget.value);}
+        if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s')commitAmount(e.currentTarget.value);
+      }}/></label>
+    {invalid && <p role="alert" className="text-amber-300">Enter a positive amount or zero, with up to 11 digits and two decimal places.</p>}
     <label className="block">Date<input type="date" className={field} value={t.date} onChange={e=>change({date:e.target.value})}/></label>
     <label className="block min-w-0">Description <span className="text-muted-foreground">(optional)</span>
       <textarea rows={4} wrap="soft" className={field+' min-h-[calc(4lh+1rem+2px)] max-w-full field-sizing-content resize-y whitespace-pre-wrap wrap-anywhere'}

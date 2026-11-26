@@ -14,7 +14,7 @@ export function MapsWorkspace({novel,selected,host,showTree,showTools,onToolPick
   const image=projectImageSrc(novel.gallery,map?.image);
   const visit=mapVisit(novel,map?.id);
   const create=(kind:'folder'|'doc')=>useKachamak.getState().addNode('maps',selected?.kind==='folder'?selected.id:null,kind,kind==='folder'?'New folder':'New map');
-  const entries=selected?.kind==='folder'?selected.children:novel.sections.maps??[];
+  const entries=(selected?.kind==='folder'?selected.children:novel.sections.maps??[]).filter(n=>!n.hidden);
   const controls='inline-flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs hover:bg-muted';
   const originalAtlas=map?.mapAtlas,originalImage=map?.image;
   return <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Maps workspace">
@@ -31,13 +31,14 @@ export function MapsWorkspace({novel,selected,host,showTree,showTools,onToolPick
           const state=useKachamak.getState(),book=state.novels.find(b=>b.id===novel.id);
           const live=book&&findProjectMap(book,map.id);
           if(!live||state.activeNovelId!==novel.id||state.selectedNodeId!==map.id||live.mapAtlas!==originalAtlas||live.image!==originalImage)return false;
-          state.updateNode('maps',map.id,{mapAtlas:atlas});return true;
+          state.updateNode('maps',map.id,{mapAtlas:atlas});
+          return live.mapAtlas===atlas;
         }}/>
     </div>:map?<div className="m-auto grid justify-items-center gap-3 p-6"><h3 className="text-lg">{map.title}</h3>
       <GalleryImagePicker novel={novel} onPick={image=>{const state=useKachamak.getState();if(state.activeNovelId===novel.id&&state.selectedNodeId===map.id)state.updateNode('maps',map.id,{image});}}>
         <button type="button" className={controls}>Choose map image from Gallery</button>
       </GalleryImagePicker></div>:<div className="min-h-0 flex-1 overflow-auto p-4">
-      {entries.length?<ul className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">{entries.filter(n=>!n.hidden).map(n=><li key={n.id}>
+      {entries.length?<ul className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">{entries.map(n=><li key={n.id}>
         <button className="w-full overflow-hidden rounded border border-border text-left hover:bg-muted" onClick={()=>useKachamak.getState().select(n.id)}>
           {n.image&&<img alt="" className="h-24 w-full object-cover" src={projectImageSrc(novel.gallery,n.image)}/>}
           <span className="block truncate p-2 text-sm">{n.title}</span>

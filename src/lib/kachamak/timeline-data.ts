@@ -1,16 +1,22 @@
 import type { Novel, NoteNode, SectionKey } from './types';
 import { TIMELINE_LIMIT, TIMELINE_MAX_SPAN, type StoryEvent, type TimelineGroup } from './story-calendar';
-import { flattenNotes } from './note-links';
 import { findNode } from './utils';
 export type EventRow={node:NoteNode;section:SectionKey;path:string[];event:StoryEvent;ancestors?:NoteNode[]};
 export function timelineRows(novel:Novel,section:SectionKey,rootId?:string,selectionScope=false):EventRow[] {
   const scope=selectionScope?(rootId?'folder':'section'):novel.timeline?.eventScope??(rootId?'folder':'book');
-  const root=rootId?findNode(novel.sections[section],rootId):null;
-  const ancestry=new Map<string,NoteNode[]>();
-  const walk=(nodes:NoteNode[],parents:NoteNode[])=>nodes.forEach(node=>{ancestry.set(node.id,parents);walk(node.children,[...parents,node]);});
-  Object.values(novel.sections).forEach(nodes=>walk(nodes,[]));
-  return flattenNotes(novel).filter(r=>r.node.event&&(scope==='book'||r.section===section&&(scope!=='folder'||!root||!!findNode([root],r.node.id))))
-    .map(r=>({...r,event:r.node.event!,ancestors:ancestry.get(r.node.id)})).sort((a,b)=>a.event.start-b.event.start);
+  const root=scope==='folder'&&rootId?findNode(novel.sections[section],rootId):null;
+  const rows:EventRow[]=[];
+  function visit(nodes:NoteNode[],source:SectionKey,ancestors:NoteNode[],insideRoot:boolean) {
+    for (const node of nodes) {
+      const included=insideRoot||node===root;
+      if(included&&node.event)rows.push({node,section:source,path:ancestors.map(parent=>parent.title),event:node.event,ancestors});
+      if(node.children.length)visit(node.children,source,[...ancestors,node],included);
+    }
+  }
+  for (const [source,nodes] of Object.entries(novel.sections) as [SectionKey,NoteNode[]][]) {
+    if(scope==='book'||source===section)visit(nodes,source,[],!root);
+  }
+  return rows.sort((a,b)=>a.event.start-b.event.start);
 }
 export const groupFor=(e:StoryEvent,groups:TimelineGroup[])=>groups.some(g=>g.id===e.groupId)?e.groupId! : '';
 export function boundedViewport(center:number,span:number) {

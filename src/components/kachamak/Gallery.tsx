@@ -193,6 +193,7 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
   const [draft,setDraft]=useState('');
   const [preview,setPreview]=useState<GalleryEntry|null>(null);
   const [error,setError]=useState('');
+  const [transferError,setTransferError]=useState('');
   const [uploading,setUploading]=useState(false);
   const input=useRef<HTMLInputElement>(null);
   const replacementInput=useRef<HTMLInputElement>(null);
@@ -214,7 +215,7 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
   }
   async function upload(files:File[]) {
     if(!files.length || uploading)return;
-    setUploading(true);setError('');
+    setUploading(true);setTransferError('');
     try {
       const additions:GalleryEntry[]=[];
       for(const file of files) {
@@ -223,19 +224,19 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
       }
       checkGalleryUploadSize(additions);
       editGallery(novel.id,{type:'add',entries:additions});
-    } catch(e) {setError(e instanceof Error?e.message:'The images could not be added.');}
+    } catch(e) {setTransferError(e instanceof Error?e.message:'The images could not be added.');}
     finally {setUploading(false);}
   }
   async function replaceImage(file?:File) {
     const item=replacement.current;
     replacement.current=null;
-    if(!item||!file)return;
-    setUploading(true);setError('');
+    if(!item||!file||uploading)return;
+    setUploading(true);setTransferError('');
     try{
       const image=await readGalleryReplacement(file);
       checkGalleryUploadSize([{...item,image}],item);
       editGallery(novel.id,{type:'replace',id:item.id,previous:item.image,image});
-    }catch(e){setError(e instanceof Error?e.message:'The image could not be replaced.');}
+    }catch(e){setTransferError(e instanceof Error?e.message:'The image could not be replaced.');}
     finally{setUploading(false);}
   }
   const moveOptions=editing?.type==='move'?entries.filter(item=>item.kind==='folder').map(item=>({item,path:galleryPath(entries,item.id)}))
@@ -264,7 +265,10 @@ export function GalleryCanvas({novel,folderId,openFolder,setDrag}:Location & {no
             onChange={e=>{const files=Array.from(e.target.files??[]);e.target.value='';void upload(files);}}/>
         </div>
       </div>
-      {error&&!editing&&<p role="alert" className="mb-3 text-sm text-red-400">{error}</p>}
+      {transferError&&<div className="mb-3 flex items-start justify-between gap-2 text-sm text-red-400">
+        <p role="alert">{transferError}</p>
+        <button type="button" aria-label="Dismiss gallery upload message" className="rounded p-1 hover:bg-muted" onClick={()=>setTransferError('')}><X className="size-3.5"/></button>
+      </div>}
       {!items.length?<p className="rounded-lg border border-dashed border-border px-5 py-12 text-center text-sm text-muted-foreground">Add images or create a folder here.</p>:
       <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,11rem),1fr))]">
         {items.map(item=><li key={item.id} className={'relative min-w-0 overflow-hidden rounded-lg border bg-card '+

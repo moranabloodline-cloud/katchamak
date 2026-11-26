@@ -50,7 +50,7 @@ export const useCollections = create<CollectionsState>()(persist((set, get) => (
   },
   renameCollection: (id, name) => {
     const title = name.trim();
-    if (!title) return;
+    if (!title || !get().collections.some((c) => c.id === id && c.name !== title)) return;
     set((state) => ({ collections: state.collections.map((c) => c.id === id ? { ...c, name: title, updatedAt: Date.now() } : c) }));
   },
   // Removing a folder promotes its contents; manuscripts are never deleted here.

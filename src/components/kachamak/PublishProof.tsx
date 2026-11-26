@@ -34,15 +34,14 @@ function revealEntry(doc:Document,anchor?:string){
   const view=doc.defaultView;
   if(entry&&view)view.scrollTo(0,entry.getBoundingClientRect().top+view.scrollY-8);
 }
-export function PublishProof({source,print,darkReader,frameRef,onReady,zoom,anchor}:{darkReader:boolean;anchor?:string;zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onReady:(ready:boolean)=>void}){
-  const [status,setStatus]=useState(''), token=useRef(0);
+export function PublishProof({source,print,darkReader,frameRef,onLoaded,zoom,anchor}:{darkReader:boolean;anchor?:string;zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onLoaded:()=>void}){
+  const [status,setStatus]=useState(print?'Setting pages…':'');
   const currentAnchor=useRef(anchor);
   useEffect(()=>{
     currentAnchor.current=anchor;
     const doc=frameRef.current?.contentDocument;
     if(doc?.documentElement&&(!print||doc.documentElement.dataset.ready==='yes'))revealEntry(doc,anchor);
   },[anchor,frameRef,print]);
-  useEffect(()=>{token.current++;onReady(false);setStatus(print?'Setting pages…':'');},[source,print,onReady]);
   useEffect(()=>{frameRef.current?.contentDocument?.documentElement?.style.setProperty('--panel-zoom',String(zoom));},[frameRef,zoom]);
   useEffect(()=>{
     const root=frameRef.current?.contentDocument?.documentElement;
@@ -51,15 +50,23 @@ export function PublishProof({source,print,darkReader,frameRef,onReady,zoom,anch
   return <div className="relative flex min-h-0 flex-1 flex-col">
     {status&&<div aria-live="polite" className="absolute bottom-2 left-2 z-10 rounded bg-background/95 px-2 py-1 text-xs text-muted-foreground">{status}</div>}
     <iframe ref={frameRef} title={print?'Print proof':'eBook proof'} className="min-h-60 w-full flex-1 border-0 bg-neutral-800" sandbox="allow-scripts allow-same-origin allow-modals" srcDoc={source}
-      onLoad={()=>{const w=frameRef.current?.contentWindow;if(!w?.document.documentElement)return;
-        if(!print)w.document.documentElement.dataset.readerTheme=darkReader?'dark':'light';
-        w.document.documentElement.style.setProperty('--panel-zoom',String(zoom));
+      onLoad={event=>{const w=event.currentTarget.contentWindow,doc=w?.document;if(!w||!doc?.documentElement)return;
+        if(!print)doc.documentElement.dataset.readerTheme=darkReader?'dark':'light';
+        doc.documentElement.style.setProperty('--panel-zoom',String(zoom));
         w.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();frameRef.current?.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,ctrlKey:true,deltaY:e.deltaY,deltaMode:e.deltaMode}));}},{passive:false});
         w.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='0'){e.preventDefault();useKachamak.getState().setPanelZoom('mid',1);}});
-        const id=token.current;const done=()=>{if(id!==token.current||!frameRef.current)return;
-          const doc=w.document;if(print && doc.documentElement.dataset.ready!=='yes'){setStatus('Pagination failed. Reopen the proof to try again.');return;}
-          const pages=doc.querySelectorAll('.pagedjs_page').length;setStatus(print?pages+' '+(pages===1?'page':'pages'):'');onReady(true);revealEntry(doc,currentAnchor.current);};
-        if(!print||w.document.documentElement.dataset.ready)done();else w.addEventListener('proofready',done,{once:true});
+        const done=()=>{
+          if(frameRef.current?.contentDocument!==doc)return;
+          if(print&&doc.documentElement.dataset.ready!=='yes'){
+            setStatus('Pagination failed. Use Print / Save PDF or reopen the proof to try again.');
+          }else{
+            const pages=doc.querySelectorAll('.pagedjs_page').length;
+            setStatus(print?pages+' '+(pages===1?'page':'pages'):'');
+            revealEntry(doc,currentAnchor.current);
+          }
+          onLoaded();
+        };
+        if(!print||doc.documentElement.dataset.ready)done();else w.addEventListener('proofready',done,{once:true});
       }}/>
   </div>;
 }

@@ -77,7 +77,9 @@ export function CanvasMapStudio({block,image,host,close,initialPinId,backLabel,o
       const length=points.length===2&&aspect?imageDistance(points[0],points[1],aspect):0;
       const distance=Number(known)*(unit==='mi'?1.609344:1);
       if(!length||!Number.isFinite(distance)||distance<=0){setError('Select two distinct points and enter their known distance.');return;}
-      if(save({...atlas,kmPerWidth:distance/length}))choose('measure');
+      const kmPerWidth=distance/length;
+      if(!Number.isFinite(kmPerWidth)||kmPerWidth<=0){setError('The calculated scale is out of range. Enter a different known distance.');return;}
+      if(save({...atlas,kmPerWidth}))choose('measure');
     }else if((tool==='path'&&points.length>=2)||(tool==='region'&&points.length>=3)){
       if(tool==='region'){
         const area=points.reduce((s,p,i)=>{const q=points[(i+1)%points.length];return s+p.x*q.y-q.x*p.y;},0);

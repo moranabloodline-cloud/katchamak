@@ -589,7 +589,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
           const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind]??{icon:Layers,name:b.layout[0].toUpperCase()+b.layout.slice(1),color:'#c7ae83'};
           const looseInk=kind==='draw'&&!!b.extent;
           const editLabel=kind==='map'?'Change map'+(b.title?': '+b.title:''):'Edit '+(b.title||name);
-          return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={0}
+          return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={page.locked?undefined:0}
             onKeyDown={e=>{if(e.target!==e.currentTarget||page.locked)return;
               if(e.key===' '&&(e.ctrlKey||e.metaKey||e.shiftKey)){e.preventDefault();toggleFreeCard(b.id);return;}
               if(e.key==='Enter'){if(tool==='line')finishLink(b.id);else editBlock(b);}

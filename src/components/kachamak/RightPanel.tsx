@@ -39,38 +39,66 @@ function SynopsisResizer({
   onDrag: (next: number) => void;
 }) {
   const [dragging, setDragging] = useState(false);
-  const start = useRef({ y: 0, ratio: 0.5 });
+  const pointer = useRef<{ id: number; y: number; ratio: number } | null>(null);
 
   useEffect(() => {
     if (!dragging) return;
-    document.body.style.cursor = "row-resize";
-    document.body.style.userSelect = "none";
+    const style = document.body.style;
+    const { cursor, userSelect } = style;
+    style.cursor = "row-resize";
+    style.userSelect = "none";
     return () => {
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+      style.cursor = cursor;
+      style.userSelect = userSelect;
     };
   }, [dragging]);
+
+  const endDrag = ({ pointerId }: { pointerId: number }) => {
+    if (pointer.current?.id !== pointerId) return;
+    pointer.current = null;
+    setDragging(false);
+  };
 
   return (
     <div
       role="separator"
       aria-orientation="horizontal"
       aria-label="Resize Synopsis and Notes"
-      onPointerDown={(e) => {
+      aria-valuemin={15}
+      aria-valuemax={85}
+      aria-valuenow={Math.round(ratio * 100)}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        const current = useKachamak.getState().infoSynopsisRatio ?? 0.5;
+        let next: number;
+        switch (e.key) {
+          case "ArrowUp": next = current - 0.02; break;
+          case "ArrowDown": next = current + 0.02; break;
+          case "Home": next = 0.15; break;
+          case "End": next = 0.85; break;
+          default: return;
+        }
         e.preventDefault();
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        start.current = { y: e.clientY, ratio };
+        onDrag(next);
+      }}
+      onPointerDown={(e) => {
+        if (e.button !== 0 || pointer.current) return;
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pointer.current = { id: e.pointerId, y: e.clientY, ratio };
         setDragging(true);
       }}
       onPointerMove={(e) => {
-        if (!dragging) return;
+        const active = pointer.current;
+        if (!active || active.id !== e.pointerId) return;
         const box = boxRef.current;
         if (!box || box.clientHeight === 0) return;
-        onDrag(start.current.ratio + (e.clientY - start.current.y) / box.clientHeight);
+        onDrag(active.ratio + (e.clientY - active.y) / box.clientHeight);
       }}
-      onPointerUp={() => setDragging(false)}
-      onPointerCancel={() => setDragging(false)}
-      className={`relative h-px w-full shrink-0 cursor-row-resize bg-white/10 after:absolute after:inset-x-0 after:-bottom-1.5 after:-top-1.5 after:content-[''] after:hover:bg-orange-500/10 ${
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onLostPointerCapture={endDrag}
+      className={`relative h-px w-full shrink-0 touch-none cursor-row-resize bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 after:absolute after:inset-x-0 after:-bottom-1.5 after:-top-1.5 after:content-[''] after:hover:bg-orange-500/10 ${
         dragging ? "bg-orange-500/70" : "hover:bg-orange-500/40"
       }`}
     />

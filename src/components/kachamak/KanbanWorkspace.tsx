@@ -53,8 +53,12 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
     } else if (form.kind === 'column') {
       const title = form.title.trim();
       if (!title) return;
-      commit(b=>({columns:form.id ? b.columns.map(col=>col.id===form.id ? {...col,title} : col) :
-        [...b.columns,{id:uid(),title,cards:[]}]}));
+      commit(b=>{
+        if(!form.id)return {columns:[...b.columns,{id:uid(),title,cards:[]}]};
+        const column=b.columns.find(col=>col.id===form.id);
+        if(!column||column.title===title)return b;
+        return {columns:b.columns.map(col=>col===column ? {...col,title} : col)};
+      });
     } else if (form.kind === 'delete-column') {
       commit(b=>({columns:b.columns.filter(col=>col.id!==form.id)}));
     } else if (form.kind === 'delete-card') {
@@ -168,7 +172,7 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
               className={[css.card,dragging===card.id?css.dragging:'',drop?.column===col.id&&drop.before===card.id?css.insert:''].join(' ')}
               draggable onDragStart={e=>{e.dataTransfer.setData(cardDrag,JSON.stringify([novel.id,node.id,card.id]));e.dataTransfer.effectAllowed='move';setDragging(card.id);}} onDragEnd={finishDrag}>
               <button className={css.cardBody} onClick={()=>editCard(col,card)} aria-label={'Edit '+card.title}>
-                {card.cover&&<img className={css.tileCover} alt="" src={projectImageSrc(novel.gallery,card.cover)}/>}
+                {card.cover&&<img className={css.tileCover} alt="" loading="lazy" draggable={false} src={projectImageSrc(novel.gallery,card.cover)}/>}
                 {!!card.labels?.length&&<span className={css.tileLabels}>{card.labels.map(label=><span key={label.name} style={{borderColor:label.color}}>{label.name}</span>)}</span>}
                 <strong>{card.complete&&<CircleCheck size={14} className={css.doneIcon} aria-label="Complete"/>}{card.title}</strong>{card.description && <span className={css.excerpt}>{card.description}</span>}
                 {(card.priority!=='Normal'||card.due)&&<span className={css.meta}>{card.priority!=='Normal'&&<span data-priority={card.priority}><Flag size={12}/>{card.priority}</span>}{card.due&&<span><CalendarDays size={12}/><time dateTime={card.due}>{card.due}</time></span>}</span>}
@@ -193,7 +197,7 @@ export function KanbanWorkspace({novel, rootId, selected, zoom, onShowTree}:{
     </>}
     {form?.kind==='card' && openedCard && openedColumn && <KanbanCardDetails key={openedCard.id} novel={novel} board={board} card={openedCard}
       columnId={openedColumn.id} existing={form.existing} author={author} change={changeCard} onCreate={createCard} onClose={()=>setForm(null)}
-      onMove={id=>form.existing ? commit(b=>moveKanbanCard(b,form.card.id,id,null,author)) : setForm({...form,columnId:id})}
+      onMove={id=>form.existing ? commit(b=>moveKanbanCard(b,form.card.id,id,null,author)) : setForm(current=>current?.kind==='card'&&current.card.id===form.card.id ? {...current,columnId:id} : current)}
       onDuplicate={copyCard} onDelete={()=>setForm({kind:'delete-card',id:openedCard.id,title:openedCard.title})}/>}
     <Dialog open={!!form && form.kind!=='card'} onOpenChange={open=>{if(!open)setForm(null);}}><DialogContent aria-describedby={undefined} className="sm:max-w-md">
       <DialogHeader><DialogTitle>{formTitle}</DialogTitle></DialogHeader>
