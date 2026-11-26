@@ -1,3 +1,5 @@
+> **2026-11-26 — Search preko cele širine.** Siva traka pretrage se proteže od ivice do ivice levog panela. Folderi i beleške zadržavaju bočni razmak.
+
 > **2026-11-26 — Razmak u levom panelu.** Search i redovi stabla imaju ujednačen bočni razmak. Polje za pretragu ima diskretnu osnovnu ivicu i istaknut fokus.
 
 > **2026-11-26 — Strelice za listanje.** U sva četiri Publish prikaza, prethodna i sledeća strana dostupne su na sredini leve i desne ivice strane. Brojač je ispod prikaza.
@@ -759,6 +761,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** U levom panelu prikazan je Search kao ravna siva traka između logotipa i stabla.
 
 - **2026-11-26.** Usklađen razmak u stablima beleški, Canvasu, Galleryju i Trashu.
 

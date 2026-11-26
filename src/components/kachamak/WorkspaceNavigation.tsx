@@ -16,7 +16,7 @@ function NoteBackButton() {
   const previous=trail.projectId===active?trail.entries.at(-1):null;
   if(!previous)return null;
   const novel=novels.find(n=>n.id===active),name=novel&&previous.selectedNodeId?findNodeInNovel(novel,previous.selectedNodeId)?.node.title:null;
-  return <button type="button" aria-label="Back to previous note" title={name?'Back to '+name:'Back to previous view'} onClick={returnToPreviousNote} className="shrink-0 rounded p-1 text-sky-400 hover:bg-white/10"><ArrowLeft className="h-4 w-4"/></button>;
+  return <button type="button" aria-label="Back to previous note" title={name?'Back to '+name:'Back to previous view'} onClick={returnToPreviousNote} className="mr-2 shrink-0 rounded p-1 text-sky-400 hover:bg-white/10"><ArrowLeft className="h-4 w-4"/></button>;
 }
 
 export function activeWritingEditor() {
@@ -96,7 +96,7 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
   };
 
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className="relative h-full min-w-0 flex-1">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
         ref={input}
@@ -125,10 +125,10 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
         }}
         placeholder="Search"
         aria-label="Search"
-        className="h-9 w-full rounded-lg border border-white/10 bg-[#10151d] pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground hover:border-white/20 focus:border-amber-500/50"
+        className="block h-full w-full bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-amber-500/50"
       />
       {expanded && (
-        <div id={listId} role="listbox" aria-label="Search results" className="absolute inset-x-0 top-11 z-50 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
+        <div id={listId} role="listbox" aria-label="Search results" className="absolute inset-x-3 top-full z-50 mt-1 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
           {results.map((r, i) => {
             const Icon = r.page ? House : iconByName(r.icon);
             return (
@@ -169,5 +169,5 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
 }
 
 export function WorkspaceNavigation({includeHomePages=false}:{includeHomePages?:boolean}={}) {
-  return <div className="flex h-10 min-w-0 shrink-0 items-center gap-1.5 border-b border-white/10 px-3"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
+  return <div className="flex h-10 min-w-0 shrink-0 items-center gap-1.5 border-b border-border bg-muted/70"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
 }
