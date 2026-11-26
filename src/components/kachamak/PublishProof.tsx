@@ -87,6 +87,7 @@ export function PublishProof({source,mode,darkReader,frameRef,onLoaded,zoom,anch
   const [status, setStatus] = useState('Setting pages…');
   const [page, setPage] = useState(0);
   const [count, setCount] = useState(0);
+  const [pageEdges, setPageEdges] = useState<{left:number;right:number;middle:number} | null>(null);
   const current = useRef(0);
   const sheets = useRef<HTMLElement[]>([]);
   const latestAnchor = useRef(anchor);
@@ -130,6 +131,28 @@ export function PublishProof({source,mode,darkReader,frameRef,onLoaded,zoom,anch
     if (root) applyAppearance(root);
   }, [darkReader, frameRef, mode, print, zoom]);
 
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || !count) return;
+    let pending = 0;
+    const measure = () => {
+      const rect = sheets.current[page]?.getBoundingClientRect();
+      if (rect?.width && rect.height) {
+        setPageEdges({ left: rect.left, right: rect.right, middle: rect.top + rect.height / 2 });
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(pending);
+      pending = requestAnimationFrame(measure);
+    });
+    observer.observe(frame);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(pending);
+    };
+  }, [count, frameRef, page, zoom]);
+
   function navigateWithKey(event: KeyboardEvent | React.KeyboardEvent) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || !sheets.current.length) return;
     if (event.key === 'ArrowLeft' || event.key === 'PageUp') showPage(current.current - 1);
@@ -138,8 +161,9 @@ export function PublishProof({source,mode,darkReader,frameRef,onLoaded,zoom,anch
     event.preventDefault();
   }
 
-  const arrow = 'grid size-8 place-items-center rounded-full border border-white/15 text-foreground hover:bg-white/10 disabled:opacity-30';
+  const arrow = 'absolute z-10 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-neutral-900/85 text-white shadow-md hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-amber-400 disabled:opacity-40';
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col" onKeyDown={navigateWithKey}>
+    <div className="relative flex min-h-0 flex-1">
     <iframe ref={frameRef} title={print?'Print proof':mode+' proof'} className="min-h-0 w-full flex-1 border-0 bg-neutral-800" sandbox="allow-scripts allow-same-origin allow-modals" srcDoc={source}
       onLoad={event=>{
         const {contentWindow:w, contentDocument:doc} = event.currentTarget;
@@ -183,10 +207,13 @@ export function PublishProof({source,mode,darkReader,frameRef,onLoaded,zoom,anch
         if (doc.documentElement.dataset.ready) done();
         else w.addEventListener('proofready', done, {once:true});
       }}/>
-    <div className="flex min-h-11 shrink-0 items-center justify-center gap-3 border-t border-white/10 px-2 py-1 text-xs">
-      <button type="button" className={arrow} aria-label="Previous page" disabled={!count || page === 0} onClick={()=>showPage(page-1)}><ChevronLeft className="size-4"/></button>
-      <span role="status" className="min-w-20 text-center tabular-nums text-muted-foreground">{status || (page+1)+' / '+count}</span>
-      <button type="button" className={arrow} aria-label="Next page" disabled={!count || page+1 >= count} onClick={()=>showPage(page+1)}><ChevronRight className="size-4"/></button>
+      {pageEdges && <>
+        <button type="button" className={arrow} style={{left:pageEdges.left,top:pageEdges.middle}} aria-label="Previous page" disabled={page === 0} onClick={()=>showPage(page-1)}><ChevronLeft className="size-4"/></button>
+        <button type="button" className={arrow} style={{left:pageEdges.right,top:pageEdges.middle}} aria-label="Next page" disabled={page+1 >= count} onClick={()=>showPage(page+1)}><ChevronRight className="size-4"/></button>
+      </>}
+    </div>
+    <div className="flex min-h-11 shrink-0 items-center justify-center border-t border-white/10 px-2 py-1 text-xs">
+      <span role="status" className="text-center tabular-nums text-muted-foreground">{status || (page+1)+' / '+count}</span>
     </div>
   </div>;
 }

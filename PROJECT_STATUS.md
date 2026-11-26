@@ -1,3 +1,5 @@
+> **2026-11-26 — Strelice za listanje.** U sva četiri Publish prikaza, prethodna i sledeća strana dostupne su na sredini leve i desne ivice strane. Brojač je ispod prikaza.
+
 > **2026-11-26 — Listanje u Publishu.** Kindle, iPhone, iPad i Print prikazuju jednu stranu, sa strelicama i brojačem. Repaginacija koristi dimenzije izabranog uređaja ili papira. Štampa koristi sve pripremljene strane.
 
 > **2026-11-26 — Publish režimi pregleda.** Izbor Kindle, iPhone i iPad prikazuje isti eBook sadržaj u različitim širinama. Print koristi format papira iz stila.
@@ -755,6 +757,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Kontrole listanja prate dimenzije, zum i položaj prikazane strane.
 
 - **2026-11-26.** Publish prikaz daje jednu stranu po ekranu u sva četiri režima. Contents vodi na odgovarajuću stranu, a PDF prikazuje celu knjigu.
 
