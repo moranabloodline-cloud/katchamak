@@ -662,7 +662,7 @@ export function NoteTree({ section, rootId, reveal, onDismissReveal, onActivate 
       <ContextMenuTrigger asChild>
       <div
         ref={treeRef}
-        className="flex-1 overflow-y-auto kachamak-scroll px-2 pb-2"
+        className="flex-1 overflow-y-auto kachamak-scroll px-3 pb-2 pt-1"
         style={{ zoom: leftZoom }}
         role="tree"
         aria-multiselectable="true"

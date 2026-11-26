@@ -127,7 +127,7 @@ export function GalleryTree({novel,folderId,openFolder,collapsed,setCollapsed,dr
   },[entries,collapsed,draggedFolders]);
   return <div className="flex h-full min-h-0 flex-col">
     <WorkspaceNavigation/>
-    <nav ref={tree} style={{zoom:leftZoom}} aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto p-1">
+    <nav ref={tree} style={{zoom:leftZoom}} aria-label="Gallery folders" className="kachamak-scroll min-h-0 flex-1 overflow-auto px-3 py-1">
       <button type="button" aria-current={folderId===null?'page':undefined} onClick={()=>{select.clear();openFolder(null);}}
         {...dropTarget(null,'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm')}>
         <Images className="size-4 text-teal-300"/>Gallery

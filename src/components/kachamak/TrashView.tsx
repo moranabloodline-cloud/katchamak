@@ -43,7 +43,7 @@ export function TrashSections({novel}: {novel: Novel}) {
     <div className="flex h-full flex-col">
       <WorkspaceNavigation />
       <div style={{zoom:leftZoom}} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="space-y-1 px-2 pb-3">
+        <div className="space-y-1 px-3 pb-3 pt-1">
           {(Object.keys(SECTION_NAMES) as SectionKey[]).map((k) => {
             const count = novel.trash.filter((t) => t.section === k).length;
             return (

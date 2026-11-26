@@ -125,7 +125,7 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
         }}
         placeholder="Search"
         aria-label="Search"
-        className="h-9 w-full rounded-lg border border-white/15 bg-[#10151d] pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-amber-500/50"
+        className="h-9 w-full rounded-lg border border-white/10 bg-[#10151d] pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground hover:border-white/20 focus:border-amber-500/50"
       />
       {expanded && (
         <div id={listId} role="listbox" aria-label="Search results" className="absolute inset-x-0 top-11 z-50 max-h-80 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-[#161616] p-1.5 shadow-2xl">
@@ -169,5 +169,5 @@ function ProjectSearch({includeHomePages}:{includeHomePages:boolean}) {
 }
 
 export function WorkspaceNavigation({includeHomePages=false}:{includeHomePages?:boolean}={}) {
-  return <div className="flex h-10 min-w-0 shrink-0 items-center gap-1.5 border-b border-white/10 pl-3 pr-2"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
+  return <div className="flex h-10 min-w-0 shrink-0 items-center gap-1.5 border-b border-white/10 px-3"><ProjectSearch includeHomePages={includeHomePages}/><NoteBackButton/></div>;
 }
