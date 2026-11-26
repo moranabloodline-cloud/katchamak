@@ -588,6 +588,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
         {page.blocks.filter(b=>b.layout!=='line').map(b=>{
           const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind]??{icon:Layers,name:b.layout[0].toUpperCase()+b.layout.slice(1),color:'#c7ae83'};
           const looseInk=kind==='draw'&&!!b.extent;
+          const editLabel=kind==='map'?'Change map'+(b.title?': '+b.title:''):'Edit '+(b.title||name);
           return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={0}
             onKeyDown={e=>{if(e.target!==e.currentTarget||page.locked)return;
               if(e.key===' '&&(e.ctrlKey||e.metaKey||e.shiftKey)){e.preventDefault();toggleFreeCard(b.id);return;}
@@ -607,7 +608,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
                 <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked){setSelected(id);surface.current?.focus({preventScroll:true});}}}/>)}</g>
             </svg>}
             {!looseInk&&(column||!page.locked)&&<div className="cv-card-cap"><Icon size={13}/>{column?<strong>{b.title||'Column'}</strong>:<span>{name}</span>}{b.groupId&&<Group size={12} aria-label="Grouped card"/>}{(column||b.positionLocked)&&<LockKeyhole size={11} aria-label="Position locked"/>}{column&&<small>{page.blocks.filter(x=>x.columnId===b.id).length}</small>}
-              {!page.locked&&<button aria-label={'Edit '+(b.title||name)} type="button" onClick={()=>editBlock(b)}><Pencil size={13}/></button>}</div>}
+              {!page.locked&&<button aria-label={editLabel} title={editLabel} type="button" onClick={()=>editBlock(b)}><Pencil size={13}/></button>}</div>}
             {column?(!page.locked&&<button type="button" className="cv-column-add" aria-label={'Add note to '+b.title} onClick={()=>{setTool('select');setEditor({initial:{...newCanvasBlock('note'),at:{x:r.x+14,y:r.y+56},columnId:b.id}});}}><Plus size={13}/> Note</button>):
             !(kind in toolsByKind)?renderClassic(b):<CanvasItemFace openMap={openMap} block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
           </article>;

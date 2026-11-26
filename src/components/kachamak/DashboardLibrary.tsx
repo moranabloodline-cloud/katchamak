@@ -74,7 +74,6 @@ interface Props {
   onCreateCollection: () => void;
   onCreateProject: () => void;
   onImport: () => void;
-  onOpenFile?: () => void;
   onRenameCollection: (collection: Collection) => void;
   onDeleteCollection: (id: string) => void;
   onDeleteProject: (novel: Novel) => void;
@@ -207,7 +206,6 @@ export function DashboardLibrary(props: Props) {
           <div aria-label="Library toolbar" className="flex flex-wrap items-center gap-2">
             <button onClick={props.onCreateCollection} className={createControl}><Plus className="h-4 w-4" />Collection</button>
             <button onClick={props.onCreateProject} className={createControl}><Plus className="h-4 w-4" />Project</button>
-            {props.onOpenFile && <button onClick={props.onOpenFile} className={control}><FolderOpen className="h-4 w-4" />Open</button>}
             <button onClick={props.onImport} className={control}><Download className="h-4 w-4" />Import</button>
             <button aria-pressed={showArchived} onClick={()=>{setShowArchived(!showArchived);navigate(null);}} className={control}><Archive className="h-4 w-4"/>{showArchived?"Active projects":"Archived"}</button>
             <div className="relative min-w-[100px] flex-1 basis-40"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><input aria-label="Search library" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this location…" className="h-9 w-full rounded-md border border-white/15 bg-black/25 pl-8 pr-2 text-sm outline-none focus:border-[#c9973c]" /></div>

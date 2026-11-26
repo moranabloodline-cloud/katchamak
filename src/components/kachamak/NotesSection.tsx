@@ -29,8 +29,9 @@ import { PublishWorkspace } from "./PublishWorkspace";
 import { RightPanel } from "./RightPanel";
 import { TrashInfo, TrashSections, TrashView } from "./TrashView";
 import { CtrlZoom, usePanelZoom } from "./CtrlZoom";
+import { ProjectFileStatus } from "./ProjectFileStorage";
 import { useWebLibrary } from "@/lib/kachamak/cloud-library";
-import { projectsSavedLocally, useKachamak } from "@/lib/kachamak/store";
+import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey, ViewMode } from "@/lib/kachamak/types";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
 import {ColourPalette} from "./PresetColourPicker";
@@ -56,7 +57,7 @@ const VIEW_BTNS: { key: ViewMode; label: string }[] = [
   { key: "write", label: "Write" },
   { key: "corkboard", label: "Grid" },
   { key: "list", label: "List" },
-  { key: "continuous", label: "Continious" },
+  { key: "continuous", label: "Continuous" },
   { key: "split", label: "Split" },
 ];
 
@@ -139,7 +140,11 @@ function Resizer(props: ResizerProps) {
 /* bottom of the left panel: circled "i" opens save information */
 function SaveInfoButton() {
   const cloud = useWebLibrary();
-  const saved = cloud.ready && !cloud.pending && !cloud.busy && !cloud.error;
+  const failed = cloud.error && !cloud.retrying;
+  const hint = cloud.conflict ? "Export unsaved edits before reloading the saved library."
+    : cloud.retrying ? "Keep Draftopus open while it retries the save."
+    : failed ? "Use the save banner to retry or export unsaved edits."
+    : "Download a JSON backup from Project Settings.";
 
   return (
     <Popover>
@@ -159,23 +164,10 @@ function SaveInfoButton() {
         className="w-64 border-white/10 bg-[#1b1b1b] p-3 text-xs"
       >
         <p className="mb-2 font-semibold text-foreground">Save information</p>
-        <dl className="space-y-1 text-muted-foreground">
-          <div className="flex justify-between gap-2">
-            <dt>{"Cloud save:"}</dt>
-            <dd className={saved ? "text-foreground" : "text-red-400"}>
-              {saved ? "up to date" : "not verified"}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt>JSON:</dt>
-            <dd>export manually</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt>{"Previous save:"}</dt>
-            <dd>{"retained in cloud"}</dd>
-          </div>
-        </dl>
-        {!saved && <p className="mt-2 text-red-400">Try Save and export a JSON backup before closing.</p>}
+        <p role="status" className={failed ? "text-red-300" : cloud.retrying ? "text-amber-200" : "text-foreground"}>
+          <ProjectFileStatus />
+        </p>
+        <p className="mt-2 text-muted-foreground">{hint}</p>
       </PopoverContent>
     </Popover>
   );

@@ -1,3 +1,5 @@
+> **2026-11-26 — Poliranje biblioteke i radnog prostora.** Pomoć opisuje trenutne komande. Save information prikazuje stanje čuvanja, ponovnog pokušaja ili greške. Nazivi Continuous i komandi za mape su usklađeni.
+
 > **2026-11-25 — Brže čuvanje u cloudu.** Velike biblioteke se šalju i upisuju kompresovano kada pregledač to podržava i kompresija smanjuje veličinu. Čuvanje i dalje čeka potvrdu revizije pre uklanjanja lokalnog nacrta.
 
 > **2026-11-25 — Stabilnija provera naloga pri čuvanju.** Čitanje i čuvanje koriste postojeću D1 šemu direktno. Nečitljiva ili nepotpuna potvrda upisa pokreće proveru revizije i ponovni pokušaj uz lokalni nacrt.
@@ -737,6 +739,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Uklonjeni su neaktivni prozor za lokalni folder, nekadašnji dijalog Timeline grupa, zaostala komanda za otvaranje lokalnog fajla i tri zastarele javne slike. Uputstva, prikaz statusa čuvanja i komande Canvas mapa usklađeni su sa trenutnim funkcijama. Stari projekti, mape, grupe i rezervne kopije ostaju čitljivi.
 
 - **2026-11-25.** Produkcijska merenja pokazala su prenos oko 8,7 MB i pri malim izmenama. Uveden je gzip za prenos i upis uz postojeću proveru revizije. Provere obuhvataju otvaranje ranijih i kompresovanih zapisa, povratak na običan JSON i odbijanje oštećenih ili prevelikih upisa. Posle prolaznog 404 za JavaScript pri objavi, sledeći Sites paket zadržava datoteke prethodne verzije koje su potrebne otvorenim tabovima.
 

@@ -21,7 +21,7 @@ import {HomeBlockEditor} from './HomeBlockEditor';
 import './canvas.css';
 import {CanvasBoard} from './CanvasBoard';
 import type {CanvasFile} from '@/lib/kachamak/canvas-file';
-import {toolsByKind} from './CanvasTools';
+import {canvasToolLabel,toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
 import {openProjectMap} from '@/lib/kachamak/map-navigation';
 import {CanvasItemFace} from './CanvasItemFace';
@@ -160,7 +160,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
     const rowLanes=lanes.get(block.id);
     const cardRow=rowLanes?.every(items=>items.length===0 || (items.length===1 && items[0].layout==='card'));
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
-    const editButton={type:'button' as const,'aria-label':'Edit '+name,title:row?'Edit row':'Edit '+name,onClick:()=>edit(block)};
+    const editLabel=block.layout==='map'?'Change map'+(block.title?': '+block.title:''):'Edit '+name;
+    const editButton={type:'button' as const,'aria-label':editLabel,title:row?'Edit row':editLabel,onClick:()=>edit(block)};
     const classic=['card','banner','image','text'].includes(block.layout);
     const emptyImage=block.layout==='image'&&!display.image;
     const bare=block.layout==='image'||Boolean(display.image&&(block.layout==='banner'||(block.image&&!display.title&&!block.text)));
@@ -202,8 +203,8 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
               </DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
                 <DropdownMenuItem onSelect={()=>edit(undefined,{rowId:block.id,column})}>Card or layout block…</DropdownMenuItem>
                 {CANVAS_TOOLS.filter(k=>k!=='line'&&k!=='column').map(kind=>{
-                  const {icon:Icon,name}=toolsByKind[kind];
-                  return <DropdownMenuItem key={kind} onSelect={()=>setItem({initial:{...newCanvasBlock(kind),cell:{rowId:block.id,column}}})}><Icon size={15}/>{name}</DropdownMenuItem>;
+                  const {icon:Icon}=toolsByKind[kind];
+                  return <DropdownMenuItem key={kind} onSelect={()=>setItem({initial:{...newCanvasBlock(kind),cell:{rowId:block.id,column}}})}><Icon size={15}/>{canvasToolLabel(kind)}</DropdownMenuItem>;
                 })}
               </DropdownMenuContent></DropdownMenu>}
             </div>;
@@ -215,7 +216,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
         page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&block.layout!=='card'&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
           <button {...editButton} data-card-face aria-label={name} title={page.locked?undefined:'Select or drag · Double-click to edit'} className={cardClass+(page.locked?'':' cursor-grab select-none active:cursor-grabbing')} onClick={()=>activate(block)}>{face}</button>
       ):['note','link','todo','map','audio','color','table','sketch','draw','comment'].includes(block.layout)?<div className="cv-page-card">
-        {!page.locked&&<button {...editButton} className="cv-page-grip"><GripVertical size={13}/>Edit {block.layout}</button>}
+        {!page.locked&&<button {...editButton} className="cv-page-grip"><GripVertical size={13}/>{block.layout==='map'?'Change map':'Edit '+block.layout}</button>}
         <CanvasItemFace openMap={openMap} block={block} novel={novel} source={block.target?.kind==='note'?byId.get(block.target.id):undefined} locked={page.locked} open={openTarget} describe={describe} toggle={(index,done)=>change({type:'task',id:block.id,index,done})}/>
       </div>:<div className="relative min-w-0">
         <HomeDocumentBlock block={block} image={display.image} interactive={page.locked} describe={describe} open={openTarget}/>
@@ -235,7 +236,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
         </DropdownMenuTrigger><DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={()=>release(selected?selectedSiblings:[block])}><MoveDown size={15}/>Premesti na slobodnu površinu{selected&&selectedSiblings.length>1&&<span className="ml-auto pl-2 text-muted-foreground">{selectedSiblings.length}</span>}</DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>}
-        {!row&&<Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm('Remove this block from the homepage?'))change({type:'remove',original:block});}}><Trash2/></Button>}
+        {!row&&<Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm('Remove this block from the canvas?'))change({type:'remove',original:block});}}><Trash2/></Button>}
       </div>}
     </article>;
   }

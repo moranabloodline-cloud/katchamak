@@ -25,7 +25,7 @@ export function MapsWorkspace({novel,selected,host,showTree,showTools,onToolPick
       <button className={controls} type="button" onClick={()=>create('doc')}><Plus size={14}/>New map</button>
     </header>
     {map&&image?<div className="relative min-h-0 flex-1">
-      <CanvasMapStudio key={map.id+':'+image.slice(-24)} block={atlasBlock(map)} image={image} initial="inspect" initialPinId={visit?.pinId}
+      <CanvasMapStudio key={map.id+':'+image.slice(-24)} block={atlasBlock(map)} image={image} initialPinId={visit?.pinId}
         host={host} showTools={showTools} onPick={onToolPicked} backLabel={visit?(visit.origin.view==='homepage'?'Back to canvas':'Back to note'):'Map library'} close={()=>leaveMap(novel,map.id)}
         persist={atlas=>{
           const state=useKachamak.getState(),book=state.novels.find(b=>b.id===novel.id);

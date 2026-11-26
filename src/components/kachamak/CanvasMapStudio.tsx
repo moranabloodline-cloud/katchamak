@@ -26,12 +26,12 @@ function FeatureDetails({feature,update,remove,move}:{feature:MapFeature;move:()
   </form>;
 }
 
-type Props={block:HomeBlock;image:string;initial:MapTool;host?:HTMLElement|null;close:()=>void;
-  initialPinId?:string;backLabel?:string;onPick?:()=>void;showTools?:()=>void;persist:(next:MapAtlas)=>boolean};
-export function CanvasMapStudio({block,image,initial,host,close,initialPinId,backLabel='Back to canvas',onPick,showTools,persist}:Props){
+type Props={block:HomeBlock;image:string;host?:HTMLElement|null;close:()=>void;
+  initialPinId?:string;backLabel:string;onPick?:()=>void;showTools?:()=>void;persist:(next:MapAtlas)=>boolean};
+export function CanvasMapStudio({block,image,host,close,initialPinId,backLabel,onPick,showTools,persist}:Props){
   const atlas=atlasOf(block);
   const [movingPin,setMovingPin]=useState<string|null>(null);
-  const [tool,setTool]=useState<MapTool>(initial),[points,setPoints]=useState<Point[]>([]),[name,setName]=useState('');
+  const [tool,setTool]=useState<MapTool>('inspect'),[points,setPoints]=useState<Point[]>([]),[name,setName]=useState('');
   const [category,setCategory]=useState<PinKind>('Location'),[color,setColor]=useState('#cc963e'),[selected,setSelected]=useState(initialPinId??'');
   const [unit,setUnit]=useState<'km'|'mi'>('km'),[known,setKnown]=useState(''),[aspect,setAspect]=useState(0),[error,setError]=useState('');
   const [zoom,setZoom]=useState(1),[localTools,setLocalTools]=useState(false);

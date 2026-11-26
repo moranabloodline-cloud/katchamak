@@ -9,40 +9,58 @@ import packageInfo from "../../../package.json";
 type Article = { id: string; title: string; description?: string; icon: ComponentType<{ className?: string }>; paragraphs: string[] };
 const groups: { title?: string; articles: Article[] }[] = [
   { title: "LEARN DRAFTOPUS", articles: [
-    { id: "getting-started", title: "Getting Started", description: "Create your first project", icon: Rocket, paragraphs: ["Create a project on the Dashboard. Your projects are saved privately to your account."] },
-    { id: "user-guide", title: "User Guide", description: "Features and step-by-step guides", icon: BookOpen, paragraphs: ["The Dashboard is your project library. The workspace Settings gear edits the open novel title, author, series and cover. Use Save changes to apply them. Archive keeps the project intact; find and restore it under Archived in the library. Create collections, drag projects or folders to organize them, and use the path above the library to navigate. Search, sorting, grouping and Grid/List help you find your work.", "Binder, Codex, Planning, Research, Templates and Prompts share the same note system. Notes can contain other notes. Optional workspace tabs have no X button: right-click a tab, choose Delete and confirm. This removes only the tab, keeping all notes. Use the + menu to restore a section, or Open as tab on a note. Binder, Codex and Trash stay available. Click a note icon to change it, or use its three-dot menu for more actions.", "Write edits one note; Split shows two editors; Grid shows index cards; List shows note details. The Inspector contains Info, Details and Mentions. Deleted notes go to Trash and can be restored."] },
-    { id: "shortcuts", title: "Keyboard Shortcuts", description: "Work faster with shortcuts", icon: Keyboard, paragraphs: ["Ctrl+Z undoes an edit. Ctrl+Y or Ctrl+Shift+Z redoes it. The toolbar arrows use the same history across workspace tabs. While typing, Undo and Redo act in the focused text field. Each book keeps its last 100 edits and its redo steps on this device. They return when you reopen the same book or refresh the page. Type --- on its own line to insert a divider immediately at the third hyphen. Ctrl+Alt+1–6 applies Heading 1–6 in the active editor; Ctrl+Alt+0 returns to a normal paragraph. The Text style menu applies the level to the current paragraph or selected blocks. Ctrl + scroll over the Dashboard library changes cover size. Ctrl + scroll over a workspace panel changes its zoom.", "In the note tree, Up/Down select the previous/next visible note. Right expands a note or enters its children; Left collapses it or selects its parent. Home/End select the first/last visible note. Delete sends the selected note to Trash when you are navigating the note tree. Text fields and the editor handle Delete as text editing.", "Escape closes this Help Center and other open popovers. Tab moves between controls; Enter activates the focused button. Use Save to finish saving changes to your account."] },
+    { id: "getting-started", title: "Getting Started", description: "Create your first project", icon: Rocket, paragraphs: [
+      "Click Project in the library and enter a title and author. In Binder, right-click an empty part of the tree and choose Create top-level note. To add a child, open a note’s menu and choose Create note.",
+      "Use Collection to organize projects and folders. Open a collection from the library tree on the left.",
+    ] },
+    { id: "user-guide", title: "User Guide", description: "Features and step-by-step guides", icon: BookOpen, paragraphs: [
+      "Use the library tree to open collections and drag projects or folders to move them. Project Settings edits the open novel’s title, author, series and cover. Find archived projects under Archived in the library.",
+      "Right-click a workspace tab to hide it. Use the + menu to show a hidden tab. Right-click a note and choose Open as tab to keep it within reach. Use the note’s three-dot menu for more actions.",
+      "Write edits one note, Split opens two editors, Grid shows index cards, and List shows note details. Use Continuous to read several notes as one document. Restore deleted notes from Trash.",
+      "Select text and press Ctrl+K to link to a note or website. Use Details to add references and Mentions to see where another note refers to the selected one.",
+      "Canvas arranges cards and embeds existing maps with Insert map. Open a map in Maps to place pins, draw paths or regions, and measure distances. The Timeline tab has Timeline, Calendar and Cards views.",
+      "In Publish, choose the manuscript and a House Style. Preview, print or export the edition from there.",
+    ] },
+    { id: "shortcuts", title: "Keyboard Shortcuts", description: "Work faster with shortcuts", icon: Keyboard, paragraphs: [
+      "Ctrl+S saves pending changes. Ctrl+K inserts a link and Ctrl+Shift+F focuses project search. Ctrl+Z undoes an edit. Ctrl+Y or Ctrl+Shift+Z redoes it. The toolbar arrows and shortcuts follow the active editor, including Synopsis and Notes.",
+      "Type --- on its own line to insert a divider. Ctrl+Alt+1–6 applies Heading 1–6 in the active editor. Ctrl+Alt+0 restores a normal paragraph. Ctrl + scroll in the library changes cover size. In a workspace panel it changes the panel zoom.",
+      "In the note tree, Up and Down move through visible notes. Right expands a note or enters its children. Left collapses it or selects its parent. Home and End select the first or last visible note. Delete sends the selected note to Trash.",
+    ] },
   ] },
   { title: "YOUR PROJECTS", articles: [
-    { id: "saving", title: "Saving & Backups", description: "Protect and export your work", icon: Save, paragraphs: ["Changes are saved automatically to your account in the cloud. Use Save before closing. Export JSON backups from the project menu."] },
-    { id: "recovery", title: "Import & Recovery", description: "Move or restore project files", icon: FolderOpen, paragraphs: ["Import a JSON backup to create a new project. Export unsaved changes before reloading after a conflict."] },
+    { id: "saving", title: "Saving & Backups", description: "Protect and export your work", icon: Save, paragraphs: [
+      "Draftopus saves changes automatically to your private account. Click Save to finish pending changes and wait for Saved to your account before closing.",
+      "If the cloud is temporarily unavailable, Draftopus retries and keeps a local draft until the server confirms the save.",
+      "Use Export JSON backup in Project Settings to download a copy of the project. " + PROJECT_BACKUP_ATTACHMENT_NOTICE,
+    ] },
+    { id: "recovery", title: "Import & Recovery", description: "Move or restore project files", icon: FolderOpen, paragraphs: [
+      "Import a JSON backup from the library or Project Settings to create a project in your account.",
+      "Use the local recovery panel to recover drafts as project copies. If another window saved newer changes, export your unsaved edits before reloading the saved library.",
+    ] },
   ] },
   { title: "SUPPORT & FEEDBACK", articles: [
-    { id: "troubleshooting", title: "Troubleshooting", description: "Resolve common problems", icon: Wrench, paragraphs: ["Check your connection, retry Save and keep unsaved edits open. Preview and browser share the same account library."] },
-    { id: "support", title: "Contact Support", description: "Report a bug or suggest a feature", icon: MessageCircle, paragraphs: ["Describe what you were doing, what you expected and what happened. Include the application version below and a screenshot if it helps explain the problem.", "Share that information in the conversation where you are developing Draftopus, or with the person providing your copy of the application. You can also suggest a feature there."] },
+    { id: "troubleshooting", title: "Troubleshooting", description: "Resolve common problems", icon: Wrench, paragraphs: [
+      "If Draftopus is retrying a save, keep the page open and check your connection. If the error persists, use Retry save or Export backups in the save banner.",
+      "Sign in to the same account in Preview and your browser to open the same saved library.",
+    ] },
+    { id: "support", title: "Report a Problem", description: "Prepare a bug report", icon: MessageCircle, paragraphs: ["Describe what you were doing, what you expected and what happened. Include the version below and a screenshot if it helps explain the problem."] },
   ] },
   { articles: [
-    { id: "whats-new", title: "What's New", icon: Megaphone, paragraphs: ["Private cloud storage for projects, collections, notes and attachments."] },
-    { id: "about", title: "About Draftopus", description: "Version info", icon: Info, paragraphs: ["Draftopus is a writing workspace with a shared cloud library."] },
+    { id: "whats-new", title: "What's New", icon: Megaphone, paragraphs: [
+      "Large libraries send less data when saving. Draftopus retries temporary failures while keeping a local draft.",
+      "Maps has its own workspace for pins, paths, regions and distances. Add map previews to Canvas or to a Codex note’s Details.",
+      "Automatic link detection on Save recognizes Codex titles and aliases. Separate multiple aliases with commas or new lines.",
+    ] },
+    { id: "about", title: "About Draftopus", description: "Version info", icon: Info, paragraphs: ["Draftopus is a writing workspace with a project library, Binder, Codex, shared editor and Inspector. Projects and attachments are stored privately in your account."] },
   ] },
 ];
-
-const webParagraphs: Record<string, string[]> = {
-  "getting-started": ["Click Project on the Dashboard, enter a title and author, and start writing. Your project is saved to your account.", "Use Collection to organize projects and nested collections. Add notes with + in the Binder."],
-  saving: ["Your library is saved automatically to your private account in the cloud. Preview and browser use the same saved projects when signed into the same account.", "Click Save to finish pending changes. Wait for Saved to your account before closing. Internet access is required for saving.", "Export backup creates a JSON copy of a project. Application source backups on GitHub contain no user projects.", PROJECT_BACKUP_ATTACHMENT_NOTICE],
-  recovery: ["Import a JSON project backup from the Dashboard or workspace settings. It creates a new project in your account library.", "If saving fails, keep the page open, retry Save or export your unsaved edits. A previous cloud save is preserved.", "When another window saves newer changes, conflicting writes are stopped. Export unsaved edits before reloading the saved library."],
-  troubleshooting: ["Sign in with the same account in Preview and browser. Both views read the same cloud library and refresh saved changes automatically.", "If saving fails, check your connection, retry Save and export a JSON backup before closing. Unsaved edits cannot sync until a save succeeds."],
-  "whats-new": ["Projects, collections, notes and attachments now use private account cloud storage. Preview and browser share the same saved library.", "Connect notes across all sections from Details. Add aliases for alternate names. Mentions shows backlinks and detected Codex names; Click a detected name to preview its Codex note, choose an ambiguous match or skip that occurrence.", "Use Link or Ctrl+K to insert a note or website link. Click an internal link to preview it, or Ctrl+click to open its target. Open beside keeps your manuscript in the other pane; the back arrow returns to the previous note and view. Select a name and use Ctrl+K → Create and link to make an ordinary blank Codex note without leaving your writing. Mentions can filter references to the manuscript. Ctrl+S saves; Ctrl+Shift+F focuses project search.", "Settings → Backups & Export → Export manuscript compiles selected Binder notes to HTML or Markdown. Export backup saves the project as JSON without separately uploaded files. Open folders as tabs without copying notes, and arrange their sequence in Outline. Timeline adds dated events, a calendar and a chronological list. Use Calendar settings for months, weekdays, eras, clock and leap days; Add event can date an existing note."],
-  about: ["Draftopus is a writing workspace with a project library, Binder, Codex, shared editor and Inspector.", `Version ${packageInfo.version}. Projects and attachments are stored privately in your account using Sites cloud storage.`],
-};
 
 export function HelpCenter() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [article, setArticle] = useState<Article | null>(null);
   const search = query.trim().toLocaleLowerCase();
-  const platformGroups = groups.map(group => ({ ...group, articles: group.articles.map(item => ({ ...item, paragraphs: webParagraphs[item.id] ?? item.paragraphs })) }));
-  const filtered = platformGroups.map(group => ({ ...group, articles: group.articles.filter(item => `${item.title} ${item.description ?? ""} ${item.paragraphs.join(" ")}`.toLocaleLowerCase().includes(search)) })).filter(group => group.articles.length);
+  const filtered = groups.map(group => ({ ...group, articles: group.articles.filter(item => `${item.title} ${item.description ?? ""} ${item.paragraphs.join(" ")}`.toLocaleLowerCase().includes(search)) })).filter(group => group.articles.length);
   return <Popover open={open} onOpenChange={value => { setOpen(value); if (!value) { setQuery(""); setArticle(null); } }}>
     <PopoverTrigger asChild><button type="button" aria-label="Help" className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-white/5 data-[state=open]:bg-white/5 data-[state=open]:text-[#eed18a]"><CircleHelp className="h-4 w-4" />Help</button></PopoverTrigger>
     <PopoverContent align="end" side="bottom" sideOffset={10} collisionPadding={10} aria-label="Help Center" className="w-[325px] max-w-[calc(100vw-20px)] overflow-hidden rounded-[15px] border-[#3f3f46] bg-[#18181b] p-0 font-sans text-[#e7e7e9] shadow-2xl [font-family:Arial,sans-serif]">
