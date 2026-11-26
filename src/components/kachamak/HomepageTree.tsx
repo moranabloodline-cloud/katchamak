@@ -103,7 +103,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const leftZoom=usePanelZoom("left");
   return <div className="flex h-full flex-col">
     <WorkspaceNavigation includeHomePages/>
-    <nav ref={tree} style={{zoom:leftZoom}} {...dropTarget(null)} aria-label="Canvas tree" className="min-h-0 flex-1 overflow-auto px-3 py-1">
+    <nav ref={tree} style={{zoom:leftZoom}} {...dropTarget(null)} aria-label="Canvas tree" className="min-h-0 flex-1 overflow-auto px-3 pb-1 pt-3">
       {rows.map(row=>{
         if(row.depth>hiddenBelow)return null;
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;
