@@ -5,7 +5,7 @@ import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, typ
 import {ChevronDown, ChevronRight, PanelsTopLeft, House, MoreVertical, Plus, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
 import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem} from '@/components/ui/context-menu';
 import {branchSources,insideBranches,type BranchSource} from '@/lib/kachamak/tree-move';
@@ -17,6 +17,8 @@ import type {Novel} from '@/lib/kachamak/types';
 import {TreeIconPicker} from './TreeIconPicker';
 import {iconByName} from '@/lib/kachamak/icons';
 import {WorkspaceNavigation} from './WorkspaceNavigation';
+import {CanvasPageTemplatePicker} from './CanvasPageTemplatePicker';
+import {CANVAS_PAGE_TEMPLATES, type CanvasPageTemplateId} from '@/lib/kachamak/canvas-page-templates';
 
 type PageDialog = {action:'create'|'rename'; id:string|null};
 
@@ -26,6 +28,8 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const [dialog,setDialog]=useState<PageDialog|null>(null);
   const [picking,setPicking]=useState<string|null>(null);
   const [title,setTitle]=useState('');
+  const customTitle=useRef(false);
+  const [templateId,setTemplateId]=useState<CanvasPageTemplateId>('blank');
   const [error,setError]=useState('');
   const rows=useMemo(()=>homepageRows(novel),[novel]);
   const pages=novel.homePages;
@@ -76,7 +80,8 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
     });
   },[selected,pages,setCollapsed]);
   const show=(action:PageDialog['action'],id:string|null,name='')=>{
-    setError('');setTitle(action==='rename'?name:'');setDialog({action,id});
+    customTitle.current=false;
+    setError('');setTemplateId('blank');setTitle(action==='rename'?name:'');setDialog({action,id});
   };
   function removePage(id:string,name:string){
     const root=id===HOME_ROOT;
@@ -90,10 +95,19 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
     if(!useKachamak.getState().changeHomepage(novel.id,{type:'appearance',field,value},id))toast.error('The canvas could not be updated.');
   }
   const choose=(id:string)=>{useKachamak.getState().openHomePage(novel.id,id);onDismiss();};
+  function templateName(template:CanvasPageTemplateId){
+    if(template==='blank')return '';
+    if(template==='project-example')return (novel.title.trim()||'Project')+' — Canvas example';
+    return CANVAS_PAGE_TEMPLATES.find(item=>item.id===template)?.label??'';
+  }
+  function chooseTemplate(next:CanvasPageTemplateId){
+    if(!customTitle.current)setTitle(templateName(next));
+    setTemplateId(next);
+  }
   const submit=()=>{
     if(!dialog)return;
     const state=useKachamak.getState();
-    const ok=dialog.action==='create'?state.createHomePage(novel.id,dialog.id,title):
+    const ok=dialog.action==='create'?state.createHomePage(novel.id,dialog.id,title,undefined,templateId):
       state.renameHomePage(novel.id,dialog.id!,title);
     if(ok){setDialog(null);if(dialog.action==='create')onDismiss();}
     else setError('The page tree has changed. Close this dialog and try again.');
@@ -156,10 +170,19 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
       })}
     </nav>
     {drag && <div {...dropTarget(null)} className={'shrink-0 rounded border border-dashed border-teal-400/60 p-2 text-center text-xs '+(over===null?'bg-teal-400/15':'')}>Move to top level</div>}
-    {dialog&&<Dialog open onOpenChange={open=>{if(!open)setDialog(null);}}><DialogContent className="sm:max-w-sm">
-      <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
+    {dialog&&<Dialog open onOpenChange={open=>{if(!open)setDialog(null);}}><DialogContent className={dialog.action==='create'?'max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl':'sm:max-w-sm'}>
+      <DialogHeader className={dialog.action==='create'?'pr-6':undefined}>
+        <DialogTitle>{dialogTitle}</DialogTitle>
+        <DialogDescription className={dialog.action==='rename'?'sr-only':undefined}>
+          {dialog.action==='create'?'Choose a layout. Edit its text, images, and links on the new canvas.':'Change the name of this canvas.'}
+        </DialogDescription>
+      </DialogHeader>
       <form className="grid gap-4" onSubmit={e=>{e.preventDefault();submit();}}>
-        <label className="grid gap-1.5 text-sm">Name<Input required autoFocus value={title} onChange={e=>setTitle(e.target.value)}/></label>
+        <label className="grid gap-1.5 text-sm">Name<Input required autoFocus value={title} onChange={e=>{
+          customTitle.current=!!e.target.value.trim();
+          setTitle(e.target.value);
+        }}/></label>
+        {dialog.action==='create'&&<CanvasPageTemplatePicker value={templateId} onChange={chooseTemplate}/>}
         {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={()=>setDialog(null)}>Cancel</Button>
           <Button type="submit" disabled={!title.trim()}>{dialog.action==='create'?'Create canvas':'Save name'}</Button></div>

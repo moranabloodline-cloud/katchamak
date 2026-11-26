@@ -42,7 +42,8 @@ import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} fr
 import {inFixedRow,unifiedCanvas} from './canvas-layout';
 import {extractBoard} from './canvas-selection';
 import {importCanvasFile} from './canvas-file';
-import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, type HomeChange } from './homepage';
+import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, validHomepage, type HomeChange } from './homepage';
+import { buildCanvasPageTemplate, CANVAS_PAGE_TEMPLATES, type CanvasPageTemplateId } from './canvas-page-templates';
 import { isReadableProject } from './project-validation';
 import { validEvent } from './story-calendar';
 import {saveZoomSetting,zoomScope,type ZoomPanel} from './workspace-zoom';
@@ -154,7 +155,7 @@ interface KachamakState {
   deleteHomePage: (bookId:string,pageId:string)=>boolean;
   moveHomePages: (bookId:string,sources:BranchSource[],parentId:string|null)=>void;
   convertBoardSelection: (projectId:string,pageId:string,ids:string[],title:string,heights:[string,number][])=>boolean;
-  createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board'|'canvas') => boolean;
+  createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board'|'canvas', template?:CanvasPageTemplateId) => boolean;
   renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
 
   importCanvasLayout: (projectId:string,pageId:string,expected:Novel['homepage'],file:unknown) => boolean;
@@ -730,10 +731,13 @@ export const useKachamak = create<KachamakState>()(
         if (next===pages) return state;
         return {novels:state.novels.map(n=>n===novel?touch({...n,homePages:next}):n)};
       }),
-      createHomePage: (projectId, parentId, title, mode='canvas') => {
+      createHomePage: (projectId, parentId, title, mode='canvas', template='blank') => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (state.activeNovelId !== projectId || !novel || !title.trim() || !['page','board','canvas'].includes(mode) || (parentId !== null && !homepageEntry(novel, parentId))) return false;
-        const page = {...EMPTY_HOMEPAGE, mode, id: uid(), title: title.trim(), parentId};
+        if (!CANVAS_PAGE_TEMPLATES.some(item => item.id === template) || (template !== 'blank' && mode !== 'canvas')) return false;
+        const layout = template === 'blank' ? EMPTY_HOMEPAGE : buildCanvasPageTemplate(template, novel);
+        const page = {...layout, mode, id: uid(), title: title.trim(), parentId};
+        if (!validHomepage(page) || page.blocks.some(block => !availableProjectImage(novel.gallery,block.image))) return false;
         set({novels: state.novels.map(n => n === novel ? touch({...n, homePages: [...(n.homePages ?? []), page]}) : n),
           activeHomePageId: page.id, view:'homepage'});
         return true;
