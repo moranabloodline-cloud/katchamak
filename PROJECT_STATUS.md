@@ -1,3 +1,5 @@
+> **2026-11-26 — Publish režimi pregleda.** Izbor Kindle, iPhone i iPad prikazuje isti eBook sadržaj u različitim širinama. Print koristi format papira iz stila.
+
 > **2026-11-26 — Ekran učitavanja.** Pokretanje i ponovno učitavanje prikazuju isti kompaktan Draftopus ekran. Ako se biblioteka ne otvori, opcije za lokalne nacrte su u sklopivom odeljku.
 
 > **2026-11-26 — Print preview i PDF.** Contents čita stvarne početne strane poglavlja nakon preloma, uključujući redosled rukopisa, prednje strane i prazne recto strane. PDF koristi isti pripremljeni prikaz kao Print preview.
@@ -751,6 +753,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Publish dobija četiri režima pregleda. EPUB režimi koriste različite širine i prelamaju tekst, a Kindle prikazuje čitalački prikaz u sivim tonovima. PDF poziva pripremu štampe i kada je aktivan pregled uređaja.
 
 - **2026-11-26.** Oporavak se ne prikazuje tokom učitavanja biblioteke. Pri grešci su dostupni Retry, Sign in i sklopive opcije za potvrđene lokalne nacrte.
 

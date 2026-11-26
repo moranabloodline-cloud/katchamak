@@ -4,6 +4,11 @@ import {bookArticles,bookCss,escapeText,type Publication} from '@/lib/kachamak/p
 import {useKachamak} from '@/lib/kachamak/store';
 import {trims,type BookStyle} from '@/lib/kachamak/book-style';
 
+export const previewModes = ['Kindle', 'iPhone', 'iPad', 'Print'] as const;
+export type PreviewMode = typeof previewModes[number];
+
+const readerWidths = { Kindle: 480, iPhone: 390, iPad: 768 } as const;
+
 const contentsPageNumbers = `
       const pageNumbers = new Map();
       for (const page of document.querySelectorAll('.pagedjs_pages .pagedjs_page[data-page-number]')) {
@@ -33,7 +38,7 @@ export function proofDocument(book:Publication,style:BookStyle,print:boolean){
     html[data-ready=yes] .pagedjs_pages{--scale:calc(var(--fit,1) * var(--panel-zoom,1));width:max(100%,calc(${trimWidth}mm * var(--scale) + 32px))}
     html[data-ready=yes] .pagedjs_page{transform:scale(var(--scale));transform-origin:top center;margin-bottom:calc(${trimHeight}mm * (var(--scale) - 1))}
   }`:
-    'html{background:#262626;color:#201f1c;padding:clamp(4px,2vw,16px);line-height:1.5}body{zoom:var(--panel-zoom,1);max-width:36em;min-height:85vh;margin:auto;background:#fff;padding:2.5em clamp(1em,5vw,2em)}html[data-reader-theme=dark]{color-scheme:dark;background:#151515;color:#e7e4df}html[data-reader-theme=dark] body{background:#242424}';
+    'html{background:#262626;color:#201f1c;padding:clamp(4px,2vw,16px);line-height:1.5}body{zoom:var(--panel-zoom,1);max-width:48em;min-height:85vh;margin:auto;background:#fff;padding:2.5em clamp(1em,5vw,2em)}html[data-reader-theme=dark]{color-scheme:dark;background:#151515;color:#e7e4df}html[data-reader-theme=dark] body{background:#242424}html[data-reader-device=Kindle] body{filter:grayscale(1)}html[data-reader-device=Kindle][data-reader-theme=light] body{background:#f6f5ee}';
   const numberedContents=print&&style.folios&&book.sections.some(section=>section.id==='matter-contents')
     &&book.sections.some(section=>section.id.startsWith('entry-'));
   // Reserve space before pagination so adding the page numbers cannot wrap a link.
@@ -73,7 +78,8 @@ function revealEntry(doc: Document, anchor?: string, moveFocus = false) {
     entry.focus({ preventScroll: true });
   }
 }
-export function PublishProof({source,print,darkReader,frameRef,onLoaded,zoom,anchor}:{darkReader:boolean;anchor?:string;zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onLoaded:()=>void}){
+export function PublishProof({source,mode,darkReader,frameRef,onLoaded,zoom,anchor}:{darkReader:boolean;anchor?:string;zoom:number;source:string;mode:PreviewMode;frameRef:React.RefObject<HTMLIFrameElement|null>;onLoaded:()=>void}){
+  const print = mode === 'Print';
   const [status,setStatus]=useState(print?'Setting pages…':'');
   const currentAnchor=useRef(anchor);
   useEffect(()=>{
@@ -84,13 +90,19 @@ export function PublishProof({source,print,darkReader,frameRef,onLoaded,zoom,anc
   useEffect(()=>{frameRef.current?.contentDocument?.documentElement?.style.setProperty('--panel-zoom',String(zoom));},[frameRef,zoom]);
   useEffect(()=>{
     const root=frameRef.current?.contentDocument?.documentElement;
-    if(root&&!print)root.dataset.readerTheme=darkReader?'dark':'light';
-  },[darkReader,frameRef,print]);
+    if (root && !print) {
+      root.dataset.readerTheme = darkReader ? 'dark' : 'light';
+      root.dataset.readerDevice = mode;
+    }
+  }, [darkReader, frameRef, mode, print]);
   return <div className="relative flex min-h-0 flex-1 flex-col">
     {status&&<div aria-live="polite" className="absolute bottom-2 left-2 z-10 rounded bg-background/95 px-2 py-1 text-xs text-muted-foreground">{status}</div>}
-    <iframe ref={frameRef} title={print?'Print proof':'eBook proof'} className="min-h-60 w-full flex-1 border-0 bg-neutral-800" sandbox="allow-scripts allow-same-origin allow-modals" srcDoc={source}
+    <iframe ref={frameRef} title={print?'Print proof':mode+' proof'} className={print ? 'min-h-60 w-full flex-1 border-0 bg-neutral-800' : 'mx-auto min-h-60 w-full flex-1 rounded-xl border border-white/10 bg-neutral-800'} style={mode === 'Print' ? undefined : {maxWidth:readerWidths[mode]}} sandbox="allow-scripts allow-same-origin allow-modals" srcDoc={source}
       onLoad={event=>{const {contentWindow:w,contentDocument:doc}=event.currentTarget;if(!w||!doc?.documentElement)return;
-        if(!print)doc.documentElement.dataset.readerTheme=darkReader?'dark':'light';
+        if (!print) {
+          doc.documentElement.dataset.readerTheme = darkReader ? 'dark' : 'light';
+          doc.documentElement.dataset.readerDevice = mode;
+        }
         doc.documentElement.style.setProperty('--panel-zoom',String(zoom));
         w.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();frameRef.current?.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,ctrlKey:true,deltaY:e.deltaY,deltaMode:e.deltaMode}));}},{passive:false});
         w.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='0'){e.preventDefault();useKachamak.getState().setPanelZoom('mid',1);}});

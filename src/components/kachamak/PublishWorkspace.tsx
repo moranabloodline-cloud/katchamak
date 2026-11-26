@@ -15,7 +15,7 @@ import type {NoteNode,Novel} from '@/lib/kachamak/types';
 import {PublishManuscript} from './PublishManuscript';
 import {manuscriptEntries} from '@/lib/kachamak/publish-manuscript';
 import {PublishTools} from './PublishTools';
-import {proofDocument,PublishProof} from './PublishProof';
+import {proofDocument,PublishProof,previewModes,type PreviewMode} from './PublishProof';
 
 const btn='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/5 disabled:opacity-40';
 const active=' border-amber-400/60 bg-amber-400/10 text-amber-200';
@@ -79,7 +79,8 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   const [focusNote,setFocusNote]=useState<string|null>(null);
   const focusIndex=includedRows.findIndex(row=>row.node.id===focusNote);
   const anchor=inspector==='manuscript'&&focusIndex>=0?'entry-'+focusIndex:undefined;
-  const [gallery,setGallery]=useState(!selected?.bookStyle),[print,setPrint]=useState(true),[proof,setProof]=useState<Proof>(!selected?.bookStyle&&rows.length?'Manuscript':'Chapter opening');
+  const [gallery,setGallery]=useState(!selected?.bookStyle),[previewMode,setPreviewMode]=useState<PreviewMode>('Print'),[proof,setProof]=useState<Proof>(!selected?.bookStyle&&rows.length?'Manuscript':'Chapter opening');
+  const print = previewMode === 'Print';
   useEffect(()=>{if(inspector==='manuscript'){setGallery(false);setProof('Manuscript');}},[inspector]);
   const [darkReader,setDarkReader]=useState(false);
   const [saving,setSaving]=useState(false),[styleName,setStyleName]=useState(''),[destination,setDestination]=useState('');
@@ -129,7 +130,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     setPdfStyleId(null);
     state.updateNode('publish',entry.node.id,{bookStyle:next});
     if(!saved)state.select(entry.node.id);
-    if(gallery){setPrint(true);setProof('Chapter opening');}
+    if(gallery){setPreviewMode('Print');setProof('Chapter opening');}
     setGallery(false);
   };
   const saveAs=()=>{setDestination(folder?.id??'');setStyleName(entry?entry.name+' copy':'New style');setSaving(true);};
@@ -144,7 +145,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         if(status==='yes'){proofFrame?.contentWindow?.print();return;}
         if(status==='error')retryProof();
       }
-      setPrint(true);setProof('Manuscript');setGallery(false);setPdfStyleId(entry.node.id);return;
+      setPreviewMode('Print');setProof('Manuscript');setGallery(false);setPdfStyleId(entry.node.id);return;
     }
     setBusy(true);
     try{await (await import('@/lib/kachamak/publish-export')).exportEdition(format,publication(novel,s),s);}
@@ -188,10 +189,13 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
           <strong className="mr-auto truncate">{entry?.name??"Book proof"}</strong>
           <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'?'Style sample':v}</option>)}</select>
-          <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setPdfStyleId(null);setPrint(m==='Print');}}>{m}</button>)}</div>
+          <select aria-label="Preview mode" className={btn+' bg-background'} value={previewMode} onChange={event=>{
+            setPdfStyleId(null);
+            setPreviewMode(event.target.value as PreviewMode);
+          }}>{previewModes.map(mode=><option key={mode}>{mode}</option>)}</select>
           {!print&&<button type="button" className={btn} aria-pressed={darkReader} aria-label="Dark reader preview" title={darkReader?'Use light reader background':'Use dark reader background'} onClick={()=>setDarkReader(!darkReader)}>{darkReader?<Sun className="size-3.5"/>:<Moon className="size-3.5"/>}</button>}
         </div>
-        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:!source?<p role="status" className="p-5 text-sm text-muted-foreground">{proof==='Scene break'?'This chapter has no scene break.':proof==='Special blocks'?'This chapter has no special blocks.':'This chapter has no text yet.'}</p>:<PublishProof key={proofAttempt?proofAttempt+':'+source:source} anchor={anchor} source={source} print={print} darkReader={darkReader} frameRef={frame} onLoaded={notifyProofLoaded} zoom={zoom}/>}
+        {!entry?<p className="p-5 text-sm text-muted-foreground">Choose a style to preview the book.</p>:proof==='Manuscript'&&!hasContents?<p className="p-5 text-sm text-muted-foreground">Select a Binder chapter or note in Manuscript to preview the book.</p>:!source?<p role="status" className="p-5 text-sm text-muted-foreground">{proof==='Scene break'?'This chapter has no scene break.':proof==='Special blocks'?'This chapter has no special blocks.':'This chapter has no text yet.'}</p>:<PublishProof key={proofAttempt?proofAttempt+':'+source:source} anchor={anchor} source={source} mode={previewMode} darkReader={darkReader} frameRef={frame} onLoaded={notifyProofLoaded} zoom={zoom}/>}
       </>}
     </div>
     {toolsHost&&createPortal(inspector==='manuscript'?<PublishManuscript book={novel} rows={rows} change={action=>{
