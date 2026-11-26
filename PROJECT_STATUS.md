@@ -1,3 +1,5 @@
+> **2026-11-26 — Vraćen prirodni raspored Canvasa.** Povučeno je poslednje razvlačenje koje je u već složenim redovima seklo slike, sužavalo mape i dodavalo unutrašnji skrol. Canvas ponovo koristi prethodni raspored sadržaja. Komanda za izmeštanje kartice iz reda je Move out of row.
+
 > **2026-11-26 — Promena dimenzija Canvas elemenata.** Kartice, kolone i redovi mogu da se razvuku po širini i visini. Sadržaj i krajevi veza prate promenu dok se ručica vuče, a upis dimenzija se radi po završetku. Kolone raspoređuju dodatni prostor između kartica.
 
 > **2026-11-26 — Tabovi desnog panela po belešci.** Hide tab i + sada pamte izbor za otvorenu belešku u lokalnim podešavanjima pregledača. Beleške bez sopstvenog izbora nasleđuju postojeća podešavanja radnog taba.
@@ -767,6 +769,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Vraćen Canvas prikaz pre promene dimenzija. Ponašanje postojećih stranica ostaje čitljivo sa istim podacima.
 
 - **2026-11-26.** Dodate ručice za širinu, visinu i ugao na otključanom Canvasu.
 

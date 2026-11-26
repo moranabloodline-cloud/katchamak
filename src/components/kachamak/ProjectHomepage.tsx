@@ -19,8 +19,7 @@ import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import './canvas.css';
-import {CanvasBoard,type CanvasRowSizing} from './CanvasBoard';
-import './canvas-resize.css';
+import {CanvasBoard} from './CanvasBoard';
 import type {CanvasFile} from '@/lib/kachamak/canvas-file';
 import {canvasToolLabel,toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
@@ -155,12 +154,9 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       setSelection(toggle&&selectedIds.has(block.id)?previous.filter(id=>!unit.has(id)):toggle?[...previous,block.id]:[block.id]);
     }
   }
-  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[],sizing:CanvasRowSizing,options:{removeRow?:()=>void;selectedColumn?:number;sizedRow?:boolean}={}):React.ReactNode {
-    const {removeRow,selectedColumn,sizedRow}=options;
+  function renderBlock(block:HomeBlock,index:number,count:number,release:(cards:HomeBlock[])=>void,selectedSiblings:HomeBlock[]=[],removeRow?:()=>void,selectedColumn?:number):React.ReactNode {
     const display=blockDisplay(block,byId,titles,novel.gallery);
     const row=block.layout==='row';
-    const extent=sizing.preview?.id===block.id?sizing.preview.extent:block.extent;
-    const sizeStyle=extent ? row ? {minHeight:extent.h} : {width:'min(100%, '+extent.w+'px)',height:extent.h} : undefined;
     const rowLanes=lanes.get(block.id);
     const cardRow=rowLanes?.every(items=>items.length===0 || (items.length===1 && items[0].layout==='card'));
     const name=block.title || (row?'Row':block.layout==='divider'?'Divider':block.layout==='video'?'Video':display.name);
@@ -174,7 +170,6 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
     const cardClass='relative flex w-full flex-col text-left focus-visible:outline-2 focus-visible:outline-amber-400 '+frame;
     const selected=!page.locked&&selectedIds.has(block.id)&&(!!block.cell||row&&selectedColumn===undefined);
     return <article key={block.id} data-fixed-selected={selected?true:undefined}
-      data-canvas-sized={extent?'card':sizedRow?'row':undefined} style={sizeStyle}
       draggable={!!block.cell&&!page.locked&&!block.positionLocked}
       tabIndex={block.cell&&!page.locked?0:undefined} aria-label={block.cell?name:undefined}
       onFocus={e=>{if(block.cell&&!page.locked&&e.target===e.currentTarget&&e.currentTarget.matches(':focus-visible')&&!selectedIds.has(block.id))selectInColumn(block,false,false);}}
@@ -182,14 +177,14 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       onDoubleClick={block.cell&&!page.locked?e=>{if(e.currentTarget.contains(e.target as Node)&&!(e.target as Element).closest('.home-arrange,.cv-page-grip,input,a,button:not([data-card-face])'))edit(block);}:undefined}
       onClickCapture={!block.cell||page.locked?undefined:e=>{
         const target=e.target as Element;
-        if(!e.currentTarget.contains(target)||target.closest('.home-arrange,.cv-resize-handle'))return;
+        if(!e.currentTarget.contains(target)||target.closest('.home-arrange'))return;
         const toggle=e.ctrlKey||e.metaKey;
         if(toggle||e.shiftKey||target.closest('[data-card-face]')){
           e.preventDefault();e.stopPropagation();e.currentTarget.focus({preventScroll:true});
         }
         selectInColumn(block,toggle,e.shiftKey);
       }} data-home-block={block.id} data-home-row={row?'':undefined} className={`relative min-w-0 [&:hover>.home-arrange]:opacity-100 [&:hover>.home-arrange]:pointer-events-auto [&:focus-within>.home-arrange]:opacity-100 [&:focus-within>.home-arrange]:pointer-events-auto ${!block.cell&&(row||block.width==='full')?'col-span-full':!block.cell&&block.width==='wide'?'@[530px]:col-span-2':''}`}>
-      {row?<div className={'cv-row-frame @container/row rounded-lg px-1 py-1 '+(page.locked?'':'outline outline-dashed outline-border')}>
+      {row?<div className={'@container/row rounded-lg px-1 py-1 '+(page.locked?'':'outline outline-dashed outline-border')}>
         {(block.title||!page.locked)&&<div className="mb-1 flex flex-wrap items-center justify-between gap-2"><h2 className="cv-row-title">
           {!page.locked&&<button type="button" data-row-handle={block.id} aria-label={'Move row: '+(block.title||'Row')} title="Drag row · Arrow keys to move" className="cv-row-grip"><GripVertical size={16}/></button>}
           <span className="cv-row-name" data-row-handle={page.locked?undefined:block.id}>{block.title||'Row'}</span></h2>
@@ -197,12 +192,12 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
           <button {...editButton} id={'home-edit-row-'+block.id} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3"/>Edit row</button>
           <button type="button" onClick={removeRow} className="flex min-h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="size-3"/>Remove row</button>
         </div>}</div>}
-        <div data-card-row={cardRow||undefined} className="cv-row-lanes grid grid-cols-1 gap-2 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
+        <div data-card-row={cardRow||undefined} className="grid grid-cols-1 gap-2 @[450px]/row:grid-cols-[repeat(min(3,var(--columns)),minmax(0,1fr))] @[680px]/row:grid-cols-[repeat(var(--columns),minmax(0,1fr))]" style={{'--columns':block.columns} as React.CSSProperties}>
           {rowLanes?.map((children,column)=>{
             const selectedSiblings=children.filter(b=>selectedIds.has(b.id));
             const active=selectedIds.has(block.id)&&selectedColumn===column;
             return <div key={column} data-home-cell={block.id} data-column={column} tabIndex={page.locked?undefined:0} aria-label={'Column '+(column+1)} className={`relative flex min-w-0 flex-col gap-2 rounded ${page.locked?'':'min-h-14 pb-6'} ${active?'bg-amber-400/10 outline outline-amber-400':page.locked?'':'outline outline-dashed outline-border/70'}`}>
-              {children.map((child,i)=>renderBlock(child,i,children.length,release,selectedSiblings,sizing,{sizedRow:!!extent}))}
+              {children.map((child,i)=>renderBlock(child,i,children.length,release,selectedSiblings))}
               {!page.locked&&<DropdownMenu><DropdownMenuTrigger asChild>
                 <button type="button" aria-label={'Add element to column '+(column+1)} className="absolute bottom-0 left-0 flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"><Plus className="size-3"/>Add element</button>
               </DropdownMenuTrigger><DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
@@ -215,7 +210,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
             </div>;
           })}
         </div>
-      </div>:<div className="cv-card-content">{emptyImage&&!page.locked?(
+      </div>:emptyImage&&!page.locked?(
         <HomeImagePlaceholder novel={novel} onImage={image=>change({type:'edit',original:block,block:{...block,image}})}/>
       ):emptyImage&&!block.target&&!block.title&&!block.text?<div aria-hidden="true" className="min-h-24 aspect-[4/1]"/>:classic?(
         page.locked&&block.target?.kind==='web'?<a draggable={false} className={cardClass} aria-label={name} href={block.target.url} target="_blank" rel="noopener noreferrer">{face}{!bare&&block.layout!=='card'&&<ArrowUpRight aria-hidden="true" className="absolute right-3 top-3 size-5 rounded bg-background/80 p-0.5"/>}</a>:
@@ -228,7 +223,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
         {!page.locked?<button {...editButton} data-card-face className="absolute inset-0 w-full cursor-grab rounded focus-visible:outline-2 focus-visible:outline-amber-400 active:cursor-grabbing"/>:
           block.target?.kind==='web'?<a aria-label={name} className="absolute inset-0" href={block.target.url} target="_blank" rel="noopener noreferrer"/>:
           block.target&&<button type="button" aria-label={name} className="absolute inset-0 w-full" onClick={()=>activate(block)}/>}
-      </div>}</div>}
+      </div>}
       {!page.locked&&display.image&&!row&&block.layout!=='map'&&<Button size="icon" variant="outline" className="home-arrange pointer-events-none absolute right-2 top-2 z-[1] size-8 bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
         aria-label={'Reposition image: '+name} title="Reposition image" onClick={()=>{captureOpener();setArtwork({block,src:display.source||display.image!});}}><Crop/></Button>}
       {!page.locked&&!row&&<div role="group" aria-label={'Arrange '+name} className="home-arrange pointer-events-none absolute -bottom-2 right-2 z-[1] flex gap-0.5 rounded-md border border-border bg-background px-0.5 text-muted-foreground opacity-0 shadow-sm [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
@@ -239,11 +234,10 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
         {block.cell&&<DropdownMenu><DropdownMenuTrigger asChild>
           <Button size="icon" variant="ghost" className="size-7" aria-label={'More actions: '+name} title="More actions"><MoreHorizontal/></Button>
         </DropdownMenuTrigger><DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={()=>release(selected?selectedSiblings:[block])}><MoveDown size={15}/>Premesti na slobodnu površinu{selected&&selectedSiblings.length>1&&<span className="ml-auto pl-2 text-muted-foreground">{selectedSiblings.length}</span>}</DropdownMenuItem>
+          <DropdownMenuItem onSelect={()=>release(selected?selectedSiblings:[block])}><MoveDown size={15}/>Move out of row{selected&&selectedSiblings.length>1&&<span className="ml-auto pl-2 text-muted-foreground">{selectedSiblings.length}</span>}</DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>}
         {!row&&<Button size="icon" variant="ghost" className="size-7" aria-label="Remove block" title="Remove block" onClick={()=>{if(window.confirm('Remove this block from the canvas?'))change({type:'remove',original:block});}}><Trash2/></Button>}
       </div>}
-      {sizing.handles(block)}
     </article>;
   }
   const actions=(placeRow:()=>NonNullable<HomeBlock['at']>)=><>
@@ -252,14 +246,14 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
     {roots.length>0&&<select aria-label="Row width" title="Row width" className="cv-width" value={page.width??'wide'} onChange={e=>change({type:'width',width:e.target.value as 'reading'|'wide'})}><option value="wide">Wide</option><option value="reading">Reading width</option></select>}
     <Button type="button" size="sm" ref={addRowButton} variant="outline" onClick={()=>addRow(placeRow())}><Rows3 size={15}/>Add row</Button>
   </>;
-  const renderRow=(row:HomeBlock,release:(cards:HomeBlock[])=>void,removeRow:()=>void,selectedColumn:number|undefined,sizing:CanvasRowSizing)=><div className="@container cv-fixed-section">
+  const renderRow=(row:HomeBlock,release:(cards:HomeBlock[])=>void,removeRow:()=>void,selectedColumn?:number)=><div className="@container cv-fixed-section">
     <div data-home-size={style?.size} data-home-spacing={style?.spacing} data-home-align={style?.page?.align}
       style={{fontFamily:style?.font,
       '--home-text-size':style?.size===undefined?undefined:`${style.size}px`,
       '--home-leading':style?.spacing,'--home-align':style?.page?.align} as CSSProperties}
       className="w-full">
       <div className="grid grid-cols-1 items-start">
-        {renderBlock(row,0,1,release,[],sizing,{removeRow,selectedColumn})}
+        {renderBlock(row,0,1,release,[],removeRow,selectedColumn)}
       </div>
     </div>
   </div>;

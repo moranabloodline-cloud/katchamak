@@ -11,7 +11,7 @@ import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import {useKachamak} from '@/lib/kachamak/store';
 import {CanvasSelectionTools} from './CanvasSelectionTools';
-import {boardRects,canResizeCanvasBlock,CARD_WIDTH,COLUMN_WIDTH,type Point,type BoardRect,type CanvasExtent,type CanvasTool,type Stroke} from '@/lib/kachamak/canvas-board';
+import {boardRects,CARD_WIDTH,COLUMN_WIDTH,type Point,type BoardRect,type CanvasTool,type Stroke} from '@/lib/kachamak/canvas-board';
 import type {HomeBlock,HomeCell,HomeChange,HomePageEntry,HomeTarget} from '@/lib/kachamak/homepage';
 import type {NoteNode,Novel} from '@/lib/kachamak/types';
 import {registerZoomReset,saveZoomSetting,useZoomSetting} from '@/lib/kachamak/workspace-zoom';
@@ -25,36 +25,12 @@ import {InkPaths} from './CanvasInk';
 import {useCanvasToolDrop,type CanvasPlacement} from './useCanvasToolDrop';
 import {useCanvasRowDrop} from './useCanvasRowDrop';
 
-type ResizeAxis = 'x' | 'y' | 'both';
-type ResizePreview = {id: string; extent: CanvasExtent};
-type ResizeTarget = {block: HomeBlock; axis: ResizeAxis; size: CanvasExtent; maxWidth: number};
-export type CanvasRowSizing = {
-  preview: ResizePreview | null;
-  handles: (block: HomeBlock) => ReactNode;
-};
-const resizeAxes = [
-  {axis: 'x', label: 'Resize width'},
-  {axis: 'y', label: 'Resize height'},
-  {axis: 'both', label: 'Resize width and height'},
-] as const;
-
-function resizeExtent(target: ResizeTarget, delta: Point): CanvasExtent {
-  const {block, axis, size, maxWidth} = target;
-  const minimum = block.layout === 'draw' ? {w: 8, h: 8}
-    : block.layout === 'row' || block.layout === 'column' ? {w: 150, h: 52}
-    : {w: 96, h: 48};
-  return {
-    w: axis === 'y' || !delta.x ? size.w : Math.min(maxWidth, Math.max(Math.min(minimum.w, size.w), Math.round(size.w + delta.x))),
-    h: axis === 'x' || !delta.y ? size.h : Math.min(Math.max(size.h, 8192), Math.max(Math.min(minimum.h, size.h), Math.round(size.h + delta.y))),
-  };
-}
-
-type Gesture={resize?:ResizeTarget;geometry?:{scene:GuideItem[];frame:ReturnType<typeof canvasDragFrame>};boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|'frame'|'resize';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
+type Gesture={geometry?:{scene:GuideItem[];frame:ReturnType<typeof canvasDragFrame>};boardStart?:Point;dockable?:boolean;kind:'pan'|'move'|'row'|'ink'|'frame';base?:string[]; group?:string[];start:Point;origin:Point;id?:string;points?:Stroke};
 type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:HomeChange)=>boolean;
   openMap:(id:string)=>void;
   selection:string[];setSelection:Dispatch<SetStateAction<string[]>>;
   rows:HomeBlock[];rowContents:HomeBlock[];heldLines:HomeBlock[];
-  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void,selectedColumn:number|undefined,sizing:CanvasRowSizing)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(placement:CanvasPlacement)=>void;
+  renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void,selectedColumn?:number)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(placement:CanvasPlacement)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void;toolsHost?:HTMLDivElement|null;showInspector?:()=>void;onToolPicked?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
 function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Point{
@@ -77,7 +53,6 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
   const zoomRef=useRef(zoom);zoomRef.current=zoom;
   const panRef=useRef(pan);panRef.current=pan;
   const [heights,setHeights]=useState(new Map<string,number>());
-  const [resize,setResize]=useState<ResizePreview|null>(null);
   const [tool,setTool]=useState<'select'|'pan'|'line'|'draw'>('select');
   const [inkColor,setInkColor]=useState('#dfac74');
   const [from,setFrom]=useState<string|null>(null);
@@ -104,11 +79,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
   const [movingRow,setMovingRow]=useState<{id:string;at:Point}|null>(null);
   const [cellRects,setCellRects]=useState(new Map<string,BoardRect & {rowId:string}>());
   const rowWidth=page.width==='reading'?736:1160;
-  const rowResize=resize && rows.some(row=>row.id===resize.id)?resize:null;
-  const rowRects=useMemo(()=>{
-    const layout = rowResize ? rows.map(row => row.id === rowResize.id ? {...row,extent:rowResize.extent} : row) : rows;
-    return worldRows(layout,rowWidth,heights,page.legacyRowX);
-  },[rows,rowWidth,heights,page.legacyRowX,rowResize]);
+  const rowRects=useMemo(()=>worldRows(rows,rowWidth,heights,page.legacyRowX),[rows,rowWidth,heights,page.legacyRowX]);
   const previousRows=useRef(rows.length);
   useLayoutEffect(()=>{
     const el=surface.current,added=rows.length>previousRows.current;
@@ -120,13 +91,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
   },[rows,rowRects,zoom,pan]);
   const [liveInk,setLiveInk]=useState<Stroke>([]);
   const lastPointer=useRef<Point|null>(null),previousZoom=useRef(zoom);
+  const rects=useMemo(()=>boardRects(page.blocks,heights),[page.blocks,heights]);
   const blocks=useMemo(()=>new Map(page.blocks.map(b=>[b.id,b])),[page.blocks]);
-  const boardResize=resize && blocks.has(resize.id)?resize:null;
-  const rects=useMemo(()=>{
-    const layout = boardResize ? page.blocks.map(block => block.id === boardResize.id ? {...block,extent:boardResize.extent} : block) : page.blocks;
-    return boardRects(layout,heights);
-  },[page.blocks,heights,boardResize]);
-  const layoutBlocks=useMemo(()=>new Map([...blocks,...rows.map(b=>[b.id,b] as const),...rowContents.map(b=>[b.id,b] as const)]),[blocks,rows,rowContents]);
   const guideScene=useMemo(()=>[...rects,...rowRects].map(([id,rect])=>({id,rect,columnId:blocks.get(id)?.columnId})),[rects,rowRects,blocks]);
   function toggleFreeCard(id:string){
     setSelection(previous=>{
@@ -166,7 +132,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
   const batch=(command:SelectionCommand)=>save({type:'boardSelection',ids:items.map(b=>b.id),command,heights:[...heights]});
   const save=(action:HomeChange)=>{const ok=change(action);if(!ok)setStatus('The board changed. Select the item again.');return ok;};
   useEffect(()=>{try{sessionStorage.setItem(cameraKey,JSON.stringify(pan));}catch{}},[pan,cameraKey]);
-  useEffect(()=>{if(page.locked){rowDrop.clear();setEditor(null);setFrom(null);setTool('select');setMove(null);setMovingRow(null);setSelected(null);setMarquee(null);setLiveInk([]);setResize(null);gesture.current=null;}},[page.locked]);
+  useEffect(()=>{if(page.locked){rowDrop.clear();setEditor(null);setFrom(null);setTool('select');setMove(null);setMovingRow(null);setSelected(null);setMarquee(null);setLiveInk([]);gesture.current=null;}},[page.locked]);
   useLayoutEffect(()=>{
     if(previousZoom.current===zoom)return;
     const s=surface.current;if(!s)return;
@@ -250,9 +216,6 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     const el=surface.current;if(!el)return;
     const reset=registerZoomReset(el,()=>{lastPointer.current=null;setZoom(1);});
     const wheel=(e:WheelEvent)=>{
-      const content = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-canvas-sized] > .cv-card-content') : null;
-      if (content && !e.ctrlKey && !e.shiftKey &&
-          (e.deltaY < 0 && content.scrollTop > 0 || e.deltaY > 0 && content.scrollTop + content.clientHeight < content.scrollHeight - 1)) return;
       e.preventDefault();e.stopPropagation();
       const factor=e.deltaMode===1?16:e.deltaMode===2?el.clientHeight:1;
       if(e.ctrlKey){
@@ -425,46 +388,13 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     const level=Math.min(2,Math.max(.02,Math.floor(100*Math.min((s.clientWidth-48)/(right-left),(s.clientHeight-48)/(bottom-top)))/100));
     previousZoom.current=level;setZoom(level);setPan({x:(s.clientWidth-(right-left)*level)/2-left*level,y:(s.clientHeight-(bottom-top)*level)/2-top*level});
   }
-  function resizeTarget(block:HomeBlock, axis:ResizeAxis, handle:HTMLButtonElement):ResizeTarget {
-    const owner = handle.parentElement!;
-    const size = {w:owner.offsetWidth,h:owner.offsetHeight};
-    const lane = owner.closest<HTMLElement>('[data-home-cell]');
-    const column = block.columnId ? rects.get(block.columnId) : undefined;
-    const limit = lane?.clientWidth ?? (column ? column.w - 28 : Math.max(size.w,8192));
-    return {block,axis,size,maxWidth:Math.max(1,limit)};
-  }
-  function commitResize(target:ResizeTarget, extent:CanvasExtent){
-    if(extent.w!==target.size.w || extent.h!==target.size.h)
-      save({type:'resize',original:target.block,extent});
-  }
-  function renderResizeHandles(block:HomeBlock):ReactNode {
-    if(page.locked || tool!=='select' || !canResizeCanvasBlock(block,layoutBlocks))return null;
-    const name=block.title || (block.layout==='row'?'Row':toolsByKind[block.layout as CanvasTool]?.name ?? block.layout);
-    return resizeAxes.map(({axis,label})=><button type="button" key={axis} className="cv-resize-handle"
-      data-canvas-resize={axis} data-resize-id={block.id} aria-label={label+': '+name} tabIndex={selected===block.id?0:-1}
-      onKeyDown={e=>{
-        const x=e.key==='ArrowLeft'?-16:e.key==='ArrowRight'?16:0;
-        const y=e.key==='ArrowUp'?-16:e.key==='ArrowDown'?16:0;
-        if(!(x && axis!=='y' || y && axis!=='x'))return;
-        const target=resizeTarget(block,axis,e.currentTarget);
-        e.preventDefault();e.stopPropagation();setSelected(block.id);
-        commitResize(target,resizeExtent(target,{x,y}));
-      }} />);
-  }
   function startGesture(e:PEvent<HTMLDivElement>){
     if(!e.isPrimary||e.button!==0&&e.button!==1||!surface.current?.contains(e.target as Node))return;
     const target=e.target as Element,card=target.closest<HTMLElement>('[data-board-card]'),id=card?.dataset.boardCard;
     const start=local(e.clientX,e.clientY),p=boardPoint(start);
     consumeClick.current=false;
     const focusSurface=()=>surface.current?.focus({preventScroll:true});
-    const resizeHandle = target.closest<HTMLButtonElement>('button[data-canvas-resize]');
-    const resizeBlock = resizeHandle ? layoutBlocks.get(resizeHandle.dataset.resizeId!) : undefined;
-    if(e.button===0 && !page.locked && tool==='select' && resizeHandle && resizeBlock && canResizeCanvasBlock(resizeBlock,layoutBlocks)){
-      const axis = resizeHandle.dataset.canvasResize as ResizeAxis;
-      gesture.current={kind:'resize',start,origin:p,resize:resizeTarget(resizeBlock,axis,resizeHandle)};
-      consumeClick.current=true;setSelected(resizeBlock.id);focusSurface();
-    }
-    else if(e.button===1 || tool==='pan'){gesture.current={kind:'pan',start,origin:pan};}
+    if(e.button===1 || tool==='pan'){gesture.current={kind:'pan',start,origin:pan};}
     else if(!page.locked&&tool==='line'){
       const endpoint=id??target.closest<HTMLElement>('[data-home-cell] [data-home-block]')?.dataset.homeBlock;
       if(endpoint){consumeClick.current=true;finishLink(endpoint);e.preventDefault();}
@@ -531,14 +461,6 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     const point=local(e.clientX,e.clientY);lastPointer.current=point;
     const g=gesture.current;if(!g||!e.isPrimary)return;
     const dx=point.x-g.start.x,dy=point.y-g.start.y,p=boardPoint(point);
-    if(g.resize){
-      if(resize || Math.abs(dx)+Math.abs(dy)>3){
-        const {block}=g.resize;
-        const extent=resizeExtent(g.resize,{x:p.x-g.origin.x,y:p.y-g.origin.y});
-        setResize(previous=>previous?.extent.w===extent.w && previous.extent.h===extent.h ? previous : {id:block.id,extent});
-      }
-      return;
-    }
     if(g.kind==='frame' && (marquee||Math.abs(dx)+Math.abs(dy)>3))setMarquee(frameBetween(g.origin,p));
     if(g.kind==='row'&&(movingRow||Math.abs(dx)+Math.abs(dy)>3)){
       const placement=dragPlacement(g,p,e.clientX,e.clientY);
@@ -558,10 +480,6 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     const g=gesture.current;if(!g||!e.isPrimary)return;
     const point=local(e.clientX,e.clientY),p=boardPoint(point);
     const dragged=Math.abs(point.x-g.start.x)+Math.abs(point.y-g.start.y)>3;
-    if(g.resize){
-      if(dragged)commitResize(g.resize,resizeExtent(g.resize,{x:p.x-g.origin.x,y:p.y-g.origin.y}));
-      cancelGesture();return;
-    }
     if(g.kind==='row'&&dragged && surface.current?.contains(document.elementFromPoint(e.clientX,e.clientY)))
       moveRow(g.id!,dragPlacement(g,p,e.clientX,e.clientY).at);
     if(g.kind==='frame'){
@@ -598,7 +516,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     }
     cancelGesture();
   }
-  function cancelGesture(){setGuides([]);rowDrop.clear();gesture.current=null;setMove(null);setMovingRow(null);setLiveInk([]);setMarquee(null);setResize(null);}
+  function cancelGesture(){setGuides([]);rowDrop.clear();gesture.current=null;setMove(null);setMovingRow(null);setLiveInk([]);setMarquee(null);}
   const editBlock=(b:HomeBlock)=>{
     if(!(b.layout in toolsByKind) || b.layout==='image'&&(b.imageFrame||b.imageCutout))editClassic(b);
     else setEditor({initial:b,original:b});
@@ -653,7 +571,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
       <div ref={world} className="cv-world" style={{transform:'translate('+pan.x+'px,'+pan.y+'px) scale('+zoom+')'}}>
         {rows.map(row=>{
           const r=rowRects.get(row.id)!;
-          return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:movingRow?.id===row.id?movingRow.at.x:r.x,top:movingRow?.id===row.id?movingRow.at.y:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row),row.id===selected?columnIndex:undefined,{preview:resize,handles:renderResizeHandles})}</div>;
+          return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:movingRow?.id===row.id?movingRow.at.x:r.x,top:movingRow?.id===row.id?movingRow.at.y:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row),row.id===selected?columnIndex:undefined)}</div>;
         })}
         <svg className="cv-lines" aria-label="Connections" style={{zIndex:1}}>{[...page.blocks.filter(b=>b.layout==='line'),...heldLines].map(b=>{
           const a=visualRect(b.edge!.from),z=visualRect(b.edge!.to);
@@ -669,10 +587,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
         })}</svg>
         {page.blocks.filter(b=>b.layout!=='line').map(b=>{
           const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind]??{icon:Layers,name:b.layout[0].toUpperCase()+b.layout.slice(1),color:'#c7ae83'};
-          const extent=resize?.id===b.id?resize.extent:b.extent;
-          const looseInk=kind==='draw'&&!!extent;
+          const looseInk=kind==='draw'&&!!b.extent;
           const editLabel=kind==='map'?'Change map'+(b.title?': '+b.title:''):'Edit '+(b.title||name);
-          return <article data-board-card={b.id} data-board-column={column?'':undefined} data-canvas-sized={extent&&!column?'card':undefined} aria-label={b.title||name} key={b.id} tabIndex={page.locked?undefined:0}
+          return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={page.locked?undefined:0}
             onKeyDown={e=>{if(e.target!==e.currentTarget||page.locked)return;
               if(e.key===' '&&(e.ctrlKey||e.metaKey||e.shiftKey)){e.preventDefault();toggleFreeCard(b.id);return;}
               if(e.key==='Enter'){if(tool==='line')finishLink(b.id);else editBlock(b);}
@@ -685,7 +602,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
             className={'cv-card'+(column?' cv-column':'')+(looseInk?' cv-free-ink':'')+(tool==='line'?' cv-connectable':'')}
             data-dragging={!!move&&(move.id===b.id || move.group?.has(b.id) || move.id===b.columnId || move.group?.has(b.columnId??''))||undefined}
             data-selected={!page.locked&&(highlighted.has(b.id)||from===b.id)||undefined} data-drop={move?.over===b.id||undefined}
-            style={{left:r.x,top:r.y,width:r.w,height:column||extent?r.h:undefined,zIndex:move?.id===b.id&&!column&&!move.group?layers.size*2+3:(layers.get(b.columnId??b.id)??1)+(b.columnId?1:0),'--cv-accent':b.color??color} as React.CSSProperties}>
+            style={{left:r.x,top:r.y,width:r.w,height:column?r.h:undefined,zIndex:move?.id===b.id&&!column&&!move.group?layers.size*2+3:(layers.get(b.columnId??b.id)??1)+(b.columnId?1:0),'--cv-accent':b.color??color} as React.CSSProperties}>
             {column&&columnEdges.has(b.id)&&<svg className="cv-column-lines" aria-hidden="true">
               <g transform={'translate('+(-r.x)+' '+(-r.y)+')'}>{columnEdges.get(b.id)!.map(id=>
                 <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked){setSelected(id);surface.current?.focus({preventScroll:true});}}}/>)}</g>
@@ -693,8 +610,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
             {!looseInk&&(column||!page.locked)&&<div className="cv-card-cap"><Icon size={13}/>{column?<strong>{b.title||'Column'}</strong>:<span>{name}</span>}{b.groupId&&<Group size={12} aria-label="Grouped card"/>}{(column||b.positionLocked)&&<LockKeyhole size={11} aria-label="Position locked"/>}{column&&<small>{page.blocks.filter(x=>x.columnId===b.id).length}</small>}
               {!page.locked&&<button aria-label={editLabel} title={editLabel} type="button" onClick={()=>editBlock(b)}><Pencil size={13}/></button>}</div>}
             {column?(!page.locked&&<button type="button" className="cv-column-add" aria-label={'Add note to '+b.title} onClick={()=>{setTool('select');setEditor({initial:{...newCanvasBlock('note'),at:{x:r.x+14,y:r.y+56},columnId:b.id}});}}><Plus size={13}/> Note</button>):
-            <div className="cv-card-content">{!(kind in toolsByKind)?renderClassic(b):<CanvasItemFace openMap={openMap} block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}</div>}
-            {renderResizeHandles(b)}
+            !(kind in toolsByKind)?renderClassic(b):<CanvasItemFace openMap={openMap} block={b} novel={novel} locked={page.locked} source={b.target?.kind==='note'?byId.get(b.target.id):undefined} open={open} describe={describe} toggle={(index,done)=>save({type:'task',id:b.id,index,done})}/>}
           </article>;
         })}
         {!page.locked&&(move||movingRow)&&(guides.length>0||move?.groupBounds)&&<svg aria-hidden="true" className="cv-guides"><defs><marker id={edgePrefix+'-gap-cap'} markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M4 0v8"/></marker></defs>
