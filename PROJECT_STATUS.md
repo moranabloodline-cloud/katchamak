@@ -1,3 +1,5 @@
+> **2026-11-26 — Prvi prikaz Story Boarda.** Tabla se pri prvom otvaranju uklapa u prozor, a zatim koristi poslednji zum sačuvan za tu tablu u pregledaču.
+
 > **2026-11-26 — Fit board na Story Boardu.** Komanda uklapa mrežu poglavlja i linija radnje u raspoloživu širinu i visinu.
 
 > **2026-11-26 — Zum na Story Boardu.** Dugmad za zum i Ctrl + točkić menjaju veličinu mreže. Procenat i Ctrl + 0 vraćaju prikaz na 100%.
@@ -777,6 +779,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Podrazumevani prikaz Story Boarda koristi Fit board kad tabla nema sačuvan zum. Postojeći izbor zuma se zadržava.
 
 - **2026-11-26.** Fit board vraća mrežu na početak i primenjuje zum koji prikazuje celu tablu u raspoloživom prostoru.
 

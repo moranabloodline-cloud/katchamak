@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type FormEvent} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type FormEvent} from 'react';
 import {AlignStartVertical, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ExternalLink, Focus, LockKeyhole, Minus, Pencil, Plus, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
@@ -200,32 +200,48 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
   const matrixRef = useRef<HTMLTableElement>(null);
   const zoomScope = 'kachamak-story-board:' + novel.id + ':' + page.id;
   const savedZoom = Number(useZoomSetting(zoomScope, 'zoom'));
-  const zoom = savedZoom >= minStoryZoom && savedZoom <= maxStoryZoom ? savedZoom : 1;
+  const hasSavedZoom = savedZoom >= minStoryZoom && savedZoom <= maxStoryZoom;
+  const zoom = hasSavedZoom ? savedZoom : 1;
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
 
-  function setZoom(next: number, precision = 100) {
+  const setZoom = useCallback((next: number, precision = 100) => {
     const level = Math.max(minStoryZoom, Math.min(maxStoryZoom, Math.round(next * precision) / precision));
     zoomRef.current = level;
     saveZoomSetting(zoomScope, 'zoom', String(level));
-  }
+  }, [zoomScope]);
 
-  function fitBoard() {
+  const fitBoard = useCallback(() => {
     const grid = gridRef.current;
     const matrix = matrixRef.current;
-    if (!grid || !matrix || !grid.clientWidth || !grid.clientHeight) return;
+    if (!grid || !matrix || !grid.clientWidth || !grid.clientHeight) return false;
 
     // Measure at 100% so a previous zoom or the table's flexible width cannot distort the fit.
     const previousZoom = matrix.style.zoom;
     matrix.style.zoom = '1';
     const width = matrix.offsetWidth;
     const height = matrix.offsetHeight;
-    const fit = Math.min(1, (grid.clientWidth - 1) / width, (grid.clientHeight - 1) / height);
+    const widthFit = width > grid.clientWidth ? (grid.clientWidth - 1) / width : 1;
+    const heightFit = height > grid.clientHeight ? (grid.clientHeight - 1) / height : 1;
+    const fit = Math.min(widthFit, heightFit);
     matrix.style.zoom = previousZoom;
 
     setZoom(Math.floor(fit * 10_000) / 10_000, 10_000);
     grid.scrollTo({left: 0, top: 0, behavior: 'instant'});
-  }
+    return true;
+  }, [setZoom]);
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (hasSavedZoom || !grid || fitBoard()) return;
+
+    // A pane can mount hidden. Wait until it has dimensions before saving its first fit.
+    const observer = new ResizeObserver(() => {
+      if (fitBoard()) observer.disconnect();
+    });
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [fitBoard, hasSavedZoom]);
 
   useEffect(() => {
     const grid = gridRef.current;
@@ -244,7 +260,7 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
       reset();
       grid.removeEventListener('wheel', onWheel);
     };
-  }, [zoomScope]);
+  }, [setZoom]);
   const {notes, notesById} = useMemo(() => {
     const notes: BinderNote[] = flattenNotes(novel, 'binder')
       .filter(({node}) => node.kind !== 'folder' && !node.hidden)
