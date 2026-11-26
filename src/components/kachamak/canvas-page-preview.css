@@ -1,0 +1,205 @@
+.canvas-preview-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  width: calc(100vw - 1rem);
+  max-width: 76rem;
+  height: min(93dvh, 64rem);
+  overflow: hidden;
+  padding: 0;
+}
+
+.canvas-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 3.25rem 0.85rem 1rem;
+}
+
+.canvas-preview-bar [data-slot="dialog-title"] {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.canvas-preview-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--muted);
+  padding: clamp(0.25rem, 2vw, 1.5rem);
+}
+
+.canvas-preview-scroll:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.canvas-preview-page {
+  container: canvas-page / inline-size;
+  display: grid;
+  align-content: start;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  width: 100%;
+  min-height: 100%;
+  max-width: 68rem;
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 3rem);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--background);
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.canvas-preview-page[data-device="phone"] {
+  max-width: 390px;
+  padding: 1rem;
+}
+
+.canvas-preview-page h1,
+.canvas-preview-page .canvas-preview-heading h2 {
+  margin: 0;
+  font-size: clamp(1.65rem, 6cqi, 3.5rem);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.canvas-preview-page h2 {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.8cqi, 1.5rem);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.canvas-preview-page h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.canvas-preview-page p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.canvas-preview-section,
+.canvas-preview-column,
+.canvas-preview-heading,
+.canvas-preview-copy,
+.canvas-preview-links {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.canvas-preview-grid {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(0.75rem, 2cqi, 1.35rem);
+}
+
+@container canvas-page (min-width: 480px) {
+  .canvas-preview-grid {
+    grid-template-columns: repeat(min(2, var(--preview-columns)), minmax(0, 1fr));
+  }
+}
+
+@container canvas-page (min-width: 680px) {
+  .canvas-preview-grid {
+    grid-template-columns: repeat(min(3, var(--preview-columns)), minmax(0, 1fr));
+  }
+}
+
+@container canvas-page (min-width: 860px) {
+  .canvas-preview-grid {
+    grid-template-columns: repeat(var(--preview-columns), minmax(0, 1fr));
+  }
+}
+
+.canvas-preview-art,
+.canvas-preview-surface,
+.canvas-preview-links {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0.65rem;
+}
+
+.canvas-preview-surface,
+.canvas-preview-links {
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.canvas-preview-copy,
+.canvas-preview-links {
+  padding: 0.9rem;
+}
+
+.canvas-preview-art .canvas-preview-copy {
+  padding-inline: 0;
+}
+
+.canvas-preview-cta,
+.canvas-preview-link {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.38rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.42rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.canvas-preview-cta {
+  border-color: #e4c775;
+  background: #e4c775;
+  color: #251d0e;
+  font-weight: 700;
+}
+
+.canvas-preview-cta:hover,
+.canvas-preview-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.canvas-preview-cta:focus-visible,
+.canvas-preview-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.canvas-preview-page :is(audio, iframe, video) {
+  max-width: 100%;
+}
+
+@media (max-width: 40rem) {
+  .canvas-preview-bar {
+    gap: 0.5rem;
+    padding: 0.7rem 2.8rem 0.7rem 0.7rem;
+  }
+
+  .canvas-preview-bar [data-slot="dialog-title"] {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 27rem) {
+  .canvas-preview-bar > :has(> select) {
+    flex-basis: 100%;
+  }
+}

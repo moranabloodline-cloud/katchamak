@@ -2,6 +2,7 @@ import type {HomeBlock, HomeLink, Homepage} from './homepage';
 import {availableProjectImage, validProjectImage} from './project-image';
 import type {NoteNode, Novel, SectionKey} from './types';
 import {stripHtml, uid} from './utils';
+import {newStoryBoard} from './story-board';
 
 export const CANVAS_PAGE_TEMPLATES = [
   {id:'blank', label:'Blank canvas', description:'Start with an empty page.'},
@@ -10,6 +11,8 @@ export const CANVAS_PAGE_TEMPLATES = [
   {id:'research-board', label:'Research board', description:'Sources, open questions and visual references.'},
   {id:'author-page', label:'Author Page', description:'A portrait, biography, featured work and public links.'},
   {id:'project-example', label:'Project example', description:'A filled-in showcase using this book’s artwork, cast and notes.'},
+  {id:'story-board', label:'Story Board', description:'Plan scenes by chapter and plotline, with links into the Binder.'},
+  {id:'mind-map', label:'Mind Map', description:'Start with a central idea and connect branches to project notes.'},
 ] as const;
 
 export type CanvasPageTemplateId = (typeof CANVAS_PAGE_TEMPLATES)[number]['id'];
@@ -124,11 +127,17 @@ function projectExample(book: Novel): HomeBlock[] {
 }
 
 export function buildCanvasPageTemplate(templateId: CanvasPageTemplateId, book: Novel): Homepage {
+  if(templateId==='story-board')return {mode:'canvas',locked:false,blocks:[],storyBoard:newStoryBoard(book)};
+  if(templateId==='mind-map')return {mode:'canvas',locked:false,viewKey:uid(),blocks:[{
+    id:uid(),layout:'note',width:'standard',title:'Central idea',
+    text:'Select this card and use Add branch to connect a related idea.',
+    at:{x:0,y:0},color:'#c4a0ed',
+  }]};
   const bookTitle = book.title.trim() || 'Book title';
   const author = book.author.trim();
   const cover = imageFor(book,book.cover?.image);
-  function blocks(): HomeBlock[] {
-    switch (templateId) {
+  function blocks(id: Exclude<CanvasPageTemplateId, 'story-board' | 'mind-map'>): HomeBlock[] {
+    switch (id) {
       case 'blank':
         return [];
       case 'project-cover':
@@ -181,5 +190,5 @@ export function buildCanvasPageTemplate(templateId: CanvasPageTemplateId, book: 
         return projectExample(book);
     }
   }
-  return {mode:'canvas',locked:false,blocks:blocks()};
+  return {mode:'canvas',locked:false,blocks:blocks(templateId)};
 }

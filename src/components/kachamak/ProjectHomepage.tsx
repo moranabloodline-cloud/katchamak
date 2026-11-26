@@ -20,6 +20,8 @@ import {HomeDocumentBlock} from './HomeDocumentBlock';
 import {HomeBlockEditor} from './HomeBlockEditor';
 import './canvas.css';
 import {CanvasBoard} from './CanvasBoard';
+import {CanvasPagePreview} from './CanvasPagePreview';
+import {CanvasStoryBoard} from './CanvasStoryBoard';
 import type {CanvasFile} from '@/lib/kachamak/canvas-file';
 import {canvasToolLabel,toolsByKind} from './CanvasTools';
 import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
@@ -83,6 +85,7 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
   const [editor,setEditor]=useState<{original?:HomeBlock;cell?:HomeCell;createRow?:boolean;manualPosition?:true;at?:HomeBlock['at'];before?:string}|null>(null);
   const [artwork,setArtwork]=useState<{block:HomeBlock;src:string}|null>(null);
   const [previewId,setPreviewId]=useState<string|null>(null);
+  const [reading,setReading]=useState(false);
   const [item,setItem]=useState<{initial:HomeBlock;original?:HomeBlock}|null>(null);
   const [message,setMessage]=useState('');
   const [incoming,setIncoming]=useState<{file:CanvasFile;name:string;project:string;page:string;expected:Novel['homepage']}|null>(null);
@@ -270,10 +273,17 @@ export function ProjectHomepage({novel,pageId=HOME_ROOT,onShowPages,toolsHost,on
       ? <a className="absolute inset-0" aria-label={display.name} href={b.target.url} target="_blank" rel="noopener noreferrer"/>
       : <button type="button" className="absolute inset-0 w-full" aria-label={display.name} onClick={()=>activate(b)}/>}</div>;
   };
+  if(page.storyBoard)return <CanvasStoryBoard key={page.id} page={page} board={page.storyBoard} novel={novel}
+    change={(previous,next)=>change({type:'storyBoard',previous,next})}
+    openNote={id=>openTarget({kind:'note',id})} onShowPages={onShowPages}
+    toggleLock={()=>change({type:'lock',locked:!page.locked})}/>;
   return <>
     <CanvasBoard key={page.id+':'+(page.viewKey??'')} novel={novel} page={free} byId={byId} change={change} open={openTarget} describe={describe} showTree={onShowPages} toolsHost={toolsHost} openMap={openMap} showInspector={onShowInspector} onToolPicked={onToolPicked}
+      onPreviewPage={()=>{captureOpener();setReading(true);}}
       selection={selection} setSelection={setSelection} rows={roots} rowContents={parts.fixed} heldLines={parts.parked} renderRow={renderRow} addRow={at=>addRow(at,true)} layoutActions={actions} editClassic={edit} renderClassic={classicFree}
       addClassic={placement=>{captureOpener();setEditor(placement);}}/>
+    {reading&&<CanvasPagePreview novel={novel} initialPageId={page.id} notes={byId} describe={describe}
+      onOpen={openTarget} onOpenMap={openMap} onClose={()=>{setReading(false);restoreFocus();}}/>}
     {incoming&&incoming.page===page.id&&incoming.project===novel.id&&<Dialog open onOpenChange={open=>{if(!open)setIncoming(null);}}><DialogContent><DialogHeader><DialogTitle>Replace this canvas layout?</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Open {incoming.name} in {page.title}. Undo restores the previous layout.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setIncoming(null)}>Cancel</Button><Button onClick={installLayout}>Replace layout</Button></div></DialogContent></Dialog>}
     {message&&<p role="status" className="absolute bottom-4 right-4 bg-card p-2 text-amber-300">{message}</p>}
     {!page.locked&&item&&<CanvasItemEditor novel={novel} creating={!item.original} initial={item.initial} onClose={()=>{setItem(null);restoreFocus();}} onSave={block=>change(item.original?{type:'edit',original:item.original,block}:{type:'add',block})}/>}

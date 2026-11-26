@@ -1,7 +1,7 @@
 'use client';
 import {useMemo,useState} from 'react';
 import {ImagePlus, Plus, X} from 'lucide-react';
-import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
+import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Textarea} from '@/components/ui/textarea';
@@ -25,7 +25,10 @@ export function newCanvasBlock(kind:CanvasTool):HomeBlock{
   if(['sketch','draw','color','column'].includes(kind))block.color=toolsByKind[kind].color;
   return block;
 }
-export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:Novel;initial:HomeBlock;creating:boolean;onSave:(next:HomeBlock)=>boolean;onClose:()=>void}){
+export function CanvasItemEditor({novel,initial,creating,branchFrom,onSave,onClose,onRestoreFocus}:{
+  novel:Novel;initial:HomeBlock;creating:boolean;branchFrom?:string;
+  onSave:(next:HomeBlock)=>boolean;onClose:()=>void;onRestoreFocus?:()=>void;
+}){
   const [draft,setDraft]=useState(initial),[error,setError]=useState('');
   const patch=(p:Partial<HomeBlock>)=>setDraft(current=>({...current,...p}));
   const kind=draft.layout as CanvasTool,{name}=toolsByKind[kind];
@@ -34,6 +37,7 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
   const tasks=draft.tasks??[],cells=draft.cells??[];
   const text=['note','comment','heading','image','map','link'].includes(kind);
   function save(){
+    if(branchFrom&&!draft.title.trim())return setError('Enter a title for this branch.');
     if(kind==='video'&&!canvasVideo(draft.videoUrl))return setError('Enter a YouTube, MP4 or WebM address.');
     if(kind==='audio'&&!canvasAudio(draft.audio))return setError('Enter a direct audio file address.');
     if(kind==='map'&&!findProjectMap(novel,draft.mapId)?.image)return setError('Choose a map from this book.');
@@ -49,10 +53,13 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
     }
     if(onSave(clean))onClose();else setError('This item changed. Reopen it to edit the latest version.');
   }
-  return <Dialog open onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="cv-dialog max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-    <DialogHeader><DialogTitle>{kind==='map'?(creating?'Insert map':'Change map'):(creating?'Add ':'Edit ')+name}</DialogTitle></DialogHeader>
+  return <Dialog open onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="cv-dialog max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+    onCloseAutoFocus={event=>{if(onRestoreFocus){event.preventDefault();onRestoreFocus();}}}>
+    <DialogHeader><DialogTitle>{branchFrom?'Add branch':kind==='map'?(creating?'Insert map':'Change map'):(creating?'Add ':'Edit ')+name}</DialogTitle>
+      {branchFrom&&<DialogDescription>Connect a new card to {branchFrom}.</DialogDescription>}
+    </DialogHeader>
     <form onSubmit={e=>{e.preventDefault();save();}} className="grid gap-4">
-      <label>Title<Input autoFocus value={draft.title} onChange={e=>patch({title:e.target.value})} placeholder={kind==='column'?'Chapter name':undefined}/></label>
+      <label>Title<Input autoFocus required={!!branchFrom} value={draft.title} onChange={e=>patch({title:e.target.value})} placeholder={kind==='column'?'Chapter name':undefined}/></label>
       {text&&kind!=='heading'&&<label>{kind==='comment'?'Comment':'Text'}<Textarea rows={3} value={draft.text} onChange={e=>patch({text:e.target.value})}/></label>}
       {(kind==='link'||kind==='note')&&<HomeDestinationFields notes={notes} pages={pages} optional={kind==='note'} target={draft.target} onChange={target=>patch({target})}/>}
       {kind==='map'&&<ProjectMapSelect book={novel} value={draft.mapId} onChange={mapId=>patch({mapId})}/>}
@@ -76,6 +83,6 @@ export function CanvasItemEditor({novel,initial,creating,onSave,onClose}:{novel:
           <button type="button" className="cv-text-btn" disabled={cells[0].length<2} onClick={()=>patch({cells:cells.map(r=>r.slice(0,-1))})}>− Column</button>
         </div></div>}
       {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
-      <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">{creating?'Add to canvas':'Save changes'}</Button></div>
+      <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit">{branchFrom?'Add branch':creating?'Add to canvas':'Save changes'}</Button></div>
     </form></DialogContent></Dialog>;
 }

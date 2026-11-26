@@ -6,6 +6,7 @@ import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,worl
 import {changeCardGroup,clearSingletonGroups,duplicateCardGroup,type CardGroupChange,type DuplicateGroupChange} from './canvas-groups';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
 import {validCanvasFields,validBoard,moveOnBoard,isPoint,type Point,type CanvasFields,type BoardMove} from './canvas-board';
+import {validStoryBoard, type StoryBoard} from './story-board';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
@@ -48,7 +49,7 @@ export interface HomeBlock extends CanvasFields {
   links?: HomeLink[];
   videoUrl?: string;
 }
-export interface Homepage { viewKey?:string; synopsis?:string; notes?:string; icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
+export interface Homepage { storyBoard?:StoryBoard; viewKey?:string; synopsis?:string; notes?:string; icon?:string; color?:string; legacyRowX?:number; title?:string; mode?:'page'|'board'|'canvas'; locked: boolean; blocks: HomeBlock[]; width?: 'wide'|'reading' }
 export const EMPTY_HOMEPAGE: Homepage = { locked: false, blocks: [] };
 export const HOME_ROOT = 'home';
 export interface HomePageEntry extends Homepage {
@@ -186,6 +187,7 @@ export function validHomepage(value: unknown): boolean {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object') return false;
   const page = value as Homepage;
+  if(page.storyBoard!==undefined && !validStoryBoard(page.storyBoard))return false;
   if(page.icon!==undefined&&!validAppearance('icon',page.icon) || page.color!==undefined&&!validAppearance('color',page.color))return false;
   if(page.viewKey!==undefined&&(typeof page.viewKey!=='string'||!page.viewKey||page.viewKey.length>80))return false;
   if(page.legacyRowX!==undefined && !Number.isFinite(page.legacyRowX))return false;
@@ -200,7 +202,9 @@ export function validHomepage(value: unknown): boolean {
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
 type MapAnnotationChange = {type:'mapAnnotations'; original:HomeBlock; atlas:MapAtlas};
-export type HomeChange = MapAnnotationChange | LayoutChange;
+export type HomeChange = MapAnnotationChange | LayoutChange
+  | {type:'storyBoard';previous:StoryBoard;next:StoryBoard}
+  | {type:'addBranch';from:string;block:HomeBlock;edgeId:string};
 type LayoutChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange | DuplicateGroupChange
   | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
@@ -218,6 +222,21 @@ type LayoutChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGrou
   | ({ type: 'place'; id: string } & HomePlacement);
 
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  if(action.type==='storyBoard'){
+    if(page.locked || !page.storyBoard || page.storyBoard!==action.previous || action.next===action.previous || !validStoryBoard(action.next))return null;
+    return {...page,storyBoard:action.next};
+  }
+  if(action.type==='addBranch'){
+    if(page.locked || page.storyBoard || (page.mode!=='board' && page.mode!=='canvas'))return null;
+    const parent=page.blocks.find(block=>block.id===action.from);
+    if(!parent || parent.layout==='line' || parent.layout==='column' || parent.columnId || inFixedRow(parent))return null;
+    const child=action.block;
+    if(child.layout!=='note' || child.cell || child.columnId || !isPoint(child.at) || typeof child.title!=='string' || !child.title.trim())return null;
+    const added=changeHomepage(page,{type:'add',block:child});
+    if(!added)return null;
+    const edge:HomeBlock={id:action.edgeId,layout:'line',width:'standard',title:'',text:'',edge:{from:parent.id,to:child.id}};
+    return changeHomepage(added,{type:'add',block:edge});
+  }
   if(action.type==='mapAnnotations'){
     const current=page.blocks.find(block=>block.id===action.original.id);
     if(current?.layout!=='map'||!current.image||current.image!==action.original.image||!validAtlas(action.atlas)||
@@ -230,6 +249,7 @@ export function changeHomepage(page: Homepage, action: HomeChange): Homepage | n
     return {...page,[action.field]:action.value};
   }
   if(action.type==='appearance')return action.value===''||validAppearance(action.field,action.value)?{...page,[action.field]:action.value||undefined}:null;
+  if(page.storyBoard && action.type!=='lock')return null;
   const next=page.mode==='canvas'?changeUnifiedCanvas(page,action):applyHomeChange(page,action);
   if(!next||page.mode!=='canvas'&&!validBoard(next))return null;
   return action.type==='remove'||action.type==='removeBoardItem'||action.type==='deleteItems'||action.type==='place'||action.type==='into'
