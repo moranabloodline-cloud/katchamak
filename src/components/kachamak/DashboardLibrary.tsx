@@ -180,6 +180,7 @@ export function DashboardLibrary(props: Props) {
   const folders = sortedCollections(location).filter((c) => c.name.toLocaleLowerCase().includes(query));
   const projects = (showArchived&&location===null?novels.filter(n=>n.archived):projectsAt(location)).filter((n) => n.title.toLocaleLowerCase().includes(query) || n.author.toLocaleLowerCase().includes(query)).sort((a,b)=>compareLibraryProjects(a,b,sort));
   const projectGroups=groupLibraryProjects(projects,group);
+  const itemCount = folders.length + projects.length;
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${Math.round(156 * coverZoom / 100)}px), 1fr))` };
 
   return <div className="flex h-dvh flex-col overflow-hidden bg-[#0a0c10] text-foreground">
@@ -198,7 +199,7 @@ export function DashboardLibrary(props: Props) {
           {tree(null)}
           {!collections.length && !novels.length && <p className="px-2 py-4 text-xs leading-relaxed text-muted-foreground">Create a collection or project to start your library.</p>}
         </nav>
-        <div className="shrink-0 border-t border-white/[0.07] px-3 py-2 text-xs text-muted-foreground">{collections.length} collections · {novels.length} projects</div>
+        <div className="shrink-0 border-t border-white/[0.07] px-3 py-2 text-xs text-muted-foreground">{collections.length} {collections.length === 1 ? "collection" : "collections"} · {novels.length} {novels.length === 1 ? "project" : "projects"}</div>
       </aside>
       <div role="separator" aria-label="Resize collections panel" aria-orientation="vertical" aria-valuemin={140} aria-valuemax={600} aria-valuenow={prefs.sidebarWidth} tabIndex={0} className="z-10 w-[5px] shrink-0 cursor-col-resize touch-none bg-white/[0.07] outline-none hover:bg-amber-400/60 focus:bg-amber-400/60" onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); prefs.setSidebarWidth(prefs.sidebarWidth + (event.key === "ArrowLeft" ? -16 : 16)); } }} onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) prefs.setSidebarWidth(Math.min(event.clientX, window.innerWidth * .45)); }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }} />
       <main aria-label="Library" className="flex min-w-0 flex-1 flex-col">
@@ -215,7 +216,7 @@ export function DashboardLibrary(props: Props) {
           </div>
         </div>
         <div ref={libraryRef} {...dropZone(location)} data-testid="library-content" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 kachamak-scroll ${dropTarget !== undefined && dropTarget === location ? "bg-amber-400/[0.04] ring-1 ring-inset ring-amber-400/40" : ""}`}>
-          <div className="mb-5 flex items-center gap-2"><h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-[#f2ead9]" title={active?.name ?? (showArchived?"Archived":"Library")}>{active?.name ?? (showArchived?"Archived":"Library")}</h1><span className="shrink-0 text-xs text-muted-foreground">{folders.length + projects.length} items</span></div>
+          <div className="mb-5 flex items-center gap-2"><h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-[#f2ead9]" title={active?.name ?? (showArchived?"Archived":"Library")}>{active?.name ?? (showArchived?"Archived":"Library")}</h1><span className="shrink-0 text-xs text-muted-foreground">{itemCount} {itemCount === 1 ? "item" : "items"}</span></div>
           {folders.length > 0 && <section aria-label="Folders" className="mb-6"><div className={layout === "grid" ? "grid gap-3" : "space-y-1"} style={layout === "grid" ? gridStyle : undefined}>{folders.map((c) => <LibraryItem key={c.id} {...dragProps({ kind: "collection", id: c.id, sourceId: c.parentId })} {...dropZone(c.id)} data-library-collection={c.id} className={`group/library-item flex min-w-0 items-center rounded-lg border px-2 py-3 ${dropTarget === c.id ? "border-amber-300 bg-amber-400/15" : "border-white/10 bg-white/[0.02] hover:border-[#a97f33]/60"}`}>
             <button type="button" onClick={() => navigate(c.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-left" aria-label={`Open collection ${c.name}`}><span className={`flex shrink-0 items-center justify-center ${layout === "list" ? "h-12 w-8" : ""}`}><CollectionIcon name={c.name} open className={`shrink-0 text-[#d1ac60] ${layout === "grid" ? "h-9 w-9" : "h-6 w-6"}`} /></span><span className="min-w-0 flex-1 basis-16"><span className="block truncate text-sm text-[#e9dfcb]">{c.name}</span>{layout === "grid" && <span className="mt-0.5 block text-xs text-muted-foreground">Collection</span>}</span>{layout === "list" && <><span className="w-14 text-xs text-muted-foreground">Collection</span><span className="w-24 text-xs text-muted-foreground">—</span><span className="w-24 text-xs text-muted-foreground/70">{c.updatedAt ? modified(c.updatedAt) : "—"}</span></>}</button>{folderMenu(c)}
           </LibraryItem>)}</div></section>}

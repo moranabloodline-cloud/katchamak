@@ -1,4 +1,4 @@
-> **2026-11-26 — Poliranje biblioteke i radnog prostora.** Pomoć opisuje trenutne komande. Save information prikazuje stanje čuvanja, ponovnog pokušaja ili greške. Nazivi Continuous i komandi za mape su usklađeni.
+> **2026-11-26 — Poliranje biblioteke i radnog prostora.** Pomoć opisuje trenutne komande. Save information prikazuje stanje čuvanja, ponovnog pokušaja ili greške. Ispravljeni su broj stavki u biblioteci, naziv Continuous i oznake komandi za mape.
 
 > **2026-11-25 — Brže čuvanje u cloudu.** Velike biblioteke se šalju i upisuju kompresovano kada pregledač to podržava i kompresija smanjuje veličinu. Čuvanje i dalje čeka potvrdu revizije pre uklanjanja lokalnog nacrta.
 
