@@ -1,3 +1,5 @@
+> **2026-11-26 — Boje Canvas alata.** Ikonice u paleti su grupisane prema nameni, uz prilagođen kontrast u svetloj i tamnoj temi.
+
 > **2026-11-26 — Premeštanje Canvas stranica.** Move to… u meniju stranice bira novi nadređeni Canvas ili najviši nivo.
 
 > **2026-11-26 — Prvi prikaz Story Boarda.** Tabla se pri prvom otvaranju uklapa u prozor, a zatim koristi poslednji zum sačuvan za tu tablu u pregledaču.
@@ -781,6 +783,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Paleta Canvas alata koristi pet boja za pisanje, veze, medije, crtanje i strukturu. Boje kartica ostaju nezavisne od palete.
 
 - **2026-11-26.** Canvas stablo podržava premeštanje kroz meni, uz zadržavanje veza, sadržaja i podstranica.
 

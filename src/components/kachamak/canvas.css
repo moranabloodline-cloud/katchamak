@@ -96,6 +96,16 @@
 .cv-tools-head button { color:var(--muted-foreground); }
 .cv-tools-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(76px,100%),1fr)); gap:6px; }
 .cv-tools-grid button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-height:51px; border:1px solid var(--border); border-radius:6px; background:var(--card); font:12px/1.25 system-ui,sans-serif; }
+.cv-tools-grid [data-tool-category="writing"] { color:#855412; }
+.cv-tools-grid [data-tool-category="connections"] { color:#006a83; }
+.cv-tools-grid [data-tool-category="media"] { color:#216742; }
+.cv-tools-grid [data-tool-category="drawing"] { color:#a04439; }
+.cv-tools-grid [data-tool-category="structure"] { color:#69449a; }
+.dark .cv-tools-grid [data-tool-category="writing"] { color:#e3b369; }
+.dark .cv-tools-grid [data-tool-category="connections"] { color:#7bc8de; }
+.dark .cv-tools-grid [data-tool-category="media"] { color:#88cea6; }
+.dark .cv-tools-grid [data-tool-category="drawing"] { color:#efa695; }
+.dark .cv-tools-grid [data-tool-category="structure"] { color:#c7adea; }
 .cv-tools:disabled button { opacity:.5; cursor:default; }
 .cv-batch { margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 .cv-batch fieldset { min-width:0; margin:0 0 11px; padding:0; border:0; }
