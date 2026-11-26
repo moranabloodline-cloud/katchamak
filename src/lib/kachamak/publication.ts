@@ -9,7 +9,7 @@ import type {Novel,NoteNode} from './types';
 export type Proof = 'Manuscript'|'Title page'|'Chapter opening'|'Body text'|'Scene break'|'Special blocks'|'End matter'|SpecialPage;
 export const proofs:Proof[]=['Manuscript','Title page','Chapter opening','Body text','Scene break','Special blocks','Copyright','Dedication','Contents','About the author','Colophon'];
 export type Leaf={id:string;title:string;kind:'chapter'|'part'|'special';html:string};
-export type Publication={title:string;author:string;lang:string;sections:Leaf[]};
+export type Publication={title:string;author:string;lang:string;sections:Leaf[];coverImage?:string};
 export const escapeText=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export function chapterNumber(index:number,format:BookStyle['numbering']){
   if(format==='None')return '';
@@ -29,6 +29,27 @@ const paras=(value:string)=>value.split(/\n\s*\n/).map(p=>'<p>'+escapeText(p).re
 export const sampleBody=sampleParagraphs.map(paras).join('');
 const sampleChapterTitle='The Far Bank';
 function divider(style:BookStyle){return '<div class="scene" role="separator">'+escapeText(glyphs[style.divider])+'</div>';}
+function preserveInlineEmphasis(element: HTMLElement) {
+  if (!element.matches('span, a, b, strong, i, em, u, s, sup, sub')) return;
+  const {style} = element;
+  const decoration = (style.textDecorationLine || style.textDecoration).split(/\s+/);
+  const marks = [
+    [style.fontWeight === 'bold' || Number(style.fontWeight) >= 600, 'strong', 'strong, b'],
+    [/^(?:italic|oblique)(?:\s|$)/.test(style.fontStyle), 'em', 'em, i'],
+    [decoration.includes('underline'), 'u', 'u'],
+    [decoration.includes('line-through'), 's', 's'],
+    [style.verticalAlign === 'super', 'sup', 'sup'],
+    [style.verticalAlign === 'sub', 'sub', 'sub'],
+  ] as const;
+  let content = element;
+  for (const [enabled, tag, selector] of marks) {
+    if (!enabled || element.closest(selector)) continue;
+    const mark = element.ownerDocument.createElement(tag);
+    mark.append(...Array.from(content.childNodes));
+    content.append(mark);
+    content = mark;
+  }
+}
 function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,string>){
   const el=document.implementation.createHTMLDocument('').createElement('div');
   if(raw.includes('gallery:')){
@@ -43,14 +64,9 @@ function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,st
   for(const n of Array.from(el.querySelectorAll<HTMLElement>('*'))){
     const old=n.getAttribute('data-block')||n.className;
     n.removeAttribute('class');n.removeAttribute('data-block');
-    // Keep semantic emphasis from rich-text editors; the preset supplies the metrics.
-    const bold=/bold|[6-9]00/.test(n.style.fontWeight), italic=n.style.fontStyle==='italic';
+    // Convert editor marks before the publication preset replaces source CSS.
+    preserveInlineEmphasis(n);
     n.removeAttribute('style');
-    if((bold||italic)&&n.tagName==='SPAN'){
-      const wrapper=document.createElement(bold?'strong':'em');
-      wrapper.append(...Array.from(n.childNodes));n.append(wrapper);
-      if(bold&&italic){const em=document.createElement('em');em.append(...Array.from(wrapper.childNodes));wrapper.append(em);}
-    }
     if(n.tagName==='IMG'){
       const src=projectImageSrc(book.gallery,n.getAttribute('src')??'');
       if(src && /^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(src))n.setAttribute('src',src);
@@ -249,7 +265,7 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
   if(proof==='Manuscript'){
     const fronters=s.pages.filter(p=>!['About the author','Colophon'].includes(p));
     const back=s.pages.filter(p=>['About the author','Colophon'].includes(p));
-    return {...model,sections:[...fronters.map(p=>special(p,book,s,chapters)),...chapters,...back.map(p=>special(p,book,s,chapters))]};
+    return {...model,coverImage:projectImageSrc(book.gallery,book.cover?.image),sections:[...fronters.map(p=>special(p,book,s,chapters)),...chapters,...back.map(p=>special(p,book,s,chapters))]};
   }
   if(proof==='Chapter opening')return {...model,sections:[sampleChapter(s,art)]};
   if (['Title page','Copyright','Dedication','Contents','About the author','Colophon'].includes(proof)) {

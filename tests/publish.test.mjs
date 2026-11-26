@@ -86,6 +86,14 @@ const xml=(str)=>{const doc=new dom.DOMParser().parseFromString(str,'application
 for(const [file,bytes] of Object.entries(epub))if(/\.(xml|opf|xhtml)$/.test(file))xml(strFromU8(bytes));
 assert.equal(xml(strFromU8(epub['Book/package.opf'])).getElementsByTagName('itemref').length,5);
 assert.match(strFromU8(epub['Book/section-3.xhtml']),/href="section-4.xhtml#entry-0"/);
+const epubPackage = xml(strFromU8(epub['Book/package.opf']));
+assert.equal(epubPackage.querySelector('item[properties="cover-image"]'), null);
+const epubNavigation = xml(strFromU8(epub['Book/nav.xhtml']));
+const landmarks = Array.from(epubNavigation.getElementsByTagName('nav'))
+  .find(nav => nav.getAttribute('epub:type') === 'landmarks');
+assert.deepEqual(Array.from(landmarks.getElementsByTagName('a'), link => [
+  link.getAttribute('epub:type'), link.getAttribute('href')
+]), [['toc','section-3.xhtml'],['bodymatter','section-4.xhtml']]);
 const word=unzipSync(new Uint8Array(await (await wordEdition(model,style)).arrayBuffer()));
 const w=xml(strFromU8(word['word/document.xml']));assert(w.documentElement.textContent.includes('Last line.'));
 assert.equal(w.getElementsByTagName('w:pgSz')[0].getAttribute('w:w'),String(Math.round(148*1440/25.4)));
@@ -96,7 +104,7 @@ assert.equal(JSON.stringify(book().sections.binder),original);
 {
   const src='data:image/png;base64,iVBORw0KGgo=';
   const passage={...book().sections.binder[0],content:'<blockquote><p>First quote.</p><p>Second quote.</p></blockquote><p>Ordinary prose.</p><h3>Subsection</h3><pre class="verse">One line\nSecond line</pre><img src="gallery:figure" alt="Map">'};
-  const fixture={...book(),gallery:[{id:'figure',kind:'image',name:'Map',parentId:null,image:src}],sections:{binder:[passage]}};
+  const fixture={...book(),cover:{...book().cover,image:'gallery:figure'},gallery:[{id:'figure',kind:'image',name:'Map',parentId:null,image:src}],sections:{binder:[passage]}};
   const edition=publication(fixture,style);
   const rich=edition.sections.find(s=>s.kind==='chapter');
   const doc=new JSDOM(rich.html).window.document;
@@ -105,7 +113,18 @@ assert.equal(JSON.stringify(book().sections.binder),original);
   const archive=unzipSync(new Uint8Array(await epubEdition(edition,style).arrayBuffer()));
   const reflow=strFromU8(archive['Book/style.css']);
   assert(!reflow.includes(style.ink)&&!reflow.match(/body\{[^}]*?(?:font-size|line-height|color):/));
-  assert(Object.keys(archive).some(name=>name.endsWith('.png')));
+  const archivePackage = xml(strFromU8(archive['Book/package.opf']));
+  const coverItems = archivePackage.querySelectorAll('item[properties="cover-image"]');
+  assert.equal(coverItems.length, 1);
+  const coverPath = coverItems[0].getAttribute('href');
+  assert.equal(coverItems[0].getAttribute('media-type'), 'image/png');
+  assert.deepEqual(Object.keys(archive).filter(name => name.endsWith('.png')), ['Book/' + coverPath]);
+  assert.deepEqual(archive['Book/' + coverPath], Uint8Array.from(Buffer.from(src.split(',')[1], 'base64')));
+  assert.equal(xml(strFromU8(archive['Book/section-4.xhtml'])).querySelector('img').getAttribute('src'), coverPath);
+  const legacy = publication({...book(), cover:{...book().cover, image:src}}, {...style, pages:[]});
+  const legacyArchive = unzipSync(new Uint8Array(await epubEdition(legacy, style).arrayBuffer()));
+  assert.equal(xml(strFromU8(legacyArchive['Book/package.opf'])).querySelectorAll('item[properties="cover-image"]').length, 1);
+  assert(!strFromU8(legacyArchive['Book/nav.xhtml']).includes('<a epub:type="toc"'));
   const wordModel={...edition,sections:[{...rich,html:rich.html.replace(/<img[^>]*>/g,'')}]};
   const pkg=unzipSync(new Uint8Array(await (await wordEdition(wordModel,style)).arrayBuffer()));
   const settings=xml(strFromU8(pkg['word/settings.xml']));
@@ -155,6 +174,26 @@ assert.equal(JSON.stringify(book().sections.binder),original);
   assert.equal(start('First route'),'7');assert.equal(start('Detour'),'12');
   assert.equal(numId('Detour'),numId('Final route'));
   assert(paragraphs.indexOf(paragraph('Nested path'))<paragraphs.indexOf(paragraph('After the turn')));
+}
+// The editor can store semantic marks as CSS while leaving typography to the edition.
+{
+  const content='<p>Before <span style="font-weight:700;font-style:italic;text-decoration:underline line-through;font-size:99px;color:#ab54bf">Žuti oblak</span> '+
+    '<a href="https://example.com" style="text-decoration-line:underline">a link</a> H<span style="vertical-align:sub">2</span>O and x<span style="vertical-align:super">3</span>.</p>';
+  const passage={...book().sections.binder[0],content};
+  const edition=publication({...book(),sections:{binder:[passage]}},style);
+  const chapter=edition.sections.find(section=>section.kind==='chapter');
+  const preview=new JSDOM(chapter.html).window.document;
+  assert.equal(preview.querySelector('strong em u s').textContent,'Žuti oblak');
+  assert.equal(preview.querySelector('a u').textContent,'a link');
+  assert.equal(preview.querySelector('sub').textContent,'2');
+  assert.equal(preview.querySelector('sup').textContent,'3');
+  assert.equal(preview.querySelector('[style]'),null);
+  const packed=unzipSync(new Uint8Array(await (await wordEdition(edition,style)).arrayBuffer()));
+  const doc=xml(strFromU8(packed['word/document.xml']));
+  assert(doc.getElementsByTagName('w:u').length);
+  assert(doc.getElementsByTagName('w:strike').length);
+  assert.deepEqual(Array.from(doc.getElementsByTagName('w:vertAlign'),mark=>mark.getAttribute('w:val')),['subscript','superscript']);
+  assert.equal(passage.content,content);
 }
 const {manuscriptEntries}=await import('../src/lib/kachamak/publish-manuscript.ts');
 const {stepWorkspaceHistory}=await import('../src/lib/kachamak/store.ts');

@@ -28,11 +28,17 @@ export function proofDocument(book:Publication,style:BookStyle,print:boolean){
     (print?'<script>window.PagedConfig={auto:false};</script><script src="/publish-pagination.js"></script>':'')+'</head><body>'+bookArticles(book)+
     (print?`<script>document.currentScript.remove();window.addEventListener('load',async()=>{try{await document.fonts.ready;await new Paged.Previewer().preview();function fit(){document.documentElement.style.setProperty('--fit',Math.min(1.3,Math.max(.15,(document.documentElement.clientWidth-36)/${width})));}fit();window.addEventListener('resize',fit);document.documentElement.dataset.ready='yes';window.dispatchEvent(new Event('proofready'));}catch(e){document.documentElement.dataset.ready='error';window.dispatchEvent(new Event('proofready'));}});</script>`:'')+'</body></html>';
 }
-function revealEntry(doc:Document,anchor?:string){
-  if(!anchor)return;
-  const entry=doc.querySelector('.pagedjs_pages [id="'+anchor+'"]')??doc.getElementById(anchor);
-  const view=doc.defaultView;
-  if(entry&&view)view.scrollTo(0,entry.getBoundingClientRect().top+view.scrollY-8);
+function revealEntry(doc: Document, anchor?: string, moveFocus = false) {
+  if (!anchor) return;
+  const escaped = CSS.escape(anchor);
+  const entry = doc.querySelector<HTMLElement>('.pagedjs_pages #' + escaped) ?? doc.getElementById(anchor);
+  const view = doc.defaultView;
+  if (!entry || !view) return;
+  view.scrollTo(0, entry.getBoundingClientRect().top + view.scrollY - 8);
+  if (moveFocus) {
+    if (entry.tabIndex < 0 && !entry.hasAttribute('tabindex')) entry.tabIndex = -1;
+    entry.focus({ preventScroll: true });
+  }
 }
 export function PublishProof({source,print,darkReader,frameRef,onLoaded,zoom,anchor}:{darkReader:boolean;anchor?:string;zoom:number;source:string;print:boolean;frameRef:React.RefObject<HTMLIFrameElement|null>;onLoaded:()=>void}){
   const [status,setStatus]=useState(print?'Setting pages…':'');
@@ -50,11 +56,23 @@ export function PublishProof({source,print,darkReader,frameRef,onLoaded,zoom,anc
   return <div className="relative flex min-h-0 flex-1 flex-col">
     {status&&<div aria-live="polite" className="absolute bottom-2 left-2 z-10 rounded bg-background/95 px-2 py-1 text-xs text-muted-foreground">{status}</div>}
     <iframe ref={frameRef} title={print?'Print proof':'eBook proof'} className="min-h-60 w-full flex-1 border-0 bg-neutral-800" sandbox="allow-scripts allow-same-origin allow-modals" srcDoc={source}
-      onLoad={event=>{const w=event.currentTarget.contentWindow,doc=w?.document;if(!w||!doc?.documentElement)return;
+      onLoad={event=>{const {contentWindow:w,contentDocument:doc}=event.currentTarget;if(!w||!doc?.documentElement)return;
         if(!print)doc.documentElement.dataset.readerTheme=darkReader?'dark':'light';
         doc.documentElement.style.setProperty('--panel-zoom',String(zoom));
         w.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();frameRef.current?.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,ctrlKey:true,deltaY:e.deltaY,deltaMode:e.deltaMode}));}},{passive:false});
         w.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='0'){e.preventDefault();useKachamak.getState().setPanelZoom('mid',1);}});
+        // A fragment in srcdoc otherwise resolves against the app URL.
+        doc.addEventListener('click', event => {
+          const target = event.target as Element | null;
+          const href = target?.closest?.('a[href^="#"]')?.getAttribute('href');
+          if (!href) return;
+          event.preventDefault();
+          if (print && doc.documentElement.dataset.ready !== 'yes') return;
+          const fragment = href.slice(1);
+          let id = fragment;
+          try { id = decodeURIComponent(fragment); } catch { /* Use a literal percent sign. */ }
+          revealEntry(doc, id, true);
+        });
         const done=()=>{
           if(frameRef.current?.contentDocument!==doc)return;
           if(print&&doc.documentElement.dataset.ready!=='yes'){
