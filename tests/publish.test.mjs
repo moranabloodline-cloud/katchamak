@@ -277,7 +277,7 @@ assert(stepWorkspaceHistory('redo'));assert.deepEqual(chosen(),[nested,ch]);
 const edition=publication(book(),style);
 assert.deepEqual(edition.sections.filter(s=>s.kind!=='special').map(s=>s.title),['Arrival','Crossing']);
 const {proofDocument}=await import('../src/components/kachamak/PublishProof.tsx');
-const folioRule='target-counter(attr(href),page)';
+const folioRule='.contents-page-number{position:absolute';
 assert(proofDocument(edition,{...style,folios:true},true).includes(folioRule));
 assert(!proofDocument(edition,{...style,folios:false},true).includes(folioRule));
 assert(!proofDocument(edition,style,false).includes(folioRule));

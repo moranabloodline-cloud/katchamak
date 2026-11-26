@@ -1,3 +1,5 @@
+> **2026-11-26 — Print preview i PDF.** Contents čita stvarne početne strane poglavlja nakon preloma, uključujući redosled rukopisa, prednje strane i prazne recto strane. PDF koristi isti pripremljeni prikaz kao Print preview.
+
 > **2026-11-26 — Publish, pregled i prenos formatiranja.** Linkovi iz Contents vode na stavku unutar pregleda. Rukopis prenosi podvlačenje, precrtavanje i indekse, a EPUB čita projektni omot i izlaže brze prečice do sadržaja i glavnog teksta.
 
 > **2026-11-26 — Čuvanje promenjenih beleški i House Styles.** Izmene postojećih beleški šalju promenjena polja, identifikatore i osnovnu reviziju. Lokalni nacrt čeka potvrdu konkretnog upisa, a privremene cloud greške pokreću automatski ponovni pokušaj. House Styles podrazumevano prikazuje univerzalni odlomak, uz postojeći izbor poglavlja i žanrovskog uzorka.
@@ -747,6 +749,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** [Byte-Sized print pipeline](https://github.com/bytesizedbooksmith/byte-sized-book-formatter/blob/32a1a1924f09203bfa8c33f342cb94ae4c46c645/server/pipeline/render-print.ts#L75-L120) poslužio je kao referenca za čitanje brojeva iz završenog preloma. Draftopus rezerviše prostor za brojeve pre preloma i popunjava ih pre prikaza ili otvaranja štampe. Izabrane margine, nativni format stranice i fizičko numerisanje određuje isti pripremljeni dokument. Promena formata papira u dijalogu pregledača može promeniti geometriju PDF-a.
 
 - **2026-11-26.** Upoređeni su postojeći browser izvoz, [Byte-Sized kod za EPUB](https://github.com/bytesizedbooksmith/byte-sized-book-formatter/blob/32a1a1924f09203bfa8c33f342cb94ae4c46c645/server/pipeline/render-epub.ts#L65-L109) i [EPUB 3.3](https://www.w3.org/TR/epub-33/#sec-nav-landmarks). Korica i glavne navigacione tačke koriste postojeći EPUB paket. Izvoz pretvara CSS oznake naglaska u semantički HTML. Sintetička Publish provera čita EPUB i DOCX pakete i potvrđuje da priprema izdanja čuva izvorni tekst.
 

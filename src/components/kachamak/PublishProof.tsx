@@ -4,6 +4,23 @@ import {bookArticles,bookCss,escapeText,type Publication} from '@/lib/kachamak/p
 import {useKachamak} from '@/lib/kachamak/store';
 import {trims,type BookStyle} from '@/lib/kachamak/book-style';
 
+const contentsPageNumbers = `
+      const pageNumbers = new Map();
+      for (const page of document.querySelectorAll('.pagedjs_pages .pagedjs_page[data-page-number]')) {
+        for (const article of page.querySelectorAll('article[id], article[data-id]')) {
+          const id = article.getAttribute('data-id') || article.id;
+          if (!pageNumbers.has(id)) pageNumbers.set(id, page.dataset.pageNumber);
+        }
+      }
+      for (const link of document.querySelectorAll('.pagedjs_pages .contents a[href^="#"]')) {
+        const pageNumber = pageNumbers.get(link.getAttribute('href').slice(1));
+        if (!pageNumber) continue;
+        const number = document.createElement('span');
+        number.className = 'contents-page-number';
+        number.textContent = pageNumber;
+        link.append(number);
+      }`;
+
 export function proofDocument(book:Publication,style:BookStyle,print:boolean){
   const [trimWidth,trimHeight]=trims[style.trim];
   const width=trimWidth*96/25.4;
@@ -17,16 +34,32 @@ export function proofDocument(book:Publication,style:BookStyle,print:boolean){
     html[data-ready=yes] .pagedjs_page{transform:scale(var(--scale));transform-origin:top center;margin-bottom:calc(${trimHeight}mm * (var(--scale) - 1))}
   }`:
     'html{background:#262626;color:#201f1c;padding:clamp(4px,2vw,16px);line-height:1.5}body{zoom:var(--panel-zoom,1);max-width:36em;min-height:85vh;margin:auto;background:#fff;padding:2.5em clamp(1em,5vw,2em)}html[data-reader-theme=dark]{color-scheme:dark;background:#151515;color:#e7e4df}html[data-reader-theme=dark] body{background:#242424}';
-  // Reserve room before pagination; the target counter resolves to the chapter's
-  // actual opening page, including front matter and blank recto pages.
   const numberedContents=print&&style.folios&&book.sections.some(section=>section.id==='matter-contents')
-    &&book.sections.some(section=>section.id.startsWith('entry-'))
+    &&book.sections.some(section=>section.id.startsWith('entry-'));
+  // Reserve space before pagination so adding the page numbers cannot wrap a link.
+  const contentsLayout=numberedContents
     ? '.contents p{break-inside:avoid}.contents a{display:block;position:relative;padding-inline-end:4ch}'+
-      '.contents a::after{content:target-counter(attr(href),page);position:absolute;inset-inline-end:0;bottom:0;font-variant-numeric:tabular-nums}'
+      '.contents-page-number{position:absolute;inset-inline-end:0;bottom:0;font-variant-numeric:tabular-nums}'
     : '';
-  return '<!doctype html><html lang="'+book.lang+'"><head><meta charset="utf-8"><title>'+escapeText(book.title)+'</title><style>'+bookCss(style,print?'print':'ebook')+numberedContents+'</style><style data-pagedjs-ignore>'+screen+'</style>'+
-    (print?'<script>window.PagedConfig={auto:false};</script><script src="/publish-pagination.js"></script>':'')+'</head><body>'+bookArticles(book)+
-    (print?`<script>document.currentScript.remove();window.addEventListener('load',async()=>{try{await document.fonts.ready;await new Paged.Previewer().preview();function fit(){document.documentElement.style.setProperty('--fit',Math.min(1.3,Math.max(.15,(document.documentElement.clientWidth-36)/${width})));}fit();window.addEventListener('resize',fit);document.documentElement.dataset.ready='yes';window.dispatchEvent(new Event('proofready'));}catch(e){document.documentElement.dataset.ready='error';window.dispatchEvent(new Event('proofready'));}});</script>`:'')+'</body></html>';
+  const paginate=print?`<script>
+    document.currentScript.remove();
+    window.addEventListener('load', async () => {
+      try {
+        await document.fonts.ready;
+        await new Paged.Previewer().preview();
+        ${numberedContents ? contentsPageNumbers : ''}
+        const fit = () => document.documentElement.style.setProperty('--fit', Math.min(1.3, Math.max(.15, (document.documentElement.clientWidth - 36) / ${width})));
+        fit();
+        window.addEventListener('resize', fit);
+        document.documentElement.dataset.ready = 'yes';
+      } catch {
+        document.documentElement.dataset.ready = 'error';
+      }
+      window.dispatchEvent(new Event('proofready'));
+    });
+  </script>`:'';
+  return '<!doctype html><html lang="'+book.lang+'"><head><meta charset="utf-8"><title>'+escapeText(book.title)+'</title><style>'+bookCss(style,print?'print':'ebook')+contentsLayout+'</style><style data-pagedjs-ignore>'+screen+'</style>'+
+    (print?'<script>window.PagedConfig={auto:false};</script><script src="/publish-pagination.js"></script>':'')+'</head><body>'+bookArticles(book)+paginate+'</body></html>';
 }
 function revealEntry(doc: Document, anchor?: string, moveFocus = false) {
   if (!anchor) return;
