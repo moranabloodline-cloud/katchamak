@@ -5,7 +5,7 @@ import {validProjectImage, validCoverImage} from './project-image';
 import {canvasParts,inFixedRow,releaseRow,transferCanvasCards,unifiedCanvas,worldRows,type CanvasTransfer} from './canvas-layout';
 import {changeCardGroup,clearSingletonGroups,duplicateCardGroup,type CardGroupChange,type DuplicateGroupChange} from './canvas-groups';
 import {applySelection,type BoardSelectionChange} from './canvas-selection';
-import {validCanvasFields,validBoard,moveOnBoard,isPoint,type Point,type CanvasFields,type BoardMove} from './canvas-board';
+import {canResizeCanvasBlock,validCanvasExtent,validCanvasFields,validBoard,moveOnBoard,isPoint,type Point,type CanvasFields,type CanvasExtent,type BoardMove} from './canvas-board';
 
 export const HOME_LAYOUTS = ['card','banner','image','text','row','heading','callout','links','divider','video','note','link','todo','column','line','audio','map','color','table','comment','sketch','draw'] as const;
 export type HomeLayout = typeof HOME_LAYOUTS[number];
@@ -200,7 +200,8 @@ export function validHomepage(value: unknown): boolean {
 export type HomePlacement = { targetId: string; side: 'before' | 'after' };
 
 type MapAnnotationChange = {type:'mapAnnotations'; original:HomeBlock; atlas:MapAtlas};
-export type HomeChange = MapAnnotationChange | LayoutChange;
+type ResizeChange = {type:'resize'; original:HomeBlock; extent:CanvasExtent};
+export type HomeChange = MapAnnotationChange | ResizeChange | LayoutChange;
 type LayoutChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGroupChange | DuplicateGroupChange
   | {type:'info';field:'synopsis'|'notes';value:string}
   | {type:'appearance';field:AppearanceField;value:string}
@@ -217,7 +218,21 @@ type LayoutChange = BoardMove | BoardSelectionChange | CanvasTransfer | CardGrou
   | { type: 'move'; id: string; offset: -1 | 1 }
   | ({ type: 'place'; id: string } & HomePlacement);
 
+function resizeBlock(page:Homepage,{original,extent}:ResizeChange):Homepage|null {
+  if(page.locked||!validCanvasExtent(extent))return null;
+  const blocks=new Map(page.blocks.map(block=>[block.id,block]));
+  const current=blocks.get(original.id);
+  if(!current||!canResizeCanvasBlock(current,blocks))return null;
+  if(current.layout!==original.layout||current.width!==original.width||current.columns!==original.columns||
+      current.manualPosition!==original.manualPosition||current.columnId!==original.columnId||!sameCell(current.cell,original.cell)||
+      current.at?.x!==original.at?.x||current.at?.y!==original.at?.y||
+      current.extent?.w!==original.extent?.w||current.extent?.h!==original.extent?.h)return null;
+  if(current.extent?.w===extent.w && current.extent.h===extent.h)return null;
+  return {...page,blocks:page.blocks.map(block=>block===current?{...block,extent:{w:extent.w,h:extent.h}}:block)};
+}
+
 export function changeHomepage(page: Homepage, action: HomeChange): Homepage | null {
+  if(action.type==='resize')return resizeBlock(page,action);
   if(action.type==='mapAnnotations'){
     const current=page.blocks.find(block=>block.id===action.original.id);
     if(current?.layout!=='map'||!current.image||current.image!==action.original.image||!validAtlas(action.atlas)||

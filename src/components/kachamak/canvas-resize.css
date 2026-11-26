@@ -1,0 +1,43 @@
+.cv-resize-handle {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #d6a95e;
+  opacity: 0;
+  touch-action: none;
+}
+.cv-resize-handle::after {
+  content: '';
+  display: block;
+  border-radius: 4px;
+  background: currentColor;
+}
+.cv-resize-handle[data-canvas-resize='x'] {
+  inset: 0 -6px 8px auto;
+  width: 12px;
+  cursor: ew-resize;
+}
+.cv-resize-handle[data-canvas-resize='x']::after { width: 4px; height: 18px; }
+.cv-resize-handle[data-canvas-resize='y'] {
+  inset: auto 8px -6px 0;
+  height: 12px;
+  cursor: ns-resize;
+}
+.cv-resize-handle[data-canvas-resize='y']::after { width: 18px; height: 4px; }
+.cv-resize-handle[data-canvas-resize='both'] {
+  right: -6px;
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+.cv-resize-handle[data-canvas-resize='both']::after { width: 7px; height: 7px; border-radius: 2px; }
+:is(.cv-card[data-selected], [data-fixed-selected], .cv-card:hover, [data-home-block]:hover) > .cv-resize-handle,
+.cv-resize-handle:focus-visible {
+  opacity: 1;
+}
+.cv-resize-handle:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }

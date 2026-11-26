@@ -1,5 +1,5 @@
 'use client';
-import {useMemo} from 'react';
+import {useMemo,useRef} from 'react';
 import {atlasBlock,findProjectMap} from '@/lib/kachamak/project-maps';
 import {CanvasMapSurface} from './CanvasMapSurface';
 import {ExternalLink,SquareCheck,ArrowUpRight} from 'lucide-react';
@@ -14,6 +14,7 @@ import {InkPaths} from './CanvasInk';
 export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle,openMap}:{block:HomeBlock;novel:Novel;source?:NoteNode;locked:boolean;
   openMap:(id:string)=>void;open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;toggle:(index:number,done:boolean)=>void}){
   const map=b.layout==='map'?findProjectMap(novel,b.mapId):undefined;
+  const mapFrame=useRef<HTMLDivElement>(null);
   const title=b.title || map?.title || (b.target?describe(b.target):'');
   const image=b.imageCutout||projectImageSrc(novel.gallery,map?.image || b.image || (b.layout==='note'?source?.image:undefined));
   const video=b.videoUrl&&canvasVideo(b.videoUrl);
@@ -23,7 +24,10 @@ export function CanvasItemFace({block:b,novel,source,locked,open,describe,toggle
   const body=b.text || excerpt;
   return <div className={'cv-face cv-face-'+b.layout}>
     {b.layout==='color'&&<div className="cv-swatch" style={{backgroundColor:b.color}}/>}
-    {b.layout==='map'&&(map&&image?<CanvasMapSurface block={atlasBlock(map)} image={image} open={()=>openMap(map.id)} openLabel="Open in Maps"/>:<p className="text-xs text-muted-foreground">Map unavailable</p>)}
+    {b.layout==='map'&&(map&&image?<div ref={mapFrame} key={image} className="cv-map-frame">
+      <CanvasMapSurface block={atlasBlock(map)} image={image} open={()=>openMap(map.id)} openLabel="Open in Maps"
+        onAspect={aspect=>{if(Number.isFinite(aspect)&&aspect>0)mapFrame.current?.style.setProperty('--cv-map-aspect',String(aspect));}}/>
+    </div>:<p className="text-xs text-muted-foreground">Map unavailable</p>)}
     {image&&b.layout!=='map'&&<div className="cv-picture">{b.imageFrame?<HomeArtwork src={image} frame={b.imageFrame} alt={b.title||b.layout}/>:<img src={image} alt={b.title||b.layout} draggable={false}/>}</div>}
     {(b.layout==='sketch'||b.layout==='draw')&&<svg viewBox="0 0 320 180" preserveAspectRatio="none" aria-label={b.title||'Drawing'} style={b.extent?{aspectRatio:b.extent.w+'/'+b.extent.h}:undefined}><InkPaths strokes={b.ink??[]} color={b.color??'#d4b487'}/></svg>}
     {title&&b.layout!=='link'&&<h3>{title}</h3>}

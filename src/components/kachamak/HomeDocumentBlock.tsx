@@ -20,12 +20,12 @@ export function HomeVideo({url,title,interactive}:{url:string;title:string;inter
 export function HomeDocumentBlock({block,image,interactive,describe,open}:{
   block:HomeBlock;image?:string;interactive:boolean;describe:(target:HomeTarget)=>string;open:(target:HomeTarget)=>void;
 }){
-  if(block.layout==='divider')return <div className="flex min-h-5 items-center"><hr className="w-full border-border"/></div>;
+  if(block.layout==='divider')return <div className="cv-document-block flex min-h-5 items-center"><hr className="w-full border-border"/></div>;
   const video=block.layout==='video'&&canvasVideo(block.videoUrl)?block.videoUrl:undefined;
   const title=block.title||(block.target?describe(block.target):'');
-  return <div className={'min-w-0 break-words '+(block.layout==='callout'?'flex items-start gap-3 rounded-lg border border-sky-400/35 bg-sky-400/10 px-4 py-3':'space-y-2')}>
+  return <div className={'cv-document-block min-w-0 break-words '+(block.layout==='callout'?'flex items-start gap-3 rounded-lg border border-sky-400/35 bg-sky-400/10 px-4 py-3':'space-y-2')}>
     {block.layout==='callout'&&<Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-sky-400"/>}
-    <div className="min-w-0 flex-1 space-y-2">
+    <div className="cv-document-content min-w-0 flex-1 space-y-2">
       {image&&<HomeArtwork src={image} frame={block.imageFrame}/>}
       {title&&(block.layout==='heading'||video?<h2 className="text-2xl font-semibold leading-tight">{title}</h2>:<h3 className="text-base font-semibold">{title}</h3>)}
       {block.text&&<p className="whitespace-pre-wrap text-sm leading-relaxed">{block.text}</p>}

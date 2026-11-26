@@ -2,6 +2,7 @@ import {validAtlas,type MapAtlas} from './canvas-map';
 import type {HomeBlock, Homepage} from './homepage';
 
 export type Point = {x:number; y:number};
+export type CanvasExtent = {w:number; h:number};
 export type Stroke = [number, number][];
 export const CANVAS_TOOLS = ['note','link','todo','line','column','heading','image','video','map','audio','color','table','comment','sketch','draw'] as const;
 export type CanvasTool = typeof CANVAS_TOOLS[number];
@@ -9,18 +10,21 @@ export type CanvasFields = {
   positionLocked?:boolean; stack?:number; groupId?:string;
   at?: Point; columnId?: string; edge?: {from:string; to:string};
   color?: string; tasks?: {text:string; done:boolean}[]; cells?: string[][];
-  mapId?:string; atlas?:MapAtlas; audio?:string; pin?:Point; ink?:Stroke[]; extent?:{w:number;h:number};
+  mapId?:string; atlas?:MapAtlas; audio?:string; pin?:Point; ink?:Stroke[]; extent?:CanvasExtent;
 };
 export const isPoint=(p:Point|undefined):p is Point=>!!p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const isInk=(ink:Stroke[]|undefined)=>Array.isArray(ink) && ink.length>0 && ink.every(stroke=>
   Array.isArray(stroke) && stroke.length>0 && stroke.every(p=>Array.isArray(p) && p.length===2 && p.every(Number.isFinite)));
+export function validCanvasExtent(value:CanvasExtent|undefined):value is CanvasExtent {
+  return !!value && Number.isFinite(value.w) && value.w>0 && Number.isFinite(value.h) && value.h>0;
+}
 export function validCanvasFields(b:HomeBlock) {
   if (b.groupId!==undefined && (typeof b.groupId!=='string'||!b.groupId.trim()||b.groupId.length>128||
       b.layout==='row'||b.layout==='line'||b.layout==='column'))return false;
   if (b.positionLocked!==undefined && typeof b.positionLocked!=='boolean' || b.stack!==undefined && !Number.isSafeInteger(b.stack))return false;
   if (b.at!==undefined && !isPoint(b.at) || b.columnId!==undefined && typeof b.columnId!=='string' ||
       b.color!==undefined && !/^#[0-9a-f]{6}$/i.test(b.color)) return false;
-  if (b.extent!==undefined && (!b.extent || ![b.extent.w,b.extent.h].every(n=>Number.isFinite(n)&&n>0))) return false;
+  if (b.extent!==undefined && !validCanvasExtent(b.extent)) return false;
   switch(b.layout){
     case 'todo': return Array.isArray(b.tasks) && b.tasks.every(t=>t && typeof t.text==='string' && typeof t.done==='boolean');
     case 'table': return Array.isArray(b.cells) && b.cells.length>0 && b.cells.every(row=>Array.isArray(row) && row.length>0 && row.length===b.cells![0].length && row.every(v=>typeof v==='string'));
@@ -49,23 +53,41 @@ export function validBoard(page:Homepage, rowCards?:ReadonlySet<string>):boolean
   });
 }
 export const CARD_WIDTH=236, COLUMN_WIDTH=276, COLUMN_HEAD=56, COLUMN_GAP=12;
-export type BoardRect=Point & {w:number;h:number};
+export type BoardRect=Point & CanvasExtent;
+
+export function canResizeCanvasBlock(block:HomeBlock,blocks:ReadonlyMap<string,HomeBlock>):boolean {
+  if(block.layout==='line'||block.positionLocked)return false;
+  const parentId=block.columnId??block.cell?.rowId;
+  const parent=parentId?blocks.get(parentId):undefined;
+  return !parentId || !!parent && !parent.positionLocked;
+}
+
+function cardHeight(block:HomeBlock,heights:ReadonlyMap<string,number>){
+  return block.extent?.h??heights.get(block.id)??98;
+}
+
 export function boardRects(blocks:HomeBlock[], heights:ReadonlyMap<string,number>) {
   const rects=new Map<string,BoardRect>();
   const children=new Map<string,HomeBlock[]>();
   for(const b of blocks){
     if(b.columnId){const list=children.get(b.columnId)??[];list.push(b);children.set(b.columnId,list);}
-    else if(b.at && b.layout!=='line')rects.set(b.id,{...b.at,w:b.extent?.w??CARD_WIDTH,h:heights.get(b.id)??b.extent?.h??98});
+    else if(b.at && b.layout!=='line')rects.set(b.id,{...b.at,w:b.extent?.w??CARD_WIDTH,h:cardHeight(b,heights)});
   }
-  for(const col of blocks.filter(b=>b.layout==='column')){
+  for(const col of blocks){
+    if(col.layout!=='column')continue;
     const rect=rects.get(col.id)!;
+    const cards=children.get(col.id)??[];
+    const minHeight=Math.max(150,cards.reduce((h,child)=>h+cardHeight(child,heights)+COLUMN_GAP,COLUMN_HEAD+28));
+    rect.w=col.extent?.w??COLUMN_WIDTH;
+    rect.h=Math.max(minHeight,col.extent?.h??0);
+    const innerWidth=Math.max(1,rect.w-28);
+    const gap=COLUMN_GAP+(cards.length>1?(rect.h-minHeight)/(cards.length-1):0);
     let offset=COLUMN_HEAD;
-    for(const child of children.get(col.id)??[]){
-      const h=heights.get(child.id)??98;
-      rects.set(child.id,{x:rect.x+14,y:rect.y+offset,w:COLUMN_WIDTH-28,h});
-      offset+=h+COLUMN_GAP;
+    for(const child of cards){
+      const h=cardHeight(child,heights);
+      rects.set(child.id,{x:rect.x+14,y:rect.y+offset,w:Math.min(innerWidth,child.extent?.w??innerWidth),h});
+      offset+=h+gap;
     }
-    rect.w=COLUMN_WIDTH;rect.h=Math.max(150,offset+28);
   }
   return rects;
 }
