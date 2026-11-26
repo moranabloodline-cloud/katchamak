@@ -1,10 +1,13 @@
 import {demoLibraryApi} from './demo-projects.mjs';
 import {validCloudLibrary} from '../src/lib/kachamak/cloud-write-validation.mjs';
+import {applyLibraryNotePatch, validLibraryNotePatch} from '../src/lib/kachamak/cloud-note-patch.mjs';
 import { measuredQuery } from './request-trace.mjs';
 export {validCloudLibrary} from '../src/lib/kachamak/cloud-write-validation.mjs';
 
 const librarySaveLimit = 20 * 1024 * 1024;
 const libraryGzipType = 'application/vnd.katchamak.snapshot+gzip';
+const libraryNotePatchType = 'application/vnd.katchamak.notes+json';
+const validNoteWriteId = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
 class LibrarySizeError extends Error {}
 
 async function readLibraryBytes(stream, limit = librarySaveLimit) {
@@ -30,6 +33,16 @@ async function readLibraryBytes(stream, limit = librarySaveLimit) {
   return new Blob(chunks).arrayBuffer();
 }
 
+async function compressLibrarySnapshot(raw) {
+  if (raw.size < 256 * 1024) return;
+  try {
+    const compressed = await new Response(raw.stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+    if (compressed.byteLength < raw.size) return compressed;
+  } catch {
+    // A valid save can still use the uncompressed storage format.
+  }
+}
+
 // Included in the Sites Worker with accountApi; all keys are private to the authenticated account.
 export async function cloudLibraryApi(request, env, measure) {
   const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
@@ -47,6 +60,7 @@ export async function cloudLibraryApi(request, env, measure) {
     const q = (sql, ...args) => measuredQuery(env.DB, sql, args, measure);
     const record = await q('SELECT * FROM cloud_libraries WHERE account_id = ?', id).first();
     const revision = record?.revision ?? 0;
+    const previousWriteId = record?.snapshot_key?.match(/-note-([0-9a-f-]{36})\.json(?:\.gz)?$/)?.[1];
     const readSnapshot = async () => {
       if (!record?.snapshot_key) return { novels: [], collections: [] };
       const read = () => env.BUCKET.get(record.snapshot_key);
@@ -61,29 +75,35 @@ export async function cloudLibraryApi(request, env, measure) {
     if (request.method !== 'GET') {
       if (request.headers.get('Origin') !== url.origin) return json({ error: 'Invalid request origin.' }, 403);
     }
-    const writeSnapshot=async(value,baseRevision,compressed)=>{
+    const writeSnapshot=async(value,baseRevision,compressed,writeId)=>{
       if (!record) {
         await q('INSERT INTO cloud_libraries (account_id, revision, updated_at) VALUES (?, 0, 0) ON CONFLICT(account_id) DO NOTHING', id).run();
       }
-      const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + (compressed ? '.json.gz' : '.json');
+      const key = prefix + 'library/' + Date.now() + '-' + crypto.randomUUID() + (writeId ? '-note-' + writeId : '') + (compressed ? '.json.gz' : '.json');
       const httpMetadata = compressed ? { contentType: 'application/json', contentEncoding: 'gzip' } : { contentType: 'application/json' };
-      const write = () => env.BUCKET.put(key, compressed ?? JSON.stringify(value), { httpMetadata });
+      const write = () => env.BUCKET.put(key, compressed ?? (typeof value === 'string' ? value : JSON.stringify(value)), { httpMetadata });
       await (measure ? measure('r2.writeSnapshot', write) : write());
       const updatedAt = Date.now();
       const result = await q('UPDATE cloud_libraries SET snapshot_key = ?, revision = revision + 1, updated_at = ? WHERE account_id = ? AND revision = ?', key, updatedAt, id, baseRevision).run();
       if (result.meta.changes !== 1) { await env.BUCKET.delete(key); return null; }
-      return {revision:baseRevision+1,updatedAt};
+      return {revision:baseRevision+1,updatedAt,...(writeId ? {writeId} : {})};
     };
     if(url.pathname==='/api/library/demo'||url.pathname.startsWith('/api/library/demo/'))return await demoLibraryApi({request,env,account,prefix,revision,readSnapshot,writeSnapshot,json});
     if (url.pathname === '/api/library') {
       if (request.method === 'GET') {
-        // Account checks above still run; an unchanged revision needs no R2 read or manuscript transfer.
-        if (url.searchParams.get('revision') === String(revision)) return json({ revision, unchanged: true, updatedAt: record?.updated_at ?? 0 });
-        return json({ revision, snapshot: await readSnapshot(), updatedAt: record?.updated_at ?? 0 });
+        const knownRevision = url.searchParams.get('revision');
+        const state = { revision, updatedAt: record?.updated_at ?? 0, ...(previousWriteId ? { writeId: previousWriteId } : {}) };
+        // A lost response can be acknowledged directly from the committed revision pointer.
+        if (previousWriteId && knownRevision === String(revision - 1) && url.searchParams.get('writeId') === previousWriteId) {
+          return json({ ...state, confirmedWrite: true });
+        }
+        if (knownRevision === String(revision)) return json({ ...state, unchanged: true });
+        return json({ ...state, snapshot: await readSnapshot() });
       }
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
       const contentType = request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase();
-      if (contentType !== 'application/json' && contentType !== libraryGzipType) return json({ error: 'Unsupported library encoding.' }, 415);
+      const noteSave = contentType === libraryNotePatchType;
+      if (contentType !== 'application/json' && contentType !== libraryGzipType && !noteSave) return json({ error: 'Unsupported library encoding.' }, 415);
       const invalidLibrary = () => json({ error: 'Invalid library. Existing data was preserved.' }, 400);
       const libraryTooLarge = () => json({ error: 'Library exceeds the 20 MB save limit. Export a backup before making further edits.' }, 413);
       let wireBytes;
@@ -112,9 +132,25 @@ export async function cloudLibraryApi(request, env, measure) {
         if (error instanceof LibrarySizeError) return libraryTooLarge();
         return json({ error: 'Invalid library data.' }, 400);
       }
-      if (!Number.isSafeInteger(body?.revision) || body.revision < 0 || !validCloudLibrary(body.snapshot)) return invalidLibrary();
+      if (!Number.isSafeInteger(body?.revision) || body.revision < 0) return invalidLibrary();
+      if (noteSave ? !validNoteWriteId(body.writeId) || !validLibraryNotePatch(body.notePatch) : !validCloudLibrary(body.snapshot)) return invalidLibrary();
       if (body.revision !== revision) return json({ error: 'Another window saved newer changes. Export your unsaved edits, then reload the library.', conflict: true }, 409);
-      const saved=await writeSnapshot(body.snapshot,body.revision,compressed);
+      let value = body.snapshot;
+      if (noteSave) {
+        value = applyLibraryNotePatch(await readSnapshot(), body.notePatch);
+        if (!value) return json({ error: 'These note changes require a full library save.', notePatchUnsupported: true }, 422);
+        for (const field of ['view', 'navigation', 'location']) {
+          if (Object.hasOwn(body, field)) value[field] = body[field];
+        }
+        if (!validCloudLibrary(value)) return invalidLibrary();
+        const serialized = JSON.stringify(value);
+        const raw = new Blob([serialized]);
+        const overhead = JSON.stringify({ revision, snapshot: null }).length - 4;
+        if (raw.size + overhead > librarySaveLimit) return libraryTooLarge();
+        compressed = await compressLibrarySnapshot(raw);
+        value = serialized;
+      }
+      const saved = await writeSnapshot(value, body.revision, compressed, noteSave ? body.writeId : undefined);
       return saved?json(saved):json({error:'Another window saved newer changes. Export your edits before reloading.',conflict:true},409);
     }
     const match = url.pathname.match(/^\/api\/library\/files\/([a-zA-Z0-9_-]{1,128})(?:\/([a-zA-Z0-9_-]{1,128}))?$/);

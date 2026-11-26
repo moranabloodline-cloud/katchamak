@@ -136,7 +136,11 @@ export function WorkspaceTabs({novel,openTab}:{novel:Novel;openTab:(key:TabKey)=
       <p className="mb-2 text-sm font-medium">Your workspace</p>
       <form className="flex gap-2" onSubmit={e=>{e.preventDefault();if(!name.trim())return;const state=useKachamak.getState();const id=state.addNode('binder',null,'doc',name.trim());if(id){state.updateNode('binder',id,{icon:'folder'});state.openNoteTab(id);state.select(id);state.setRenamingNode(null);}setName('');setOpen(false);}}><input aria-label="New folder tab name" placeholder="Research, World, Marketing…" value={name} onChange={e=>setName(e.target.value)} className="min-w-0 flex-1 rounded border border-white/15 bg-black/20 px-2 py-1.5 text-xs"/><button className="rounded bg-amber-400 px-2 text-xs text-black">Create</button></form>
       {hiddenTabs.length>0&&<div aria-label="Hidden tabs" className="mt-3 max-h-60 overflow-y-auto border-t border-white/10 pt-2">
-        {hiddenTabs.map(tab=><button type="button" key={tab.key} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-white/10" onClick={()=>{openTab(tab.key);setOpen(false);}}><FolderOpen className="h-3.5 w-3.5 shrink-0"/>Show <span style={{color:tab.color || undefined}}>{tab.label}</span></button>)}
+        {hiddenTabs.map(tab=><button type="button" key={tab.key} className="flex w-full items-center gap-2 rounded p-2 text-left text-xs hover:bg-white/10" onClick={()=>{
+          openTab(tab.key);
+          if(tab.key==='publish')useKachamak.getState().installPublishStyles(novel.id);
+          setOpen(false);
+        }}><FolderOpen className="h-3.5 w-3.5 shrink-0"/>Show <span style={{color:tab.color || undefined}}>{tab.label}</span></button>)}
       </div>}
     </PopoverContent></Popover>
   </nav>

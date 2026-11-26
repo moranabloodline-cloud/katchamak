@@ -5,6 +5,7 @@ import {HOME_ROOT, homepageEntry} from './homepage';
 import { create } from 'zustand';
 import { useKachamak, isUsableBackup, normalizeNovelSections, exportNovelJson } from './store';
 import { validCloudLibrary } from './cloud-write-validation.mjs';
+import { createLibraryNotePatch, type LibraryNotePatch } from './cloud-note-patch.mjs';
 import { useCollections, type Collection } from './collections-store';
 import { findNode, findNodeInNovel } from './utils';
 import { useLibraryPreferences } from './library-preferences';
@@ -30,9 +31,12 @@ let initializing: Promise<void> | null = null, running: Promise<void> | null = n
 let timer: ReturnType<typeof setTimeout> | null = null;
 let saveRetry: ReturnType<typeof setTimeout> | null = null;
 let retryDelay = 1000;
-let unconfirmedWrite: { payload: string; value: string; draft: LocalDraft | null } | null = null;
+type WriteReceipt = { payload: string } | { writeId: string };
+type PendingWrite = WriteReceipt & { value: string; draft: LocalDraft | null };
+let unconfirmedWrite: PendingWrite | null = null;
 let accountId='';
 let gzipLibrarySave = false;
+let notePatchEnabled = false, exactServerBaseline = false;
 let accountEpoch = 0, writerId = crypto.randomUUID();
 let activeDraft: LocalDraft | null = null, localTimer: ReturnType<typeof setTimeout> | null = null;
 let localWrites: Promise<void> = Promise.resolve();
@@ -63,12 +67,15 @@ function rememberedLibraryLocation(): LibraryLocation | undefined {
     if (value && Array.isArray(value.expanded)) return value;
   } catch { /* Older cloud locations remain the fallback. */ }
 }
-function snapshotWithNavigation(value: string) {
+function snapshotNavigation() {
   const {view,activeNovelId,activeTab,selectedNodeId,paneAId,paneBId,activePane,activeHomePageId} = useKachamak.getState();
   const navigation = {activeNovelId,activeTab,selectedNodeId,paneAId,paneBId,activePane,
     ...(view==='homepage' && activeHomePageId!==HOME_ROOT ? {activeHomePageId} : {})};
+  return {view,navigation,location:libraryLocation()};
+}
+function snapshotWithNavigation(value: string) {
   // Add the latest navigation to a real save without re-encoding the manuscript.
-  return value.slice(0,-1) + ',' + JSON.stringify({view,navigation,location:libraryLocation()}).slice(1);
+  return value.slice(0,-1) + ',' + JSON.stringify(snapshotNavigation()).slice(1);
 }
 // Check a whole upload before changing the book, including the other books in its cloud save.
 export function checkGalleryUploadSize(entries:import('./gallery').GalleryEntry[],replaced?:import('./gallery').GalleryEntry) {
@@ -130,6 +137,7 @@ function lockAccount() {
   void checkpointLocalDraft();
   accountEpoch++;
   gzipLibrarySave = false;
+  notePatchEnabled = false;
   clearSaveRetry();
   retryDelay = 1000;
   unconfirmedWrite = null;
@@ -199,7 +207,9 @@ async function removeAcknowledgedDraft(draft: LocalDraft | null, value: string) 
 class LibraryConflictError extends Error {}
 class TemporaryCloudError extends Error {}
 class UnsupportedLibraryEncodingError extends Error {}
+class UnsupportedNotePatchError extends Error {}
 const GZIP_LIBRARY_TYPE = 'application/vnd.katchamak.snapshot+gzip';
+const NOTE_PATCH_TYPE = 'application/vnd.katchamak.notes+json';
 async function api(path: string, init?: RequestInit) {
   const epoch = accountEpoch;
   const headers=new Headers(init?.headers);
@@ -218,6 +228,13 @@ async function api(path: string, init?: RequestInit) {
   }
   if (!response.ok) {
     const message=data.error || 'Cloud storage could not be reached. Retry saving.';
+    if (headers.get('Content-Type') === NOTE_PATCH_TYPE) {
+      if (response.status === 415) {
+        notePatchEnabled = false;
+        throw new UnsupportedNotePatchError(message);
+      }
+      if (response.status === 422 && data.notePatchUnsupported === true) throw new UnsupportedNotePatchError(message);
+    }
     if(response.status===415&&headers.get('Content-Type')===GZIP_LIBRARY_TYPE)throw new UnsupportedLibraryEncodingError(message);
     if(response.status===409&&data.conflict===true)throw new LibraryConflictError(message);
     if(response.status===408||response.status===429||response.status>=500)throw new TemporaryCloudError(message);
@@ -262,8 +279,16 @@ async function writeLibrarySnapshot(value: string, baseRevision: number) {
     body: `{"revision":${baseRevision},"snapshot":${value}}`,
   });
 }
+function writeLibraryNotePatch(notePatch: LibraryNotePatch, writeId: string, baseRevision: number) {
+  return api('/api/library', {
+    method: 'POST',
+    headers: { 'Content-Type': NOTE_PATCH_TYPE },
+    body: JSON.stringify({ revision: baseRevision, writeId, notePatch, ...snapshotNavigation() }),
+  });
+}
 function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=false) {
   if (!Number.isSafeInteger(data.revision) || data.revision < 0 || !Array.isArray(data.snapshot?.novels) || !data.snapshot.novels.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
+  const serverBaseline = serializeLibrary(data.snapshot);
   data.snapshot.novels.forEach(normalizeNovelSections);
   const active = useKachamak.getState().activeNovelId;
   const route = !useWebLibrary.getState().ready ? readWorkspaceRoute() : null;
@@ -297,6 +322,7 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
   snapshotDirty=true;
   revision = data.revision; saved = snapshot();
   if(keepAppearance){const acknowledged=JSON.parse(saved);acknowledged.editorAppearance=appearance;saved=JSON.stringify(acknowledged);}
+  exactServerBaseline = serverBaseline === saved;
   useWebLibrary.setState({ ready: true, busy: false, pending: snapshot()!==saved, error: null, conflict: false });
   // Retain the acknowledged snapshot as the CAS baseline. This change then uses
   // the same autosave, offline draft and retry path as edits in the workspace.
@@ -327,6 +353,7 @@ export async function initializeWebLibrary() {
     if (accountId !== account.id) { writerId = crypto.randomUUID(); activeDraft = null; }
     accountId=account.id;
     gzipLibrarySave = account.librarySaveEncoding === 'gzip';
+    notePatchEnabled = account.libraryNotePatch === 1;
     useLocalRecovery.setState({ owner: account.id, drafts: [], error: null });
     await loadLocalDrafts();
     useWebLibrary.setState({ email: account.email });
@@ -384,17 +411,21 @@ export async function flushWebLibrary() {
     if(useWebLibrary.getState().conflict)await reconcileRevision();
     if (unconfirmedWrite) {
       const attempt = unconfirmedWrite;
-      const remote = await api('/api/library?revision='+revision);
+      const expectedWriteId = 'writeId' in attempt ? attempt.writeId : null;
+      const remote = await api('/api/library?revision=' + revision + (expectedWriteId ? '&writeId=' + expectedWriteId : ''));
+      const confirmedPatch = expectedWriteId !== null && remote.revision === revision + 1 && remote.writeId === expectedWriteId;
       if (!Number.isSafeInteger(remote.revision) || remote.revision < revision ||
-          (remote.unchanged === true ? remote.revision !== revision
+          (remote.confirmedWrite === true ? !confirmedPatch
+            : remote.unchanged === true ? remote.revision !== revision
             : !Array.isArray(remote.snapshot?.novels) || !Array.isArray(remote.snapshot?.collections))) {
         throw new TemporaryCloudError('The server did not confirm the saved library revision.');
       }
-      // A failed response may follow a committed write. Confirm its exact payload
-      // before retrying newer edits against the acknowledged revision.
-      if (remote.revision === revision + 1 && JSON.stringify(remote.snapshot) === attempt.payload) {
+      // A failed response may follow a committed write. A patch receipt identifies
+      // that exact commit. Existing full writes are still checked against their payload.
+      if (confirmedPatch || ('payload' in attempt && remote.revision === revision + 1 && JSON.stringify(remote.snapshot) === attempt.payload)) {
         revision = remote.revision;
         saved = attempt.value;
+        exactServerBaseline = true;
         await removeAcknowledgedDraft(attempt.draft, attempt.value);
       }
       unconfirmedWrite = null;
@@ -410,22 +441,41 @@ export async function flushWebLibrary() {
       await checkpointLocalDraft();
       const checkpoint = activeDraft;
       if (!useWebLibrary.getState().ready) throw new Error('Sign in again before saving.');
-      const payload = snapshotWithNavigation(value);
-      useWebLibrary.setState({ busy: true, pending: true });
+      const notePatch = notePatchEnabled && exactServerBaseline
+        ? createLibraryNotePatch(JSON.parse(saved) as Snapshot, JSON.parse(value) as Snapshot)
+        : null;
+      const baseRevision = revision;
+      let receipt: WriteReceipt | undefined;
       let data;
+      useWebLibrary.setState({ busy: true, pending: true });
       try {
-        data = await writeLibrarySnapshot(payload, revision);
-        if (!Number.isSafeInteger(data.revision) || data.revision !== revision + 1) {
+        if (notePatch) {
+          const writeId = crypto.randomUUID();
+          receipt = { writeId };
+          try { data = await writeLibraryNotePatch(notePatch, writeId, baseRevision); }
+          catch (error) {
+            if (!(error instanceof UnsupportedNotePatchError)) throw error;
+            receipt = undefined;
+          }
+        }
+        if (!receipt) {
+          const payload = snapshotWithNavigation(value);
+          receipt = { payload };
+          data = await writeLibrarySnapshot(payload, baseRevision);
+        }
+        if (!Number.isSafeInteger(data.revision) || data.revision !== baseRevision + 1 ||
+            ('writeId' in receipt && data.writeId !== receipt.writeId)) {
           throw new TemporaryCloudError('The server did not confirm this save. Your edits are kept in this window.');
         }
       }
       catch(error){
-        if (error instanceof TemporaryCloudError && useWebLibrary.getState().ready) unconfirmedWrite = { payload, value, draft: checkpoint };
+        if (receipt && error instanceof TemporaryCloudError && useWebLibrary.getState().ready) unconfirmedWrite = { ...receipt, value, draft: checkpoint };
         if(!(error instanceof LibraryConflictError))throw error;
         if(retries++>=2){useWebLibrary.setState({conflict:true});throw error;}
         await reconcileRevision();continue;
       }
       revision = data.revision; saved = value;
+      exactServerBaseline = true;
       await removeAcknowledgedDraft(checkpoint, value);
     }
     retryDelay = 1000;
@@ -516,6 +566,7 @@ async function reconcileRevision(){
     throw new LibraryConflictError('Another window changed project content too. Your unsaved edits are kept in this window. Export backups before reloading.');
   }
   revision=remote.revision;saved=serializeLibrary(remote.snapshot);
+  exactServerBaseline=true;
   if(!keepAppearance){const appearance=remote.snapshot.editorAppearance??DEFAULT_EDITOR_APPEARANCE;applying=true;try{useKachamak.setState({editorFont:appearance.font,editorSize:appearance.size,editorSpacing:appearance.spacing,pageFormat:{...appearance.page},editorSpellCheck:appearance.spellCheck??true});}finally{applying=false;}snapshotDirty=true;}
   useWebLibrary.setState({conflict:false,error:null});
 }

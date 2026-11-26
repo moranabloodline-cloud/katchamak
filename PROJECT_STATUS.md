@@ -1,3 +1,5 @@
+> **2026-11-26 — Čuvanje promenjenih beleški i House Styles.** Izmene postojećih beleški šalju promenjena polja, identifikatore i osnovnu reviziju. Lokalni nacrt čeka potvrdu konkretnog upisa, a privremene cloud greške pokreću automatski ponovni pokušaj. House Styles podrazumevano prikazuje univerzalni odlomak, uz postojeći izbor poglavlja i žanrovskog uzorka.
+
 > **2026-11-26 — Poliranje postojećih funkcija.** Biblioteka zadržava kreiranu kolekciju tokom ponovnog cloud čuvanja. Uređivači zadržavaju izbor teksta pri ručnom linkovanju, a razdelnici rade sa tastature. Timeline daje poruku za neispravan datum, Finance primenjuje iznos po završetku unosa, a Publish vezuje pripremu PDF-a za stil odabran pri izvozu.
 
 > **2026-11-26 — Brži prelazak između tabova.** Navigacija se pamti u adresi i sesiji pregledača. Prelazak između tabova ne pretvara knjigu u JSON niti pokreće cloud upis.
@@ -743,6 +745,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-26.** Upisi beleški koriste postojeću zaštitu od sukoba revizija i validiraju sastavljeni snimak biblioteke. Pri izgubljenoj potvrdi klijent može da proveri identifikator upisa bez preuzimanja rukopisa. Promene strukture, podešavanja biblioteke i starije kopije koriste postojeći potpuni upis. Otvaranje Publish taba ne upisuje katalog. Katalog se dodaje pri uključivanju taba ili odgovarajućom komandom u galeriji. Izvoz i Manuscript pregled koriste izabrani sadržaj knjige.
 
 - **2026-11-26.** Uređeni su dijalozi biblioteke, obaveštenja o cloud čuvanju i unos iz rezervne kopije. Dodato je vraćanje fokusa za ručne linkove i pomeranje razdelnika tastaturom. Smanjeni su suvišni upisi pri neizmenjenim unosima u biblioteci, Galeriji i Kanbanu. Ispravljeni su izbor datuma na Timeline tab-u, unos iznosa u Finance, uređivanje veza i obrada greške pri pripremi PDF-a. Zaključani Canvas i biblioteka mapa dobijaju preciznija stanja za navigaciju i prazne prikaze.
 

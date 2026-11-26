@@ -67,8 +67,13 @@ const dom=new Window({url:'https://test.local'});globalThis.window=dom;globalThi
 globalThis.localStorage={getItem(){throw new DOMException('Storage denied','SecurityError');},setItem(){browserStorageWrites++;throw new DOMException('Storage full','QuotaExceededError');},removeItem(){throw new DOMException('Storage denied','SecurityError');}};
 let browserUser=a;
 globalThis.fetch=async(path,init={})=>{
- const body=init.body instanceof FormData ? init.body : init.body ? JSON.parse(init.body) : undefined;
- return path==='/api/account'?accountApi(new Request('https://test.local/api/account',{headers:{'oai-authenticated-user-id':browserUser,'oai-authenticated-user-email':browserUser}}),env):call(browserUser,path,init.method||'GET',body,'https://test.local',new Headers(init.headers).get('X-Katchamak-Account')||browserUser);
+ const headers=new Headers(init.headers);
+ headers.set('oai-authenticated-user-id',browserUser);
+ headers.set('oai-authenticated-user-email',browserUser);
+ if(!headers.has('X-Katchamak-Account'))headers.set('X-Katchamak-Account',browserUser);
+ if(init.method&&init.method!=='GET')headers.set('Origin','https://test.local');
+ const request=new Request('https://test.local'+path,{...init,headers});
+ return path==='/api/account'?accountApi(request,env):cloudLibraryApi(request,env);
 };
 const cloud=await import('../src/lib/kachamak/cloud-library.ts');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');

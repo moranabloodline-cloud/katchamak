@@ -39,15 +39,22 @@ export async function packageSite(manifest) {
   const accounts = await readFile("scripts/accounts-runtime.mjs", "utf8");
   const demos = await readFile("scripts/demo-projects.mjs", "utf8");
   const cloud = await readFile("scripts/cloud-library-runtime.mjs", "utf8");
-  // Bundle only the shared cloud write validator, never the client store or its effects.
-  const validation = await bundle({ entryPoints: ["src/lib/kachamak/cloud-write-validation.mjs"], bundle: true, write: false, format: "iife", globalName: "projectValidation", platform: "neutral", target: "es2022" });
-  const projectValidation = validation.outputFiles[0].text + "\nconst {validCloudLibrary} = projectValidation;\n";
+  // Bundle the shared cloud write logic without pulling in the client store.
+  const validation = await bundle({
+    stdin: {
+      contents: `export {validCloudLibrary} from "./src/lib/kachamak/cloud-write-validation.mjs";
+export {applyLibraryNotePatch, validLibraryNotePatch} from "./src/lib/kachamak/cloud-note-patch.mjs";`,
+      resolveDir: process.cwd(),
+    },
+    bundle: true, write: false, format: "iife", globalName: "projectValidation", platform: "neutral", target: "es2022",
+  });
+  const projectValidation = validation.outputFiles[0].text + "\nconst {validCloudLibrary, applyLibraryNotePatch, validLibraryNotePatch} = projectValidation;\n";
   const oidc = await readFile("scripts/github-oidc.mjs", "utf8");
   const store = await readFile("scripts/release-store.mjs", "utf8");
   const automation = JSON.parse(await readFile(".openai/automation.json", "utf8"));
   const deployConfig = { repository: automation.repository, branch: automation.branch, origin: automation.origin, workflow: automation.workflow };
   deployConfig.runtimeHash = createHash("sha256").update(requestTrace + accounts + demos + cloud + projectValidation + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
-  const modules = projectValidation + requestTrace.replace(/^export /gm, "") + "\n" + demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^(?:import|export \{)[^\r\n]*(?:demo-projects|cloud-write-validation|request-trace)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + accounts.replace(/^import[^\r\n]*request-trace[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
+  const modules = projectValidation + requestTrace.replace(/^export /gm, "") + "\n" + demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^(?:import|export \{)[^\r\n]*(?:demo-projects|cloud-(?:write-validation|note-patch)|request-trace)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + accounts.replace(/^import[^\r\n]*request-trace[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
   await mkdir("dist/server", { recursive: true });
   await mkdir("dist/.openai", { recursive: true });
   // Keep the previous build's extra immutable files out of the active build

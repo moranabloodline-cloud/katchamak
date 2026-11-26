@@ -27,6 +27,7 @@ const sampleParagraphs=[
 ];
 const paras=(value:string)=>value.split(/\n\s*\n/).map(p=>'<p>'+escapeText(p).replace(/\n/g,'<br/>')+'</p>').join('');
 export const sampleBody=sampleParagraphs.map(paras).join('');
+const sampleChapterTitle='The Far Bank';
 function divider(style:BookStyle){return '<div class="scene" role="separator">'+escapeText(glyphs[style.divider])+'</div>';}
 function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,string>){
   const el=document.implementation.createHTMLDocument('').createElement('div');
@@ -106,6 +107,19 @@ function special(page:SpecialPage,book:Novel,style:BookStyle,chapters:Leaf[]):Le
     'About the author':paras(style.biography),Colophon:paras(style.colophon)
   };
   return {id:'matter-'+page.toLowerCase().replaceAll(' ','-'),title:page,kind:'special',html:page==='Title page'?content[page]:'<h1>'+escapeText(page)+'</h1>'+content[page]};
+}
+function sampleChapter(s: BookStyle, art?: string): Leaf {
+  const ending = paras('By the time the post boat passed the headland, he had read the letter twice. He folded it along the old creases and slipped it into his coat. The sky was clearing over the hills. For the first time in years, the clock on the customs house was running a little slow.');
+  return {
+    id: 'specimen',
+    kind: 'chapter',
+    title: sampleChapterTitle,
+    html: chapterHead(sampleChapterTitle, 1, s, art) + opening(sampleBody) + divider(s) + ending,
+  };
+}
+export function sampleChapterOpening(book: Novel, s: BookStyle): Publication {
+  const art = projectImageSrc(book.gallery, s.chapterImage);
+  return {title: sampleChapterTitle, author: '', lang: 'en', sections: [sampleChapter(s, art)]};
 }
 function genreOpening(s:BookStyle,genre:NonNullable<BookStyle['sampleGenre']>,art?:string):Publication{
   const sample=genreSamples[genre];
@@ -237,21 +251,20 @@ export function publication(book:Novel,s:BookStyle,proof:Proof='Manuscript'):Pub
     const back=s.pages.filter(p=>['About the author','Colophon'].includes(p));
     return {...model,sections:[...fronters.map(p=>special(p,book,s,chapters)),...chapters,...back.map(p=>special(p,book,s,chapters))]};
   }
-  const title='The Far Bank';
+  if(proof==='Chapter opening')return {...model,sections:[sampleChapter(s,art)]};
   if (['Title page','Copyright','Dedication','Contents','About the author','Colophon'].includes(proof)) {
     const samples={...s,dedication:s.dedication||'For everyone who made the crossing.',biography:s.biography||'The author writes about the people who cross the river.',colophon:s.colophon||'Set and composed for this edition.'};
     const contents:Leaf[]=proof==='Contents'&&book.sections.binder?.length
       ?manuscriptEntries(book).filter(row=>row.included).map(({node},i)=>({id:'entry-'+i,title:node.title,kind:'chapter',html:''}))
-      :[{id:'specimen',title,kind:'chapter',html:''}];
+      :[{id:'specimen',title:sampleChapterTitle,kind:'chapter',html:''}];
     return {...model,sections:[special(proof as SpecialPage,book,samples,contents)]};
   }
   const examples:Partial<Record<Proof,string>>={
-    'Chapter opening':chapterHead(title,1,s,art)+opening(sampleBody)+divider(s)+paras('By the time the post boat passed the headland, he had read the letter twice. He folded it along the old creases and slipped it into his coat. The sky was clearing over the hills. For the first time in years, the clock on the customs house was running a little slow.'),
     'Body text':sampleBody+sampleBody,'Scene break':paras(sampleParagraphs[0])+divider(s)+paras(sampleParagraphs[2]),
     'Special blocks':'<h2>Field notes</h2><blockquote>Every crossing begins with a promise.</blockquote><p class="letter">Dear Elin,<br/>The ferry will be waiting when you return.</p><pre class="verse">One lamp upon the water,\none star beneath the oar.</pre><aside>A note from the ferryman’s log.</aside>',
     'End matter':special('About the author',book,{...s,biography:s.biography||'The author lives near the river and writes about the people who cross it.'},[]).html
   };
-  return {...model,sections:[{id:'specimen',title:proof,kind:proof==='Chapter opening'?'chapter':'special',html:examples[proof]!}]};
+  return {...model,sections:[{id:'specimen',title:proof,kind:'special',html:examples[proof]!}]};
 }
 // Share the opening (right-hand) margins with the paged print layout.
 export function pageMargins(s:BookStyle){

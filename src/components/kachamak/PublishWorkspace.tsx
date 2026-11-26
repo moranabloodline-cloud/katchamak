@@ -6,8 +6,8 @@ import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
 import {baseStyle,fontStacks,trims,type BookStyle} from '@/lib/kachamak/book-style';
-import {binderChapterChoices,bookArticles,bookCss,escapeText,pageMargins,projectOpeningSample,projectStyleProof,prepareChapterSample,proofs,publication,type ChapterSample,type Proof} from '@/lib/kachamak/publication';
-import {withGenreSample} from '@/lib/kachamak/house-styles';
+import {binderChapterChoices,bookArticles,bookCss,escapeText,pageMargins,projectStyleProof,prepareChapterSample,proofs,publication,sampleChapterOpening,type ChapterSample,type Proof} from '@/lib/kachamak/publication';
+import {houseStyleCatalogVersion,withGenreSample} from '@/lib/kachamak/house-styles';
 import {galleryImage,galleryImageRef} from '@/lib/kachamak/project-image';
 import {findNode,locateNode} from '@/lib/kachamak/utils';
 import {useKachamak} from '@/lib/kachamak/store';
@@ -23,19 +23,25 @@ type StyleCard={name:string;style:BookStyle;node:NoteNode};
 function styleCards(nodes:NoteNode[]):StyleCard[]{
   return nodes.flatMap(node=>node.hidden?[]:node.bookStyle?[{name:node.title,style:node.bookStyle,node}]:styleCards(node.children));
 }
+function styleProof(book: Novel, style: BookStyle, proof: Proof, comparison: ChapterSample | null, genre: boolean, thumbnail = false) {
+  if (comparison) return projectStyleProof(book, style, proof, comparison, thumbnail);
+  if (genre) return publication(book, style, proof);
+  if (proof === 'Chapter opening') return sampleChapterOpening(book, style);
+  if (proof === 'Body text' || proof === 'Scene break' || proof === 'Special blocks') return publication(book, style, proof);
+  return projectStyleProof(book, style, proof, null);
+}
 function Miniature({book,entry,comparison,genre,selected,choose}:{book:Novel;entry:StyleCard;comparison:ChapterSample|null;genre:boolean;selected:boolean;choose:()=>void}){
   const holder=useRef<HTMLDivElement>(null),[width,setWidth]=useState(160);
   useEffect(()=>{if(!holder.current)return;const observer=new ResizeObserver(([r])=>setWidth(r.contentRect.width));observer.observe(holder.current);return()=>observer.disconnect();},[]);
   const s=entry.style,[w,h]=trims[s.trim],sheet=w*96/25.4;
   const source=useMemo(()=>{
-    const sample=genre?publication(book,s,'Chapter opening'):projectStyleProof(book,s,'Chapter opening',comparison,true);
-    const titlePage=sample.sections[0]?.id==='matter-title-page';
+    const sample=styleProof(book,s,'Chapter opening',comparison,genre,true);
     const margins='.running,.folio{position:absolute;left:'+s.inner+'mm;right:'+s.outer+'mm;display:grid;place-content:center;overflow:hidden;white-space:nowrap}'+
       '.running{top:0;height:'+s.top+'mm;font:9pt '+fontStacks[s.headingFont]+';color:'+s.accent+'}.folio{bottom:0;height:'+s.bottom+'mm;font:9pt '+fontStacks[s.bodyFont]+'}';
     const paper='html{background:white;overflow:hidden}body{position:relative;height:100vh;overflow:hidden;padding:'+pageMargins(s)+'}.book-name{display:none}'+
       'main{height:100%;columns:1;column-fill:auto;overflow:hidden}'+margins;
-    const running=s.running&&!titlePage?'<div class="running">'+escapeText(sample.title)+'</div>':'';
-    const folio=s.folios&&!titlePage?'<div class="folio">1</div>':'';
+    const running=s.running?'<div class="running">'+escapeText(sample.title)+'</div>':'';
+    const folio=s.folios?'<div class="folio">1</div>':'';
     return '<!doctype html><html lang="'+sample.lang+'"><meta charset="utf-8"><style>'+bookCss(s,'print')+paper+'</style><body>'+running+'<main>'+bookArticles(sample)+'</main>'+folio+'</body></html>';
   },[book,s,comparison,genre]);
   return <button type="button" aria-label={'Preview '+entry.name} aria-pressed={selected} onClick={choose} className={'group flex min-w-0 flex-col rounded-lg border p-2 text-left transition-colors '+(selected?'border-amber-400/70 bg-amber-400/5':'border-white/10 bg-white/[.025] hover:border-amber-300/40')}>
@@ -59,14 +65,14 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
     for(const b of books)if(b.id!==novel.id)visit(b,b.sections.publish??[],b.title);
     return choices;
   },[books,novel.id]);
-  useEffect(()=>{useKachamak.getState().installPublishStyles(novel.id);},[novel.id,novel.publishStyleCatalogVersion]);
+  const needsHouseStyles=(novel.publishStyleCatalogVersion??0)<houseStyleCatalogVersion;
   const rows=useMemo(()=>manuscriptEntries(novel),[novel]);
   const chapterChoices=useMemo(()=>binderChapterChoices(novel),[novel]);
-  // null follows the current manuscript, an empty string explicitly requests genre examples.
+  // Start with the shared sample. A Binder chapter or genre sample is an explicit choice.
   const [comparisonId,setComparisonId]=useState<string|null>(null);
   const genre=comparisonId==='';
   const selectedChapter=chapterChoices.find(choice=>choice.node.id===comparisonId);
-  const comparison=useMemo(()=>genre?null:selectedChapter?prepareChapterSample(novel,selectedChapter):projectOpeningSample(novel,rows,chapterChoices),[novel,genre,selectedChapter,rows,chapterChoices]);
+  const comparison=useMemo(()=>selectedChapter?prepareChapterSample(novel,selectedChapter):null,[novel,selectedChapter]);
   useEffect(()=>{if(comparisonId&&!selectedChapter)setComparisonId(null);},[comparisonId,selectedChapter]);
   const includedRows=useMemo(()=>rows.filter(row=>row.included),[rows]);
   const hasContents=includedRows.length>0;
@@ -96,15 +102,15 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   useEffect(()=>{if(selected?.id!==prev.current){
     setPdfStyleId(null);
     if(selected){
-      if(gallery&&selected.bookStyle&&(comparison||selected.bookStyle.sampleGenre))setProof('Chapter opening');
+      if(gallery&&selected.bookStyle)setProof('Chapter opening');
       setGallery(!selected.bookStyle);
     }
     prev.current=selected?.id;
-  }},[selected,gallery,comparison]);
+  }},[selected,gallery]);
   const options=treeOptions(roots);
   const source=useMemo(()=>{
     if(gallery||!hasStyle)return '';
-    const book=genre?publication(novel,s,proof):projectStyleProof(novel,s,proof,comparison);
+    const book=styleProof(novel,s,proof,comparison,genre);
     if(!book.sections.length)return '';
     return proofDocument(book,s,print);
   },[novel,s,proof,print,gallery,comparison,genre,hasStyle]);
@@ -114,7 +120,7 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
   const open=(card:StyleCard)=>{
     useKachamak.getState().select(card.node.id);
     onInspect('tools');setPdfStyleId(null);
-    if(comparison||card.style.sampleGenre)setProof('Chapter opening');
+    setProof('Chapter opening');
     setGallery(false);
   };
   const change=(next:BookStyle)=>{
@@ -165,24 +171,23 @@ export function PublishWorkspace({novel,selected,rootId,zoom,toolsHost,inspector
         {(gallery||proof==='Chapter opening')&&<div role="group" aria-label="Style samples" className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 border-l border-white/10 pl-2 max-sm:order-last max-sm:w-full max-sm:border-0 max-sm:pl-0">
           <select aria-label="Compare Binder chapter" className={btn+' min-w-0 max-w-full shrink bg-background sm:max-w-64'} value={genre?':genre':selectedChapter?.node.id??''} onChange={e=>compare(e.target.value||null)}>
             {genre&&<option hidden value=":genre">Compare Binder chapter…</option>}
-            <option value="">{novel.title}{!genre&&!selectedChapter&&comparison?' — '+comparison.title:''}</option>
+            <option value="">Universal sample</option>
             {chapterChoices.map(({node,path})=><option key={node.id} value={node.id}>{path}</option>)}
           </select>
           <button type="button" aria-pressed={genre} className={btn+(genre?active:'')} onClick={()=>compare('')}>Genre samples</button>
         </div>}
-        {!genre&&!comparison&&(gallery||proof==='Chapter opening')&&<span role="status" className="text-xs text-muted-foreground">Showing the title page. Select a Binder item with text in Manuscript to preview a chapter.</span>}
         {comparison&&!comparison.full&&(gallery||proof==='Chapter opening')&&<span role="status" className="text-xs text-muted-foreground">This chapter has no text yet.</span>}
         <span className="min-w-1 flex-1"/>
         <button className={btn+' lg:hidden'} onClick={onShowTools} aria-label="Show style tools"><Settings2 className="size-4"/></button>
         <DropdownMenu><DropdownMenuTrigger asChild><button disabled={busy||!!pdfStyleId||!hasContents||!entry} title={!entry?'Choose a book style':!hasContents?'Select at least one Binder item in Manuscript':undefined} className={btn}>{pdfStyleId?'Preparing PDF…':busy?'Exporting…':'Export book'}<Download className="size-3.5"/></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">{(['PDF','EPUB','DOCX','HTML'] as const).map(f=><DropdownMenuItem key={f} onSelect={()=>void download(f)}>{f==='PDF'?'Print / Save PDF':f}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
       </div>
-      {gallery?<div className="kachamak-scroll min-h-0 flex-1 overflow-auto p-5" style={{zoom}}><div className="mb-5 flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">{folder?.title??'Book styles'}</h1><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>{useKachamak.getState().addNode('publish',folder?.id??null,'folder','New folder');}}>New folder</button>{otherStyles.length>0&&<button className={btn} onClick={()=>setImporting(true)}>Use style from another book</button>}</div></div>
+      {gallery?<div className="kachamak-scroll min-h-0 flex-1 overflow-auto p-5" style={{zoom}}><div className="mb-5 flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">{folder?.title??'Book styles'}</h1><div className="flex flex-wrap gap-2">{needsHouseStyles&&<button type="button" className={btn} onClick={()=>useKachamak.getState().installPublishStyles(novel.id)}>{novel.publishStyleCatalogVersion||novel.publishStylesInstalled?'Update House styles':'Add House styles'}</button>}<button className={btn} onClick={()=>{useKachamak.getState().addNode('publish',folder?.id??null,'folder','New folder');}}>New folder</button>{otherStyles.length>0&&<button className={btn} onClick={()=>setImporting(true)}>Use style from another book</button>}</div></div>
         {savedCards.length?group(savedCards):<button className={btn} onClick={saveAs}>Create a style in this folder</button>}
       </div>:<>
         <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-xs">
           <strong className="mr-auto truncate">{entry?.name??"Book proof"}</strong>
-          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'&&genre&&s.sampleGenre?'Style sample':v==='Chapter opening'&&!genre?'Project opening':v}</option>)}</select>
+          <select aria-label="Preview content" className={btn+' bg-background'} value={proof} onChange={e=>inspect(e.target.value as Proof)}>{proofs.map(v=><option key={v} value={v}>{v==='Chapter opening'&&comparison?'Binder chapter':v==='Chapter opening'?'Style sample':v}</option>)}</select>
           <div className="flex gap-1">{['Print','eBook'].map(m=><button key={m} aria-pressed={(m==='Print')===print} className={btn+((m==='Print')===print?active:'')} onClick={()=>{setPdfStyleId(null);setPrint(m==='Print');}}>{m}</button>)}</div>
           {!print&&<button type="button" className={btn} aria-pressed={darkReader} aria-label="Dark reader preview" title={darkReader?'Use light reader background':'Use dark reader background'} onClick={()=>setDarkReader(!darkReader)}>{darkReader?<Sun className="size-3.5"/>:<Moon className="size-3.5"/>}</button>}
         </div>

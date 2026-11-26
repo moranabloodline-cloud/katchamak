@@ -23,7 +23,11 @@ const DB = { prepare(query) { let values = []; const statement = {
 const objects = new Map(); let writes = 0;
 const BUCKET = {
   async put(key, data) { writes++; objects.set(key, data); },
-  async get(key) { return objects.has(key) ? { text: async () => objects.get(key) } : null; },
+  async get(key) {
+    if (!objects.has(key)) return null;
+    const data = new Blob([objects.get(key)]);
+    return { body: data.stream(), text: () => data.text() };
+  },
   async delete(key) { objects.delete(key); },
 };
 const user = 'validation@test.local', origin = 'https://test.local';
@@ -149,7 +153,15 @@ validProjects.forEach((project, i) => project.id = 'fixture-' + i);
 assert.equal((await call('/api/library', 'POST', {revision:saved.revision, snapshot:{novels:validProjects,collections:[]}})).status, 200);
 assert.deepEqual((await (await call()).json()).snapshot.novels, validProjects);
 const dom = new Window({url:origin}); globalThis.window = dom; globalThis.document = dom.document;
-globalThis.fetch = (path, init={}) => call(path, init.method || 'GET', init.body ? JSON.parse(init.body) : undefined);
+globalThis.fetch = (path, init={}) => {
+  const headers = new Headers(init.headers);
+  headers.set('oai-authenticated-user-id', user);
+  headers.set('oai-authenticated-user-email', user);
+  if (!headers.has('X-Katchamak-Account')) headers.set('X-Katchamak-Account', user);
+  if (init.method && init.method !== 'GET') headers.set('Origin', origin);
+  const request = new Request(origin + path, { ...init, headers });
+  return path === '/api/account' ? accountApi(request, env) : handler(request, env);
+};
 useKachamak.setState({novels:[], activeNovelId:null});
 const cloud = await import('../src/lib/kachamak/cloud-library');
 await cloud.initializeWebLibrary();
