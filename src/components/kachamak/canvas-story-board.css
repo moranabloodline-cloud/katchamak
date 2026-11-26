@@ -1,21 +1,87 @@
 .canvas-story {
   --story-axis-width: 11rem;
-  --story-chapter-width: 15rem;
+  --story-chapter-width: 14.5rem;
+  --story-accent: #69449a;
+  --story-axis-bg: color-mix(in srgb, var(--background) 94%, var(--story-accent));
   background: var(--background);
   height: 100%;
   width: 100%;
 }
+
+.dark .canvas-story { --story-accent: #c7adea; }
 
 .canvas-story-header {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: .7rem 1rem;
-  padding: clamp(.8rem, 2vw, 1.3rem);
+  padding: .85rem clamp(.8rem, 2vw, 1.3rem);
   border-bottom: 1px solid var(--border);
 }
 
-.canvas-story-title svg { color: #b18753; }
+.canvas-story-title {
+  display: flex;
+  align-items: center;
+  flex: 1 1 14rem;
+  min-width: 0;
+  gap: .72rem;
+}
+
+.canvas-story-title h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.1rem, 2vw, 1.48rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.canvas-story-title p, .canvas-story-scene-count {
+  color: var(--muted-foreground);
+  font: 500 .73rem/1.45 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.canvas-story-emblem {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.3rem;
+  height: 2.3rem;
+  border: 1px solid color-mix(in srgb, var(--story-accent) 28%, var(--border));
+  border-radius: .65rem;
+  background: var(--story-axis-bg);
+  color: var(--story-accent);
+}
+
+.canvas-story-view {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem .85rem;
+  padding: .4rem clamp(.8rem, 2vw, 1.3rem);
+  border-bottom: 1px solid var(--border);
+  font: 500 .78rem/1.35 system-ui, sans-serif;
+}
+
+.canvas-story-view label {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  color: var(--muted-foreground);
+}
+
+.canvas-story-view select {
+  width: min(13rem, 52vw);
+  min-height: 2rem;
+  padding-inline: .55rem;
+  border: 1px solid var(--border);
+  border-radius: .35rem;
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.canvas-story-view button[aria-pressed="true"] { color: var(--story-accent); background: var(--story-axis-bg); }
 .canvas-story-error, .canvas-story-empty {
   padding: .65rem 1.2rem;
   font-size: .875rem;
@@ -36,6 +102,7 @@
   table-layout: fixed;
   border-spacing: 0;
   text-align: left;
+  font-family: system-ui, sans-serif;
 }
 
 .canvas-story-matrix th,
@@ -45,16 +112,17 @@
 }
 
 .canvas-story-matrix th {
-  background: var(--background);
-  padding: .48rem .6rem;
-  font-size: .875rem;
+  background: var(--story-axis-bg);
+  padding: .58rem .7rem;
+  font-size: .82rem;
+  font-weight: 650;
 }
 
 .canvas-story-matrix thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: color-mix(in srgb, var(--background) 92%, #b18753);
+  background: color-mix(in srgb, var(--story-axis-bg) 94%, var(--foreground));
 }
 
 .canvas-story-matrix .canvas-story-axis {
@@ -66,6 +134,10 @@
 }
 
 .canvas-story-matrix thead .canvas-story-axis { z-index: 3; }
+.canvas-story-matrix tbody .canvas-story-axis {
+  background: color-mix(in srgb, var(--background) 94%, var(--story-line));
+  box-shadow: inset 3px 0 var(--story-line);
+}
 
 .canvas-story-axis-heading {
   display: flex;
@@ -92,23 +164,19 @@
 .canvas-story-plotline {
   display: flex;
   align-items: baseline;
-  gap: .42rem;
-}
-
-.canvas-story-plotline::before {
-  content: '';
-  flex: 0 0 .48rem;
-  height: .48rem;
-  border-radius: 50%;
-  background: var(--story-line);
+  line-height: 1.35;
 }
 
 .canvas-story-matrix td {
   vertical-align: top;
   min-height: 5rem;
   height: 5rem;
-  padding: .62rem;
-  background-color: color-mix(in srgb, var(--card) 32%, var(--background));
+  padding: .62rem .64rem .45rem;
+  background-color: var(--background);
+}
+
+.canvas-story-matrix tr:nth-child(even) td {
+  background-color: color-mix(in srgb, var(--background) 96%, var(--foreground));
 }
 
 .canvas-story-matrix td[data-drop] {
@@ -119,11 +187,37 @@
 .canvas-story-scene {
   position: relative;
   margin-bottom: .5rem;
-  padding: .5rem .58rem;
-  border: 1px solid var(--border);
+  padding: .55rem .6rem;
+  border: 1px solid color-mix(in srgb, var(--story-line) 32%, var(--border));
   border-left: 3px solid var(--story-line);
-  border-radius: .45rem;
-  background: var(--card);
+  border-radius: .5rem;
+  background: color-mix(in srgb, var(--card) 92%, var(--story-line));
+  box-shadow: 0 2px 3px rgb(0 0 0 / .08);
+}
+
+.canvas-story-scene-title {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  font-size: .875rem;
+  font-weight: 650;
+  line-height: 1.38;
+}
+
+.canvas-story-synopsis {
+  margin-top: .32rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  font-size: .79rem;
+  line-height: 1.45;
+}
+
+.canvas-story-matrix:not([data-full-synopses]) .canvas-story-synopsis {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .canvas-story-scene[draggable="true"] { cursor: grab; }
@@ -151,23 +245,36 @@
 .canvas-story-note {
   max-width: 100%;
   margin-top: .45rem;
+  padding: .18rem .4rem;
   color: var(--foreground);
-  text-decoration: underline;
-  text-underline-offset: .2rem;
+  background: color-mix(in srgb, var(--card) 64%, var(--border));
 }
+
+.canvas-story-note:hover { text-decoration: underline; text-underline-offset: .15rem; }
 
 .canvas-story-add {
   width: 100%;
   justify-content: center;
-  border: 1px dashed var(--border);
-  min-height: 2.05rem;
+  border: 1px dashed transparent;
+  min-height: 1.65rem;
   color: var(--muted-foreground);
 }
 
-.canvas-story-add:hover {
+.canvas-story-add:hover, .canvas-story-add:focus-visible {
   color: var(--foreground);
-  border-color: var(--story-line);
+  border-color: color-mix(in srgb, var(--story-line) 65%, var(--border));
+  background: color-mix(in srgb, var(--background) 91%, var(--story-line));
 }
+
+@media (hover: hover) {
+  .canvas-story-add:not(:hover, :focus-visible) { opacity: .55; }
+  .canvas-story-scene button[data-size="icon"]:not(:focus-visible),
+  .canvas-story-axis-heading button[data-size="icon"]:not(:focus-visible) { opacity: .48; }
+  .canvas-story-scene:hover button[data-size="icon"],
+  .canvas-story-axis-heading:hover button[data-size="icon"] { opacity: 1; }
+}
+
+.canvas-story-zoom button[title^="Fit"] svg { color: var(--story-accent); }
 
 .canvas-story-note:focus-visible,
 .canvas-story-add:focus-visible {

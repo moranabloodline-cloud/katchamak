@@ -2,12 +2,13 @@
 
 import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode,type PointerEvent as PEvent} from 'react';
 import {createPortal} from 'react-dom';
-import {Copy,Group,Ungroup,Magnet,PanelRightOpen,Check,Columns3,Eye,Focus,GitBranchPlus,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,Pencil,Plus,Rows3,Square,Trash2,UnlockKeyhole} from 'lucide-react';
+import {Copy,Group,Ungroup,Magnet,PanelRightOpen,Check,Columns3,Eye,Focus,GitBranchPlus,GitFork,Grid2X2,Grid2X2X,Hand,Layers,ListTree,LockKeyhole,Minus,MousePointer2,MoveHorizontal,Pencil,Plus,Rows3,Scan,Square,Trash2,UnlockKeyhole} from 'lucide-react';
 import {ContextMenu,ContextMenuContent,ContextMenuItem,ContextMenuTrigger} from '@/components/ui/context-menu';
 import {canvasOpeningView} from '@/lib/kachamak/canvas-file';
 import {canGroupCards,expandCardGroups} from '@/lib/kachamak/canvas-groups';
 import {alignCanvas,canvasDragFrame,type AlignmentGuide,type GuideItem} from '@/lib/kachamak/canvas-guides';
 import {worldRows,legacyRowLeft} from '@/lib/kachamak/canvas-layout';
+import {canAddBranch,canvasMindMap,mindMapTone} from '@/lib/kachamak/canvas-mind-map';
 import {boardLayers,frameBetween,framedItems,selectionRoots,type SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import {useKachamak} from '@/lib/kachamak/store';
 import {CanvasSelectionTools} from './CanvasSelectionTools';
@@ -34,10 +35,8 @@ type Props={novel:Novel;page:HomePageEntry;byId:Map<string,NoteNode>;change:(a:H
   renderRow:(row:HomeBlock,release:(blocks:HomeBlock[])=>void,removeRow:()=>void,selectedColumn?:number)=>ReactNode;layoutActions:(position:()=>Point)=>ReactNode;addRow:(at:Point)=>void;editClassic:(b:HomeBlock)=>void;renderClassic:(b:HomeBlock)=>ReactNode;addClassic:(placement:CanvasPlacement)=>void;
   open:(t:HomeTarget)=>void;describe:(t:HomeTarget)=>string;showTree?:()=>void;toolsHost?:HTMLDivElement|null;showInspector?:()=>void;onToolPicked?:()=>void;onPreviewPage?:()=>void};
 const inside=(p:Point,r:BoardRect)=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
-const canAddBranch=(block:HomeBlock|undefined):block is HomeBlock=>
-  !!block?.at&&!block.columnId&&!block.cell&&['note','card','heading','text'].includes(block.layout);
 
-function nextBranchPosition(anchor:BoardRect, occupied:BoardRect[], height:number):Point {
+function nextBranchPosition(anchor:BoardRect, occupied:BoardRect[], height:number, parent?:BoardRect):Point {
   const gap=22,offset=72;
   occupied.sort((a,b)=>a.y-b.y);
   function candidate(x:number):Point {
@@ -49,6 +48,10 @@ function nextBranchPosition(anchor:BoardRect, occupied:BoardRect[], height:numbe
     return {x,y};
   }
   const right=candidate(anchor.x+anchor.w+offset),left=candidate(anchor.x-CARD_WIDTH-offset);
+  if(parent){
+    if(anchor.x>=parent.x+parent.w)return right;
+    if(anchor.x+anchor.w<=parent.x)return left;
+  }
   return right.y<=left.y?right:left;
 }
 function initialPan(key:string,first?:HomeBlock,zoom=1,originX=legacyRowLeft):Point{
@@ -112,6 +115,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
   const lastPointer=useRef<Point|null>(null),previousZoom=useRef(zoom);
   const rects=useMemo(()=>boardRects(page.blocks,heights),[page.blocks,heights]);
   const blocks=useMemo(()=>new Map(page.blocks.map(b=>[b.id,b])),[page.blocks]);
+  const mindMap=useMemo(()=>rows.length?undefined:canvasMindMap(page.blocks),[page.blocks,rows.length]);
   const guideScene=useMemo(()=>[...rects,...rowRects].map(([id,rect])=>({id,rect,columnId:blocks.get(id)?.columnId})),[rects,rowRects,blocks]);
   function toggleFreeCard(id:string){
     setSelection(previous=>{
@@ -356,7 +360,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     const lines=(value:string,columns:number)=>value.split(/\r?\n/).reduce((total,line)=>total+Math.max(1,Math.ceil(line.length/columns)),0);
     const height=68+lines(block.title,20)*22+(block.text?lines(block.text,24)*20:linked?180:0)
       +(block.target?35:0)+(linked?.image?300:0);
-    const at=nextBranchPosition(anchor,[...rects.values(),...rowRects.values()],height);
+    const parentId=mindMap?.parents.get(branch.from);
+    const at=nextBranchPosition(anchor,[...rects.values(),...rowRects.values()],height,parentId?rects.get(parentId):undefined);
     if(!save({type:'addBranch',from:branch.from,block:{...block,at},edgeId:branch.edgeId}))return false;
     branchFocus.current=block.id;
     setSelected(block.id);
@@ -433,11 +438,26 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
     const middle=boardPoint({x:el.clientWidth/2,y:el.clientHeight/2});
     moveRow(id,{x:middle.x-r.w/2,y:middle.y-r.h/2});
   }
-  function fit(){
-    const s=surface.current,rs=[...rects.values(),...rowRects.values()];if(!s||!rs.length)return;
+  function fit(rs:BoardRect[],widthOnly=false){
+    const s=surface.current;if(!s?.clientWidth||!s.clientHeight||!rs.length)return;
     const left=Math.min(...rs.map(r=>r.x)),right=Math.max(...rs.map(r=>r.x+r.w)),top=Math.min(...rs.map(r=>r.y)),bottom=Math.max(...rs.map(r=>r.y+r.h));
-    const level=Math.min(2,Math.max(.02,Math.floor(100*Math.min((s.clientWidth-48)/(right-left),(s.clientHeight-48)/(bottom-top)))/100));
-    previousZoom.current=level;setZoom(level);setPan({x:(s.clientWidth-(right-left)*level)/2-left*level,y:(s.clientHeight-(bottom-top)*level)/2-top*level});
+    const availableWidth=(s.clientWidth-48)/(right-left);
+    const availableHeight=widthOnly?Infinity:(s.clientHeight-48)/(bottom-top);
+    const level=Math.min(2,Math.max(.02,Math.floor(100*Math.min(availableWidth,availableHeight))/100));
+    const y=widthOnly?24:(s.clientHeight-(bottom-top)*level)/2;
+    previousZoom.current=level;
+    setZoom(level);
+    setPan({x:(s.clientWidth-(right-left)*level)/2-left*level,y:y-top*level});
+  }
+  function fitBranch(id:string){
+    const branchRects:BoardRect[]=[];
+    const pending=[id];
+    while(pending.length){
+      const next=pending.pop()!,rect=rects.get(next);
+      if(rect)branchRects.push(rect);
+      for(const child of mindMap?.children.get(next)??[])pending.push(child);
+    }
+    fit(branchRects);
   }
   function startGesture(e:PEvent<HTMLDivElement>){
     if(!e.isPrimary||e.button!==0&&e.button!==1||!surface.current?.contains(e.target as Node))return;
@@ -580,11 +600,13 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
   const resetTool=()=>{setTool('select');setFrom(null);cancelGesture();};
   const btn=(label:string,Icon:typeof Plus,fn:()=>void,pressed?:boolean)=><button type="button" title={label} aria-label={label} aria-pressed={pressed} className="cv-icon" onClick={fn}><Icon size={16}/></button>;
   return <section className="cv-board-shell flex-1" aria-label="Canvas board" aria-description={page.title}>
-    <div className="cv-board-main"><header className="cv-board-head"><button type="button" className="md:hidden" aria-label="Show canvas tree" onClick={showTree}><ListTree size={16}/></button><Layers size={16}/><h2>{page.title}</h2>
+    <div className="cv-board-main"><header className="cv-board-head"><button type="button" className="md:hidden" aria-label="Show canvas tree" onClick={showTree}><ListTree size={16}/></button>
+      {mindMap?<GitFork size={16} className="cv-icon-tone" data-tool-category="connections"/>:<Layers size={16}/>}<h2>{page.title}</h2>
       {focused&&!page.locked&&tool==='select'&&<div className="cv-selection-tools">
         {canAddBranch(focused)&&<button type="button" aria-label="Add branch" title="Add branch"
           className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           onClick={()=>addBranch(focused)}><GitBranchPlus size={15}/><span className="hidden whitespace-nowrap xl:inline">Add branch</span></button>}
+        {mindMap?.children.has(focused.id)&&btn('Fit branch',Scan,()=>fitBranch(focused.id))}
         {focused.positionLocked&&btn('Unlock position',UnlockKeyhole,()=>batch({kind:'lock',locked:false}))}{focused.layout!=='line'&&btn('Edit selected item',Pencil,editFocused)}{btn('Remove selected item',Trash2,()=>remove(focused,columnIndex))}
       </div>}
       {!page.locked&&layoutActions(()=>nextPosition('note',rowWidth))}
@@ -631,7 +653,8 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
           return <div key={row.id} data-world-row={row.id} className="cv-world-row" style={{left:movingRow?.id===row.id?movingRow.at.x:r.x,top:movingRow?.id===row.id?movingRow.at.y:r.y,width:r.w}}>{renderRow(row,releaseCards,()=>remove(row),row.id===selected?columnIndex:undefined)}</div>;
         })}
         <svg className="cv-lines" aria-label="Connections" style={{zIndex:1}}>{[...page.blocks.filter(b=>b.layout==='line'),...heldLines].map(b=>{
-          const a=visualRect(b.edge!.from),z=visualRect(b.edge!.to);
+          const {from,to}=b.edge!;
+          const a=visualRect(from),z=visualRect(to);
           if(!a||!z)return null;
           const vertical=Math.abs(z.x+z.w/2-a.x-a.w/2)<Math.min(a.w,z.w)*0.65;
           const forward=vertical?z.y+z.h/2>=a.y+a.h/2:z.x+z.w/2>=a.x+a.w/2;
@@ -640,11 +663,13 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
           const bend=Math.max(5,Math.abs(vertical?y2-y:x2-x)*.45)*(forward?1:-1);
           const dx=vertical?0:bend,dy=vertical?bend:0;
           const d='M '+x+' '+y+' C '+(x+dx)+' '+(y+dy)+' '+(x2-dx)+' '+(y2-dy)+' '+x2+' '+y2;
-          return <g key={b.id} id={edgePrefix+b.id} data-board-edge={b.id}><path d={d} fill="none" stroke={selected===b.id?'#f2ce80':'#a98854'} strokeWidth={2}/>{!page.locked&&<path d={d} fill="none" stroke="transparent" strokeWidth={18} style={{pointerEvents:'stroke',cursor:'pointer'}} role="button" tabIndex={0} aria-label="Select connection" onFocus={()=>setSelected(b.id)} onClick={()=>{setSelected(b.id);surface.current?.focus({preventScroll:true});}} onKeyDown={e=>{if(e.key==='Enter')setSelected(b.id);}}/>}<circle cx={x2} cy={y2} r={3} fill="#dbb879"/></g>;
+          const tone=mindMap?.parents.get(to)===from?mindMapTone(mindMap.byId.get(to)):undefined;
+          return <g key={b.id} id={edgePrefix+b.id} data-board-edge={b.id}><path d={d} fill="none" stroke={selected===b.id?'#f2ce80':tone??'#a98854'} strokeWidth={selected===b.id?3:tone?2.5:2}/>{!page.locked&&<path d={d} fill="none" stroke="transparent" strokeWidth={18} style={{pointerEvents:'stroke',cursor:'pointer'}} role="button" tabIndex={0} aria-label="Select connection" onFocus={()=>setSelected(b.id)} onClick={()=>{setSelected(b.id);surface.current?.focus({preventScroll:true});}} onKeyDown={e=>{if(e.key==='Enter')setSelected(b.id);}}/>}<circle cx={x2} cy={y2} r={3} fill={tone??'#dbb879'}/></g>;
         })}</svg>
         {page.blocks.filter(b=>b.layout!=='line').map(b=>{
           const r=visualRect(b.id),column=b.layout==='column',kind=b.layout as CanvasTool,{icon:Icon,name,color}=toolsByKind[kind]??{icon:Layers,name:b.layout[0].toUpperCase()+b.layout.slice(1),color:'#c7ae83'};
           const looseInk=kind==='draw'&&!!b.extent;
+          const mindTone=mindMapTone(mindMap?.byId.get(b.id));
           const editLabel=kind==='map'?'Change map'+(b.title?': '+b.title:''):'Edit '+(b.title||name);
           return <article data-board-card={b.id} data-board-column={column?'':undefined} aria-label={b.title||name} key={b.id} tabIndex={page.locked?undefined:0}
             onKeyDown={e=>{if(e.target!==e.currentTarget||page.locked)return;
@@ -657,9 +682,10 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
               }}}
             onFocus={e=>{if(!page.locked&&e.target===e.currentTarget&&e.currentTarget.matches(':focus-visible')&&!highlighted.has(b.id))setSelected(b.id);}}
             className={'cv-card'+(column?' cv-column':'')+(looseInk?' cv-free-ink':'')+(tool==='line'?' cv-connectable':'')}
+            data-mind-node={mindTone?(mindMap?.root===b.id?'root':'branch'):undefined}
             data-dragging={!!move&&(move.id===b.id || move.group?.has(b.id) || move.id===b.columnId || move.group?.has(b.columnId??''))||undefined}
             data-selected={!page.locked&&(highlighted.has(b.id)||from===b.id)||undefined} data-drop={move?.over===b.id||undefined}
-            style={{left:r.x,top:r.y,width:r.w,height:column?r.h:undefined,zIndex:move?.id===b.id&&!column&&!move.group?layers.size*2+3:(layers.get(b.columnId??b.id)??1)+(b.columnId?1:0),'--cv-accent':b.color??color} as React.CSSProperties}>
+            style={{left:r.x,top:r.y,width:r.w,height:column?r.h:undefined,zIndex:move?.id===b.id&&!column&&!move.group?layers.size*2+3:(layers.get(b.columnId??b.id)??1)+(b.columnId?1:0),'--cv-accent':b.color??mindTone??color} as React.CSSProperties}>
             {column&&columnEdges.has(b.id)&&<svg className="cv-column-lines" aria-hidden="true">
               <g transform={'translate('+(-r.x)+' '+(-r.y)+')'}>{columnEdges.get(b.id)!.map(id=>
                 <use key={id} href={'#'+edgePrefix+id} data-board-edge-copy={id} onClick={()=>{if(!page.locked){setSelected(id);surface.current?.focus({preventScroll:true});}}}/>)}</g>
@@ -693,6 +719,7 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
         <ContextMenuItem onSelect={()=>addClassic({at:menu.at})}><Square size={14}/>Add card here</ContextMenuItem>
       </>:<>
         {!page.locked&&canAddBranch(menu.block)&&<ContextMenuItem onSelect={()=>addBranch(menu.block)}><GitBranchPlus size={14}/>Add branch</ContextMenuItem>}
+        {mindMap?.children.has(menu.block.id)&&<ContextMenuItem onSelect={()=>fitBranch(menu.block.id)}><Scan size={14}/>Fit branch</ContextMenuItem>}
         {menu.block.layout==='row'&&menu.column===undefined&&<ContextMenuItem onSelect={()=>centerRow(menu.block.id)}><Focus size={14}/>Center row in view</ContextMenuItem>}
         <ContextMenuItem onSelect={()=>remove(menu.block,menu.column)}><Trash2 size={14}/>Delete {menu.column!==undefined?'column':menu.block.layout==='line'?'connection':menu.block.layout}</ContextMenuItem>
       </>}
@@ -701,7 +728,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
       {btn('Select items',MousePointer2,resetTool,tool==='select')}{btn('Pan board',Hand,()=>{setFrom(null);setTool('pan');},tool==='pan')}
       <span className="cv-dock-divider"/>{btn('Zoom out',Minus,()=>{lastPointer.current=null;setZoom(zoom/1.2);})}
       <button className="cv-zoom-level" title="Reset zoom" onClick={()=>{lastPointer.current=null;setZoom(1);}}>{Math.round(zoom*100)}%</button>
-      {btn('Zoom in',Plus,()=>{lastPointer.current=null;setZoom(zoom*1.2);})}{btn('Fit board',Focus,fit)}
+      {btn('Zoom in',Plus,()=>{lastPointer.current=null;setZoom(zoom*1.2);})}
+      {btn('Fit board',Focus,()=>fit([...rects.values(),...rowRects.values()]))}
+      {btn('Fit width',MoveHorizontal,()=>fit([...rects.values(),...rowRects.values()],true))}
       {!page.locked&&btn('Snap to alignment guides',Magnet,()=>saveZoomSetting(positionKey,'snap-edges',snapping?'off':'on'),snapping)}
       {btn(showGrid?'Hide grid':'Show grid',showGrid?Grid2X2:Grid2X2X,()=>saveZoomSetting(positionKey,'grid',showGrid?'hidden':'visible'))}
     </div>

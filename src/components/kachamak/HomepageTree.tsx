@@ -2,16 +2,17 @@
 
 import {usePanelZoom} from './CtrlZoom';
 import {useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction} from 'react';
-import {ChevronDown, ChevronRight, PanelsTopLeft, House, MoreVertical, Plus, X} from 'lucide-react';
+import {AlignStartVertical, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Folder, GitFork, House, IndentDecrease, IndentIncrease, MoreVertical, PanelsTopLeft, Plus, X} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
-import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
-import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem} from '@/components/ui/context-menu';
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuSeparator} from '@/components/ui/context-menu';
 import {branchSources,insideBranches,type BranchSource} from '@/lib/kachamak/tree-move';
 import {useTreeSelection} from './useTreeSelection';
 import {toast} from 'sonner';
-import {HOME_ROOT, homepageRows} from '@/lib/kachamak/homepage';
+import {canvasMindMap} from '@/lib/kachamak/canvas-mind-map';
+import {HOME_ROOT, homepageRows, type HomePageMove} from '@/lib/kachamak/homepage';
 import {useKachamak} from '@/lib/kachamak/store';
 import type {Novel} from '@/lib/kachamak/types';
 import {TreeIconPicker} from './TreeIconPicker';
@@ -21,6 +22,12 @@ import {CanvasPageTemplatePicker} from './CanvasPageTemplatePicker';
 import {CANVAS_PAGE_TEMPLATES, type CanvasPageTemplateId} from '@/lib/kachamak/canvas-page-templates';
 
 type PageDialog = {action:'create'|'rename'; id:string|null};
+const moveCommands = [
+  {move:'up', label:'Move up', icon:ArrowUp, tone:'connections'},
+  {move:'down', label:'Move down', icon:ArrowDown, tone:'connections'},
+  {move:'outdent', label:'Move up a level', icon:IndentDecrease, tone:'structure'},
+  {move:'indent', label:'Move down a level', icon:IndentIncrease, tone:'structure'},
+] as const;
 
 export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   novel:Novel; selected:string; collapsed:Set<string>; setCollapsed:Dispatch<SetStateAction<Set<string>>>; onDismiss:()=>void;
@@ -34,6 +41,8 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const [error,setError]=useState('');
   const rows=useMemo(()=>homepageRows(novel),[novel]);
   const pages=novel.homePages;
+  const pageKinds=useMemo(()=>new Map(pages?.map(page=>[page.id,
+    page.storyBoard?'story':canvasMindMap(page.blocks)?'mind':'page'] as const)),[pages]);
   const tree=useRef<HTMLElement>(null);
   const selection=useTreeSelection(tree,selected);
   const [drag,setDrag]=useState<BranchSource[]|null>(null);
@@ -46,15 +55,23 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
   const draggedIds=useMemo(()=>new Set(drag?.map(source=>source.id)),[drag]);
   const topSources=useMemo(()=>drag?.filter(source=>!insideBranches(source.parentId,draggedIds,parents)),[drag,draggedIds,parents]);
   const finishDrag=()=>{setDrag(null);setOver(undefined);};
-  function movePages(sources:BranchSource[],destination:string|null) {
-    useKachamak.getState().moveHomePages(novel.id,sources,destination);
-    selection.clear();
+  function expandDestination(destination:string|null) {
     if (destination) setCollapsed(previous=>{
       if (!previous.has(destination)) return previous;
       const next=new Set(previous);
       next.delete(destination);
       return next;
     });
+  }
+  function movePages(sources:BranchSource[],destination:string|null) {
+    useKachamak.getState().moveHomePages(novel.id,sources,destination);
+    selection.clear();
+    expandDestination(destination);
+  }
+  function reorderPage(id:string,move:HomePageMove) {
+    const result=useKachamak.getState().reorderHomePage(novel.id,id,move);
+    if (result) expandDestination(result.parentId);
+    else toast.error('The page tree has changed. Try moving the canvas again.');
   }
   function showMove(id:string,name:string) {
     setError('');
@@ -149,7 +166,20 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
         if(row.depth>hiddenBelow)return null;
         hiddenBelow=collapsed.has(row.id)?row.depth:Infinity;
         const active=selected===row.id;
-        const Icon=iconByName(row.icon)??(row.id===HOME_ROOT?House:PanelsTopLeft);
+        const kind=pageKinds.get(row.id);
+        const isHome=row.id===HOME_ROOT;
+        const Icon=iconByName(row.icon)??(isHome?House:kind==='story'?AlignStartVertical:kind==='mind'?GitFork:row.hasChildren?Folder:PanelsTopLeft);
+        const tone=kind==='story'?'structure':kind==='mind'?'connections':isHome||row.hasChildren?'writing':'structure';
+        const available={
+          up:!!row.previousId&&row.previousId!==HOME_ROOT,
+          down:!!row.nextId,
+          outdent:row.parentId!==null,
+          indent:!!row.previousId,
+        };
+        const moves=(Item:typeof DropdownMenuItem|typeof ContextMenuItem)=>moveCommands.map(({move,label,icon:MoveIcon,tone})=>
+          <Item key={move} disabled={!available[move]} onSelect={()=>reorderPage(row.id,move)}>
+            <MoveIcon className="cv-icon-tone" data-tool-category={tone}/>{label}
+          </Item>);
         return <ContextMenu key={row.id}><ContextMenuTrigger asChild><div {...dropTarget(row.id)} style={{paddingLeft:Math.min(row.depth,9)*12+2}} className={'group flex shrink-0 items-center rounded-md border '+(over===row.id?'ring-1 ring-inset ring-teal-400 ':'')+
           (selection.marked?.has(row.id)?'outline outline-1 -outline-offset-1 outline-teal-400 ':'')+(active?'border-amber-500/60 bg-amber-400/10 text-amber-300':'border-transparent hover:bg-white/5')}>
           {row.hasChildren?<button type="button" className="grid size-6 shrink-0 place-items-center" aria-label={(collapsed.has(row.id)?'Expand ':'Collapse ')+row.title}
@@ -159,7 +189,7 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
           <TreeIconPicker open={picking===row.id} onOpenChange={open=>setPicking(open?row.id:null)} icon={row.icon} color={row.color} allowDefault
             onIcon={key=>appearance(row.id,'icon',key)} onColor={color=>appearance(row.id,'color',color)}>
             <button type="button" aria-label={'Change icon and colour: '+row.title} title="Change icon and colour"
-              className="mr-1 shrink-0 rounded p-0.5 text-amber-300 hover:bg-white/10" style={{color:row.color}}>
+              className="cv-icon-tone mr-1 shrink-0 rounded p-0.5 hover:bg-white/10" data-tool-category={tone} style={{color:row.color}}>
               <Icon className="size-3.5"/>
             </button>
           </TreeIconPicker>
@@ -181,13 +211,23 @@ export function HomepageTree({novel,selected,collapsed,setCollapsed,onDismiss}:{
           </DropdownMenuTrigger><DropdownMenuContent align="start">
             <DropdownMenuItem onSelect={()=>show('create',row.id,row.title)}>New nested canvas</DropdownMenuItem>
             <DropdownMenuItem onSelect={()=>show('rename',row.id,row.title)}>Rename</DropdownMenuItem>
-            {row.id!==HOME_ROOT && <DropdownMenuItem onSelect={()=>showMove(row.id,row.title)}>Move to…</DropdownMenuItem>}
+            {!isHome && <>
+              <DropdownMenuSeparator/>
+              {moves(DropdownMenuItem)}
+              <DropdownMenuItem onSelect={()=>showMove(row.id,row.title)}>Move to…</DropdownMenuItem>
+            </>}
+            <DropdownMenuSeparator/>
             <DropdownMenuItem variant="destructive" onSelect={()=>removePage(row.id,row.title)}>Delete canvas</DropdownMenuItem>
           </DropdownMenuContent></DropdownMenu>
         </div></ContextMenuTrigger><ContextMenuContent>
           <ContextMenuItem onSelect={()=>show('create',row.id)}>New nested canvas</ContextMenuItem>
           <ContextMenuItem onSelect={()=>show('rename',row.id,row.title)}>Rename</ContextMenuItem>
-          {row.id!==HOME_ROOT && <ContextMenuItem onSelect={()=>showMove(row.id,row.title)}>Move to…</ContextMenuItem>}
+          {!isHome && <>
+            <ContextMenuSeparator/>
+            {moves(ContextMenuItem)}
+            <ContextMenuItem onSelect={()=>showMove(row.id,row.title)}>Move to…</ContextMenuItem>
+          </>}
+          <ContextMenuSeparator/>
           <ContextMenuItem variant="destructive" onSelect={()=>removePage(row.id,row.title)}>Delete canvas</ContextMenuItem>
         </ContextMenuContent></ContextMenu>;
       })}

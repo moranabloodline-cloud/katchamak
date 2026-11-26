@@ -1,3 +1,5 @@
+> **2026-11-27 — Canvas navigacija i planiranje.** Fit width uklapa širinu Canvasa i Story Boarda. Meni stranice menja njen redosled ili nivo. Story Board ima filter po liniji radnje i preglednije scene, a Mind Map dobija boje po granama i Fit branch.
+
 > **2026-11-26 — Book Website Canvas šablon.** Jedan izbor kreira početnu stranicu i šest podstranica sa povezanim menijem. Naslov, autor i dostupna korica preuzimaju se iz otvorenog projekta.
 
 > **2026-11-26 — Brisanje i kreiranje u Canvas stablu.** Desni klik na prazno mesto otvara New canvas i Delete all canvases. Pojedinačni meni omogućava brisanje i početne stranice.
@@ -787,6 +789,12 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+### 2026-11-27 — Canvas navigacija i planiranje
+
+- Dodata je komanda Fit width za Canvas, uključujući Mind Map, i za Story Board. Izabrani zum pamti se u pregledaču.
+- Move up, Move down, Move up a level i Move down a level ređaju stranice i njihove grane u levom stablu. Ikonice razlikuju grupe, stranice, Story Board i Mind Map.
+- Story Board ističe linije radnje, prikazuje broj scena po liniji i omogućava filtriranje i prikaz punih sinopsisa. Mind Map razlikuje povezane grane po boji i uklapa odabranu granu komandom Fit branch.
 
 - **2026-11-26.** Book Website pretvara raspored Showcase-a u izmenjive Canvas blokove. Svaka kopija dobija sopstvene stranice i interne veze.
 

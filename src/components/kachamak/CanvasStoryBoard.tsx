@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type FormEvent} from 'react';
-import {AlignStartVertical, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ExternalLink, Focus, LockKeyhole, Minus, Pencil, Plus, UnlockKeyhole} from 'lucide-react';
+import {AlignLeft, AlignStartVertical, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ExternalLink, Focus, LockKeyhole, Minus, MoveHorizontal, Pencil, Plus, UnlockKeyhole} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import {Input} from '@/components/ui/input';
@@ -196,10 +196,12 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
   const [dragId, setDragId] = useState<string>();
   const [drop, setDrop] = useState<Destination>();
   const [error, setError] = useState(false);
+  const [plotlineFilter, setPlotlineFilter] = useState('');
   const gridRef = useRef<HTMLDivElement>(null);
   const matrixRef = useRef<HTMLTableElement>(null);
   const zoomScope = 'kachamak-story-board:' + novel.id + ':' + page.id;
   const savedZoom = Number(useZoomSetting(zoomScope, 'zoom'));
+  const fullSynopses = useZoomSetting(zoomScope, 'full-synopses') === 'true';
   const hasSavedZoom = savedZoom >= minStoryZoom && savedZoom <= maxStoryZoom;
   const zoom = hasSavedZoom ? savedZoom : 1;
   const zoomRef = useRef(zoom);
@@ -211,7 +213,7 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
     saveZoomSetting(zoomScope, 'zoom', String(level));
   }, [zoomScope]);
 
-  const fitBoard = useCallback(() => {
+  const fitBoard = useCallback((mode: 'board' | 'width' = 'board') => {
     const grid = gridRef.current;
     const matrix = matrixRef.current;
     if (!grid || !matrix || !grid.clientWidth || !grid.clientHeight) return false;
@@ -223,10 +225,22 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
     const height = matrix.offsetHeight;
     const widthFit = width > grid.clientWidth ? (grid.clientWidth - 1) / width : 1;
     const heightFit = height > grid.clientHeight ? (grid.clientHeight - 1) / height : 1;
-    const fit = Math.min(widthFit, heightFit);
+    const roundDown = (value: number) => Math.max(minStoryZoom, Math.floor(value * 10_000) / 10_000);
+    let fit = roundDown(mode === 'width' ? widthFit : Math.min(widthFit, heightFit));
+
+    // Fractional zoom can wrap cell text differently and change the scrollbar space.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      matrix.style.zoom = String(fit);
+      const widthRatio = grid.scrollWidth > grid.clientWidth ? (grid.clientWidth - 1) / grid.scrollWidth : 1;
+      const heightRatio = mode === 'board' && grid.scrollHeight > grid.clientHeight
+        ? (grid.clientHeight - 1) / grid.scrollHeight : 1;
+      const next = roundDown(fit * Math.min(widthRatio, heightRatio));
+      if (next === fit || (widthRatio === 1 && heightRatio === 1)) break;
+      fit = next;
+    }
     matrix.style.zoom = previousZoom;
 
-    setZoom(Math.floor(fit * 10_000) / 10_000, 10_000);
+    setZoom(fit, 10_000);
     grid.scrollTo({left: 0, top: 0, behavior: 'instant'});
     return true;
   }, [setZoom]);
@@ -270,16 +284,20 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
       });
     return {notes, notesById: new Map(notes.map(note => [note.id, note]))};
   }, [novel]);
-  const sceneCells = useMemo(() => {
+  const {sceneCells, sceneCounts} = useMemo(() => {
     const groups = new Map<string, StoryScene[]>();
+    const counts = new Map<string, number>();
     for (const scene of board.scenes) {
       const key = cellKey(scene.chapterId, scene.plotlineId);
       const group = groups.get(key);
       if (group) group.push(scene);
       else groups.set(key, [scene]);
+      counts.set(scene.plotlineId, (counts.get(scene.plotlineId) ?? 0) + 1);
     }
-    return groups;
+    return {sceneCells: groups, sceneCounts: counts};
   }, [board.scenes]);
+  const selectedPlotline = board.plotlines.find(line => line.id === plotlineFilter);
+  const visiblePlotlines = selectedPlotline ? [selectedPlotline] : board.plotlines;
 
   function openEditor(item: Item, existing = false) {
     setError(false);
@@ -313,9 +331,12 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
     <section className="canvas-story flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Story Board">
       <header className="canvas-story-header">
         {onShowPages && <Button type="button" variant="ghost" size="sm" className="md:hidden" onClick={onShowPages}>Pages</Button>}
-        <div className="canvas-story-title flex min-w-0 flex-1 items-center gap-2">
-          <AlignStartVertical size={18} className="shrink-0" aria-hidden="true" />
-          <h2 className="truncate text-xl font-semibold" title={page.title}>{page.title}</h2>
+        <div className="canvas-story-title">
+          <span className="canvas-story-emblem"><AlignStartVertical size={19} aria-hidden="true" /></span>
+          <div className="min-w-0">
+            <h2 title={page.title}>{page.title}</h2>
+            <p>{board.chapters.length} {board.chapters.length === 1 ? 'chapter' : 'chapters'} · {board.plotlines.length} {board.plotlines.length === 1 ? 'plotline' : 'plotlines'} · {board.scenes.length} {board.scenes.length === 1 ? 'scene' : 'scenes'}</p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {!locked && <>
@@ -329,12 +350,29 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
           </Button>}
         </div>
       </header>
+      {board.plotlines.length > 0 && <div className="canvas-story-view">
+        <label>
+          Plotline
+          <select value={selectedPlotline?.id ?? ''} onChange={event => {
+            setPlotlineFilter(event.target.value);
+            if (gridRef.current) gridRef.current.scrollTop = 0;
+          }}>
+            <option value="">All plotlines</option>
+            {board.plotlines.map(line => <option key={line.id} value={line.id}>{line.title}</option>)}
+          </select>
+        </label>
+        <Button type="button" size="sm" variant="ghost" aria-pressed={fullSynopses}
+          onClick={() => saveZoomSetting(zoomScope, 'full-synopses', fullSynopses ? 'false' : 'true')}>
+          <AlignLeft />Full synopses
+        </Button>
+      </div>}
       {error && !editor && <p className="canvas-story-error" role="alert">The board changed. Try moving the scene again.</p>}
       {(!board.chapters.length || !board.plotlines.length) && <p className="canvas-story-empty">
         {locked ? 'No scenes on this board.' : 'Add a chapter and a plotline to start placing scenes.'}
       </p>}
       <div ref={gridRef} className="canvas-story-scroll kachamak-scroll" role="region" aria-label="Story grid" tabIndex={0}>
-        <table ref={matrixRef} className="canvas-story-matrix" aria-label="Chapters and plotlines" style={{'--story-chapters': Math.max(1, board.chapters.length), zoom} as CSSProperties}>
+        <table ref={matrixRef} className="canvas-story-matrix" data-full-synopses={fullSynopses || undefined}
+          aria-label="Chapters and plotlines" style={{'--story-chapters': Math.max(1, board.chapters.length), zoom} as CSSProperties}>
           <thead>
             <tr>
               <th scope="col" className="canvas-story-axis">Plotlines</th>
@@ -347,12 +385,13 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
             </tr>
           </thead>
           <tbody>
-            {board.plotlines.map(plotline => <tr key={plotline.id} style={{'--story-line': plotline.color} as CSSProperties}>
+            {visiblePlotlines.map(plotline => <tr key={plotline.id} style={{'--story-line': plotline.color} as CSSProperties}>
               <th scope="row" className="canvas-story-axis">
                 <div className="canvas-story-axis-heading">
-                  <span className="canvas-story-plotline">{plotline.title}</span>
+                  <span className="canvas-story-plotline"><span>{plotline.title}</span></span>
                   {!locked && <Button type="button" variant="ghost" size="icon" aria-label={'Edit ' + plotline.title} onClick={() => openEditor({kind: 'plotline', value: plotline}, true)}><Pencil /></Button>}
                 </div>
+                <span className="canvas-story-scene-count">{sceneCounts.get(plotline.id) ?? 0} {sceneCounts.get(plotline.id) === 1 ? 'scene' : 'scenes'}</span>
               </th>
               {board.chapters.map(chapter => {
                 const activeDrop = drop?.chapterId === chapter.id && drop.plotlineId === plotline.id ? drop : undefined;
@@ -391,10 +430,10 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
                       }}
                       onDragEnd={clearDrag}>
                       <div className="flex items-start gap-1">
-                        <h3 className="min-w-0 flex-1 break-words text-sm font-medium">{scene.title}</h3>
+                        <h3 className="canvas-story-scene-title">{scene.title}</h3>
                         {!locked && <Button type="button" size="icon" variant="ghost" aria-label={'Edit ' + scene.title} onClick={() => openEditor({kind: 'scene', value: scene}, true)}><Pencil /></Button>}
                       </div>
-                      {scene.synopsis && <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{scene.synopsis}</p>}
+                      {scene.synopsis && <p className="canvas-story-synopsis">{scene.synopsis}</p>}
                       {note ? <button type="button" className="canvas-story-note" aria-label={'Open ' + note.title} title={note.path} onClick={() => openNote(note.id)}>
                         <ExternalLink size={12} className="shrink-0" /><span className="truncate">{note.title}</span>
                       </button> : scene.noteId && <p className="mt-2 text-xs text-muted-foreground">Linked note unavailable</p>}
@@ -409,13 +448,14 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
           </tbody>
         </table>
       </div>
-      <div className="flex shrink-0 items-center gap-1 border-t border-border px-3 py-1" role="group" aria-label="Story Board zoom">
+      <div className="canvas-story-zoom flex shrink-0 flex-wrap items-center gap-1 border-t border-border px-3 py-1" role="group" aria-label="Story Board zoom">
         <Button type="button" variant="ghost" size="icon" aria-label="Zoom out" disabled={zoom <= minStoryZoom} onClick={() => setZoom(zoom / 1.2, zoom < .05 ? 10_000 : 100)}><Minus /></Button>
         <Button type="button" variant="ghost" size="sm" title="Reset zoom" aria-label={'Reset zoom, current zoom ' + Math.round(zoom * 100) + '%'} onClick={() => setZoom(1)}>
           {Math.round(zoom * 100)}%
         </Button>
         <Button type="button" variant="ghost" size="icon" aria-label="Zoom in" disabled={zoom >= maxStoryZoom} onClick={() => setZoom(zoom * 1.2, zoom < .05 ? 10_000 : 100)}><Plus /></Button>
-        <Button type="button" variant="ghost" size="sm" title="Fit board" onClick={fitBoard}><Focus />Fit board</Button>
+        <Button type="button" variant="ghost" size="sm" title="Fit board" onClick={() => fitBoard()}><Focus />Fit board</Button>
+        <Button type="button" variant="ghost" size="sm" title="Fit width" onClick={() => fitBoard('width')}><MoveHorizontal />Fit width</Button>
       </div>
       {!locked && editor && <StoryBoardEditor key={editor.value.id} edit={editor} notes={notes}
         save={next => commit(editor.previous, next)} close={() => setEditor(null)} />}

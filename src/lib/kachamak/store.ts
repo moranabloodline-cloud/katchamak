@@ -42,7 +42,7 @@ import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} fr
 import {inFixedRow,unifiedCanvas} from './canvas-layout';
 import {extractBoard} from './canvas-selection';
 import {importCanvasFile} from './canvas-file';
-import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, validHomepage, type HomeChange } from './homepage';
+import { changeHomepage, EMPTY_HOMEPAGE, HOME_ROOT, homepageEntry, placeHomePage, validHomepage, type HomeChange, type HomePageMove } from './homepage';
 import { buildBookWebsite } from './canvas-book-website';
 import { buildCanvasPageTemplate, CANVAS_PAGE_TEMPLATES, type CanvasPageTemplateId } from './canvas-page-templates';
 import { isReadableProject } from './project-validation';
@@ -156,6 +156,7 @@ interface KachamakState {
   deleteHomePage: (bookId:string,pageId:string)=>boolean;
   deleteAllHomePages: (bookId:string)=>boolean;
   moveHomePages: (bookId:string,sources:BranchSource[],parentId:string|null)=>void;
+  reorderHomePage: (bookId:string,pageId:string,move:HomePageMove)=>{parentId:string|null}|undefined;
   convertBoardSelection: (projectId:string,pageId:string,ids:string[],title:string,heights:[string,number][])=>boolean;
   createHomePage: (projectId: string, parentId: string | null, title: string, mode?: 'page'|'board'|'canvas', template?:CanvasPageTemplateId) => boolean;
   renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
@@ -743,6 +744,14 @@ export const useKachamak = create<KachamakState>()(
         if (next===pages) return state;
         return {novels:state.novels.map(n=>n===novel?touch({...n,homePages:next}):n)};
       }),
+      reorderHomePage: (bookId,pageId,move) => {
+        const state=get(), novel=state.novels.find(n=>n.id===bookId);
+        if (!novel || state.activeNovelId!==bookId) return;
+        const placed=placeHomePage(novel,pageId,move);
+        if (!placed) return;
+        set({novels:state.novels.map(n=>n===novel?touch({...n,homePages:placed.pages}):n)});
+        return {parentId:placed.parentId};
+      },
       createHomePage: (projectId, parentId, title, mode='canvas', template='blank') => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (state.activeNovelId !== projectId || !novel || !title.trim() || !['page','board','canvas'].includes(mode) || (parentId !== null && !homepageEntry(novel, parentId))) return false;

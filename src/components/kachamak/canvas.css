@@ -49,6 +49,24 @@
 .cv-column-lines { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; clip-path:inset(40px 0 0); pointer-events:none; }
 .cv-live-ink { z-index:8; }
 .cv-card { position:absolute; box-sizing:border-box; border:1px solid color-mix(in srgb,var(--cv-accent) 28%,var(--border)); border-radius:9px; background:var(--card); box-shadow:0 3px 10px #0002; cursor:grab; touch-action:none; }
+.cv-board-shell {
+  --cv-mind-teal:#08766e; --cv-mind-blue:#345ea9; --cv-mind-green:#467029;
+  --cv-mind-amber:#8c5b15; --cv-mind-rose:#a54169; --cv-mind-violet:#7244a0;
+}
+.dark .cv-board-shell {
+  --cv-mind-teal:#74c8bb; --cv-mind-blue:#85a9ec; --cv-mind-green:#acd094;
+  --cv-mind-amber:#e5b777; --cv-mind-rose:#dd96b5; --cv-mind-violet:#c9acec;
+}
+.cv-card[data-mind-node] {
+  border-color:color-mix(in srgb,var(--cv-accent) 50%,var(--border));
+  background:color-mix(in srgb,var(--cv-accent) 7%,var(--card));
+}
+.cv-card[data-mind-node="root"] {
+  border-color:var(--cv-accent);
+  background:color-mix(in srgb,var(--cv-accent) 15%,var(--card));
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--cv-accent) 12%,transparent);
+}
+.cv-card[data-mind-node="root"] .cv-face h3 { font-size:clamp(19px,2vw,24px); }
 .cv-card[data-selected],.cv-card:focus-visible { outline:2px solid #d6a95e; outline-offset:2px; }
 .cv-card[data-drop] { outline:2px dashed #7cc7b3; outline-offset:2px; }
 .cv-card-cap { display:flex; align-items:center; gap:6px; padding:7px 10px; min-height:29px; color:var(--cv-accent); border-bottom:1px solid var(--border); font:500 11px/1.25 system-ui,sans-serif; }
@@ -96,16 +114,16 @@
 .cv-tools-head button { color:var(--muted-foreground); }
 .cv-tools-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(76px,100%),1fr)); gap:6px; }
 .cv-tools-grid button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-height:51px; border:1px solid var(--border); border-radius:6px; background:var(--card); font:12px/1.25 system-ui,sans-serif; }
-.cv-tools-grid [data-tool-category="writing"] { color:#855412; }
-.cv-tools-grid [data-tool-category="connections"] { color:#006a83; }
-.cv-tools-grid [data-tool-category="media"] { color:#216742; }
-.cv-tools-grid [data-tool-category="drawing"] { color:#a04439; }
-.cv-tools-grid [data-tool-category="structure"] { color:#69449a; }
-.dark .cv-tools-grid [data-tool-category="writing"] { color:#e3b369; }
-.dark .cv-tools-grid [data-tool-category="connections"] { color:#7bc8de; }
-.dark .cv-tools-grid [data-tool-category="media"] { color:#88cea6; }
-.dark .cv-tools-grid [data-tool-category="drawing"] { color:#efa695; }
-.dark .cv-tools-grid [data-tool-category="structure"] { color:#c7adea; }
+.cv-tools-grid [data-tool-category="writing"], .cv-icon-tone[data-tool-category="writing"] { color:#855412; }
+.cv-tools-grid [data-tool-category="connections"], .cv-icon-tone[data-tool-category="connections"] { color:#006a83; }
+.cv-tools-grid [data-tool-category="media"], .cv-icon-tone[data-tool-category="media"] { color:#216742; }
+.cv-tools-grid [data-tool-category="drawing"], .cv-icon-tone[data-tool-category="drawing"] { color:#a04439; }
+.cv-tools-grid [data-tool-category="structure"], .cv-icon-tone[data-tool-category="structure"] { color:#69449a; }
+.dark .cv-tools-grid [data-tool-category="writing"], .dark .cv-icon-tone[data-tool-category="writing"] { color:#e3b369; }
+.dark .cv-tools-grid [data-tool-category="connections"], .dark .cv-icon-tone[data-tool-category="connections"] { color:#7bc8de; }
+.dark .cv-tools-grid [data-tool-category="media"], .dark .cv-icon-tone[data-tool-category="media"] { color:#88cea6; }
+.dark .cv-tools-grid [data-tool-category="drawing"], .dark .cv-icon-tone[data-tool-category="drawing"] { color:#efa695; }
+.dark .cv-tools-grid [data-tool-category="structure"], .dark .cv-icon-tone[data-tool-category="structure"] { color:#c7adea; }
 .cv-tools:disabled button { opacity:.5; cursor:default; }
 .cv-batch { margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 .cv-batch fieldset { min-width:0; margin:0 0 11px; padding:0; border:0; }

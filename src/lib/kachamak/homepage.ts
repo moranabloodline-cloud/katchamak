@@ -64,7 +64,7 @@ export function homepageEntry(novel: Novel, id: string): HomePageEntry | undefin
   return novel.homePages?.find(page => page.id === id);
 }
 
-export function homepageRows(novel: Novel) {
+function homePageSiblings(novel: Novel) {
   const children = new Map<string | null, HomePageEntry[]>();
   const root = homepageEntry(novel, HOME_ROOT);
   if (root) children.set(null, [root]);
@@ -73,18 +73,69 @@ export function homepageRows(novel: Novel) {
     siblings.push(page);
     children.set(page.parentId, siblings);
   }
-  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean; mode?:Homepage['mode']; icon?:string; color?:string}[] = [];
-  const pending = (children.get(null) ?? []).map(page => ({page, path:page.title, depth:0})).reverse();
+  return children;
+}
+
+export type HomePageMove = 'up' | 'down' | 'outdent' | 'indent';
+
+export function placeHomePage(novel: Novel, pageId: string, move: HomePageMove) {
+  const pages = novel.homePages ?? [];
+  const page = pages.find(entry => entry.id === pageId);
+  if (!page) return;
+
+  const groups = homePageSiblings(novel);
+  const siblings = groups.get(page.parentId)!;
+  const index = siblings.indexOf(page);
+  let parentId = page.parentId;
+  let anchor: HomePageEntry | undefined;
+  switch (move) {
+    case 'up':
+      anchor = siblings[index - 1];
+      if (!anchor || anchor.id === HOME_ROOT) return;
+      break;
+    case 'down':
+      anchor = siblings[index + 1];
+      if (!anchor) return;
+      break;
+    case 'outdent':
+      anchor = parentId === null ? undefined : homepageEntry(novel, parentId);
+      if (!anchor) return;
+      parentId = anchor.parentId;
+      break;
+    case 'indent': {
+      const parent = siblings[index - 1];
+      if (!parent) return;
+      parentId = parent.id;
+      anchor = groups.get(parentId)?.at(-1) ?? parent;
+      break;
+    }
+  }
+
+  const reordered = pages.filter(entry => entry !== page);
+  const insertAt = anchor && anchor.id !== HOME_ROOT
+    ? reordered.indexOf(anchor) + Number(move !== 'up')
+    : move === 'outdent' ? 0 : reordered.length;
+  reordered.splice(insertAt, 0, parentId === page.parentId ? page : {...page, parentId});
+  return {pages:reordered, parentId};
+}
+
+export function homepageRows(novel: Novel) {
+  const children = homePageSiblings(novel);
+  const rows: {id:string; title:string; path:string; depth:number; hasChildren:boolean; parentId:string|null; previousId?:string; nextId?:string; mode?:Homepage['mode']; icon?:string; color?:string}[] = [];
+  const roots = children.get(null) ?? [];
+  const pending = roots.map((page, index) => ({siblings:roots, index, path:page.title, depth:0})).reverse();
   const visited = new Set<string>();
   while (pending.length) {
-    const {page, path, depth} = pending.pop()!;
+    const {siblings, index, path, depth} = pending.pop()!;
+    const page = siblings[index];
     if (visited.has(page.id)) continue;
     visited.add(page.id);
     const nested = children.get(page.id) ?? [];
-    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0, mode:page.mode,icon:page.icon,color:page.color});
+    rows.push({id:page.id, title:page.title, path, depth, hasChildren:nested.length > 0, parentId:page.parentId,
+      previousId:siblings[index - 1]?.id, nextId:siblings[index + 1]?.id, mode:page.mode, icon:page.icon, color:page.color});
     for (let i = nested.length - 1; i >= 0; i--) {
       const child = nested[i];
-      pending.push({page:child, path:path+' / '+child.title, depth:depth+1});
+      pending.push({siblings:nested, index:i, path:path+' / '+child.title, depth:depth+1});
     }
   }
   return rows;
