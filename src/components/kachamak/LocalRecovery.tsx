@@ -35,7 +35,7 @@ export function LocalRecoveryNotice() {
     if (!owner || (!error && !hasDrafts)) return;
     const id = error
       ? toast.warning('Local draft protection needs attention.', { description: error })
-      : toast.info('A local draft is ready to recover.', { description: 'Open My Account → Storage to review it.' });
+      : toast.info('A local draft is ready to recover.', { description: 'Open Settings → Data & Privacy → Cloud storage to review it.' });
     return () => { toast.dismiss(id); };
   }, [owner, hasDrafts, error]);
   return null;

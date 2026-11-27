@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
-import { ChevronLeft, EyeOff, LoaderCircle, Minimize2, Save, Settings, Trash2 } from "lucide-react";
+import { ChevronLeft, EyeOff, LoaderCircle, Minimize2, Save, Trash2 } from "lucide-react";
 import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
 import { inspectorOpen, inspectorWidth } from "@/lib/kachamak/inspector-tabs";
 import { resetZoomUnderPointer } from "@/lib/kachamak/workspace-zoom";
@@ -13,18 +13,14 @@ import { activeWritingEditor } from "./WorkspaceNavigation";
 import { PageFormatMenu } from "./PageFormatMenu";
 import { useOpenWorkspaceTab, WorkspaceTabs } from "./WorkspaceTabs";
 import { findNodeInNovel } from "@/lib/kachamak/utils";
-import {ProjectSettings as SettingsDialog} from "./ProjectSettings";
 import { NoteLinkDialog } from "./NoteLinkDialog";
 import { NotesSection } from "./NotesSection";
 
-import { useAccountPreferences } from "@/lib/kachamak/account-preferences";
-import { AccountDialog } from "./AccountDialog";
+import { AccountMenu } from "./AccountMenu";
 
 
 
 /* ---------- project search (top bar, left panel zone) ---------- */
-
-/* ---------- settings (the gear) ---------- */
 
 /* ---------- workspace ---------- */
 
@@ -57,16 +53,12 @@ export function Workspace() {
   },[]);
   const setTreeScope = useKachamak((s) => s.setTreeScope);
   useEffect(()=>{if(useKachamak.getState().treeScope!=="all")setTreeScope("all");},[setTreeScope]);
-  const defaultAuthor = useKachamak((s) => s.defaultAuthor);
-  const { displayName, photo } = useAccountPreferences();
   const leftPanelOpen = useKachamak((s) => s.leftPanelOpen);
   const toggleLeftPanel = useKachamak((s) => s.toggleLeftPanel);
   const rightPanelOpen = useKachamak(inspectorOpen);
   const leftPanelWidth = useKachamak((s) => s.leftPanelWidth);
   const rightPanelWidth = useKachamak(inspectorWidth);
 
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [focusMode,setFocusMode]=useState(false);
   useEffect(()=>{setFocusMode(false);},[activeNovelId]);
   useEffect(()=>{
@@ -92,15 +84,6 @@ export function Workspace() {
   const formatLabel = formatTab==='homepage'?'Canvas':folder?.node.title??TABS.find(tab=>tab.key===activeTab)?.label??'Untitled tab';
   useEffect(() => { if(activeTab.startsWith('note:') && !folder) setTab('binder'); }, [activeTab,folder,setTab]);
   if (!novel) return null;
-
-  const initials =
-    (displayName || defaultAuthor)
-      .trim()
-      .split(/\s+/)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "?";
 
   return (
     <div data-workspace data-focus-mode={focusMode} onBlur={event=>{
@@ -143,14 +126,7 @@ export function Workspace() {
             onClick={()=>openTab('trash')} className="workspace-action text-rose-300">
             <Trash2 aria-hidden="true"/>
           </button>
-          <button type="button" aria-label="Settings" title="Settings" onClick={()=>setSettingsOpen(true)} className="workspace-action text-[#b49de9]">
-            <Settings aria-hidden="true"/>
-          </button>
-          <button type="button" aria-label="My account" title="My account" onClick={()=>setAccountOpen(true)} className="workspace-action group">
-            <span aria-hidden="true" className="grid place-items-center overflow-hidden rounded-full border border-[#ecb66b]/60 bg-[#18202c] text-[10px] font-bold leading-none text-[#ecb66b] group-hover:border-[#ecb66b]">
-              {photo ? <img src={photo} alt="" className="size-full object-cover" /> : initials}
-            </span>
-          </button>
+          <AccountMenu workspace/>
         </div>
       </header>
 
@@ -159,8 +135,6 @@ export function Workspace() {
 
       <AutoLinkReview />
       <NoteLinkDialog />
-      <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

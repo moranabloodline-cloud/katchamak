@@ -146,7 +146,7 @@ function SaveInfoButton() {
   const hint = cloud.conflict ? "Export unsaved edits before reloading the saved library."
     : cloud.retrying ? "Keep Draftopus open while it retries the save."
     : failed ? "Use the save banner to retry or export unsaved edits."
-    : "Download a JSON backup from Project Settings.";
+    : "Download a JSON backup under Settings → Data & Privacy → Backups & export.";
 
   return (
     <Popover>

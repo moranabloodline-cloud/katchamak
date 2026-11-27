@@ -52,15 +52,15 @@ const button=text=>[...document.querySelectorAll('button')].find(el=>el.textCont
 const exportButton=button('Export JSON backup');
 assert.ok(exportButton);
 const help=document.getElementById(exportButton.getAttribute('aria-describedby'));
-assert.match(help.textContent,/JSON backups do not include files uploaded to Project files/);
-assert.match(help.textContent,/My Account → Storage → Project files.*click each filename/);
+assert.match(help.textContent,/JSON backups do not include uploaded attachments/);
+assert.match(help.textContent,/Settings → Data & Privacy → Cloud storage → Project files/);
 assert.ok(help.compareDocumentPosition(exportButton)&dom.Node.DOCUMENT_POSITION_FOLLOWING,'The warning is shown before the export action');
 await React.act(async()=>exportButton.click());
 assert.equal(exportedName,'New_title-kachamak-backup.json');
 assert.deepEqual(JSON.parse(await exportedBlob.text()),useKachamak.getState().novels[0],'JSON format and embedded cover are unchanged');
 await React.act(async()=>button('Delete Novel').click());
 const safetyExport=button('Export backup');
-assert.match(document.getElementById(safetyExport.getAttribute('aria-describedby')).textContent,/click each filename/);
+assert.match(document.getElementById(safetyExport.getAttribute('aria-describedby')).textContent,/download each attachment/);
 assert.equal(button('Delete permanently').disabled,true,'Test never deletes the project');
 await React.act(async()=>root.unmount());
 URL.createObjectURL=oldBlobUrl;URL.revokeObjectURL=oldRevoke;dom.close();

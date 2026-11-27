@@ -40,7 +40,7 @@ export function CloneWorkspaceTabDialog({sourceId, tab, onClose}: {
       const location = `${target.title} → ${selected.label} → Sort This`;
       void saving.then(
         () => toast.success(count === null ? `Saved the previous clone to ${location}.` : `Copied ${count} ${count === 1 ? 'note' : 'notes'} to ${location}.`),
-        () => toast.error(count === null ? 'Could not confirm this clone. Check Retry save or My Account → Storage.' : 'The copies are pending in this window. Use Retry save to keep them.'),
+        () => toast.error(count === null ? 'Could not confirm this clone. Check Retry save or Settings → Data & Privacy → Cloud storage.' : 'The copies are pending in this window. Use Retry save to keep them.'),
       );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The tab could not be copied.');

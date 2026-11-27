@@ -79,7 +79,6 @@ function StorageActions({ email, active }: { email: string; active: string | nul
     <div className="flex flex-wrap gap-2 text-xs">
       <button disabled={busy} className={buttonClass} onClick={() => void run('Saving…', async () => { await saveWebLibrary(); toast.success('Saved to your account.'); })}>Save now</button>
       <button disabled={busy} className={buttonClass} onClick={() => void run('Reloading library…', async () => { await saveWebLibrary(); await reloadWebLibrary(); toast.success('Cloud library reloaded.'); })}>Reload library</button>
-      <button disabled={busy} className={buttonClass} onClick={() => void run('Signing out…', async () => { await saveWebLibrary(); window.location.assign('/signout-with-chatgpt?return_to=%2F'); })}>Sign out</button>
       {active && <button disabled={busy} className={buttonClass} onClick={() => void run('Opening project files…', async () => { await saveWebLibrary(); setFiles(await projectAttachments(active)); setOpen(true); })}>Project files</button>}
     </div>
     {!open && <p role="status" className={action ? 'text-xs text-muted-foreground' : 'sr-only'}>{action}</p>}

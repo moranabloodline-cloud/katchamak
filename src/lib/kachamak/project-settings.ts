@@ -109,4 +109,4 @@ function encodeProjectBitmap(bitmap:ImageBitmap,mime:string,bounds:{width:number
   }finally{bitmap.close();}
 }
 
-export const PROJECT_BACKUP_ATTACHMENT_NOTICE = 'JSON backups do not include files uploaded to Project files. With the project open, go to My Account → Storage → Project files and click each filename to download it separately.';
+export const PROJECT_BACKUP_ATTACHMENT_NOTICE = 'JSON backups do not include uploaded attachments. With the project open, use Settings → Data & Privacy → Cloud storage → Project files to download each attachment.';

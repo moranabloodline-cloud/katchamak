@@ -31,10 +31,10 @@ const groups: { title?: string; articles: Article[] }[] = [
     { id: "saving", title: "Saving & Backups", description: "Protect and export your work", icon: Save, paragraphs: [
       "Draftopus saves changes automatically to your private account. Click Save to finish pending changes and wait for Saved to your account before closing.",
       "If the cloud is temporarily unavailable, Draftopus retries and keeps a local draft until the server confirms the save.",
-      "Use Export JSON backup in Project Settings to download a copy of the project. " + PROJECT_BACKUP_ATTACHMENT_NOTICE,
+      "Use Export JSON backup under Settings → Data & Privacy → Backups & export to download a copy of the project. " + PROJECT_BACKUP_ATTACHMENT_NOTICE,
     ] },
     { id: "recovery", title: "Import & Recovery", description: "Move or restore project files", icon: FolderOpen, paragraphs: [
-      "Import a JSON backup from the library or Project Settings to create a project in your account.",
+      "Import a JSON backup from the library or Settings → Data & Privacy → Backups & export.",
       "Use the local recovery panel to recover drafts as project copies. If another window saved newer changes, export your unsaved edits before reloading the saved library.",
     ] },
   ] },

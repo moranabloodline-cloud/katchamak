@@ -115,7 +115,7 @@ assert.deepEqual(migrated.novels,oldProject);assert.equal(migrated.editorFont,'G
 assert.equal(validEditorAppearance({font:'Georgia',size:18,spacing:'2.0',page:{...DEFAULT_PAGE_FORMAT,indent:99}}),false);
 await React.act(async()=>root.render(React.createElement(Workspace)));
 const headerActions=()=>[...document.querySelectorAll('header [aria-label="Workspace actions"] button')];
-const expectedActions=['Save','Focus','Format','Trash','Settings','My account'];
+const expectedActions=['Save','Focus','Format','Trash','Account settings'];
 assert.deepEqual(headerActions().map(button=>button.getAttribute('aria-label')),expectedActions);
 assert.ok(headerActions().every(button=>button.title));
 assert.ok(headerActions().slice(0,-1).every(button=>!button.textContent.trim()));

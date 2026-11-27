@@ -503,7 +503,7 @@ export function saveWorkspaceClone(source: Novel, sourceTab: TabKey, destination
     return {count: null, saving: flushWebLibrary()};
   const prior = useLocalRecovery.getState().drafts.find(draft => draft.cloneKey === key);
   if (prior) {
-    if (!prior.retryClone) throw new Error('The destination changed. Review the previous clone in My Account → Storage.');
+    if (!prior.retryClone) throw new Error('The destination changed. Review the previous clone in Settings → Data & Privacy → Cloud storage.');
     return {count: null, saving: recoverLocalDraft(prior)};
   }
   // A scoped retry is safe only when this clone accounts for all unsaved project data.

@@ -47,7 +47,7 @@
 }
 .workspace-actions {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 2.5rem));
+  grid-template-columns: repeat(5, minmax(0, 2.5rem));
   align-items: center;
   justify-content: end;
   column-gap: clamp(2px, calc(5% - 9px), 6px);
