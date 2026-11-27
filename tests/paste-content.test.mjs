@@ -96,6 +96,14 @@ assert.equal(root.querySelectorAll('img').length,2,'Independent photographs reta
 const plain=new AbortController().signal;
 const pastedMedia=await prepareEditorClipboard({html:oldPaste+prose,text:'',markdown:'',files:[]},'rich',[],plain);
 assert.match(pastedMedia.html,/data-draftopus-media-picture/);
+const imageGroup='<div><div><div><a href="'+imageLink+'">First photo</a><div>12</div></div></div><div><div><a href="'+imageLink+'-next">Second photo</a></div></div></div>';
+root.innerHTML=imageGroup;
+const imageGroupText=indexText(root).text;
+formatEditorMedia(root);
+assert.equal(root.querySelectorAll('[data-draftopus-media-picture] img').length,2);
+assert.equal(root.querySelector('div[hidden]').textContent,'12');
+assert.equal(indexText(root).text,imageGroupText,'Hiding the copied counter preserves text coordinates');
+assert.equal(formatEditorMediaHtml(root.innerHTML),root.innerHTML);
 const pastedAddress=await prepareEditorClipboard({html:'',text:imageLink,markdown:'',files:[]},'rich',[],plain);
 assert.match(pastedAddress.html,/data-draftopus-media="linked"/);
 const plainAddress=await prepareEditorClipboard({html:'',text:imageLink,markdown:'',files:[]},'plain',[],plain);

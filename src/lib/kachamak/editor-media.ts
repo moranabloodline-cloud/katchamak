@@ -4,6 +4,7 @@ const mediaAttribute = 'data-draftopus-media';
 const pictureAttribute = 'data-draftopus-media-picture';
 const creditAttribute = 'data-draftopus-media-credit';
 const pictureFile = /\.(?:avif|bmp|gif|jpe?g|png|webp)$/i;
+const chatGptPicturePrefix = 'https://images.openai.com/static-rsc-';
 const blockSelector = 'p,div';
 const excluded = 'pre,code';
 
@@ -30,13 +31,25 @@ function sourceCredit(link: HTMLAnchorElement) {
   return !!url && !directImageLink(url.href) && compact(link.textContent).replace(/^www\./i,'').toLowerCase() === hostname(url);
 }
 
-function findImageBlock(link: HTMLAnchorElement, root: ParentNode) {
+function copiedImageCounter(link: HTMLAnchorElement) {
+  if (!link.href.startsWith(chatGptPicturePrefix)) return;
+  const counter=link.nextElementSibling;
+  if (counter?.tagName!=='DIV' || counter.nextElementSibling ||
+    counter.childElementCount || !/^\d{1,3}$/.test(counter.textContent?.trim() ?? '')) return;
+  const nextCard=link.parentElement?.parentElement?.nextElementSibling;
+  if (nextCard?.querySelector('a[href^="'+chatGptPicturePrefix+'"]')) return counter as HTMLDivElement;
+}
+
+function findImageBlock(link: HTMLAnchorElement, root: ParentNode, counter?: HTMLElement) {
   let block: HTMLElement|undefined, credit: HTMLAnchorElement|undefined;
   for (let current=link.parentElement; current && current!==root; current=current.parentElement) {
     if (!current.matches('p,div,span') || current.matches('[data-draftopus-paste],[data-draftopus-layout]') ||
       (current.textContent?.length ?? 0)>1024) break;
     const anchors=Array.from(current.querySelectorAll<HTMLAnchorElement>('a[href]'));
-    if (anchors.length>2 || compact(current.textContent)!==anchors.map(a=>compact(a.textContent)).join('')) break;
+    if (anchors.length>2) break;
+    const badgeText=counter && current.contains(counter) ? compact(counter.textContent) : '';
+    const linkText=anchors.map(a=>compact(a.textContent)+(a===link ? badgeText : '')).join('');
+    if (compact(current.textContent)!==linkText) break;
     const other=anchors.find(a=>a!==link);
     if (other && !sourceCredit(other)) break;
     if (Array.from(current.querySelectorAll('img')).some(img=>!link.contains(img)) ||
@@ -65,7 +78,8 @@ function embedImageLink(link: HTMLAnchorElement, root: ParentNode) {
   const href=link.getAttribute('href') ?? '';
   const src=directImageLink(href) || (link.hasAttribute('data-draftopus-image-link') ? httpsUrl(href)?.href : undefined);
   if (!src || link.closest(excluded)) return;
-  const {block,credit}=findImageBlock(link,root);
+  const counter=copiedImageCounter(link);
+  const {block,credit}=findImageBlock(link,root,counter);
   if (!block) return;
   const title=link.textContent?.trim() ?? '';
   let image=link.querySelector('img');
@@ -85,6 +99,7 @@ function embedImageLink(link: HTMLAnchorElement, root: ParentNode) {
     if (title && title!==href) link.title=title;
   }
   block.setAttribute(mediaAttribute,'linked');
+  if (counter) counter.hidden=true;
   link.setAttribute(pictureAttribute,'');
   credit?.setAttribute(creditAttribute,'');
 }

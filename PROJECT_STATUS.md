@@ -798,7 +798,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
-- **2026-11-27.** Lepljenje celog odgovora prikazuje samostalne direktne adrese fotografija kao slike u belešci. Spojena oznaka izvora i okvir prikazuju se u uređivaču i čitanju. Otvaranje ranije beleške prikazuje isti izgled, a susedna kopija iste fotografije iz Gallery može da se upotrebi za okvir.
+- **2026-11-27.** Lepljenje celog odgovora prikazuje samostalne direktne adrese fotografija kao slike u belešci. Okvir i oznaka izvora prikazuju se u uređivaču i čitanju. Ranije beleške dobijaju isti prikaz. Podudarna susedna kopija iz Gallery koristi se u okviru, a preneti brojači grupa slika izostavljaju se iz prikaza.
 
 - **2026-11-27.** Uređivač uvozi podržani HTML, Markdown i slike sa clipboarda. Raspored se prilagođava širini aktivnog panela. Izveštaj o Irskoj sačuvao je 30 tabela i 16 kartica posle ponovnog otvaranja. Lokalna istorija vraća lepljenje, a slike ostaju dostupne u Gallery. JSON prenosi bibliotečke slike uz projekat, Markdown i HTML izvoz čuvaju tabele i vizuale.
 
