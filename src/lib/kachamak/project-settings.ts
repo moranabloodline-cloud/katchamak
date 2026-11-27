@@ -1,4 +1,5 @@
 import {validCurrency} from './finance';
+import {clearPastedChartMatte} from './paste-chart-matte';
 import type {Novel} from './types';
 export type NovelSettingsPatch=Partial<Pick<Novel,'title'|'author'|'series'|'seriesIndex'|'language'|'genres'|'subgenres'|'chapterCount'|'targetAudience'|'tones'|'writingStyles'|'plotTechniques'|'sellingPoints'|'explicitContent'|'archived'|'cover'|'financeCurrency'>>;
 import {validProjectImage, validCoverImage, availableProjectImage} from './project-image';
@@ -67,11 +68,12 @@ export function encodeHomepageCutout(bitmap:ImageBitmap):string {
   return encodeProjectBitmap(bitmap,'image/png',{width:2400,height:1600},true);
 }
 
-export function encodePastedImage(bitmap: ImageBitmap, mime: string): string {
-  return encodeProjectBitmap(bitmap, mime === 'image/jpeg' ? mime : 'image/webp', {width:1280,height:960}, true);
+export function encodePastedImage(bitmap: ImageBitmap, mime: string, chartSnapshot = false): string {
+  return encodeProjectBitmap(bitmap, mime === 'image/jpeg' ? mime : 'image/webp', {width:1280,height:960},true,
+    chartSnapshot && mime.toLowerCase().split(';',1)[0]==='image/png');
 }
 
-function encodeProjectBitmap(bitmap:ImageBitmap,mime:string,bounds:{width:number;height:number},homepage:boolean):string {
+function encodeProjectBitmap(bitmap:ImageBitmap,mime:string,bounds:{width:number;height:number},homepage:boolean,chartMatte=false):string {
   try{
     if(!bitmap.width||!bitmap.height)throw new Error('This image could not be read.');
     const canvas=document.createElement('canvas');
@@ -87,7 +89,13 @@ function encodeProjectBitmap(bitmap:ImageBitmap,mime:string,bounds:{width:number
         ctx.fillRect(0,0,canvas.width,canvas.height);
       }
       ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-      if(keepAlpha && mime==='image/png'){
+      let clearedMatte = false;
+      if(chartMatte){
+        const pixels = ctx.getImageData(0,0,canvas.width,canvas.height);
+        clearedMatte = clearPastedChartMatte(pixels);
+        if(clearedMatte)ctx.putImageData(pixels,0,0);
+      }
+      if(keepAlpha && (mime==='image/png' || clearedMatte)){
         const png=canvas.toDataURL('image/png');
         if(validCoverImage(png))return png;
       }

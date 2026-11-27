@@ -6,7 +6,7 @@ import {directImageLink, formatEditorMedia, formatEditorMediaHtml} from './edito
 
 type ClipboardContent = {html: string; text: string; markdown: string; files: Blob[]};
 export type EditorPasteRequest = {mode: PasteMode; range: Range};
-type Media = {blob?: Blob; svg?: string; url?: string; reference?: string; existing?: GalleryImage; title: string};
+type Media = {blob?: Blob; svg?: string; url?: string; reference?: string; existing?: GalleryImage; title: string; chartSnapshot?: boolean};
 type ImportedMedia = {image: string; width: number; height: number};
 export type PreparedClipboard = {html: string; images: GalleryImage[]; unavailable: number};
 
@@ -137,7 +137,7 @@ async function importMedia(media: Media, signal: AbortSignal): Promise<ImportedM
     bitmap.close();
     throw new Error('This image could not be prepared.');
   }
-  return {image:encodePastedImage(bitmap,blob?.type || 'image/svg+xml'),width,height};
+  return {image:encodePastedImage(bitmap,blob?.type || 'image/svg+xml',media.chartSnapshot),width,height};
 }
 
 function isIllustration(element: Element) {
@@ -205,8 +205,10 @@ export async function prepareEditorClipboard(
     const url = bitmapSource(src);
     const existing = galleryImage(gallery,source.getAttribute(editorImageAttribute)??undefined);
     const blob = !svg && !existing && (!url || onlyHtmlImage && files.length === 1) ? files.shift() : undefined;
-    const img = makeImage(doc,{title,url,reference:imageReference(src),existing,blob,
-      svg:svg && source.outerHTML.length <= 1024*1024 ? source.outerHTML : undefined}, existing?.id || url);
+    const chartSnapshot = !svg && title === 'Chart' && (!!blob || /^data:image\/png;base64,/i.test(src));
+    const key = existing?.id || (chartSnapshot && url ? 'chart:'+url : url);
+    const img = makeImage(doc,{title,url,reference:imageReference(src),existing,blob,chartSnapshot,
+      svg:svg && source.outerHTML.length <= 1024*1024 ? source.outerHTML : undefined}, key);
     if (mode === 'rich' && !svg) {
       const size = pastedImageSize(source,declarations);
       if (size.width)img.width = size.width;

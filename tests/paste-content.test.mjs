@@ -216,4 +216,26 @@ assert.equal(root.querySelector('img').style.objectPosition,'50% 100%');
 assert.equal(root.querySelector('img').style.aspectRatio,'5 / 3');
 assert.equal(root.querySelector('img').style.borderRadius,'16px');
 assert.equal(root.querySelector('img').getAttribute('data-draftopus-image'),'gallery:photo');
+
+const {clearPastedChartMatte}=await import('../src/lib/kachamak/paste-chart-matte.ts');
+const matteWidth=80,matteHeight=60;
+const matte={width:matteWidth,height:matteHeight,data:new Uint8ClampedArray(matteWidth*matteHeight*4).fill(255)};
+const matteOffset=(x,y)=>(y*matteWidth+x)*4;
+for(let y=0;y<matteHeight;y++){
+  for(let x=0;x<matteWidth;x++){
+    const radius=Math.hypot(x-40,y-27);
+    if(radius<=21 && radius>10)matte.data.set([32,78,148,255],matteOffset(x,y));
+  }
+}
+// The chart's white label is surrounded by colored pixels.
+matte.data.set([255,255,255,255],matteOffset(55,27));
+const transparent={...matte,data:matte.data.slice()};
+transparent.data[3]=0;
+assert.equal(clearPastedChartMatte(transparent),false,'Preserve an existing transparent chart');
+assert.equal(clearPastedChartMatte(matte),true);
+assert.equal(matte.data[3],0,'The white export background becomes transparent');
+assert.equal(matte.data[matteOffset(40,27)+3],0,'The center of the doughnut becomes transparent');
+assert.deepEqual([...matte.data.slice(matteOffset(56,27),matteOffset(56,27)+4)],[32,78,148,255]);
+assert.equal(matte.data[matteOffset(55,27)+3],255,'White chart details stay opaque');
+
 console.log('Paste formatting: empty lines, local typography, HTML/Word heading levels, original paragraph gaps, soft breaks, emphasis, links, tables, lists and whitespace passed.');
