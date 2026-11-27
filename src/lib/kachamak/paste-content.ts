@@ -55,7 +55,7 @@ export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
 }
 
 export function insertPastedBlocks(editor:HTMLElement,html:string):boolean {
-  return /<(?:h[1-6]|table|figure|aside)(?:\s|>)| data-draftopus-layout=/i.test(html) && insertBlocks(editor,html);
+  return /<(?:h[1-6]|table|figure|aside)(?:\s|>)| data-draftopus-(?:layout|media)=/i.test(html) && insertBlocks(editor,html);
 }
 
 function insertBlocks(editor:HTMLElement,html:string):boolean {
@@ -104,7 +104,7 @@ function insertBlocks(editor:HTMLElement,html:string):boolean {
   replacement.deleteContents();
   replacement.insertNode(parts);
   // Keep subsequent typing in the last pasted paragraph.
-  if(last.nodeType===1 && (last as Element).matches('br,hr,figure,table,[data-draftopus-paste]')){
+  if(last.nodeType===1 && (last as Element).matches('br,hr,figure,table,[data-draftopus-paste],[data-draftopus-media]')){
     range.setStartAfter(last);range.collapse(true);
   }else{
     range.selectNodeContents(last);

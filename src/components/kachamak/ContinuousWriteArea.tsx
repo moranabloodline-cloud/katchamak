@@ -11,6 +11,7 @@ import {noteAnchorStyles,openEditorWebsite} from '@/lib/kachamak/note-links';
 import {trimWordSelection} from '@/lib/kachamak/editor-selection';
 import {wrapRootParagraphs} from '@/lib/kachamak/editor-paragraphs';
 import {portableEditorHtml} from '@/lib/kachamak/project-image';
+import {formatEditorMedia} from '@/lib/kachamak/editor-media';
 
 export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?:string}) {
   const {defaults,settings}=useTabPageDefaults();
@@ -25,7 +26,7 @@ export function ContinuousWriteArea({section,rootId}:{section:SectionKey;rootId?
       {notes.map(node=>{
         const appearance=noteAppearance(defaults,settings,node);
         return <section key={node.id} data-continuous-note={node.id} aria-label={node.title||'Untitled note'} className="px-6 py-6 [&+section]:border-t [&+section]:border-border/50">
-        <PageSurface appearance={appearance}><h2 className="note-page-title mb-4 text-center font-bold [overflow-wrap:anywhere]" style={{color:node.color || undefined}}>{node.title||'Untitled note'}</h2><div ref={element=>{if(element)wrapRootParagraphs(element);}} contentEditable={false} data-readonly-note={node.id} className="kachamak-editor text-foreground" onClick={event=>{const anchor=(event.target as Element).closest('a[href^="#note/"]');if(anchor){event.preventDefault();setPreview(anchor.getAttribute('href')!.slice(6));}else openEditorWebsite(event.nativeEvent);}} dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(portableEditorHtml(node.content||'',novel?.gallery),{FORBID_TAGS:['style','script','iframe','object','embed'],FORBID_ATTR:['srcdoc'],ADD_ATTR:['referrerpolicy']})}}/></PageSurface>
+        <PageSurface appearance={appearance}><h2 className="note-page-title mb-4 text-center font-bold [overflow-wrap:anywhere]" style={{color:node.color || undefined}}>{node.title||'Untitled note'}</h2><div ref={element=>{if(element){wrapRootParagraphs(element);formatEditorMedia(element);}}} contentEditable={false} data-readonly-note={node.id} className="kachamak-editor text-foreground" onClick={event=>{const anchor=(event.target as Element).closest('a[href^="#note/"]');if(anchor){event.preventDefault();setPreview(anchor.getAttribute('href')!.slice(6));}else openEditorWebsite(event.nativeEvent);}} dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(portableEditorHtml(node.content||'',novel?.gallery),{FORBID_TAGS:['style','script','iframe','object','embed'],FORBID_ATTR:['srcdoc'],ADD_ATTR:['referrerpolicy']})}}/></PageSurface>
       </section>;})}
       {!notes.length&&<p className="p-10 text-center text-sm text-muted-foreground">No notes in this view.</p>}
     </div>

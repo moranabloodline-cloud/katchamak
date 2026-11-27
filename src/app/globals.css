@@ -350,6 +350,46 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 .kachamak-editor img[data-draftopus-image][style*="float: left"] { margin-inline-end: .75em; margin-block-end: .5em; }
 .kachamak-editor img[data-draftopus-image][style*="float: right"] { margin-inline-start: .75em; margin-block-end: .5em; }
 .kachamak-editor [data-draftopus-image-link] { overflow-wrap: anywhere; }
+.kachamak-editor [data-draftopus-media] {
+  position: relative;
+  max-inline-size: 100%;
+  margin-block: .9em 1.15em;
+  border-radius: .9rem;
+  text-indent: 0;
+}
+.kachamak-editor [data-draftopus-media] img {
+  display: block;
+  max-inline-size: 100%;
+  height: auto;
+  border-radius: .9rem;
+}
+.kachamak-editor [data-draftopus-media] [data-draftopus-media-picture] {
+  display: block;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.kachamak-editor [data-draftopus-media-picture] > img { inline-size: 100%; }
+.kachamak-editor [data-draftopus-media] a[data-draftopus-media-credit] {
+  position: absolute;
+  inset-block-end: .65rem;
+  inset-inline-start: .65rem;
+  z-index: 1;
+  max-inline-size: calc(100% - 1.3rem);
+  overflow: hidden;
+  padding: .3em .8em;
+  border: 1px solid #ffffff3b;
+  border-radius: 999px;
+  background: #20282de6;
+  color: #fff;
+  font-size: max(.72em, .6875rem) !important;
+  line-height: 1.25 !important;
+  text-align: start;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kachamak-editor [data-draftopus-media] a[data-draftopus-media-credit]:hover { background: #10171b; text-decoration: underline; }
+.kachamak-editor [data-draftopus-media] a[data-draftopus-media-credit]:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 
 /* Note identities stay stable when titles change. */
 .kachamak-editor a[href^="#note/"] { color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

@@ -19,6 +19,7 @@ import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {trimWordSelection} from '@/lib/kachamak/editor-selection';
 import {wrapRootParagraphs} from '@/lib/kachamak/editor-paragraphs';
+import {formatEditorMedia} from '@/lib/kachamak/editor-media';
 import {captureTableCell,focusEditorRange,moveTableCaret,tableCellAt} from '@/lib/kachamak/editor-tables';
 import {EditorTableMenu,type EditorTableMenuRequest} from './EditorTableTools';
 
@@ -114,10 +115,12 @@ export function RichEditor({
       el.innerHTML = DOMPurify.sanitize(html || "", {FORBID_TAGS:["style","script","iframe","object","embed"],FORBID_ATTR:["srcdoc"],ADD_ATTR:["referrerpolicy"]});
       const repaired=repairListWrappers(el);
       const paragraphs=wrapRootParagraphs(el);
+      const repairedHtml=repaired||paragraphs ? storedEditorHtml(el.innerHTML) : undefined;
+      formatEditorMedia(el);
       paintImages(el);
       lastHtml.current = storedEditorHtml(el.innerHTML);
       history.current.reset(el);
-      if(repaired||paragraphs)normalizeEditorContent(()=>onChange(lastHtml.current));
+      if(repairedHtml!==undefined)normalizeEditorContent(()=>onChange(repairedHtml));
     }
   }, [html]);
 

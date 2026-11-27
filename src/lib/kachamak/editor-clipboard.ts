@@ -2,6 +2,7 @@ import type {GalleryEntry} from './gallery';
 import {galleryImage, galleryImageRef, editorImageAttribute, type GalleryImage} from './project-image';
 import {pasteMediaAttribute, preparePastedContent, type PasteMode} from './paste-content';
 import {pastedImageSize} from './paste-layout';
+import {directImageLink, formatEditorMedia, formatEditorMediaHtml} from './editor-media';
 
 type ClipboardContent = {html: string; text: string; markdown: string; files: Blob[]};
 export type EditorPasteRequest = {mode: PasteMode; range: Range};
@@ -162,6 +163,15 @@ export async function prepareEditorClipboard(
   const text = payload.text || payload.markdown;
   if (mode === 'plain')return {html:preparePastedContent('',text,'plain'),images:[],unavailable:0};
   let html = payload.html.length <= 16 * 1024 * 1024 ? payload.html : '';
+  const imageUrl = directImageLink(text.trim());
+  if (imageUrl && !/<(?:img|figure)\b/i.test(html) && !payload.files.length) {
+    const paragraph = document.createElement('p');
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.textContent = imageUrl;
+    paragraph.append(link);
+    html = paragraph.outerHTML;
+  }
   const markdown = payload.markdown || (looksLikeMarkdown(text) ? text : '');
   if (!html && markdown) {
     const {marked} = await import('marked');
@@ -211,7 +221,7 @@ export async function prepareEditorClipboard(
     figure.append(makeImage(document,{blob:file,title:file instanceof File ? file.name.slice(0,255) : ''}));
     body += figure.outerHTML;
   }
-  if (!media.length || signal.aborted)return {html:body,images:[],unavailable:0};
+  if (!media.length || signal.aborted)return {html:signal.aborted?body:formatEditorMediaHtml(body),images:[],unavailable:0};
   // Fetch a few images at a time. A blocked source does not hold a long report
   // indefinitely, and one visual cannot consume the entire Gallery write.
   const deadline = AbortSignal.any([signal,AbortSignal.timeout(5000)]);
@@ -278,5 +288,6 @@ export async function prepareEditorClipboard(
       fallback.append(img);
     }else fallback.textContent=description;
   }
+  formatEditorMedia(template.content);
   return {html:template.innerHTML,images,unavailable};
 }
