@@ -1,0 +1,25 @@
+.draftopus-settings {
+  --background: #fbfbfa;
+  --foreground: #222226;
+  --card: #f1f1ef;
+  --muted: #ebebea;
+  --muted-foreground: #65656b;
+  --border: #dedede;
+  --input: #cfcfd1;
+  --ring: #707075;
+  --settings-index: #f6f6f5;
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+}
+
+html[data-theme="dark"] .draftopus-settings {
+  --background: #131314;
+  --foreground: #ededee;
+  --card: #202022;
+  --muted: #29292c;
+  --muted-foreground: #a8a8ac;
+  --border: #303033;
+  --input: #424245;
+  --ring: #a8a8ac;
+  --settings-index: #181819;
+}

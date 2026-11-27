@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/
 import {AdminDemoProject} from './AdminDemoProject';
 import {AdminLicenseList} from './AdminLicenseList';
 import { Input } from '@/components/ui/input';
+import {Switch} from '@/components/ui/switch';
 import { CloudStorageControls } from './WebLibraryStorage';
 import { LocalRecovery } from './LocalRecovery';
 import { useKachamak } from '@/lib/kachamak/store';
@@ -13,7 +14,6 @@ import { toast } from 'sonner';
 import { useAppearancePreferences } from '@/lib/kachamak/appearance-preferences';
 import packageInfo from '../../../package.json';
 import { requestJson } from '@/lib/kachamak/request-json';
-import {cn} from '@/lib/utils';
 import {useAccountPreferences} from '@/lib/kachamak/account-preferences';
 import {saveWebLibrary} from '@/lib/kachamak/cloud-library';
 import {AdminMailConnection} from './AdminMailConnection';
@@ -25,10 +25,12 @@ async function api(path: string, method = 'GET', body?: unknown) {
   const {response:r,data} = await requestJson(path, { method, headers: body ? { 'Content-Type':'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) throw new Error(data.error || 'Request failed'); return data;
 }
-const button = 'rounded-lg border border-border bg-card px-3 py-2 text-sm hover:bg-muted disabled:opacity-50';
-const primary = 'rounded-lg bg-amber-400 px-4 py-2 text-sm font-medium text-stone-950 hover:bg-amber-300 disabled:opacity-50';
-const surface = 'space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5';
-const selectClass = 'h-10 rounded-md border border-border bg-background px-3 text-sm';
+const button = 'rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50';
+const primary = 'rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background hover:opacity-85 disabled:opacity-50';
+const heading = 'text-sm font-semibold text-foreground';
+const surface = 'space-y-3 border-t border-border py-4 text-sm';
+const row = 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3';
+const selectClass = 'h-8 rounded-md border border-input bg-background px-2.5 text-xs';
 const appearanceKeys = ['lightTheme','smallInterface','largeInterface'] as const;
 const notificationKeys = ['tips','updates','changelog'] as const;
 export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpenChange:(v:boolean)=>void;trigger:ReactElement}) {
@@ -94,58 +96,65 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
     onOpenChange(next);
   }}>
     <DialogTrigger asChild>{trigger}</DialogTrigger>
-    <DialogContent placement="right" aria-describedby={undefined} className="flex max-w-[60rem] flex-col overflow-hidden border-border bg-background font-sans text-foreground sm:w-[min(94vw,60rem)] sm:rounded-l-2xl">
-      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-border px-5 pr-14 sm:px-7">
-        <img src="/draftopus-logo.png" alt="" width={30} height={30} className="size-[30px] object-contain"/>
-        <DialogTitle className="font-serif text-xl">Settings</DialogTitle>
+    <DialogContent placement="right" aria-describedby={undefined} className="draftopus-settings flex max-w-[65rem] flex-col overflow-hidden border-border bg-background font-sans text-foreground sm:w-[min(94vw,65rem)] sm:rounded-l-xl">
+      <header className="flex min-h-[3.25rem] shrink-0 items-center gap-2.5 border-b border-border px-5 pr-14 sm:px-6">
+        <img src="/draftopus-logo.png" alt="" width={23} height={23} className="size-[23px] object-contain"/>
+        <DialogTitle className="text-sm">Settings</DialogTitle>
       </header>
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_14rem] md:grid-rows-[minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_14.5rem] md:grid-rows-[minmax(0,1fr)]">
         <SettingsNavigation page={tab} onSelect={changePage} project={!!novel} admin={account?.role==='admin'} busy={locked}/>
-        <main ref={main} aria-label="Settings content" className="@container row-start-2 min-w-0 overflow-y-auto p-5 md:col-start-1 md:row-start-1 md:p-7">
-          <div className="mx-auto max-w-2xl space-y-5">
+        <main ref={main} aria-label="Settings content" className="@container row-start-2 min-w-0 overflow-y-auto px-5 py-6 md:col-start-1 md:row-start-1 md:px-8 md:py-9">
+          <div className="mx-auto max-w-[36rem] space-y-4">
             {error&&<p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">{error}</p>}
             {!account && projectSection==='hidden' && (error
               ? <button className={button} onClick={()=>setAccountAttempt(attempt=>attempt+1)}>Retry</button>
               : <p role="status" className="text-sm text-muted-foreground">Loading account…</p>)}
-            {projectSection!=='hidden'&&<h2 className="font-serif text-2xl">{tab==='project'?'Project settings':'Backups & export'}</h2>}
+            {projectSection!=='hidden'&&<h2 className={heading}>{tab==='project'?'Project settings':'Backups & export'}</h2>}
             {open && <ProjectSettings key={activeBook} open={open} onOpenChange={onOpenChange} section={projectSection} onBusyChange={setProjectBusy}/>}
             {account&&<>
-              {tab==='profile'&&<section className="max-w-md space-y-3" aria-labelledby="personal-details-title">
-                <h2 id="personal-details-title" className="text-base font-semibold">Personal details</h2>
-                <form className="space-y-3 rounded-xl border border-border bg-card p-3.5 sm:p-4" onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {avatar?<img src={avatar} alt="Your avatar" className="size-11 shrink-0 rounded-full object-cover"/>:
-                      <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-amber-500/15 text-sm font-medium">{(name||account.email).slice(0,2).toUpperCase()}</span>}
-                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <GalleryImagePicker novel={novel} books={books} onPick={(_,item)=>void run(async()=>setAvatar(await galleryAvatar(item.image)))}>
-                        <button type="button" disabled={locked} className={cn(button,'h-8 rounded-md px-2.5 py-0 text-xs')} aria-label="Choose avatar from Gallery">Choose avatar</button>
-                      </GalleryImagePicker>
-                      {avatar&&<button type="button" className="h-8 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" disabled={locked} onClick={()=>setAvatar('')}>Remove</button>}
-                    </div>
+              {tab==='profile'&&<section aria-labelledby="personal-details-title">
+                <form onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h2 id="personal-details-title" className={heading}>Personal details</h2>
+                    <button disabled={locked||(name.trim()===account.displayName&&avatar===account.avatar)} className={primary}>Save profile</button>
                   </div>
-                  <label className="block text-xs font-medium">Display / author name<Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="mt-1 h-8 px-2.5"/></label>
-                  <label className="block text-xs font-medium">Sign-in email<Input readOnly value={account.email} className="mt-1 h-8 px-2.5 text-muted-foreground"/></label>
-                  <button disabled={locked} className={cn(primary,'h-8 rounded-md px-3 py-0 text-xs')}>Save profile</button>
+                  <div className="divide-y divide-border border-y border-border text-sm">
+                    <div className={row}>
+                      <div className="flex items-center gap-3">
+                        {avatar?<img src={avatar} alt="Your avatar" className="size-9 shrink-0 rounded-full object-cover"/>:
+                          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium">{(name||account.email).slice(0,2).toUpperCase()}</span>}
+                        <span>Avatar</span>
+                      </div>
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <GalleryImagePicker novel={novel} books={books} onPick={(_,item)=>void run(async()=>setAvatar(await galleryAvatar(item.image)))}>
+                          <button type="button" disabled={locked} className={button} aria-label="Choose avatar from Gallery">Choose avatar</button>
+                        </GalleryImagePicker>
+                        {avatar&&<button type="button" className="rounded-full px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" disabled={locked} onClick={()=>setAvatar('')}>Remove</button>}
+                      </div>
+                    </div>
+                    <label className={row}>Display / author name<Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="h-8 px-2.5 @md:w-[15rem]"/></label>
+                    <div className={row}><span>Sign-in email</span><span className="max-w-full select-text break-all text-xs text-muted-foreground">{account.email}</span></div>
+                  </div>
                 </form>
               </section>}
               {tab==='appearance'&&<>
-                <h2 className="font-serif text-2xl">Appearance</h2>
-                <form className={surface} onSubmit={event=>{event.preventDefault();void saveSettings('appearance');}}>
-                  <label className="flex flex-wrap items-center justify-between gap-3 text-sm">Theme
+                <h2 className={heading}>Appearance</h2>
+                <form className="text-sm" onSubmit={event=>{event.preventDefault();void saveSettings('appearance');}}>
+                  <label className={row+' border-t border-border'}>Theme
                     <select disabled={locked} className={selectClass} value={prefs.lightTheme?'light':'dark'} onChange={e=>setPrefs({...prefs,lightTheme:e.target.value==='light'})}>
                       <option value="dark">Dark</option><option value="light">Light</option>
                     </select>
                   </label>
-                  <label className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-sm">Interface size
+                  <label className={row+' border-y border-border'}>Interface size
                     <select disabled={locked} className={selectClass} value={prefs.smallInterface?'small':prefs.largeInterface?'large':'normal'} onChange={e=>setPrefs({...prefs,smallInterface:e.target.value==='small',largeInterface:e.target.value==='large'})}>
                       <option value="small">Small</option><option value="normal">Normal</option><option value="large">Large</option>
                     </select>
                   </label>
-                  <button disabled={locked} className={primary}>Save appearance</button>
+                  <div className="mt-3 flex justify-end"><button disabled={locked} className={primary}>Save appearance</button></div>
                 </form>
               </>}
               {tab==='about'&&<>
-                <h2 className="font-serif text-2xl">About Draftopus</h2>
+                <h2 className={heading}>About Draftopus</h2>
                 <div className={surface}>
                   <p>Version {packageInfo.version}</p>
                   <p className="text-sm text-muted-foreground">Draftopus is a private application. Third-party components retain their respective licenses.</p>
@@ -156,14 +165,14 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                 </div>
               </>}
               {tab==='membership'&&<>
-                <h2 className="font-serif text-2xl">Membership</h2>
+                <h2 className={heading}>Membership</h2>
                 <div className={surface}>
-                  <h3 className="text-lg font-medium">{account.license.plan==='lifetime'?'Lifetime':account.license.plan==='timed'?'Time-limited access':'No license assigned'}</h3>
+                  <h3 className="font-medium">{account.license.plan==='lifetime'?'Lifetime':account.license.plan==='timed'?'Time-limited access':'No license assigned'}</h3>
                   <p className="text-sm text-muted-foreground">{account.license.plan==='none'?'Contact the administrator to assign a license.':account.license.active?'Active':'Expired / inactive'}{account.license.expires_at?' · Until '+new Date(account.license.expires_at).toLocaleDateString():''}</p>
                 </div>
               </>}
               {tab==='security'&&<>
-                <h2 className="font-serif text-2xl">Sign-in &amp; security</h2>
+                <h2 className={heading}>Sign-in &amp; security</h2>
                 <div className={surface}>
                   <h3 className="font-medium">ChatGPT sign-in</h3>
                   <p className="break-words text-sm">{account.email}</p>
@@ -172,32 +181,37 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                 </div>
               </>}
               {tab==='notifications'&&<>
-                <h2 className="font-serif text-2xl">Notifications</h2>
+                <h2 className={heading}>Notifications</h2>
                 <form className={surface} onSubmit={event=>{event.preventDefault();void saveSettings('notifications');}}>
                   <p className="text-sm text-muted-foreground">Save your preferences for when email delivery becomes available.</p>
-                  {[[notificationKeys[0],'Writing and product tips'],[notificationKeys[1],'Product updates'],[notificationKeys[2],'Release notes']].map(([key,label])=>
-                    <label key={key} className="flex items-center justify-between gap-4 border-t border-border pt-3 text-sm">{label}<input type="checkbox" disabled={locked} checked={prefs[key]??false} onChange={e=>setPrefs({...prefs,[key]:e.target.checked})}/></label>
-                  )}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="divide-y divide-border border-y border-border">
+                    {[[notificationKeys[0],'Writing and product tips'],[notificationKeys[1],'Product updates'],[notificationKeys[2],'Release notes']].map(([key,label])=>
+                      <div key={key} className={row}>
+                        <label htmlFor={`draftopus-notification-${key}`}>{label}</label>
+                        <Switch id={`draftopus-notification-${key}`} type="button" disabled={locked} checked={prefs[key]??false} onCheckedChange={checked=>setPrefs({...prefs,[key]:checked})}/>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
                     <button type="button" disabled={locked} className={button} onClick={()=>setPrefs({...prefs,tips:false,updates:false,changelog:false})}>Unsubscribe from all</button>
                     <button className={primary} disabled={locked}>Save preferences</button>
                   </div>
                 </form>
               </>}
               {tab==='storage'&&<>
-                <h2 className="font-serif text-2xl">Cloud storage</h2>
+                <h2 className={heading}>Cloud storage</h2>
                 <div className={surface}><CloudStorageControls/></div>
-                <div className={surface}><LocalRecovery accountId={account.id}/></div>
+                <LocalRecovery accountId={account.id}/>
               </>}
               {tab==='integrations'&&<>
-                <h2 className="font-serif text-2xl">Connected services</h2>
+                <h2 className={heading}>Connected services</h2>
                 <div className={surface}>
                   <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-medium">ChatGPT</h3><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300">Connected</span></div>
                   <p className="break-words text-sm text-muted-foreground">Sign-in is linked to {account.email}.</p>
                 </div>
                 {account.role==='admin'&&<AdminMailConnection/>}
               </>}
-  {tab==='admin'&&account.role==='admin'&&<>{process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP !== '1' && <AdminDemoProject onOpen={()=>onOpenChange(false)}/>}<h2 className="font-serif text-2xl">Users and licenses</h2><AdminLicenseList revision={licenseRevision} onEdit={license=>{setEmail(license.email);setPlan(license.plan);setExpiry(license.expires_at?new Date(license.expires_at-new Date(license.expires_at).getTimezoneOffset()*60000).toISOString().slice(0,10):'');setLicenseFeedback(null);licenseForm.current?.scrollIntoView({block:'start',behavior:'smooth'});}} onRevoked={()=>{void run(async()=>{await loadUsers();setEvents((await api('/api/admin/audit')).events);});}}/><h3 className="font-medium">Accounts and access</h3><form className="flex gap-2" onSubmit={e=>{e.preventDefault();void run(()=>loadUsers(0));}}><Input aria-label="Search users" placeholder="Search name or email" value={search} onChange={e=>setSearch(e.target.value)}/><button disabled={busy} className={button}>Search</button></form><div className="max-h-64 overflow-auto rounded border border-white/10">{users.map(u=><div key={u.id??u.email} className="flex flex-wrap items-center gap-2 border-b border-white/10 p-3 text-xs"><div className="min-w-0 flex-1"><p className="break-all">{u.email}</p><p className="text-stone-400">{u.role} · {u.id?u.status:u.status==='suspended'?'Suspended before sign-in':'Awaiting first sign-in'}{u.source==='sites'?' · Sites invitation':''} · {u.plan||'No license'}{u.expires_at?' · '+new Date(u.expires_at).toLocaleDateString():''}</p></div>{u.role!=='admin'&&<><button className={button} onClick={()=>{setEmail(u.email);setPlan(u.plan==='timed'?'timed':'lifetime');}}>License</button><button disabled={busy} className={button} onClick={()=>{if(window.confirm((u.status==='suspended'?'Restore':'Suspend')+' access for '+u.email+'?'))void run(async()=>{await api('/api/admin/status','POST',{email:u.email,status:u.status==='suspended'?'active':'suspended'});await loadUsers();toast.success('Access updated.');});}}>{u.status==='suspended'?'Restore':'Suspend'}</button></>}</div>)}{!users.length&&<p className="p-3 text-sm text-stone-400">No users or assigned licenses match.</p>}</div><div className="flex justify-between"><button className={button} disabled={busy||offset===0} onClick={()=>void run(()=>loadUsers(Math.max(0,offset-50)))}>Previous</button><button className={button} disabled={busy||!hasMore} onClick={()=>void run(()=>loadUsers(offset+50))}>Next</button></div><form ref={licenseForm} className="space-y-3 rounded-xl border border-amber-400/20 p-4" onSubmit={e=>{e.preventDefault();void run(async()=>{setLicenseFeedback(null);try{const result=await api('/api/admin/license','POST',{email:email.trim(),plan,expiresAt:plan==='timed'?new Date(expiry+'T23:59:59').getTime():undefined});const saved=result.license;const message=saved.plan==='none'?'License revoked for '+saved.email+'.':(saved.plan==='lifetime'?'Lifetime license saved for ':'Time-limited license saved for ')+saved.email+'.'+(!result.registered?' Ready for their first sign-in.':'');setLicenseFeedback({ok:true,message});setEmail(saved.email);setSearch(saved.email);setLicenseRevision(r=>r+1);toast.success(message);try{await loadUsers(0,saved.email);setEvents((await api('/api/admin/audit')).events);}catch{setLicenseFeedback({ok:true,message:message+' The list could not refresh. Search this email to check it.'});}}catch(error){setLicenseFeedback({ok:false,message:error instanceof Error?error.message:'License could not be saved.'});throw error;}});}}><h3>Assign or revoke a license</h3><p className="text-xs text-stone-400">You can assign a license before the user signs in for the first time. Use their ChatGPT sign-in email.</p><Input aria-label="License email" type="email" required placeholder="User email" maxLength={254} value={email} onChange={e=>{setEmail(e.target.value);setLicenseFeedback(null);}}/><select aria-label="License type" className="rounded border border-white/20 bg-background p-2 text-sm" value={plan} onChange={e=>{setPlan(e.target.value);setLicenseFeedback(null);}}><option value="lifetime">Lifetime</option><option value="timed">Time-limited</option><option value="none">Revoke license</option></select>{plan==='timed'&&<Input aria-label="Expiry date" type="date" required value={expiry} onChange={e=>{setExpiry(e.target.value);setLicenseFeedback(null);}}/>}<button disabled={busy} className={button}>{busy?'Saving…':'Apply license'}</button>{licenseFeedback&&<p role={licenseFeedback.ok?'status':'alert'} className={'rounded border p-3 text-sm '+(licenseFeedback.ok?'border-emerald-500/30 bg-emerald-500/10 text-emerald-200':'border-red-500/30 bg-red-950 text-red-200')}>{licenseFeedback.message}</p>}</form><details className="text-xs text-stone-400"><summary>Recent admin activity</summary>{events.map(e=><p key={e.id} className="mt-2 break-all">{new Date(e.created_at).toLocaleString()} · {e.action} · {e.target} · {e.detail}</p>)}</details></>}
+  {tab==='admin'&&account.role==='admin'&&<>{process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP !== '1' && <AdminDemoProject onOpen={()=>onOpenChange(false)}/>}<h2 className={heading}>Users and licenses</h2><AdminLicenseList revision={licenseRevision} onEdit={license=>{setEmail(license.email);setPlan(license.plan);setExpiry(license.expires_at?new Date(license.expires_at-new Date(license.expires_at).getTimezoneOffset()*60000).toISOString().slice(0,10):'');setLicenseFeedback(null);licenseForm.current?.scrollIntoView({block:'start',behavior:'smooth'});}} onRevoked={()=>{void run(async()=>{await loadUsers();setEvents((await api('/api/admin/audit')).events);});}}/><h3 className="font-medium">Accounts and access</h3><form className="flex gap-2" onSubmit={e=>{e.preventDefault();void run(()=>loadUsers(0));}}><Input aria-label="Search users" placeholder="Search name or email" value={search} onChange={e=>setSearch(e.target.value)}/><button disabled={busy} className={button}>Search</button></form><div className="max-h-64 overflow-auto rounded border border-white/10">{users.map(u=><div key={u.id??u.email} className="flex flex-wrap items-center gap-2 border-b border-white/10 p-3 text-xs"><div className="min-w-0 flex-1"><p className="break-all">{u.email}</p><p className="text-stone-400">{u.role} · {u.id?u.status:u.status==='suspended'?'Suspended before sign-in':'Awaiting first sign-in'}{u.source==='sites'?' · Sites invitation':''} · {u.plan||'No license'}{u.expires_at?' · '+new Date(u.expires_at).toLocaleDateString():''}</p></div>{u.role!=='admin'&&<><button className={button} onClick={()=>{setEmail(u.email);setPlan(u.plan==='timed'?'timed':'lifetime');}}>License</button><button disabled={busy} className={button} onClick={()=>{if(window.confirm((u.status==='suspended'?'Restore':'Suspend')+' access for '+u.email+'?'))void run(async()=>{await api('/api/admin/status','POST',{email:u.email,status:u.status==='suspended'?'active':'suspended'});await loadUsers();toast.success('Access updated.');});}}>{u.status==='suspended'?'Restore':'Suspend'}</button></>}</div>)}{!users.length&&<p className="p-3 text-sm text-stone-400">No users or assigned licenses match.</p>}</div><div className="flex justify-between"><button className={button} disabled={busy||offset===0} onClick={()=>void run(()=>loadUsers(Math.max(0,offset-50)))}>Previous</button><button className={button} disabled={busy||!hasMore} onClick={()=>void run(()=>loadUsers(offset+50))}>Next</button></div><form ref={licenseForm} className="space-y-3 border-t border-border py-4" onSubmit={e=>{e.preventDefault();void run(async()=>{setLicenseFeedback(null);try{const result=await api('/api/admin/license','POST',{email:email.trim(),plan,expiresAt:plan==='timed'?new Date(expiry+'T23:59:59').getTime():undefined});const saved=result.license;const message=saved.plan==='none'?'License revoked for '+saved.email+'.':(saved.plan==='lifetime'?'Lifetime license saved for ':'Time-limited license saved for ')+saved.email+'.'+(!result.registered?' Ready for their first sign-in.':'');setLicenseFeedback({ok:true,message});setEmail(saved.email);setSearch(saved.email);setLicenseRevision(r=>r+1);toast.success(message);try{await loadUsers(0,saved.email);setEvents((await api('/api/admin/audit')).events);}catch{setLicenseFeedback({ok:true,message:message+' The list could not refresh. Search this email to check it.'});}}catch(error){setLicenseFeedback({ok:false,message:error instanceof Error?error.message:'License could not be saved.'});throw error;}});}}><h3>Assign or revoke a license</h3><p className="text-xs text-stone-400">You can assign a license before the user signs in for the first time. Use their ChatGPT sign-in email.</p><Input aria-label="License email" type="email" required placeholder="User email" maxLength={254} value={email} onChange={e=>{setEmail(e.target.value);setLicenseFeedback(null);}}/><select aria-label="License type" className="rounded border border-white/20 bg-background p-2 text-sm" value={plan} onChange={e=>{setPlan(e.target.value);setLicenseFeedback(null);}}><option value="lifetime">Lifetime</option><option value="timed">Time-limited</option><option value="none">Revoke license</option></select>{plan==='timed'&&<Input aria-label="Expiry date" type="date" required value={expiry} onChange={e=>{setExpiry(e.target.value);setLicenseFeedback(null);}}/>}<button disabled={busy} className={button}>{busy?'Saving…':'Apply license'}</button>{licenseFeedback&&<p role={licenseFeedback.ok?'status':'alert'} className={'rounded border p-3 text-sm '+(licenseFeedback.ok?'border-emerald-500/30 bg-emerald-500/10 text-emerald-200':'border-red-500/30 bg-red-950 text-red-200')}>{licenseFeedback.message}</p>}</form><details className="text-xs text-stone-400"><summary>Recent admin activity</summary>{events.map(e=><p key={e.id} className="mt-2 break-all">{new Date(e.created_at).toLocaleString()} · {e.action} · {e.target} · {e.detail}</p>)}</details></>}
             </>}
           </div>
         </main>

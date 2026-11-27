@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./workspace-ribbon.css";
+@import "./settings-panel.css";
 
 @custom-variant dark (&:is(.dark *));
 

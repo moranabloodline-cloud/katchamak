@@ -42,29 +42,29 @@ export function SettingsNavigation({page, onSelect, project, admin, busy}: {
     return words.every(word=>copy.includes(word));
   })})).filter(section=>section.pages.length);
 
-  return <nav aria-label="Settings sections" className="min-h-0 border-b border-border bg-muted/45 p-4 md:col-start-2 md:row-start-1 md:overflow-y-auto md:border-b-0 md:border-l">
+  return <nav aria-label="Settings sections" className="min-h-0 border-b border-border bg-[var(--settings-index)] px-3 py-4 md:col-start-2 md:row-start-1 md:overflow-y-auto md:border-b-0 md:border-l">
     <label className="relative block md:hidden">
       <span className="sr-only">Settings section</span>
-      <select value={page} disabled={busy} onChange={event=>onSelect(event.target.value as SettingsPage)} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm">
+      <select value={page} disabled={busy} onChange={event=>onSelect(event.target.value as SettingsPage)} className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm">
         {available.map(section=><optgroup key={section.label} label={section.label}>
           {section.pages.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
         </optgroup>)}
       </select>
     </label>
     <div className="hidden md:block">
-      <form role="search" className="relative mb-5" onSubmit={event=>{
+      <form role="search" className="relative mb-4" onSubmit={event=>{
         event.preventDefault();
         if (!busy && results[0]) onSelect(results[0].pages[0].id);
       }}>
-        <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"/>
+        <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground"/>
         <input type="search" aria-label="Search settings" placeholder="Search settings" value={query} onChange={event=>setQuery(event.target.value)}
-          className="h-10 w-full rounded-lg border border-border bg-background pr-3 pl-9 text-sm outline-none focus-visible:border-amber-500"/>
+          className="h-8 w-full rounded-full border border-input bg-background pr-3 pl-8 text-xs outline-none focus-visible:border-ring"/>
       </form>
-      {results.length ? <div className="space-y-5">{results.map(section=><section key={section.label}>
-        <h3 className="mb-1.5 px-2 text-xs font-semibold text-muted-foreground">{section.label}</h3>
+      {results.length ? <div className="space-y-4">{results.map(section=><section key={section.label}>
+        <h3 className="mb-1 px-2 text-xs font-medium text-muted-foreground">{section.label}</h3>
         {section.pages.map(({id,label,icon:Icon})=><button key={id} type="button" disabled={busy} aria-current={page===id?'page':undefined}
-          onClick={()=>onSelect(id)} className="flex min-h-9 w-full items-center gap-2.5 rounded-md border-l-2 border-transparent px-2.5 py-1.5 text-left text-sm hover:bg-background focus-visible:outline-2 focus-visible:outline-amber-500 disabled:opacity-60 aria-[current=page]:border-amber-500 aria-[current=page]:bg-background aria-[current=page]:font-semibold">
-          <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground"/>{label}
+          onClick={()=>onSelect(id)} className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[0.8125rem] hover:bg-card focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60 aria-[current=page]:bg-muted aria-[current=page]:font-medium">
+          <Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground"/>{label}
         </button>)}
       </section>)}</div> : <p className="px-2 text-sm text-muted-foreground">No settings match your search.</p>}
     </div>

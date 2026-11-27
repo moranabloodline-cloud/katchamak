@@ -12,8 +12,8 @@ import {ManuscriptExport} from './ManuscriptExport';
 import {toast} from 'sonner';
 
 const field='mt-1 w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm text-foreground outline-none focus:border-amber-400/70';
-const button='inline-flex items-center justify-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs hover:bg-muted disabled:opacity-40';
-const card='rounded-xl border border-border bg-card p-4';
+const button='inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-40';
+const card='border-t border-border py-4';
 export function ProjectSettings({open,onOpenChange,section,onBusyChange}:{
   open:boolean;onOpenChange:(open:boolean)=>void;section?:'project'|'backups'|'hidden';onBusyChange?:(busy:boolean)=>void;
 }) {
@@ -48,7 +48,7 @@ export function ProjectSettings({open,onOpenChange,section,onBusyChange}:{
               <label className="text-xs">Series index<input aria-label="Series index" maxLength={100} placeholder="e.g. Book 1" className={field} value={seriesIndex} onChange={e=>setSeriesIndex(e.target.value)} disabled={working}/></label>
             </div>
             {newSeries!==null&&<div className="mt-3 flex gap-2"><input autoFocus aria-label="New series name" placeholder="Series name" maxLength={200} className={field+' mt-0'} value={newSeries} onChange={e=>setNewSeries(e.target.value)}/><button type="button" className={button} disabled={!newSeries.trim()} onClick={()=>{setSeries(seriesNames.find(s=>s.toLocaleLowerCase()===newSeries.trim().toLocaleLowerCase())||newSeries.trim());setNewSeries(null);}}>Add</button><button type="button" className={button} onClick={()=>setNewSeries(null)}>Cancel</button></div>}
-            <div className="mt-4 flex justify-end"><button type="submit" disabled={working||!title.trim()} className="rounded bg-amber-400 px-4 py-2 text-xs font-medium text-black disabled:opacity-40">{working?'Saving…':'Save changes'}</button></div>
+            <div className="mt-4 flex justify-end"><button type="submit" disabled={working||!title.trim()} className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background hover:opacity-85 disabled:opacity-40">{working?'Saving…':'Save changes'}</button></div>
           </form>}
           {showBackups&&<section className={card}><h2 className="text-sm font-semibold">{novel.title}</h2><div className="mt-3 space-y-2"><button className={button+' w-full'} onClick={()=>setExportOpen(true)}><Download className="h-3.5 w-3.5"/>Export manuscript</button><p id={backupNoticeId} className="text-xs leading-relaxed text-muted-foreground">{PROJECT_BACKUP_ATTACHMENT_NOTICE}</p><button className={button+' w-full'} aria-describedby={backupNoticeId} onClick={()=>{exportNovelJson(novel);toast.success('Backup downloaded.');}}>Export JSON backup</button><button className={button+' w-full'} disabled={working} onClick={()=>{if(importReady)backupInput.current?.click();else void run(async()=>{await prepareWebImport(null);setImportReady(true);});}}><Upload className="h-3.5 w-3.5"/>{importReady?'Choose JSON backup':'Import into library'}</button><input ref={backupInput} disabled={working} type="file" className="sr-only" aria-label="Import JSON backup" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void run(async()=>{await importWebProject(file,null);setImportReady(false);onOpenChange(false);toast.success('Project imported.');});}}/></div></section>}
         </div>

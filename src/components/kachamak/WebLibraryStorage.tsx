@@ -72,7 +72,7 @@ function StorageActions({ email, active }: { email: string; active: string | nul
     }
   };
   const busy = action !== '';
-  const buttonClass = 'rounded border border-white/20 px-3 py-2 disabled:opacity-50';
+  const buttonClass = 'rounded-full border border-border bg-card px-3 py-1.5 hover:bg-muted disabled:opacity-50';
   return <>
     <p className="break-words text-sm text-muted-foreground">Signed in as {email}</p>
     <p className="text-sm">Your collections, projects, notes and attachments are saved privately to this account. Preview and browser use the same library.</p>
