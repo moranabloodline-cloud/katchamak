@@ -97,7 +97,7 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
     onOpenChange(next);
   }}>
     <DialogTrigger asChild>{trigger}</DialogTrigger>
-    <DialogContent aria-describedby={undefined} className="draftopus-settings flex h-[min(36rem,calc(100dvh-2rem))] max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden rounded-xl border-border bg-background p-0 font-sans text-foreground shadow-2xl sm:max-w-[44rem]">
+    <DialogContent placement="right" aria-describedby={undefined} className="draftopus-settings flex max-w-[65rem] flex-col overflow-hidden border-border bg-background font-sans text-foreground sm:w-[min(94vw,65rem)] sm:rounded-l-xl">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-[var(--settings-header)] px-4 pr-12">
         <img src="/draftopus-logo.png" alt="" width={19} height={19} className="size-[19px] object-contain"/>
         <DialogTitle className="text-sm">Settings</DialogTitle>
@@ -113,7 +113,7 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
             {projectSection!=='hidden'&&<h2 className={heading}>{tab==='project'?'Project settings':'Backups & export'}</h2>}
             {open && <ProjectSettings key={activeBook} open={open} onOpenChange={onOpenChange} section={projectSection} onBusyChange={setProjectBusy}/>}
             {account&&<>
-              {tab==='profile'&&<section aria-labelledby="personal-details-title">
+              {tab==='profile'&&<section aria-labelledby="personal-details-title" className="mx-auto max-w-[28rem]">
                 <h2 id="personal-details-title" className="text-base font-semibold">Personal details</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">Manage your profile and author identity.</p>
                 <form className="mt-3 rounded-xl border border-border bg-card/60 p-3 text-xs" onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
