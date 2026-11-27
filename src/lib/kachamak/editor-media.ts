@@ -36,8 +36,11 @@ function copiedImageCounter(link: HTMLAnchorElement) {
   const counter=link.nextElementSibling;
   if (counter?.tagName!=='DIV' || counter.nextElementSibling ||
     counter.childElementCount || !/^\d{1,3}$/.test(counter.textContent?.trim() ?? '')) return;
-  const nextCard=link.parentElement?.parentElement?.nextElementSibling;
-  if (nextCard?.querySelector('a[href^="'+chatGptPicturePrefix+'"]')) return counter as HTMLDivElement;
+  const card=link.parentElement?.parentElement;
+  const photoLink='a[href^="'+chatGptPicturePrefix+'"]';
+  if (card?.previousElementSibling?.querySelector(photoLink) || card?.nextElementSibling?.querySelector(photoLink)) {
+    return counter as HTMLDivElement;
+  }
 }
 
 function findImageBlock(link: HTMLAnchorElement, root: ParentNode, counter?: HTMLElement) {
