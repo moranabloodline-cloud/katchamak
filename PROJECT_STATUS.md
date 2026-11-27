@@ -1,3 +1,5 @@
+> **2026-11-27 — Naslovi Timeline kartica.** Naslov je ponovo poravnat uz donju levu ivicu kartice, bez prateće ikonice.
+
 > **2026-11-27 — Dimenzije tabela u uređivaču.** Tabele se podrazumevano prilagođavaju sadržaju. Desna ivica ćelije podešava širinu kolone, a donja visinu reda.
 
 > **2026-11-27 — Providna pozadina lepljenih grafikona.** Pri lepljenju PNG kopije grafikona uklanja se bela podloga oko grafikona i u otvoru prstenastog grafikona.
@@ -810,6 +812,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Timeline kartice prikazuju naslov u donjem levom uglu i koriste postojeća podešavanja za prikaz datuma i sinopsisa.
 - **2026-11-27.** Povlačenje ivice prikazuje vodič i upisuje dimenziju po otpuštanju. AutoFit to contents vraća kolone na prirodnu širinu teksta.
 - **2026-11-27.** PNG kopija sa oznakom Chart i neprekinutom belom pozadinom dobija providnost pri uvozu. Boje grafikona i izdvojeni beli detalji čuvaju se u slici u Gallery.
 - **2026-11-27.** Vraćena je verzija 510 nakon prijave da poslednja izmena lepljenja nije rešila prikaz slika i da se tabele više ne prikazuju.
