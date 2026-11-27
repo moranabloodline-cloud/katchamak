@@ -2,11 +2,10 @@
 import DOMPurify from 'dompurify';
 import {repairListWrappers} from './editor-lists';
 import {tableFormatting} from './editor-table-format';
-import {finishPastedEditorialLayout, pastedEditorialFormat, pastedLayoutAttributes, pastedProgress, transferPastedColumnWidths} from './paste-layout';
+import {finishPastedEditorialLayout, formatPastedReports, pastedDocumentAttribute, pastedEditorialFormat, pastedLayoutAttributes, pastedProgress, transferPastedColumnWidths} from './paste-layout';
 
 export type PasteMode = 'rich' | 'match' | 'plain';
 export const pasteMediaAttribute = 'data-draftopus-paste-media';
-export const pastedDocumentAttribute = 'data-draftopus-paste';
 type PrepareMedia = (element: Element) => Node | null;
 
 // Shared emphasis and whitespace rules for both formatted modes.
@@ -203,6 +202,7 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
       container.append(...root.childNodes);
       root.append(container);
     }
+    formatPastedReports(root);
   }
   return root.innerHTML.trim() || plainTextContent(text);
 }

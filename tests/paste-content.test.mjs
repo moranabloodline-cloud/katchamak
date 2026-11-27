@@ -110,4 +110,37 @@ const pastedAddress=await prepareEditorClipboard({html:'',text:imageLink,markdow
 assert.match(pastedAddress.html,/data-draftopus-media="linked"/);
 const plainAddress=await prepareEditorClipboard({html:'',text:imageLink,markdown:'',files:[]},'plain',[],plain);
 assert.equal(plainAddress.html,imageLink);
+const {formatPastedReports}=await import('../src/lib/kachamak/paste-layout.ts');
+const sampleMetrics='<div><div><span>Market average</span><h1><strong>€2,239</strong></h1></div>'+
+  '<div><span>Available homes</span><h1><strong>2,795</strong></h1><span>Reported this month</span></div></div>';
+const rentRows=[['North','€2,563','94.9259%'],['East','€2,343','86.7778%'],['South','€2,268','84%']];
+const rentalChart=keepBars=>'<div>'+rentRows.map(([name,value,width])=>'<div><div><p>'+name+
+  '</p><div></div><p>'+value+'</p></div>'+(keepBars?'<div style="height:13px"><div style="height:13px;width:'+width+
+  ';background-color:rgb(67,135,101)"></div></div>':'')+'</div>').join('')+'</div>';
+const photoAndText='<div><div><a href="'+imageLink+'">Photo source</a></div>'+
+  '<div><p><span><strong>Townhouses</strong></span></p><p>Buildings along the street.</p></div></div>';
+const reportHead='<h3>Rental market</h3>'+sampleMetrics+'<span>Report note.</span><p><strong>Market comparison</strong></p>';
+const chartWidths=()=>Array.from(root.querySelectorAll('[data-draftopus-layout="bar-track"] > div')).map(bar=>bar.style.width);
+root.innerHTML=preparePastedContent(reportHead+rentalChart(true)+photoAndText,'','rich');
+assert.equal(root.querySelector('[data-draftopus-layout="grid"]').getAttribute('data-draftopus-columns'),'2');
+assert.equal(root.querySelectorAll('[data-draftopus-layout="metric"]').length,2);
+assert.deepEqual(chartWidths(),rentRows.map(row=>row[2]),'Source widths survive a formatted paste');
+assert.ok(root.querySelector('[data-draftopus-layout="photo-row"] a'));
+const formattedReport=root.innerHTML;
+root.innerHTML=preparePastedContent(formattedReport,'','rich');
+assert.deepEqual(chartWidths(),rentRows.map(row=>row[2]),'Copying within Draftopus preserves the original scale');
+root.innerHTML='<div data-draftopus-paste>'+reportHead+rentalChart(false).replaceAll('<div></div>','')+photoAndText+'</div>';
+const legacyText=indexText(root).text;
+formatPastedReports(root);
+assert.deepEqual(chartWidths(),rentRows.map(row=>row[2]),'Old repeated label/value rows get a comparable scale');
+assert.equal(indexText(root).text,legacyText,'Reconstructing a report leaves its text and link coordinates intact');
+assert.ok(root.querySelector('[data-draftopus-layout="photo-row"]'));
+const restoredReport=root.innerHTML;
+formatPastedReports(root);
+assert.equal(root.innerHTML,restoredReport,'Restoration is stable across repeated opening');
+root.innerHTML=preparePastedContent(reportHead+rentalChart(true),'','match');
+assert.doesNotMatch(root.innerHTML,/data-draftopus-layout/);
+root.innerHTML='<div data-draftopus-paste><p>Ordinary notes</p>'+rentalChart(false).replaceAll('<div></div>','')+'</div>';
+formatPastedReports(root);
+assert.equal(chartWidths().length,0,'Ordinary repeated paragraphs stay as written');
 console.log('Paste formatting: empty lines, local typography, HTML/Word heading levels, original paragraph gaps, soft breaks, emphasis, links, tables, lists and whitespace passed.');

@@ -20,6 +20,7 @@ import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {trimWordSelection} from '@/lib/kachamak/editor-selection';
 import {wrapRootParagraphs} from '@/lib/kachamak/editor-paragraphs';
 import {formatEditorMedia} from '@/lib/kachamak/editor-media';
+import {formatPastedReports} from '@/lib/kachamak/paste-layout';
 import {captureTableCell,focusEditorRange,moveTableCaret,tableCellAt} from '@/lib/kachamak/editor-tables';
 import {EditorTableMenu,type EditorTableMenuRequest} from './EditorTableTools';
 
@@ -117,6 +118,7 @@ export function RichEditor({
       const paragraphs=wrapRootParagraphs(el);
       const repairedHtml=repaired||paragraphs ? storedEditorHtml(el.innerHTML) : undefined;
       formatEditorMedia(el);
+      formatPastedReports(el);
       paintImages(el);
       lastHtml.current = storedEditorHtml(el.innerHTML);
       history.current.reset(el);

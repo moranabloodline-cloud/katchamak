@@ -1,3 +1,5 @@
+> **2026-11-27 — Raspored lepljenih izveštaja.** Uređivač raspoređuje pokazatelje u kolone, čuva horizontalne trake i stavlja pripadajući opis pored fotografije. Prikaz se prilagođava širini panela.
+
 > **2026-11-27 — Slike iz lepljenih odgovora.** Prepoznate samostalne adrese slika prikazuju fotografiju u okviru. Oznaka vodi na priloženi izvor, a ista pravila važe za ranije sačuvane beleške.
 
 > **2026-11-27 — Uvoz formatiranog sadržaja.** Ctrl+V čuva strukturu naslova, tabela, kartica, kolona i dostupnih vizuala. Paste options nudi tri režima, a Ctrl+Shift+V lepi običan tekst. Uvezene slike su u Gallery, a spoljni vizuali koji dozvoljavaju samo prikaz ostaju povezani sa izvorom.
@@ -798,6 +800,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Pri lepljenju i otvaranju izveštaja pokazatelji se prikazuju u kolonama, grafikoni kao trake sa nazivima i vrednostima, a fotografije sa opisima u istom redu. Ako je prethodni clipboard sačuvao samo vrednosti grafikona, dužine traka se rekonstruišu na zajedničkoj skali. Promena prikaza stare beleške pri otvaranju ne pokreće upis.
 - **2026-11-27.** Lepljenje celog odgovora prikazuje samostalne direktne adrese fotografija kao slike u belešci. Okvir i oznaka izvora prikazuju se u uređivaču i čitanju. Ranije beleške dobijaju isti prikaz. Podudarna susedna kopija iz Gallery koristi se u okviru, a preneti brojači grupa slika izostavljaju se iz prikaza.
 
 - **2026-11-27.** Uređivač uvozi podržani HTML, Markdown i slike sa clipboarda. Raspored se prilagođava širini aktivnog panela. Izveštaj o Irskoj sačuvao je 30 tabela i 16 kartica posle ponovnog otvaranja. Lokalna istorija vraća lepljenje, a slike ostaju dostupne u Gallery. JSON prenosi bibliotečke slike uz projekat, Markdown i HTML izvoz čuvaju tabele i vizuale.
