@@ -1,6 +1,7 @@
 import {directImageLink} from './editor-media';
 import {pastedSourceStyle, sourceAspectRatio, sourceFlowAttribute, sourceLength, sourceObjectPosition, sourceRadius, sourceSizeAttribute} from './paste-source-layout';
 import {sourceThemeAttribute} from './paste-source-hints';
+import {applyPastedTableStyle, copiedTableStyle, pastedTableStyleAttribute} from './paste-table-style';
 
 const layoutAttribute = 'data-draftopus-layout';
 const columnsAttribute = 'data-draftopus-columns';
@@ -9,7 +10,13 @@ export const pastedDocumentAttribute = 'data-draftopus-paste';
 
 export const pastedImageFormatAttribute = 'data-draftopus-image-format';
 export const pastedLayoutAttributes = [layoutAttribute, columnsAttribute, sourceFlowAttribute, sourceSizeAttribute,
-  sourceThemeAttribute, pastedImageFormatAttribute, 'data-editor-line-height', 'width', 'height', 'scope', 'alt'];
+  sourceThemeAttribute, pastedImageFormatAttribute, pastedTableStyleAttribute, 'data-editor-line-height',
+  'width', 'height', 'scope', 'alt', 'border', 'cellpadding', 'cellspacing'];
+
+function tableLengthAttribute(element: Element | null, name: string) {
+  const value=element?.getAttribute(name) ?? '';
+  return /^\d{1,2}$/.test(value) && Number(value)<=24 ? value : '';
+}
 
 export function pastedImageSize(element: Element, declarations: string) {
   const style=element.ownerDocument.createElement('span').style;
@@ -47,6 +54,8 @@ function layoutOf(element: HTMLElement, source: CSSStyleDeclaration, style: CSSS
   const component = element.getAttribute('data-d-component');
   const children = Array.from(element.children).filter(child => !child.matches('style,[hidden],[aria-hidden="true"]'));
   if (component === 'grid-item') return { kind: 'card' };
+  if ((component === 'table' || element.hasAttribute('data-d-table-viewport')) &&
+      element.querySelector(':scope > table')) return { kind: 'table' };
   if (component === 'caption' && !element.closest('p,th,td')) return { kind: 'caption' };
   if (component === 'badge' && element.closest('[data-d-component="popover-trigger"]')) return { kind: 'citation' };
   if (element.matches('aside,[role="note"],[role="alert"]')) return { kind: 'callout' };
@@ -65,6 +74,8 @@ export function pastedEditorialFormat(element: HTMLElement, declarations: string
   const style = element.ownerDocument.createElement('span').style;
   source.cssText = declarations.replace(/^\s*;+/, '').trim();
   const {attributes,flow} = pastedSourceStyle(element,source,style);
+  const tableStyle=copiedTableStyle(element);
+  if (tableStyle) attributes[pastedTableStyleAttribute]=tableStyle;
   const layout = layoutOf(element, source, style, flow==='grid');
   if (layout) {
     attributes[layoutAttribute] = layout.kind;
@@ -72,12 +83,33 @@ export function pastedEditorialFormat(element: HTMLElement, declarations: string
   }
   if (['left', 'center', 'right', 'justify', 'start', 'end'].includes(source.textAlign)) style.textAlign = source.textAlign;
   if (element.matches('table,td,th') || layout?.kind === 'bar') {
-    style.width = sourceLength(source.width || element.getAttribute('width')?.replace(/^\d+$/, '$&px') || '', 2400, 100);
+    const width=source.width || element.getAttribute('width')?.replace(/^\d+$/, '$&px') || '';
+    style.width = width==='auto' ? width : sourceLength(width, 2400, 100);
+  }
+  if (element.matches('table')) {
+    if (['collapse','separate'].includes(source.borderCollapse)) style.borderCollapse=source.borderCollapse;
+    if (['auto','fixed'].includes(source.tableLayout)) style.tableLayout=source.tableLayout;
+    const legacySpacing=tableLengthAttribute(element,'cellspacing');
+    const spacing=source.borderSpacing.trim().split(/\s+/).map(value=>sourceLength(value,64));
+    if (spacing.length<=2 && spacing.every(Boolean)) style.borderSpacing=spacing.join(' ');
+    else if (legacySpacing) style.borderSpacing=legacySpacing+'px';
+    for (const name of ['border','cellpadding','cellspacing']) {
+      const value=tableLengthAttribute(element,name);
+      if (value) attributes[name]=value;
+    }
+    if (Number(attributes.border) > 0 && !source.borderTopStyle && !source.borderRightStyle &&
+        !source.borderBottomStyle && !source.borderLeftStyle) {
+      style.border=attributes.border+'px outset currentColor';
+    }
   }
   if (element.matches('td,th')) {
-    for (const side of ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'] as const) {
-      style[side] = sourceLength(source[side], 24);
+    const padding=tableLengthAttribute(element.closest('table'),'cellpadding');
+    if (padding && !style.paddingInlineStart && !style.paddingInlineEnd && !style.paddingBlockStart && !style.paddingBlockEnd) {
+      for (const side of ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'] as const) {
+        if (!style[side]) style[side]=padding+'px';
+      }
     }
+    if (['top','middle','bottom','baseline'].includes(source.verticalAlign)) style.verticalAlign=source.verticalAlign;
   }
   if (element.matches('th')) {
     const scope = element.getAttribute('scope');
@@ -124,6 +156,7 @@ export function transferPastedColumnWidths(root: ParentNode) {
 
 export function finishPastedEditorialLayout(root: ParentNode) {
   for (const table of root.querySelectorAll('table')) {
+    applyPastedTableStyle(table);
     if (table.parentElement?.getAttribute(layoutAttribute) === 'table' || table.closest('td,th')) continue;
     const container = table.ownerDocument.createElement('div');
     container.setAttribute(layoutAttribute, 'table');

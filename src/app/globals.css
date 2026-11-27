@@ -443,6 +443,7 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 }
 .kachamak-editor [data-draftopus-flow] { min-inline-size: 0; max-inline-size: 100%; }
 .kachamak-editor [data-draftopus-flow="grid"] {
+  --draftopus-paste-tracks: initial;
   display: grid;
   grid-template-columns: var(--draftopus-paste-tracks, repeat(var(--pasted-columns, 2), minmax(0, 1fr)));
   gap: .65em;
@@ -468,11 +469,57 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 .kachamak-editor [data-draftopus-layout="bar"] { display: block; max-inline-size: 100%; }
 .kachamak-editor [data-draftopus-size] { font-size: var(--draftopus-paste-size) !important; }
 @container (width < 23rem) {
-  .kachamak-editor [data-draftopus-flow="grid"] { grid-template-columns: minmax(0, 1fr); }
-  .kachamak-editor [data-draftopus-flow="grid"] > * { grid-column: auto !important; grid-row: auto !important; }
+  .kachamak-editor [data-draftopus-flow="grid"] { grid-template-columns: var(--draftopus-paste-tracks, minmax(0, 1fr)); }
+  .kachamak-editor [data-draftopus-flow="grid"]:not([style*="--draftopus-paste-tracks:"]) > * {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
 }
 .kachamak-editor [data-draftopus-layout="table"] { max-width: 100%; overflow-x: auto; margin-block: .75em 1em; }
 .kachamak-editor [data-draftopus-layout="table"] > table { margin-block: 0; }
+.kachamak-editor table[data-draftopus-table-style="source"] {
+  width: auto;
+  border-collapse: separate;
+  border-spacing: 2px;
+}
+.kachamak-editor table[data-draftopus-table-style] > :is(thead,tbody,tfoot) > tr > th {
+  background: transparent;
+  font-weight: bold;
+}
+.kachamak-editor table[data-draftopus-table-style] > :is(thead,tbody,tfoot) > tr > :is(td,th) {
+  min-width: 0;
+  padding: 1px;
+  vertical-align: middle;
+}
+.kachamak-editor table[data-draftopus-table-style]:not([border]:not([border="0"]))
+  > :is(thead,tbody,tfoot) > tr > :is(td,th) { border: 0; }
+.kachamak-editor table[data-draftopus-table-style="source"][border]:not([border="0"])
+  > :is(thead,tbody,tfoot) > tr > :is(td,th) { border: 1px inset; }
+.kachamak-editor table[data-draftopus-table-style="rows"] {
+  border-collapse: collapse;
+  line-height: 20px;
+}
+.kachamak-editor table[data-draftopus-table-style="rows"]:not([data-draftopus-size]) { font-size: 14px !important; }
+.kachamak-editor table[data-draftopus-table-style="rows"] > :is(thead,tbody,tfoot) > tr > :is(td,th) {
+  padding: 8px 8px 8px 0;
+  vertical-align: top;
+  text-align: start;
+}
+.kachamak-editor table[data-draftopus-table-style="rows"] > :is(thead,tbody,tfoot) > tr > th { font-weight: 600; }
+.kachamak-editor table[data-draftopus-table-style="rows"] > :is(thead,tbody,tfoot) > tr:not(:last-child),
+.kachamak-editor table[data-draftopus-table-style="rows"] > :is(thead,tbody,tfoot):not(:last-child) > tr:last-child {
+  border-bottom: 1px solid color-mix(in srgb, currentColor 6%, transparent);
+}
+.kachamak-editor table[data-draftopus-table-style="source"][data-editor-table-borderless="false"]
+  > :is(thead,tbody,tfoot) > tr > :is(td,th) {
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent) !important;
+}
+.kachamak-editor table[data-draftopus-table-style][data-editor-table-borderless="true"],
+.kachamak-editor table[data-draftopus-table-style][data-editor-table-borderless="true"] > :is(thead,tbody,tfoot),
+.kachamak-editor table[data-draftopus-table-style][data-editor-table-borderless="true"] > :is(thead,tbody,tfoot) > tr,
+.kachamak-editor table[data-draftopus-table-style][data-editor-table-borderless="true"] > :is(thead,tbody,tfoot) > tr > :is(td,th) {
+  border-color: transparent !important;
+}
 .kachamak-editor [data-draftopus-paste] pre { overflow-x: auto; padding: .7em; white-space: pre; }
 .kachamak-editor [data-draftopus-paste] blockquote { border-inline-start: 3px solid var(--border); padding-inline-start: .9em; }
 .kachamak-editor :is([data-draftopus-layout="caption"],figcaption) {
@@ -597,7 +644,7 @@ html[data-theme="light"] .kachamak-editor { --editor-web-link: #1d4ed8; }
 [data-document-page] .kachamak-editor { text-align: var(--page-align, left); }
 [data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"],
 [data-document-page][data-colorize-annotations="false"] .kachamak-editor a[href^="#note/"] * { color: inherit !important; -webkit-text-fill-color: inherit !important; text-decoration-color: currentColor !important; }
-[data-document-page][data-page-leading] .kachamak-editor :is(p,div,h1,h2,h3,h4,h5,h6,blockquote,li,td,th,pre):not([data-editor-line-height]) { line-height: var(--page-leading) !important; }
+[data-document-page][data-page-leading] .kachamak-editor :is(p,div,h1,h2,h3,h4,h5,h6,blockquote,li,td,th,pre):not([data-editor-line-height], [data-draftopus-paste] *) { line-height: var(--page-leading) !important; }
 .kachamak-editor li[data-editor-line-height] > :is(ul,ol) { line-height: var(--page-leading); }
 [data-document-page][data-page-leading] .kachamak-editor :is(span,font,a,b,i,strong,em,u,s):not([data-editor-typography],[data-editor-spacing-flow],[data-editor-spacing-run]) { line-height: inherit !important; }
 /* The surrounding text keeps the original leading. Each rendered line takes

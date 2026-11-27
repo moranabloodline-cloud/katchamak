@@ -68,6 +68,50 @@ root.innerHTML=preparePastedContent(editorial,'','match');
 assert.ok(root.querySelector('table')&&root.querySelector('h1'));
 assert.doesNotMatch(root.innerHTML,/data-draftopus-layout|text-align: center/);
 assert.equal(preparePastedContent(editorial,'<heading>','plain'),'&lt;heading&gt;');
+
+const exportedTable='<style>.exported{border-collapse:collapse;width:82%}.exported tbody tr:not(:last-child)'+
+  '{border-bottom:2px solid #497773}.exported th{background-color:transparent;padding:6px 10px}'+
+  '.exported td:nth-child(2){border-inline-start:1px dashed #333;vertical-align:bottom}</style>'+
+  '<table class="exported"><thead><tr><th>Period</th><th>Total</th></tr></thead>'+
+  '<tbody><tr><td>First</td><td>12</td></tr><tr><td>Last</td><td>18</td></tr></tbody></table>';
+root.innerHTML=preparePastedContent(exportedTable,'','rich');
+const table=()=>root.querySelector('table');
+assert.equal(table().getAttribute('data-draftopus-table-style'),'source');
+assert.equal(table().style.borderCollapse,'collapse');
+assert.equal(table().style.width,'82%');
+assert.equal(root.querySelector('th').style.padding,'6px 10px');
+assert.equal(root.querySelector('th').style.backgroundColor,'transparent');
+assert.equal(root.querySelector('tbody tr').style.borderBottomWidth,'2px');
+assert.equal(root.querySelector('tbody tr:last-child').style.borderBottomStyle,'');
+assert.equal(root.querySelector('td:nth-child(2)').style.borderInlineStartWidth,'1px');
+assert.equal(root.querySelector('td:nth-child(2)').style.verticalAlign,'bottom');
+root.innerHTML=preparePastedContent(root.innerHTML,'','rich');
+assert.equal(root.querySelector('tbody tr').style.borderBottomStyle,'solid');
+assert.equal(root.querySelector('td:nth-child(2)').style.borderInlineStartStyle,'dashed');
+
+root.innerHTML=preparePastedContent('<table border="2" cellpadding="7" cellspacing="4"><tr><td>Legacy</td></tr></table>','','rich');
+assert.equal(table().style.borderTopWidth,'2px');
+assert.equal(table().style.borderSpacing,'4px');
+assert.equal(root.querySelector('td').style.padding,'7px');
+
+root.innerHTML=preparePastedContent('<div data-d-component="table"><div data-d-table-viewport="true">'+
+  '<table data-d-dividers><tr><th>Measures</th></tr>'+
+  '<tr><td><p data-d-component="text" data-d-text-flow>Growth</p></td></tr></table></div></div>','','rich');
+assert.equal(table().getAttribute('data-draftopus-table-style'),'rows');
+assert.equal(table().parentElement.getAttribute('data-draftopus-layout'),'table');
+assert.equal(root.querySelector('td p').style.lineHeight,'20px');
+const {tableProperties,setTableProperties}=await import('../src/lib/kachamak/editor-table-format.ts');
+assert.equal(tableProperties(table()).borders,true);
+root.innerHTML=preparePastedContent('<table data-d-dividers><tr><td>Copied table only</td></tr></table>','','rich');
+assert.equal(table().getAttribute('data-draftopus-table-style'),'rows');
+root.innerHTML=preparePastedContent('<table><tr><td>Plain table</td></tr></table>','','rich');
+const plainTableFormat=tableProperties(table());
+assert.equal(plainTableFormat.fit,'contents');
+assert.equal(plainTableFormat.borders,false);
+setTableProperties(table(),{...plainTableFormat,borders:true});
+assert.equal(tableProperties(table()).borders,true);
+assert.equal(table().getAttribute('data-editor-table-borderless'),'false');
+
 const {formatEditorMedia,formatEditorMediaHtml}=await import('../src/lib/kachamak/editor-media.ts');
 const {indexText}=await import('../src/lib/kachamak/note-links.ts');
 const {prepareEditorClipboard}=await import('../src/lib/kachamak/editor-clipboard.ts');
@@ -143,16 +187,20 @@ assert.doesNotMatch(root.innerHTML,/data-draftopus-layout/);
 root.innerHTML='<div data-draftopus-paste><p>Ordinary notes</p>'+rentalChart(false).replaceAll('<div></div>','')+'</div>';
 formatPastedReports(root);
 assert.equal(chartWidths().length,0,'Ordinary repeated paragraphs stay as written');
-const webLayout='<style>.catalog{display:grid;grid-template-columns:minmax(0,1fr) 2fr;gap:12px}</style>'+
+const webLayout='<style>.catalog{display:grid;grid-template-columns:minmax(0,1fr) 2fr;grid-auto-rows:minmax(40px, auto);gap:12px}</style>'+
   '<section class="catalog"><div style="grid-column:span 2;padding:8px;border:1px solid #444">Overview</div>'+
   '<div style="display:flex;flex-direction:row-reverse;justify-content:space-between;column-gap:10px">'+
   '<div style="flex:0 1 30%;max-width:126px;aspect-ratio:4 / 3;background:#556677;position:fixed">Left</div>'+
   '<div style="display:flex;flex-direction:column;gap:5px"><p>Right <kbd>R</kbd></p><dl><dt>Harbour</dt><dd>Location</dd></dl></div></div>'+
-  '<details open><summary>Details</summary><p>More information</p></details></section>';
+  '<details open><summary>Details</summary><p>More information</p></details></section>'+
+  '<article style="column-count:2;column-gap:19px"><p>Editorial columns</p></article>';
 root.innerHTML=preparePastedContent(webLayout,'','rich');
 const webGrid=root.querySelector('[data-draftopus-flow="grid"]');
 assert.equal(webGrid.style.getPropertyValue('--draftopus-paste-tracks'),'minmax(0px, 1fr) 2fr');
 assert.equal(webGrid.style.columnGap,'12px');
+assert.equal(webGrid.style.gridAutoRows,'minmax(40px, auto)');
+assert.equal(root.querySelector('article').style.columnCount,'2');
+assert.equal(root.querySelector('article').style.columnGap,'19px');
 assert.equal(webGrid.firstElementChild.style.gridColumn,'span 2');
 const webRow=webGrid.querySelector('[data-draftopus-flow="row"]');
 assert.equal(webRow.style.flexDirection,'row-reverse');

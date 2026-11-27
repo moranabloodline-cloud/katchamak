@@ -10,6 +10,7 @@ const namedSizes: Record<string, string> = {
   lg: '1.075em', xl: '1.25em', '2xl': '1.5em', '3xl': '1.85em',
 };
 const namedWeights: Record<string, string> = {normal:'400',medium:'500',semibold:'600',bold:'700'};
+const borderLines = ['none','hidden','solid','dashed','dotted','double','groove','ridge','inset','outset'];
 const legacyFontSizes = ['','10px','13px','16px','18px','24px','32px','48px'];
 const palette: Record<string, string> = {
   'color-text':'text', 'color-text-prose':'text', 'color-text-primary':'text',
@@ -118,17 +119,27 @@ function boxStyle(source: CSSStyleDeclaration, style: CSSStyleDeclaration) {
     style[property] = source[property]==='auto' ? 'auto' : signedLength(source[property],96,30);
   }
   if (style.aspectRatio && source.overflow==='hidden') style.overflow='hidden';
-  if (['solid','dashed','dotted','double'].includes(source.borderStyle) && sourceLength(source.borderWidth, 8)) {
-    style.borderStyle = source.borderStyle;
-    style.borderWidth = source.borderWidth;
-    style.borderColor = sourceColor(source.borderColor) || 'var(--border)';
-  } else {
-    for (const side of ['Top','Right','Bottom','Left'] as const) {
-      const width=sourceLength(source[`border${side}Width`],8);
-      const line=source[`border${side}Style`];
-      if (width && ['solid','dashed','dotted','double'].includes(line)) {
-        style[`border${side}`]=width+' '+line+' '+(sourceColor(source[`border${side}Color`]) || 'currentColor');
-      }
+  for (const side of ['Top','Right','Bottom','Left','BlockStart','BlockEnd','InlineStart','InlineEnd'] as const) {
+    const property = `border${side}` as const;
+    const sourceWidth = source[`${property}Width`];
+    const width = /^(thin|medium|thick)$/.test(sourceWidth) ? sourceWidth : sourceLength(sourceWidth, 24);
+    const line = source[`${property}Style`];
+    const color = sourceColor(source[`${property}Color`]);
+    if (width) style[`${property}Width`] = width;
+    if (borderLines.includes(line)) style[`${property}Style`] = line;
+    if (color) style[`${property}Color`] = color;
+  }
+}
+
+function copyColumns(source: CSSStyleDeclaration, style: CSSStyleDeclaration) {
+  const count = Number(source.columnCount);
+  const width = sourceLength(source.columnWidth, 1200);
+  if (Number.isInteger(count) && count >= 1 && count <= 12) style.columnCount = String(count);
+  if (width) style.columnWidth = width;
+  if (style.columnCount || style.columnWidth) {
+    style.columnGap = spacing(source.columnGap, 96);
+    if (source.columnFill === 'auto' || source.columnFill === 'balance') {
+      style.columnFill = source.columnFill;
     }
   }
 }
@@ -142,6 +153,10 @@ export function pastedSourceStyle(element: HTMLElement, source: CSSStyleDeclarat
   if (flow === 'grid') {
     const columns = tracks(source.getPropertyValue(sourceTracks).trim() || source.gridTemplateColumns);
     if (columns) style.setProperty(sourceTracks, columns);
+    style.gridTemplateRows = tracks(source.gridTemplateRows);
+    style.gridAutoColumns = tracks(source.gridAutoColumns);
+    style.gridAutoRows = tracks(source.gridAutoRows);
+    if (/^(?:row|column)(?: dense)?$|^dense$/.test(source.gridAutoFlow)) style.gridAutoFlow = source.gridAutoFlow;
   }
   if (flow && flow !== 'spacer') {
     style.columnGap = spacing(source.columnGap || source.gap, 64);
@@ -153,10 +168,11 @@ export function pastedSourceStyle(element: HTMLElement, source: CSSStyleDeclarat
       style.flexDirection = source.flexDirection;
     }
   }
-  if (element.matches(blockTags+',p,span,h1,h2,h3,h4,h5,h6,blockquote,figcaption,table,td,th,pre,li,hr') ||
+  if (element.matches(blockTags+',p,span,h1,h2,h3,h4,h5,h6,blockquote,figcaption,table,thead,tbody,tfoot,tr,td,th,pre,li,hr') ||
     element.matches('[role="separator"],[data-d-component="divider"]')) {
     boxStyle(source, style);
   }
+  if (!flow && element.matches(blockTags)) copyColumns(source, style);
   // Preserve item sizing and placement as well as the container's layout.
   for (const key of ['flexGrow','flexShrink'] as const) {
     if (source[key] && Number(source[key]) >= 0 && Number(source[key]) <= 12) style[key] = source[key];
@@ -192,7 +208,9 @@ export function pastedSourceStyle(element: HTMLElement, source: CSSStyleDeclarat
     attributes['data-editor-line-height']='';
   }
   const background=sourceColor(source.backgroundColor || element.getAttribute('bgcolor') || '');
-  if (background && background!=='transparent') style.backgroundColor=background;
+  if (background && (background!=='transparent' || !source.backgroundImage || source.backgroundImage==='none')) {
+    style.backgroundColor=background;
+  }
   style.color=sourceColor(source.color || (htmlFont ? element.getAttribute('color') ?? '' : '')) || hints?.color || '';
   style.textDecorationColor=sourceColor(source.textDecorationColor);
   if (['solid','double','dotted','dashed','wavy'].includes(source.textDecorationStyle)) style.textDecorationStyle=source.textDecorationStyle;
