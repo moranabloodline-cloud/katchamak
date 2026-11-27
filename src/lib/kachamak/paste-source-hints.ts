@@ -1,5 +1,3 @@
-import {pastedTableStyleAttribute} from './paste-table-style';
-
 export const sourceThemeAttribute = 'data-draftopus-source-theme';
 
 const systemText = '-apple-system-body, ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, "Segoe UI Emoji", "Segoe UI Symbol", sans-serif';
@@ -30,10 +28,6 @@ export function copiedTextHints(element: HTMLElement) {
   if (caption) {
     size=Object.hasOwn(captionSizes,sizeName) ? captionSizes[sizeName] : 12;
     leading=size*1.3;
-  }
-  if (!sizeName && element.closest('td,th')?.closest('[data-d-component="table"],['+pastedTableStyleAttribute+'="rows"]')) {
-    size=14;
-    leading=20;
   }
   const previous=element.previousElementSibling;
   const card=element.parentElement?.matches('[data-d-component="grid-item"],[data-draftopus-layout="card"]');

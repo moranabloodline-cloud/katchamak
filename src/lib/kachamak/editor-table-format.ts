@@ -1,5 +1,3 @@
-import {pastedTableStyleAttribute} from './paste-table-style';
-
 export const tableFits = ['contents', 'page', 'fixed'] as const;
 export const tableAlignments = ['left', 'center', 'right'] as const;
 export const cellVerticalAlignments = ['top', 'middle', 'bottom'] as const;
@@ -15,27 +13,13 @@ function widthPercentage(value: string) {
   if (width >= 1 && width <= 100) return width;
 }
 
-function containsTableBorders(table: HTMLTableElement) {
-  if (table.getAttribute(pastedTableStyleAttribute) !== 'source' || Number(table.getAttribute('border')) > 0) return true;
-  const elements = [table, ...table.querySelectorAll<HTMLElement>(
-    ':scope > :is(thead,tbody,tfoot)[style], :scope > :is(thead,tbody,tfoot) > tr[style], ' +
-    ':scope > :is(thead,tbody,tfoot) > tr > :is(td,th)[style]'
-  )];
-  return elements.some(({style}) => ['top','right','bottom','left','block-start','block-end','inline-start','inline-end'].some(side => {
-    const line = style.getPropertyValue('border-'+side+'-style');
-    return line && line !== 'none' && line !== 'hidden' && style.getPropertyValue('border-'+side+'-width') !== '0px';
-  }));
-}
-
 export function tableProperties(table: HTMLTableElement): TableProperties {
   const {style} = table;
-  const fitContents = style.width === 'auto' || !style.width && table.getAttribute(pastedTableStyleAttribute) === 'source';
-  const borderless = table.getAttribute('data-editor-table-borderless');
   return {
-    fit: fitContents ? 'contents' : style.tableLayout === 'fixed' ? 'fixed' : 'page',
+    fit: style.width === 'auto' ? 'contents' : style.tableLayout === 'fixed' ? 'fixed' : 'page',
     width: widthPercentage(style.width) ?? 100,
     alignment: style.marginLeft === 'auto' ? style.marginRight === 'auto' ? 'center' : 'right' : 'left',
-    borders: borderless === null ? containsTableBorders(table) : borderless !== 'true',
+    borders: table.getAttribute('data-editor-table-borderless') !== 'true',
   };
 }
 
@@ -45,10 +29,8 @@ export function setTableProperties(table: HTMLTableElement, properties: TablePro
   table.style.tableLayout = fit === 'fixed' ? 'fixed' : 'auto';
   table.style.marginLeft = alignment === 'left' ? '0' : 'auto';
   table.style.marginRight = alignment === 'right' ? '0' : 'auto';
-  if (borders === tableProperties(table).borders) return;
-  if (!borders) table.setAttribute('data-editor-table-borderless', 'true');
-  else if (containsTableBorders(table)) table.removeAttribute('data-editor-table-borderless');
-  else table.setAttribute('data-editor-table-borderless', 'false');
+  if (borders) table.removeAttribute('data-editor-table-borderless');
+  else table.setAttribute('data-editor-table-borderless', 'true');
 }
 
 // Keep supported table formatting when the publication strips source typography.

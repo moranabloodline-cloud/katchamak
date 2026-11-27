@@ -121,15 +121,6 @@ function pasteLink(value: string) {
   return /^(?:https?:\/\/|mailto:|#)/i.test(value) ? value : value.startsWith('//') ? 'https:' + value : '';
 }
 
-function supportedClipboardSelector(selector: string) {
-  if (selector.length > 240) return false;
-  const structure = selector
-    .replace(/:(?:first|last|only)-(?:child|of-type)\b|:empty\b/gi, '')
-    .replace(/:nth-(?:last-)?(?:child|of-type)\(\s*(?:odd|even|[+-]?\d*n(?:\s*[+-]\s*\d+)?|\d+)\s*\)/gi, '')
-    .replace(/:(?:not|is|where)\(/gi, '(');
-  return !/[@:]/.test(structure);
-}
-
 export function preparePastedContent(html: string, text: string, mode: PasteMode = 'match', prepareMedia?: PrepareMedia): string {
   if (!html || mode === 'plain') return plainTextContent(text);
   // A template does not request resources from pasted img, iframe or link tags.
@@ -142,12 +133,10 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
   // Office/Docs clipboard fragments often keep paragraph spacing in class rules.
   let rules = 0;
   for(const sheet of Array.from(root.querySelectorAll('style')).slice(0,16)) {
-    const css = sheet.textContent?.slice(0,128_000).replace(/\/\*[\s\S]*?\*\//g, '') ?? '';
-    for(const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    for(const rule of sheet.textContent?.slice(0,128_000).matchAll(/([^{}]+)\{([^{}]*)\}/g) ?? []) {
       if(++rules>256)break;
-      const selector = rule[1].trim();
-      if(!supportedClipboardSelector(selector) || rule[2].length>4000)continue;
-      try { for(const el of root.querySelectorAll(selector)) inherited.set(el,(inherited.get(el)||'')+';'+rule[2]); } catch { /* Unsupported source selector. */ }
+      if(rule[1].length>200 || /[@:]/.test(rule[1]) || rule[2].length>4000)continue;
+      try { for(const el of root.querySelectorAll(rule[1].trim())) inherited.set(el,(inherited.get(el)||'')+';'+rule[2]); } catch { /* Unsupported source selector. */ }
     }
   }
   root.querySelectorAll('script,style,link,meta,base,iframe,object,embed,button,input,textarea,select,noscript,[hidden],[aria-hidden="true"]').forEach(el=>el.remove());

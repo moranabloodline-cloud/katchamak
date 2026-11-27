@@ -1,4 +1,4 @@
-> **2026-11-27 — Raspored i tabele pri formatiranom lepljenju.** Preuzete kolone zadržavaju svoj raspored i u uskom panelu. Uvezene tabele koriste sačuvane ivice, širine i razmake iz izvora.
+> **2026-11-27 — Vraćena obrada lepljenja iz verzije 510.** Slike i tabele se pri lepljenju ponovo obrađuju prema pravilima iz verzije 510.
 
 > **2026-11-27 — Izvorni izgled pri lepljenju.** Ctrl+V čuva dostupne boje, pozadine, fontove, veličine, prored, razmake i kadar slike. Prepoznatljive oznake teme i tipografije iz kopiranog odgovora prenose se u belešku.
 
@@ -806,7 +806,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
-- **2026-11-27.** Formatirano lepljenje zadržava preuzete CSS kolone i mrežu u uskom prikazu. Tabele čuvaju dostupne ivice redova i ćelija, boju zaglavlja i razmake. Pravila iz kopiranog fragmenta podržavaju i strukturne selektore redova i ćelija. Ako kopija sadrži samo tekst, Draftopus koristi podrazumevani prikaz dostupnog sadržaja.
+- **2026-11-27.** Vraćena je verzija 510 nakon prijave da poslednja izmena lepljenja nije rešila prikaz slika i da se tabele više ne prikazuju.
 - **2026-11-27.** Formatirano lepljenje čuva dostupne boje i pozadine, familiju i težinu fonta, prored, razmake i stilove sadržane u clipboard HTML-u. Slike prenose odnos stranica, veličinu i položaj kadra. Podržane oznake teme i teksta sačuvane su za ponovno otvaranje. Match Draftopus Style i običan tekst ostaju dostupni u meniju lepljenja.
 - **2026-11-27.** Formatirano lepljenje čuva mreže i njihove odnose kolona, tok i raspodelu elemenata u redovima, geometriju slika, razmake i semantičke HTML blokove. Sačuvani atributi rade u drugim beleškama i posle ponovnog otvaranja. Raniji HTML bez rasporeda i dalje koristi rekonstrukciju prikaza. Prepoznatljive osnove Markdowna prolaze kroz postojeći uvoz.
 - **2026-11-27.** Pri lepljenju i otvaranju izveštaja pokazatelji se prikazuju u kolonama, grafikoni kao trake sa nazivima i vrednostima, a fotografije sa opisima u istom redu. Ako je prethodni clipboard sačuvao samo vrednosti grafikona, dužine traka se rekonstruišu na zajedničkoj skali. Promena prikaza stare beleške pri otvaranju ne pokreće upis.
