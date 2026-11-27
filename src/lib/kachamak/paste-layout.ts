@@ -1,23 +1,31 @@
 import {directImageLink} from './editor-media';
-import {pastedSourceStyle, sourceFlowAttribute, sourceLength, sourceSizeAttribute} from './paste-source-layout';
+import {pastedSourceStyle, sourceAspectRatio, sourceFlowAttribute, sourceLength, sourceObjectPosition, sourceRadius, sourceSizeAttribute} from './paste-source-layout';
+import {sourceThemeAttribute} from './paste-source-hints';
 
 const layoutAttribute = 'data-draftopus-layout';
 const columnsAttribute = 'data-draftopus-columns';
 const layouts = ['grid', 'card', 'callout', 'caption', 'table', 'bar', 'metric', 'chart', 'chart-row', 'chart-label', 'bar-track', 'photo-row', 'citation', 'shape'];
 export const pastedDocumentAttribute = 'data-draftopus-paste';
 
-export const pastedLayoutAttributes = [layoutAttribute, columnsAttribute, sourceFlowAttribute, sourceSizeAttribute, 'data-editor-line-height', 'width', 'height', 'scope', 'alt'];
+export const pastedImageFormatAttribute = 'data-draftopus-image-format';
+export const pastedLayoutAttributes = [layoutAttribute, columnsAttribute, sourceFlowAttribute, sourceSizeAttribute,
+  sourceThemeAttribute, pastedImageFormatAttribute, 'data-editor-line-height', 'width', 'height', 'scope', 'alt'];
 
-export function pastedImageSize(element: Element) {
-  const style = (element as HTMLElement).style;
+export function pastedImageSize(element: Element, declarations: string) {
+  const style=element.ownerDocument.createElement('span').style;
+  style.cssText=declarations.replace(/^\s*;+/, '').trim();
   const width = Number(element.getAttribute('width'));
   const height = Number(element.getAttribute('height'));
   return {
     width: width > 0 && width <= 8192 ? Math.round(width) : undefined,
     height: height > 0 && height <= 8192 ? Math.round(height) : undefined,
     cssWidth: sourceLength(style?.width || '', 2400, 100),
+    cssHeight: sourceLength(style?.height || '', 2400, 100),
     cssMaxWidth: sourceLength(style?.maxWidth || '', 2400, 100),
-    objectFit: ['contain','cover','fill','scale-down'].includes(style?.objectFit) ? style.objectFit : '',
+    aspectRatio: sourceAspectRatio(style.aspectRatio),
+    objectFit: ['contain','cover','fill','scale-down','none'].includes(style?.objectFit) ? style.objectFit : '',
+    objectPosition: sourceObjectPosition(style.objectPosition),
+    borderRadius: sourceRadius(style.borderRadius),
     alignment: style?.float || element.getAttribute('align') || '',
   };
 }
@@ -51,7 +59,7 @@ function layoutOf(element: HTMLElement, source: CSSStyleDeclaration, style: CSSS
   }
 }
 
-/** Preserve supported dimensions and layout tokens using the destination theme. */
+/** Retain the original structure and validated presentation properties. */
 export function pastedEditorialFormat(element: HTMLElement, declarations: string) {
   const source = element.ownerDocument.createElement('span').style;
   const style = element.ownerDocument.createElement('span').style;
@@ -63,13 +71,6 @@ export function pastedEditorialFormat(element: HTMLElement, declarations: string
     if (layout.columns) attributes[columnsAttribute] = String(layout.columns);
   }
   if (['left', 'center', 'right', 'justify', 'start', 'end'].includes(source.textAlign)) style.textAlign = source.textAlign;
-  if (element.matches('p,div,blockquote,li,td,th,pre,h1,h2,h3,h4,h5,h6')) {
-    const leading = Number(source.lineHeight);
-    if ((leading >= .9 && leading <= 3) || (source.lineHeight !== '0px' && sourceLength(source.lineHeight, 64, 300))) {
-      style.lineHeight = source.lineHeight;
-      attributes['data-editor-line-height'] = '';
-    }
-  }
   if (element.matches('table,td,th') || layout?.kind === 'bar') {
     style.width = sourceLength(source.width || element.getAttribute('width')?.replace(/^\d+$/, '$&px') || '', 2400, 100);
   }

@@ -176,4 +176,44 @@ const fromMarkdown=await prepareEditorClipboard({html:'',text:'# Imported headin
 assert.match(fromMarkdown.html,/<h1>Imported heading<\/h1>/);
 const dashDialogue=await prepareEditorClipboard({html:'',text:'- One line of dialogue.',markdown:'',files:[]},'rich',[],plain);
 assert.equal(dashDialogue.html,'- One line of dialogue.');
+const styledHtml='<style>.field{color:#912755;background-color:#fff1d0;font-family:Georgia, serif;letter-spacing:.04em}</style>'+
+  '<h2 style="font-size:22px;font-weight:650;margin-block-start:18px">Field report</h2>'+
+  '<p class="field" style="font-size:17px;line-height:26px;margin-bottom:14px;text-indent:12px">Observations</p>'+
+  '<span style="color:var(--ink,#8b2233)">Caption</span>'+
+  '<div role="separator" style="border-top:2px dashed #e04a57;margin-bottom:12px"></div>';
+root.innerHTML=preparePastedContent(styledHtml,'','rich');
+const styledText=root.querySelector('p');
+assert.equal(styledText.style.color,'rgb(145, 39, 85)');
+assert.equal(styledText.style.backgroundColor,'rgb(255, 241, 208)');
+assert.equal(styledText.style.fontFamily,'Georgia, serif');
+assert.equal(styledText.style.getPropertyValue('--draftopus-paste-size'),'17px');
+assert.equal(styledText.style.lineHeight,'26px');
+assert.equal(styledText.style.marginBottom,'14px');
+assert.equal(styledText.style.textIndent,'12px');
+assert.equal(root.querySelector('h2').style.fontWeight,'650');
+assert.equal(root.querySelector('h2').style.marginTop,'18px');
+assert.equal(root.querySelector('hr').style.borderTopStyle,'dashed');
+assert.equal(root.querySelector('span').style.color,'rgb(139, 34, 51)');
+const richStyled=root.innerHTML;
+root.innerHTML=preparePastedContent(richStyled,'','rich');
+assert.equal(root.querySelector('p').style.fontFamily,'Georgia, serif');
+assert.equal(root.querySelector('p').style.backgroundColor,'rgb(255, 241, 208)');
+root.innerHTML=preparePastedContent(styledHtml,'','match');
+assert.equal(root.querySelector('p').style.color,'');
+assert.equal(root.querySelector('p').style.fontFamily,'');
+const composed='<div data-theme="dark"><h3 data-d-component="title" data-d-text-flow data-d-size="md">A collection</h3>'+
+  '<span data-d-component="caption" data-d-text-flow data-d-size="lg">Caption</span></div>';
+root.innerHTML=preparePastedContent(composed,'','rich');
+assert.ok(root.querySelector('[data-draftopus-source-theme="dark"]'));
+assert.equal(root.querySelector('h3').style.getPropertyValue('--draftopus-paste-size'),'16px');
+assert.equal(root.querySelector('span').style.getPropertyValue('--draftopus-paste-size'),'14px');
+const crop='<style>.cover{width:100%;height:100%;aspect-ratio:5 / 3;object-fit:cover;object-position:50% 100%;border-radius:var(--dil-radius-xl)}</style>'+
+  '<figure><img class="cover" data-draftopus-image="gallery:photo" alt="Landscape"><figcaption>Landscape</figcaption></figure>';
+const preparedCrop=await prepareEditorClipboard({html:crop,text:'',markdown:'',files:[]},'rich',
+  [{id:'photo',kind:'image',name:'Landscape',parentId:null,image:'data:image/png;base64,AA=='}],plain);
+root.innerHTML=preparedCrop.html;
+assert.equal(root.querySelector('img').style.objectPosition,'50% 100%');
+assert.equal(root.querySelector('img').style.aspectRatio,'5 / 3');
+assert.equal(root.querySelector('img').style.borderRadius,'16px');
+assert.equal(root.querySelector('img').getAttribute('data-draftopus-image'),'gallery:photo');
 console.log('Paste formatting: empty lines, local typography, HTML/Word heading levels, original paragraph gaps, soft breaks, emphasis, links, tables, lists and whitespace passed.');

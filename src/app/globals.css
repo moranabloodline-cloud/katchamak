@@ -296,6 +296,40 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
   text-indent: 0;
   overflow-wrap: anywhere;
 }
+.kachamak-editor {
+  --draftopus-source-text: var(--foreground);
+  --draftopus-source-secondary: var(--muted-foreground);
+  --draftopus-source-tertiary: var(--muted-foreground);
+  --draftopus-source-paper: var(--background);
+  --draftopus-source-surface: var(--muted);
+  --draftopus-source-elevated: var(--muted);
+  --draftopus-source-border: var(--border);
+}
+.kachamak-editor [data-draftopus-source-theme="dark"] {
+  color-scheme: dark;
+  --draftopus-source-text: #ededed;
+  --draftopus-source-secondary: #cdcdcd;
+  --draftopus-source-tertiary: #a0a0a0;
+  --draftopus-source-paper: #101010;
+  --draftopus-source-surface: #222;
+  --draftopus-source-elevated: #2f2f2f;
+  --draftopus-source-border: #383838;
+}
+.kachamak-editor [data-draftopus-source-theme="light"] {
+  color-scheme: light;
+  --draftopus-source-text: #0d0d0d;
+  --draftopus-source-secondary: #5d5d5d;
+  --draftopus-source-tertiary: #767676;
+  --draftopus-source-paper: #fff;
+  --draftopus-source-surface: #f4f4f4;
+  --draftopus-source-elevated: #fff;
+  --draftopus-source-border: #dedede;
+}
+.kachamak-editor [data-draftopus-source-theme] {
+  color: var(--draftopus-source-text);
+  background-color: var(--draftopus-source-paper);
+}
+.kachamak-editor [data-draftopus-source-theme] :is(b,strong) { font-weight: 600; }
 .kachamak-editor [data-draftopus-paste] :is(p,div) { text-indent: 0; }
 .kachamak-editor [data-draftopus-paste] p { margin-block: 0 .75em; }
 .kachamak-editor [data-draftopus-paste] :is(h1,h2,h3,h4,h5,h6) { color: inherit; }
@@ -342,9 +376,11 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 }
 .kachamak-editor [data-draftopus-layout="metric"] > :is(h1,h2,h3,h4,h5,h6) {
   margin-block: .3em .15em !important;
-  font-size: 1.45em !important;
   line-height: 1.2 !important;
   font-variant-numeric: tabular-nums;
+}
+.kachamak-editor [data-draftopus-layout="metric"] > :is(h1,h2,h3,h4,h5,h6):not([data-draftopus-size]) {
+  font-size: 1.45em !important;
 }
 .kachamak-editor [data-draftopus-layout="chart"] {
   display: grid;
@@ -457,6 +493,9 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
   border-radius: .9rem;
   text-indent: 0;
 }
+.kachamak-editor [data-draftopus-paste] [data-draftopus-media]:has(img[data-draftopus-image-format]) {
+  margin-block: 0;
+}
 .kachamak-editor [data-draftopus-media] img {
   display: block;
   max-inline-size: 100%;
@@ -504,8 +543,7 @@ html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 }
 html[data-theme="light"] .kachamak-editor { --editor-web-link: #1d4ed8; }
 
-/* Heading levels own their typography, even when pasted spans/font tags carry
-   source sizes. Body formatting remains unchanged; levels scale with editor size. */
+/* Local heading defaults apply when the fragment supplies no type size. */
 .kachamak-editor :is(h1,h2,h3,h4,h5,h6) {
   font-family: inherit !important; font-weight: 700 !important;
   margin-block: .75em .35em !important;
@@ -518,14 +556,14 @@ html[data-theme="light"] .kachamak-editor { --editor-web-link: #1d4ed8; }
   --note-link-line: color-mix(in srgb, currentColor 55%, transparent);
 }
 .note-prose .note-page-title { font-size: calc(var(--note-step) * 22); line-height: 1.2; }
-.note-prose .kachamak-editor h1 { font-size: calc(var(--note-step) * 18) !important; }
-.note-prose .kachamak-editor h2 { font-size: calc(var(--note-step) * 16) !important; }
-.note-prose .kachamak-editor h3 { font-size: calc(var(--note-step) * 14) !important; }
-.note-prose .kachamak-editor h4 { font-size: calc(var(--note-step) * 12) !important; }
-.note-prose .kachamak-editor h5 { font-size: calc(var(--note-step) * 11) !important; }
-.note-prose .kachamak-editor h6 { font-size: calc(var(--note-step) * 10) !important; font-weight: 600 !important; }
-/* Imported HTML uses the note's type. Explicit selections made in the editor retain their overrides. */
-.note-prose .kachamak-editor :is(p,div,ul,ol,li,table,tr,td,th,blockquote,span,font,a,strong,b,em,i,u,s):not([data-editor-typography]) {
+.note-prose .kachamak-editor h1:not([data-draftopus-size]) { font-size: calc(var(--note-step) * 18) !important; }
+.note-prose .kachamak-editor h2:not([data-draftopus-size]) { font-size: calc(var(--note-step) * 16) !important; }
+.note-prose .kachamak-editor h3:not([data-draftopus-size]) { font-size: calc(var(--note-step) * 14) !important; }
+.note-prose .kachamak-editor h4:not([data-draftopus-size]) { font-size: calc(var(--note-step) * 12) !important; }
+.note-prose .kachamak-editor h5:not([data-draftopus-size]) { font-size: calc(var(--note-step) * 11) !important; }
+.note-prose .kachamak-editor h6:not([data-draftopus-size]) { font-size: calc(var(--note-step) * 10) !important; font-weight: 600 !important; }
+/* Local text inherits typography. Authored and pasted preferences stay explicit. */
+.note-prose .kachamak-editor :is(p,div,ul,ol,li,table,tr,td,th,blockquote,span,font,a,strong,b,em,i,u,s):not([data-editor-typography],[data-draftopus-size]) {
   font-family: inherit !important;
   font-size: inherit !important;
 }
@@ -533,7 +571,7 @@ html[data-theme="light"] .kachamak-editor { --editor-web-link: #1d4ed8; }
   text-decoration: underline dotted var(--note-link-line) 1px !important;
   text-underline-offset: .13em;
 }
-.kachamak-editor :is(h1,h2,h3,h4,h5,h6) :is(span,font,a,strong,b,em,i,u,s):not([data-editor-typography],[data-editor-spacing-flow],[data-editor-spacing-run]) {
+.kachamak-editor :is(h1,h2,h3,h4,h5,h6) :is(span,font,a,strong,b,em,i,u,s):not([data-editor-typography],[data-editor-spacing-flow],[data-editor-spacing-run],[data-draftopus-size]) {
   font-size: inherit !important; font-family: inherit !important;
   line-height: inherit !important;
 }

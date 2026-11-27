@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://test.local'}).window;
-for(const key of ['window','document','HTMLElement','Element','Node','DOMParser','Event','CustomEvent','MouseEvent','KeyboardEvent','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:key==='getComputedStyle'?dom.getComputedStyle.bind(dom):dom[key]});
+for(const key of ['window','document','HTMLElement','Element','Node','DOMParser','Event','InputEvent','CustomEvent','MouseEvent','KeyboardEvent','getComputedStyle','navigator'])Object.defineProperty(globalThis,key,{configurable:true,value:key==='window'?dom:key==='getComputedStyle'?dom.getComputedStyle.bind(dom):dom[key]});
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const React=await import('react');const {createRoot}=await import('react-dom/client');
 const {useKachamak}=await import('../src/lib/kachamak/store.ts');
@@ -15,10 +15,12 @@ const editor=box.querySelector('[contenteditable]');
 assert.ok(!editor.innerHTML.includes('onerror'));assert.ok(!editor.querySelector('script'));
 await React.act(async()=>editor.querySelector('a').dispatchEvent(new dom.MouseEvent('click',{bubbles:true,ctrlKey:true,cancelable:true})));
 assert.equal(useKachamak.getState().activeTab,'codex');assert.equal(useKachamak.getState().selectedNodeId,target);
-let command='';document.execCommand=(name,_unused,html)=>{command=name;editor.innerHTML=html;return true;};
+const replaced=document.createRange();replaced.selectNodeContents(editor);
+editor.focus();dom.getSelection().removeAllRanges();dom.getSelection().addRange(replaced);
 const paste=new dom.Event('paste',{bubbles:true,cancelable:true});Object.defineProperty(paste,'clipboardData',{value:{getData:type=>type==='text/html'?'<p style="color:red;background:white"><b>Pasted</b></p><p><br></p><p>Last</p>':''}});
 await React.act(async()=>editor.dispatchEvent(paste));
-assert.equal(command,'insertHTML');assert.ok(changed.includes('<b>Pasted</b>'));assert.equal(editor.querySelectorAll('p').length,3);assert.ok(!changed.includes('color:'));assert.ok(!changed.includes('background'));
+assert.ok(changed.includes('<b>Pasted</b>'));assert.equal(editor.querySelectorAll('p').length,3);
+assert.equal(editor.querySelector('p').style.color,'red');assert.equal(editor.querySelector('p').style.backgroundColor,'white');
 const {SECTION_KEYS}=await import('../src/lib/kachamak/types.ts');
 for(const section of SECTION_KEYS){
  await React.act(async()=>{useKachamak.setState({activeTab:section});root.render(React.createElement(RichEditor,{key:section,html:'<ul><li>Before</li><li>---</li><li>After</li></ul>',onChange:value=>{changed=value;}}));});

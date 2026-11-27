@@ -146,6 +146,7 @@ export function clearEditorFormatting(range:Range|null) {
     for(const block of selectedBlocks){
       for(const wrapper of Array.from(block.querySelectorAll('[data-editor-spacing-run],[data-editor-spacing-flow]')).reverse())wrapper.replaceWith(...wrapper.childNodes);
       block.removeAttribute('style');block.removeAttribute('data-editor-line-height');
+      block.removeAttribute('data-draftopus-size');
       if(/^H[1-6]$/.test(block.tagName)){const paragraph=document.createElement('p');paragraph.append(...Array.from(block.childNodes));block.replaceWith(paragraph);}
     }
     if(collapsed||wholeParagraphs)unquote(editor,current,start);

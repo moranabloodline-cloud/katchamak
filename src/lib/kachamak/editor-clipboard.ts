@@ -1,7 +1,7 @@
 import type {GalleryEntry} from './gallery';
 import {galleryImage, galleryImageRef, editorImageAttribute, type GalleryImage} from './project-image';
 import {pasteMediaAttribute, preparePastedContent, type PasteMode} from './paste-content';
-import {pastedImageSize} from './paste-layout';
+import {pastedImageFormatAttribute, pastedImageSize} from './paste-layout';
 import {directImageLink, formatEditorMedia, formatEditorMediaHtml} from './editor-media';
 
 type ClipboardContent = {html: string; text: string; markdown: string; files: Blob[]};
@@ -196,7 +196,7 @@ export async function prepareEditorClipboard(
     return img;
   };
   const onlyHtmlImage = (html.match(/<img\b/gi)?.length ?? 0) === 1;
-  let body = preparePastedContent(html,text,mode,source=>{
+  let body = preparePastedContent(html,text,mode,(source,declarations)=>{
     if (!isIllustration(source))return null;
     const doc = source.ownerDocument;
     const svg = source.tagName.toLowerCase() === 'svg';
@@ -208,12 +208,17 @@ export async function prepareEditorClipboard(
     const img = makeImage(doc,{title,url,reference:imageReference(src),existing,blob,
       svg:svg && source.outerHTML.length <= 1024*1024 ? source.outerHTML : undefined}, existing?.id || url);
     if (mode === 'rich' && !svg) {
-      const size = pastedImageSize(source);
+      const size = pastedImageSize(source,declarations);
       if (size.width)img.width = size.width;
       if (size.height)img.height = size.height;
       if (size.cssWidth)img.style.width = size.cssWidth;
+      if (size.cssHeight)img.style.height = size.cssHeight;
       if (size.cssMaxWidth)img.style.maxWidth = size.cssMaxWidth;
+      if (size.aspectRatio)img.style.aspectRatio = size.aspectRatio;
       if (size.objectFit)img.style.objectFit = size.objectFit;
+      if (size.objectPosition)img.style.objectPosition = size.objectPosition;
+      if (size.borderRadius)img.style.borderRadius = size.borderRadius;
+      if (size.aspectRatio || size.objectPosition || size.borderRadius)img.setAttribute(pastedImageFormatAttribute,'');
       if (size.alignment==='left' || size.alignment==='right')img.style.float=size.alignment;
       if (size.alignment==='center'){img.style.display='block';img.style.marginInline='auto';}
     }

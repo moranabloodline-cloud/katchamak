@@ -7,7 +7,7 @@ import {sourceFlowAttribute} from './paste-source-layout';
 
 export type PasteMode = 'rich' | 'match' | 'plain';
 export const pasteMediaAttribute = 'data-draftopus-paste-media';
-type PrepareMedia = (element: Element) => Node | null;
+type PrepareMedia = (element: Element, declarations: string) => Node | null;
 
 // Shared emphasis and whitespace rules for both formatted modes.
 function formatting(el:Element,css:string) {
@@ -55,7 +55,7 @@ export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
 }
 
 export function insertPastedBlocks(editor:HTMLElement,html:string):boolean {
-  return /<(?:h[1-6]|table|figure|aside|dl|details)(?:\s|>)| data-draftopus-(?:layout|media|flow)=/i.test(html) && insertBlocks(editor,html);
+  return /<(?:h[1-6]|table|figure|aside|dl|details)(?:\s|>)| data-draftopus-(?:paste|layout|media|flow)=/i.test(html) && insertBlocks(editor,html);
 }
 
 function insertBlocks(editor:HTMLElement,html:string):boolean {
@@ -143,8 +143,9 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
   if(mode === 'rich')transferPastedColumnWidths(root);
   for(const el of root.querySelectorAll('*')) {
     if(!root.contains(el))continue;
+    const declarations = (inherited.get(el)||'')+';'+(el.getAttribute('style')||'');
     if(el.matches('img,svg')) {
-      const replacement = prepareMedia?.(el);
+      const replacement = prepareMedia?.(el,declarations);
       if(replacement)el.replaceWith(replacement);
       else el.remove();
       continue;
@@ -158,11 +159,12 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
       const progress=pastedProgress(el);
       if(progress){el.replaceWith(progress);continue;}
     }
-    const declarations = (inherited.get(el)||'')+';'+(el.getAttribute('style')||'');
     const editorial = mode === 'rich' ? pastedEditorialFormat(el as HTMLElement,declarations) : undefined;
     const css = [formatting(el,declarations),el.matches('table,td,th') ? tableFormatting(el as HTMLElement) : '',editorial?.css].filter(Boolean).join(' ');
     if(el.getAttribute('role')==='separator' || el.getAttribute('data-d-component')==='divider'){
-      el.replaceWith(doc.createElement('hr'));
+      const separator=doc.createElement('hr');
+      if(css)separator.style.cssText=css;
+      el.replaceWith(separator);
       continue;
     }
     // Word and accessible editors also mark headings without using an h tag.
@@ -197,7 +199,7 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
         el.getAttribute(sourceFlowAttribute)!=='spacer')el.remove();
     }
     finishPastedEditorialLayout(root);
-    if(root.querySelector('table,figure,aside,dl,details,[data-draftopus-layout],['+sourceFlowAttribute+'],h1,h2,h3,h4,h5,h6') ||
+    if(root.querySelector('table,figure,aside,dl,details,[data-draftopus-layout],['+sourceFlowAttribute+'],h1,h2,h3,h4,h5,h6,:scope > :is(p,div,pre,blockquote)[style]') ||
       root.querySelectorAll('p').length > 1) {
       const container = doc.createElement('div');
       container.setAttribute(pastedDocumentAttribute,'');
