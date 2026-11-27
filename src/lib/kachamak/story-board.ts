@@ -1,4 +1,5 @@
 import type {NoteNode, Novel} from './types';
+import {NOTE_COLORS} from './note-colors';
 import {uid} from './utils';
 
 export interface StoryChapter {
@@ -27,7 +28,10 @@ export interface StoryBoard {
   scenes: StoryScene[];
 }
 
-export const storyPlotlineColors = ['#d6a95e', '#78b7c2', '#b7a0e0', '#8dbb99', '#d38f83'];
+export function nextPlotlineColor(plotlines: StoryPlotline[]) {
+  const used = new Set(plotlines.map(line => line.color.toLowerCase()));
+  return NOTE_COLORS.find(color => !used.has(color)) ?? NOTE_COLORS[plotlines.length % NOTE_COLORS.length];
+}
 
 const chapterTitle = /^ch(?:apter)?\.?\s*(?:\d+|[ivxlcdm]+)\b/i;
 
@@ -54,8 +58,8 @@ export function newStoryBoard(novel: Novel): StoryBoard {
   return {
     chapters: (names.length ? names : ['Chapter 1', 'Chapter 2', 'Chapter 3']).map(title => ({id: uid(), title})),
     plotlines: [
-      {id: uid(), title: 'Main plot', color: storyPlotlineColors[0]},
-      {id: uid(), title: 'Character arc', color: storyPlotlineColors[1]},
+      {id: uid(), title: 'Main plot', color: NOTE_COLORS[0]},
+      {id: uid(), title: 'Character arc', color: NOTE_COLORS[1]},
     ],
     scenes: [],
   };

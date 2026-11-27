@@ -15,6 +15,7 @@ import {HomeDestinationFields} from './HomeDestinationFields';
 import {ProjectMapSelect} from './ProjectMapSelect';
 import {findProjectMap} from '@/lib/kachamak/project-maps';
 import {CanvasInk} from './CanvasInk';
+import {PresetColourPicker} from './PresetColourPicker';
 import {toolsByKind} from './CanvasTools';
 
 export function newCanvasBlock(kind:CanvasTool):HomeBlock{
@@ -70,7 +71,12 @@ export function CanvasItemEditor({novel,initial,creating,branchFrom,onSave,onClo
         </div>}
       {kind==='video'&&<label>Video address<Input type="text" required={!draft.videoUrl} placeholder={draft.videoUrl?.startsWith('data:')?'Embedded video · enter a URL to replace':'YouTube, MP4 or WebM URL'} value={draft.videoUrl?.startsWith('data:')?'':draft.videoUrl??''} onChange={e=>patch({videoUrl:e.target.value})}/></label>}
       {kind==='audio'&&<label>Audio file address<Input type="text" required={!draft.audio} value={draft.audio?.startsWith('data:')?'':draft.audio??''} onChange={e=>patch({audio:e.target.value})} placeholder={draft.audio?.startsWith('data:')?'Embedded audio · enter a URL to replace':'https://…/recording.mp3'}/></label>}
-      {['color','column','sketch','draw'].includes(kind)&&<label>Color<div className="flex items-center gap-2"><input type="color" value={draft.color??'#deb679'} onChange={e=>patch({color:e.target.value})}/><code>{draft.color}</code></div></label>}
+      {['color','column','sketch','draw'].includes(kind)&&<div className="grid gap-2 text-sm">
+        <span>Color</span><div className="flex items-center gap-2">
+          <PresetColourPicker label="Item color" value={draft.color??'#deb679'} align="start" onChange={color=>patch({color})} allowClear={false}/>
+          <code>{draft.color}</code>
+        </div>
+      </div>}
       {(kind==='sketch'||kind==='draw')&&<CanvasInk value={draft.ink??[]} color={draft.color??'#deb679'} onChange={ink=>patch({ink})}/>}
       {kind==='todo'&&<div className="grid gap-2">{tasks.map((t,i)=><div key={i} className="flex items-center gap-2"><input type="checkbox" aria-label={'Task '+(i+1)+' completed'} checked={t.done} onChange={e=>patch({tasks:tasks.map((v,j)=>i===j?{...v,done:e.target.checked}:v)})}/>
         <Input aria-label={'Task '+(i+1)} value={t.text} onChange={e=>patch({tasks:tasks.map((v,j)=>i===j?{...v,text:e.target.value}:v)})}/><button type="button" aria-label={'Remove task '+(i+1)} onClick={()=>patch({tasks:tasks.filter((_,j)=>j!==i)})}><X size={15}/></button></div>)}

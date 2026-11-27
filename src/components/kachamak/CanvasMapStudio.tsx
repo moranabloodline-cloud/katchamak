@@ -8,6 +8,7 @@ import type {HomeBlock} from '@/lib/kachamak/homepage';
 import {atlasOf,imageDistance,mapDistance,PIN_KINDS,type MapAtlas,type MapFeature,type MapTool,type PinKind} from '@/lib/kachamak/canvas-map';
 import {registerZoomReset} from '@/lib/kachamak/workspace-zoom';
 import {CanvasMapSurface,featureLabel,pinIcons} from './CanvasMapSurface';
+import {PresetColourPicker} from './PresetColourPicker';
 
 const commands=[['pin','Add pin',MapPin],['path','Draw path',Route],['region','Draw region',Scan],['measure','Measure distance',Ruler]] as const;
 function ToolButtons({tool,choose}:{tool?:MapTool;choose:(tool:MapTool)=>void}){
@@ -21,7 +22,9 @@ function FeatureDetails({feature,update,remove,move}:{feature:MapFeature;move:()
   return <form className="atlas-editor" onSubmit={e=>{e.preventDefault();if(name.trim())update(feature.kind==='pin'?{...feature,name:name.trim(),category}:{...feature,name:name.trim(),color});}}>
     <label>Name<input required value={name} onChange={e=>setName(e.target.value)}/></label>
     {feature.kind==='pin'?<label>Pin type<select value={category} onChange={e=>setCategory(e.target.value as PinKind)}>{PIN_KINDS.map(k=><option key={k}>{k}</option>)}</select></label>:
-      <label>Color<input type="color" value={color} onChange={e=>setColor(e.target.value)}/></label>}
+      <div className="flex items-center justify-between gap-2 text-sm"><span>Color</span>
+        <PresetColourPicker label="Feature color" value={color} onChange={setColor} allowClear={false}/>
+      </div>}
     <div className="atlas-actions"><button type="submit"><Check size={14}/>Save changes</button>{feature.kind==='pin'&&<button type="button" onClick={move}>Move pin</button>}<button type="button" aria-label={'Delete '+feature.name} onClick={remove}><Trash2 size={14}/></button></div>
   </form>;
 }
@@ -96,7 +99,9 @@ export function CanvasMapStudio({block,image,host,close,initialPinId,backLabel,o
     {edit&&<div className="atlas-editor">
       {tool==='pin'&&<label>Pin type<select value={category} onChange={e=>setCategory(e.target.value as PinKind)}>{PIN_KINDS.map(k=><option key={k}>{k}</option>)}</select></label>}
       <label>Name<input aria-label="New feature name" value={name} placeholder={tool==='pin'?category:tool==='path'?'Path':'Region'} onChange={e=>setName(e.target.value)}/></label>
-      {tool!=='pin'&&<label>Color<input type="color" value={color} onChange={e=>setColor(e.target.value)}/></label>}
+      {tool!=='pin'&&<div className="flex items-center justify-between gap-2 text-sm"><span>Color</span>
+        <PresetColourPicker label="New feature color" value={color} onChange={setColor} allowClear={false}/>
+      </div>}
     </div>}
     {(tool==='measure'||tool==='calibrate')&&<div className="atlas-editor"><label>Units<select value={unit} onChange={e=>setUnit(e.target.value as 'mi'|'km')}><option value="km">Kilometres</option><option value="mi">Miles</option></select></label>
       {!atlas.geo&&tool==='measure'&&<button type="button" onClick={()=>choose('calibrate')}><Ruler size={14}/>{scaled?'Recalibrate scale':'Calibrate scale'}</button>}
@@ -108,7 +113,11 @@ export function CanvasMapStudio({block,image,host,close,initialPinId,backLabel,o
       return <button type="button" key={f.id} aria-pressed={f.id===selected} onClick={()=>{if(tool==='measure'&&f.kind==='pin')place(f.point);else {choose('inspect');setSelected(f.id);}}}><Icon size={15}/><span>{f.name}</span><small>{featureLabel(f)}</small></button>;
     })}</div>}
   </section>;
-  return <section className="atlas-studio" aria-label="Map workspace" onKeyDown={e=>{if(e.key==='Enter'&&(tool==='path'||tool==='region')&&e.target instanceof HTMLElement&&!e.target.closest('button,input,select,textarea')){e.preventDefault();finish();}if(e.key==='Escape'){e.stopPropagation();if(tool==='inspect')close();else choose('inspect');}}}>
+  return <section className="atlas-studio" aria-label="Map workspace" onKeyDown={e=>{
+    if(e.defaultPrevented)return;
+    if(e.key==='Enter'&&(tool==='path'||tool==='region')&&e.target instanceof HTMLElement&&!e.target.closest('button,input,select,textarea')){e.preventDefault();finish();}
+    if(e.key==='Escape'){e.stopPropagation();if(tool==='inspect')close();else choose('inspect');}
+  }}>
     <header className="atlas-bar"><button ref={back} type="button" onClick={close} title={backLabel} aria-label={backLabel}><ArrowLeft size={17}/></button><h3>{block.title||'Map'}</h3>
       <button type="button" aria-label="Zoom out of map" disabled={zoom<=.5} onClick={()=>setZoom(Math.max(.5,zoom/1.25))}><Minus size={15}/></button>
       <button type="button" title="Fit map width" onClick={()=>setZoom(1)}>{Math.round(zoom*100)}%</button>

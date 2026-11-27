@@ -1,10 +1,11 @@
 'use client';
 import {useEffect,useState,type ReactNode} from 'react';
 import {ChevronDown} from 'lucide-react';
-import {alignments,blockNames,fonts,ornaments,specialPages,trims,type BlockName,type BookStyle} from '@/lib/kachamak/book-style';
+import {alignments,baseStyle,blockNames,fonts,ornaments,specialPages,trims,type BlockName,type BookStyle} from '@/lib/kachamak/book-style';
 import type {Novel} from '@/lib/kachamak/types';
 import type {Proof} from '@/lib/kachamak/publication';
 import {GalleryImagePicker} from './GalleryImagePicker';
+import {PresetColourPicker} from './PresetColourPicker';
 
 const input='min-w-0 max-w-full rounded border border-white/15 bg-background px-2 py-1.5 text-xs text-foreground';
 function Field({label,children}:{label:string;children:ReactNode}){
@@ -71,7 +72,12 @@ export function PublishTools({novel,name,style:s,change,save,inspect,print}:{nov
       <Check label="Page numbers" value={s.folios} change={v=>patch('folios',v)}/><Check label="Running book title" value={s.running} change={v=>patch('running',v)}/>
       <Check label="Start chapters on right pages" value={s.recto} change={v=>patch('recto',v)}/>
     </Group>
-    <Group title="Colors">{([['Body text','ink'],['Headings','heading'],['Accents','accent']] as const).map(([label,k])=><Field label={label} key={k}><input type="color" value={s[k]} className="h-7 w-full cursor-pointer" onChange={e=>patch(k,e.target.value)}/></Field>)}</Group>
+    <Group title="Colors">{([['Body text','ink'],['Headings','heading'],['Accents','accent']] as const).map(([label,k])=>
+      <div key={k} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>{label}</span>
+        <PresetColourPicker label={label+' color'} value={s[k]} onChange={color=>patch(k,color)} allowClear={false} resetValue={baseStyle[k]}/>
+      </div>
+    )}</Group>
     <Group title="Special pages">{specialPages.map(p=><div key={p} className="grid gap-2">
       <Check label={p} value={s.pages.includes(p)} change={v=>patch('pages',specialPages.filter(key=>key===p?v:s.pages.includes(key)))}/>
       {s.pages.includes(p)&&matter.filter(([page])=>page===p).map(([,k])=><textarea key={k} aria-label={p+' text'} rows={3} maxLength={10000} className={input} value={s[k]} onChange={e=>patch(k,e.target.value)}/>)}

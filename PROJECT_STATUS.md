@@ -1,3 +1,5 @@
+> **2026-11-27 — Jedinstvena paleta u Canvasu, Kanbanu i Publishu.** Story Board i preostale kontrole za boje koriste istu aplikacijsku paletu od deset nijansi kao beleške i Timeline. Već upisane boje ostaju u projektu.
+
 > **2026-11-27 — Canvas navigacija i planiranje.** Fit width uklapa širinu Canvasa i Story Boarda. Meni stranice menja njen redosled ili nivo. Story Board ima filter po liniji radnje i preglednije scene, a Mind Map dobija boje po granama i Fit branch.
 
 > **2026-11-26 — Book Website Canvas šablon.** Jedan izbor kreira početnu stranicu i šest podstranica sa povezanim menijem. Naslov, autor i dostupna korica preuzimaju se iz otvorenog projekta.
@@ -789,6 +791,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-27.** Add/Edit plotline, Canvas kartice, selekcija i crtanje, Maps putanje i oblasti, Kanban oznake i Publish boje koriste zajedničku paletu. Publish nudi Reset to default za svaku boju stila.
 
 ### 2026-11-27 — Canvas navigacija i planiranje
 

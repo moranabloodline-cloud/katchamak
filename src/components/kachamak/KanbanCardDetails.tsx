@@ -5,6 +5,8 @@ import {AlignLeft, CalendarDays, Check, CheckSquare, Circle, CircleCheck, Copy, 
 import {Dialog, DialogContent, DialogTitle} from '@/components/ui/dialog';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
 import {GalleryImagePicker} from './GalleryImagePicker';
+import {PresetColourPicker} from './PresetColourPicker';
+import {NOTE_COLORS} from '@/lib/kachamak/note-colors';
 import {projectImageSrc} from '@/lib/kachamak/project-image';
 import {uid} from '@/lib/kachamak/utils';
 import type {Novel} from '@/lib/kachamak/types';
@@ -14,7 +16,6 @@ import css from './kanban.module.css';
 type Change = (update:(current:KanbanCard)=>KanbanCard,message?:string)=>void;
 type Tool = 'Labels'|'Dates'|'Checklist'|'Members';
 const tools = [{name:'Labels',icon:Tag},{name:'Dates',icon:CalendarDays},{name:'Checklist',icon:CheckSquare},{name:'Members',icon:Users}] as const;
-const colors = ['#ddb466','#75b9b0','#7fa9d9','#be99cb','#de967f','#93b982'];
 const same = (left:string,right:string)=>left.trim().toLowerCase()===right.trim().toLowerCase();
 
 function AddText({label,action,onAdd}:{label:string;action:string;onAdd:(value:string)=>void}) {
@@ -68,7 +69,7 @@ export function KanbanCardDetails({novel, board, card, columnId, existing, autho
 }) {
   const [tool,setTool]=useState<Tool|null>(null), [gallery,setGallery]=useState(false);
   const [title,setTitle]=useState(card.title), [description,setDescription]=useState(card.description);
-  const [color,setColor]=useState(colors[0]), [comment,setComment]=useState(''), [details,setDetails]=useState(false);
+  const [color,setColor]=useState(NOTE_COLORS[0]), [comment,setComment]=useState(''), [details,setDetails]=useState(false);
   const commentRef=useRef<HTMLTextAreaElement>(null);
   useEffect(()=>setTitle(card.title),[card.title]);
   useEffect(()=>setDescription(card.description),[card.description]);
@@ -79,7 +80,7 @@ export function KanbanCardDetails({novel, board, card, columnId, existing, autho
   const boardCards=board.columns.flatMap(column=>column.cards);
   const labels=new Map<string,CardLabel>();
   for(const label of [...(novel.labels??[]),...boardCards.flatMap(c=>c.labels??[]),...selectedLabels]) {
-    if(label.name.trim()) labels.set(label.name.toLowerCase(),{name:label.name,color:/^#[0-9a-f]{6}$/i.test(label.color)?label.color:colors[0]});
+    if(label.name.trim()) labels.set(label.name.toLowerCase(),{name:label.name,color:/^#[0-9a-f]{6}$/i.test(label.color)?label.color:NOTE_COLORS[0]});
   }
   const people=[...new Set([author,...boardCards.flatMap(c=>c.members??[]),...members])];
   function saveTitle() {
@@ -141,7 +142,9 @@ export function KanbanCardDetails({novel, board, card, columnId, existing, autho
             <header><h3>{tool}</h3><button className={css.icon} aria-label="Close options" onClick={()=>setTool(null)}><X size={14}/></button></header>
             {tool==='Labels'&&<>
               <div className={css.chips}>{[...labels.values()].map(label=><LabelChip key={label.name.toLowerCase()} label={label} selected={selectedLabels.some(l=>same(l.name,label.name))} onClick={()=>toggleLabel(label)}/>)}</div>
-              <div className={css.colorRow}><label>Label color <input type="color" aria-label="Label color" value={color} onChange={e=>setColor(e.target.value)}/></label>
+              <div className={css.colorRow}><div className="flex items-center gap-1.5 text-xs"><span>Label color</span>
+                <PresetColourPicker label="Label color" value={color} align="start" onChange={setColor} allowClear={false}/>
+              </div>
                 <AddText label="New label name" action="Add label" onAdd={name=>{const label=labels.get(name.toLowerCase())??{name,color};if(!selectedLabels.some(l=>same(l.name,name)))toggleLabel(label);}}/></div>
             </>}
             {tool==='Dates'&&<CardDates key={(card.start??'')+'/'+card.due} card={card} change={change}/>}

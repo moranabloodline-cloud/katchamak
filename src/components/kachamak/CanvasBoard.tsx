@@ -21,6 +21,7 @@ import {CanvasItemEditor,newCanvasBlock} from './CanvasItemEditor';
 
 
 import {CanvasItemFace} from './CanvasItemFace';
+import {PresetColourPicker} from './PresetColourPicker';
 import {CanvasTools,toolsByKind} from './CanvasTools';
 import {InkPaths} from './CanvasInk';
 import {useCanvasToolDrop,type CanvasPlacement} from './useCanvasToolDrop';
@@ -734,7 +735,9 @@ export function CanvasBoard({novel,page,byId,change,open,describe,showTree,openM
       {!page.locked&&btn('Snap to alignment guides',Magnet,()=>saveZoomSetting(positionKey,'snap-edges',snapping?'off':'on'),snapping)}
       {btn(showGrid?'Hide grid':'Show grid',showGrid?Grid2X2:Grid2X2X,()=>saveZoomSetting(positionKey,'grid',showGrid?'hidden':'visible'))}
     </div>
-    {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}{tool==='draw'&&<input aria-label="Drawing color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/>}<button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
+    {(tool==='draw'||tool==='line'||status)&&<div className="cv-mode-message" role="status">{status||(tool==='draw'?'Draw on the board':from?'Choose the second item':'Choose the first item')}
+      {tool==='draw'&&<PresetColourPicker label="Drawing color" value={inkColor} onChange={setInkColor} allowClear={false}/>}
+      <button aria-label="Finish tool" onClick={()=>{resetTool();setStatus('');}}><Check size={15}/></button></div>}
     </div></div>
     {toolsHost && createPortal(<>
       {!page.locked&&(items.length>1 || framed&&items.length===1)&&tool==='select'&&<CanvasSelectionTools items={items} fixed={items.some(fixed)} clear={()=>setSelected(null)} run={batch}

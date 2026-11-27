@@ -9,11 +9,12 @@ import {Textarea} from '@/components/ui/textarea';
 import type {HomePageEntry} from '@/lib/kachamak/homepage';
 import {flattenNotes} from '@/lib/kachamak/note-links';
 import {
-  moveStoryScene, storyPlotlineColors, type StoryBoard, type StoryChapter, type StoryPlotline, type StoryScene,
+  moveStoryScene, nextPlotlineColor, type StoryBoard, type StoryChapter, type StoryPlotline, type StoryScene,
 } from '@/lib/kachamak/story-board';
 import type {Novel} from '@/lib/kachamak/types';
 import {uid} from '@/lib/kachamak/utils';
 import {registerZoomReset, saveZoomSetting, useZoomSetting} from '@/lib/kachamak/workspace-zoom';
+import {PresetColourPicker} from './PresetColourPicker';
 import './canvas-story-board.css';
 
 type Item =
@@ -58,6 +59,7 @@ function StoryBoardEditor({edit, notes, save, close}: {
 }) {
   const [editorError, setEditorError] = useState('');
   const {kind, value, previous, existing} = edit;
+  const [plotlineColor, setPlotlineColor] = useState(kind === 'plotline' ? value.color : '');
   const scene = kind === 'scene' ? value : undefined;
   const chapter = kind === 'chapter';
   const axes = chapter ? previous.chapters : previous.plotlines;
@@ -78,7 +80,7 @@ function StoryBoardEditor({edit, notes, save, close}: {
     if (kind === 'chapter') {
       next = {...previous, chapters: upsert(previous.chapters, {...value, title})};
     } else if (kind === 'plotline') {
-      next = {...previous, plotlines: upsert(previous.plotlines, {...value, title, color: String(form.get('color'))})};
+      next = {...previous, plotlines: upsert(previous.plotlines, {...value, title, color: plotlineColor})};
     } else {
       const chapterId = String(form.get('chapter'));
       const plotlineId = String(form.get('plotline'));
@@ -136,10 +138,10 @@ function StoryBoardEditor({edit, notes, save, close}: {
             Title
             <Input name="title" required defaultValue={value.title} autoFocus />
           </label>
-          {kind === 'plotline' && <label className="grid gap-1.5 text-sm">
-            Color
-            <input className="h-9 w-14 rounded-md border border-input bg-background p-1" type="color" name="color" defaultValue={value.color} />
-          </label>}
+          {kind === 'plotline' && <div className="grid justify-items-start gap-1.5 text-sm">
+            <span>Color</span>
+            <PresetColourPicker label="Plotline color" value={plotlineColor} align="start" allowClear={false} onChange={setPlotlineColor} />
+          </div>}
           {scene && <>
             <label className="grid gap-1.5 text-sm">
               Synopsis
@@ -342,7 +344,7 @@ export function CanvasStoryBoard({page, board, novel, change, openNote, onShowPa
           {!locked && <>
             <Button type="button" size="sm" variant="outline" onClick={() => openEditor({kind: 'chapter', value: {id: uid(), title: ''}})}><Plus />Add chapter</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => openEditor({kind: 'plotline', value: {
-              id: uid(), title: '', color: storyPlotlineColors[board.plotlines.length % storyPlotlineColors.length],
+              id: uid(), title: '', color: nextPlotlineColor(board.plotlines),
             }})}><Plus />Add plotline</Button>
           </>}
           {toggleLock && <Button type="button" size="icon" variant="ghost" aria-label={locked ? 'Unlock canvas' : 'Lock canvas'} onClick={toggleLock}>

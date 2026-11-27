@@ -128,10 +128,7 @@
 .cv-batch { margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 .cv-batch fieldset { min-width:0; margin:0 0 11px; padding:0; border:0; }
 .cv-batch legend { margin-bottom:5px; color:var(--muted-foreground); font:12px/1.35 system-ui,sans-serif; }
-.cv-batch-swatches,.cv-batch-icons { display:grid; gap:4px; }
-.cv-batch-swatches { grid-template-columns:repeat(auto-fit,minmax(21px,1fr)); }
-.cv-batch-swatches button,.cv-batch-swatches input { width:100%; height:23px; border-radius:4px; cursor:pointer; }
-.cv-batch-swatches [aria-pressed=true] { outline:1px solid var(--foreground); outline-offset:1px; }
+.cv-batch-icons { display:grid; gap:4px; }
 .cv-batch-icons { grid-template-columns:repeat(3,minmax(0,1fr)); }
 .cv-batch-icons button { display:grid; place-items:center; height:29px; border:1px solid var(--border); border-radius:5px; }
 .cv-batch-actions { display:grid; gap:3px; padding-top:7px; border-top:1px solid var(--border); }

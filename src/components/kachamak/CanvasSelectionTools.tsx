@@ -6,25 +6,26 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import type {Alignment,SelectionCommand} from '@/lib/kachamak/canvas-selection';
 import type {HomeBlock} from '@/lib/kachamak/homepage';
+import {ColourPalette} from './PresetColourPicker';
 
 const alignments=[
   ['left',AlignStartVertical],['center',AlignCenterVertical],['right',AlignEndVertical],
   ['top',AlignStartHorizontal],['middle',AlignCenterHorizontal],['bottom',AlignEndHorizontal]
 ] as const;
-const colors=['#e4b56c','#e18d89','#b4a1dc','#79b9dd','#79bfaa','#c2ce88'];
 type Props={items:HomeBlock[];fixed:boolean;clear:()=>void;run:(command:SelectionCommand)=>void;convert:(title:string)=>boolean};
 
 export function CanvasSelectionTools({items,fixed,clear,run,convert}:Props){
   const [naming,setNaming]=useState(false),[title,setTitle]=useState(''),[error,setError]=useState('');
   const loose=items.every(b=>!b.columnId), allLocked=items.every(b=>b.positionLocked);
+  const firstColor=items[0]?.color;
+  const selectionColor=items.every(item=>item.color===firstColor)?firstColor:undefined;
   const align=(value:Alignment)=>run({kind:'align',alignment:value});
   return <section className="cv-batch" aria-label="Selection tools">
     <div>
       <div className="cv-tools-head"><strong>{items.length} selected</strong><button type="button" title="Clear selection" aria-label="Clear selection" onClick={clear}><X size={15}/></button></div>
-      <fieldset><legend>Color</legend><div className="cv-batch-swatches">
-        {colors.map(c=><button key={c} type="button" style={{background:c}} aria-label={'Set color '+c} aria-pressed={items.every(b=>b.color===c)} onClick={()=>run({kind:'color',color:c})}/>)}
-        <input type="color" aria-label="Custom selection color" title="Custom color" value={items[0]?.color??colors[0]} onChange={e=>run({kind:'color',color:e.target.value})}/>
-      </div></fieldset>
+      <fieldset><legend>Color</legend>
+        <ColourPalette label="Selection color" value={selectionColor} onChange={color=>run({kind:'color',color})} allowClear={false}/>
+      </fieldset>
       <fieldset disabled={!loose||fixed||items.length<2} title={!loose?'Columns arrange their own cards':undefined}><legend>Alignment</legend><div className="cv-batch-icons">
         {alignments.map(([value,Icon])=><button key={value} type="button" aria-label={'Align '+value} title={'Align '+value} onClick={()=>align(value)}><Icon size={16}/></button>)}
       </div></fieldset>

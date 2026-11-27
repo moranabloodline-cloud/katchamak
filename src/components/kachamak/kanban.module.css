@@ -62,10 +62,10 @@
 .detailLayout { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(16rem,1fr); }
 .detailMain, .activity { display:flex; flex-direction:column; gap:1.05rem; padding:1.25rem; min-width:0; }
 .detailMain { min-height:18rem; }
-.detailMain input:not([type=checkbox]):not([type=color]), .detailMain textarea, .activity textarea { width:100%; min-width:0; color:var(--foreground); border:1px solid var(--border); border-radius:.4rem; padding:.5rem .6rem; background:var(--background); }
+.detailMain input:not([type=checkbox]), .detailMain textarea, .activity textarea { width:100%; min-width:0; color:var(--foreground); border:1px solid var(--border); border-radius:.4rem; padding:.5rem .6rem; background:var(--background); }
 .detailMain textarea, .activity textarea { resize:vertical; }
-.detailMain .cardTitle input:not([type=checkbox]):not([type=color]) { font-size:1.4rem; line-height:1.2; font-weight:700; border-color:transparent; padding:.25rem; }
-.detailMain .cardTitle input:not([type=checkbox]):not([type=color]):focus { border-color:var(--border); }
+.detailMain .cardTitle input { font-size:1.4rem; line-height:1.2; font-weight:700; border-color:transparent; padding:.25rem; }
+.detailMain .cardTitle input:focus { border-color:var(--border); }
 .cardTitle { display:flex; align-items:center; gap:.45rem; }
 .cardTitle button { flex:none; color:var(--muted-foreground); }
 .cardTitle button[aria-pressed=true], .doneIcon { color:#79b894; }
@@ -83,8 +83,6 @@
 .toolBox .fields label { display:grid; gap:.3rem; font-size:.8rem; }
 .labelChip { display:inline-flex; align-items:center; gap:.35rem; border:1px solid var(--border); border-radius:.35rem; padding:.2rem .45rem; font-size:.78rem; max-width:100%; overflow-wrap:anywhere; }
 .labelChip i { flex:none; width:.62rem; height:.62rem; border-radius:3px; }
-.colorRow > label { display:flex; align-items:center; gap:.3rem; font-size:.78rem; }
-.colorRow input[type=color] { width:1.6rem; height:1.6rem; cursor:pointer; }
 .inlineForm { display:flex; align-items:center; gap:.4rem; flex:1 1 11rem; }
 .inlineForm button { flex:none; }
 .inlineForm:only-child { flex:auto; }
