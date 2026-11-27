@@ -1,3 +1,5 @@
+> **2026-11-27 — Formatirano lepljenje iz različitih izvora.** Draftopus koristi strukturu HTML-a sa clipboarda za mreže, redove, kolone, proporcije, slike i razmake. Prikaz se prilagođava širini beleške. Markdown sadržaj zadržava svoje naslove i druge blokove.
+
 > **2026-11-27 — Raspored lepljenih izveštaja.** Uređivač raspoređuje pokazatelje u kolone, čuva horizontalne trake i stavlja pripadajući opis pored fotografije. Prikaz se prilagođava širini panela.
 
 > **2026-11-27 — Slike iz lepljenih odgovora.** Prepoznate samostalne adrese slika prikazuju fotografiju u okviru. Oznaka vodi na priloženi izvor, a ista pravila važe za ranije sačuvane beleške.
@@ -800,6 +802,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Formatirano lepljenje čuva mreže i njihove odnose kolona, tok i raspodelu elemenata u redovima, geometriju slika, razmake i semantičke HTML blokove. Sačuvani atributi rade u drugim beleškama i posle ponovnog otvaranja. Raniji HTML bez rasporeda i dalje koristi rekonstrukciju prikaza. Prepoznatljive osnove Markdowna prolaze kroz postojeći uvoz.
 - **2026-11-27.** Pri lepljenju i otvaranju izveštaja pokazatelji se prikazuju u kolonama, grafikoni kao trake sa nazivima i vrednostima, a fotografije sa opisima u istom redu. Ako je prethodni clipboard sačuvao samo vrednosti grafikona, dužine traka se rekonstruišu na zajedničkoj skali. Promena prikaza stare beleške pri otvaranju ne pokreće upis.
 - **2026-11-27.** Lepljenje celog odgovora prikazuje samostalne direktne adrese fotografija kao slike u belešci. Okvir i oznaka izvora prikazuju se u uređivaču i čitanju. Ranije beleške dobijaju isti prikaz. Podudarna susedna kopija iz Gallery koristi se u okviru, a preneti brojači grupa slika izostavljaju se iz prikaza.
 

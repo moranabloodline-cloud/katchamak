@@ -46,7 +46,8 @@ function copiedImageCounter(link: HTMLAnchorElement) {
 function findImageBlock(link: HTMLAnchorElement, root: ParentNode, counter?: HTMLElement) {
   let block: HTMLElement|undefined, credit: HTMLAnchorElement|undefined;
   for (let current=link.parentElement; current && current!==root; current=current.parentElement) {
-    if (!current.matches('p,div,span') || current.matches('[data-draftopus-paste],[data-draftopus-layout]') ||
+    if (!current.matches('p,div,span') ||
+      current.matches('[data-draftopus-paste],[data-draftopus-layout],[data-draftopus-flow="row"],[data-draftopus-flow="grid"]') ||
       (current.textContent?.length ?? 0)>1024) break;
     const anchors=Array.from(current.querySelectorAll<HTMLAnchorElement>('a[href]'));
     if (anchors.length>2) break;

@@ -45,7 +45,9 @@ export async function readEditorClipboard(): Promise<ClipboardContent> {
 
 function looksLikeMarkdown(text: string) {
   return /^\s*\|?[ \t]*:?-{3,}:?[ \t]*\|[ \t]*:?-{3,}/m.test(text) ||
-    /^#{1,6}[ \t]+\S/m.test(text) && /^(?:#{1,6}[ \t]+\S|[-*][ \t]+\S|> |\x60{3,})/gm.test(text.replace(/^#{1,6}[ \t]+\S[^\n]*\n/m,''));
+    /^ {0,3}(?:#{1,6}[ \t]+\S|\x60{3,}|~{3,}|>[ \t]+\S)/m.test(text) ||
+    /^ {0,3}(?:[-+*]|\d{1,3}[.)])[ \t]+\S[^\n]*\n {0,3}(?:[-+*]|\d{1,3}[.)])[ \t]+\S/m.test(text) ||
+    /!?\[[^\]\n]+\]\((?:https?:\/\/|#)[^\s)]+\)/i.test(text);
 }
 
 function imageReference(src: string) {
@@ -172,7 +174,7 @@ export async function prepareEditorClipboard(
     paragraph.append(link);
     html = paragraph.outerHTML;
   }
-  const markdown = payload.markdown || (looksLikeMarkdown(text) ? text : '');
+  const markdown = !html && (payload.markdown || (looksLikeMarkdown(text) ? text : ''));
   if (!html && markdown) {
     const {marked} = await import('marked');
     html = marked.parse(markdown,{gfm:true,async:false});
@@ -210,6 +212,8 @@ export async function prepareEditorClipboard(
       if (size.width)img.width = size.width;
       if (size.height)img.height = size.height;
       if (size.cssWidth)img.style.width = size.cssWidth;
+      if (size.cssMaxWidth)img.style.maxWidth = size.cssMaxWidth;
+      if (size.objectFit)img.style.objectFit = size.objectFit;
       if (size.alignment==='left' || size.alignment==='right')img.style.float=size.alignment;
       if (size.alignment==='center'){img.style.display='block';img.style.marginInline='auto';}
     }

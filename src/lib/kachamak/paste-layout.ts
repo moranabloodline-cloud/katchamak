@@ -1,22 +1,12 @@
 import {directImageLink} from './editor-media';
+import {pastedSourceStyle, sourceFlowAttribute, sourceLength, sourceSizeAttribute} from './paste-source-layout';
 
 const layoutAttribute = 'data-draftopus-layout';
 const columnsAttribute = 'data-draftopus-columns';
-const layouts = ['grid', 'card', 'callout', 'caption', 'table', 'bar', 'metric', 'chart', 'chart-row', 'chart-label', 'bar-track', 'photo-row', 'citation'];
+const layouts = ['grid', 'card', 'callout', 'caption', 'table', 'bar', 'metric', 'chart', 'chart-row', 'chart-label', 'bar-track', 'photo-row', 'citation', 'shape'];
 export const pastedDocumentAttribute = 'data-draftopus-paste';
 
-export const pastedLayoutAttributes = [layoutAttribute, columnsAttribute, 'data-editor-line-height', 'width', 'height', 'scope', 'alt'];
-
-function sourceLength(value: string, maxPixels: number, maxPercent = 0): string {
-  if (value === '0' || value === '0px') return '0px';
-  const match = /^(\d+(?:\.\d+)?|\.\d+)(px|pt|em|rem|%)$/i.exec(value.trim());
-  if (!match) return '';
-  const amount = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  if (unit === '%') return amount <= maxPercent ? amount + '%' : '';
-  const pixels = amount * (unit === 'pt' ? 4 / 3 : unit === 'px' ? 1 : 16);
-  return pixels <= maxPixels ? amount + unit : '';
-}
+export const pastedLayoutAttributes = [layoutAttribute, columnsAttribute, sourceFlowAttribute, sourceSizeAttribute, 'data-editor-line-height', 'width', 'height', 'scope', 'alt'];
 
 export function pastedImageSize(element: Element) {
   const style = (element as HTMLElement).style;
@@ -26,6 +16,8 @@ export function pastedImageSize(element: Element) {
     width: width > 0 && width <= 8192 ? Math.round(width) : undefined,
     height: height > 0 && height <= 8192 ? Math.round(height) : undefined,
     cssWidth: sourceLength(style?.width || '', 2400, 100),
+    cssMaxWidth: sourceLength(style?.maxWidth || '', 2400, 100),
+    objectFit: ['contain','cover','fill','scale-down'].includes(style?.objectFit) ? style.objectFit : '',
     alignment: style?.float || element.getAttribute('align') || '',
   };
 }
@@ -38,7 +30,7 @@ function gridColumns(style: CSSStyleDeclaration, children: number) {
   return Math.min(children, tracks > 1 ? tracks : 3, 6);
 }
 
-function layoutOf(element: HTMLElement, style: CSSStyleDeclaration) {
+function layoutOf(element: HTMLElement, source: CSSStyleDeclaration, style: CSSStyleDeclaration, grid: boolean) {
   const native = element.getAttribute(layoutAttribute);
   if (native && layouts.includes(native)) {
     const columns = Number(element.getAttribute(columnsAttribute));
@@ -50,27 +42,22 @@ function layoutOf(element: HTMLElement, style: CSSStyleDeclaration) {
   if (component === 'caption' && !element.closest('p,th,td')) return { kind: 'caption' };
   if (component === 'badge' && element.closest('[data-d-component="popover-trigger"]')) return { kind: 'citation' };
   if (element.matches('aside,[role="note"],[role="alert"]')) return { kind: 'callout' };
-  if (element.matches('div,section,article') && children.length > 1) {
-    if (component === 'grid' || /^(?:inline-)?grid$/.test(style.display) || style.gridTemplateColumns) {
-      return { kind: 'grid', columns: gridColumns(style, children.length) };
-    }
-    if (/^(?:inline-)?flex$/.test(style.display) && !style.flexDirection.startsWith('column') &&
-      children.length <= 6 && children.every(child => child.matches('div,section,article,figure,p,img'))) {
-      return { kind: 'grid', columns: children.length };
-    }
+  if (grid) {
+    return { kind: 'grid', columns: gridColumns(source, Math.max(2, children.length)) };
   }
-  if (element.matches('div,span') && !children.length && !element.textContent?.trim() &&
-    style.backgroundColor && sourceLength(style.height, 32) && /^\d+(?:\.\d+)?%$/.test(style.width) &&
-    sourceLength(style.width, 0, 100)) return { kind: 'bar' };
+  if (element.matches('div,span') && !children.length && !element.textContent?.trim() && style.backgroundColor && style.height) {
+    if (sourceLength(source.height, 32) && /^\d+(?:\.\d+)?%$/.test(style.width)) return {kind:'bar'};
+    return {kind:'shape'};
+  }
 }
 
 /** Preserve supported dimensions and layout tokens using the destination theme. */
 export function pastedEditorialFormat(element: HTMLElement, declarations: string) {
   const source = element.ownerDocument.createElement('span').style;
   const style = element.ownerDocument.createElement('span').style;
-  const attributes: Record<string, string> = {};
   source.cssText = declarations.replace(/^\s*;+/, '').trim();
-  const layout = layoutOf(element, source);
+  const {attributes,flow} = pastedSourceStyle(element,source,style);
+  const layout = layoutOf(element, source, style, flow==='grid');
   if (layout) {
     attributes[layoutAttribute] = layout.kind;
     if (layout.columns) attributes[columnsAttribute] = String(layout.columns);
@@ -99,7 +86,7 @@ export function pastedEditorialFormat(element: HTMLElement, declarations: string
 }
 
 export function pastedProgress(source: Element) {
-  const min = Number(source.getAttribute('min') || 0);
+  const min = Number(source.getAttribute('min') || source.getAttribute('aria-valuemin') || 0);
   const max = Number(source.getAttribute('max') || source.getAttribute('aria-valuemax') || 1);
   const value = Number(source.getAttribute('value') ?? source.getAttribute('aria-valuenow'));
   if (!source.hasAttribute('value') && !source.hasAttribute('aria-valuenow') ||
@@ -240,7 +227,8 @@ function formatChart(group: Element, children: Element[]) {
 export function formatPastedReports(root: ParentNode) {
   for (const group of root.querySelectorAll('['+pastedDocumentAttribute+'] div')) {
     const current = group.getAttribute(layoutAttribute);
-    if (group.childElementCount < 2 || (current && current!=='grid') || group.closest('pre,code,table')) continue;
+    if (group.childElementCount < 2 || group.hasAttribute(sourceFlowAttribute) ||
+      (current && current!=='grid') || group.closest('pre,code,table')) continue;
     const children = Array.from(group.children);
     if (children.length <= 6 && children.every(metricCard)) {
       markLayout(group,'grid');

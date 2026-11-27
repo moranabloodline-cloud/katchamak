@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import {repairListWrappers} from './editor-lists';
 import {tableFormatting} from './editor-table-format';
 import {finishPastedEditorialLayout, formatPastedReports, pastedDocumentAttribute, pastedEditorialFormat, pastedLayoutAttributes, pastedProgress, transferPastedColumnWidths} from './paste-layout';
+import {sourceFlowAttribute} from './paste-source-layout';
 
 export type PasteMode = 'rich' | 'match' | 'plain';
 export const pasteMediaAttribute = 'data-draftopus-paste-media';
@@ -54,7 +55,7 @@ export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
 }
 
 export function insertPastedBlocks(editor:HTMLElement,html:string):boolean {
-  return /<(?:h[1-6]|table|figure|aside)(?:\s|>)| data-draftopus-(?:layout|media)=/i.test(html) && insertBlocks(editor,html);
+  return /<(?:h[1-6]|table|figure|aside|dl|details)(?:\s|>)| data-draftopus-(?:layout|media|flow)=/i.test(html) && insertBlocks(editor,html);
 }
 
 function insertBlocks(editor:HTMLElement,html:string):boolean {
@@ -113,8 +114,8 @@ function insertBlocks(editor:HTMLElement,html:string):boolean {
   return true;
 }
 
-const allowedAttributes = ['data-katchamak-note','data-editor-table-borderless','title','href','colspan','rowspan','start','reversed','type','value'];
-const allowedTags = ['div','p','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','caption','thead','tbody','tfoot','tr','th','td','a','font','hr','figure','figcaption','section','aside','article','mark'];
+const allowedAttributes = ['data-katchamak-note','data-editor-table-borderless','title','href','colspan','rowspan','start','reversed','type','value','open','dir','lang'];
+const allowedTags = ['div','p','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','caption','thead','tbody','tfoot','tr','th','td','a','font','hr','figure','figcaption','section','aside','article','mark','dl','dt','dd','details','summary','small','kbd','abbr','cite','address'];
 
 function pasteLink(value: string) {
   return /^(?:https?:\/\/|mailto:|#)/i.test(value) ? value : value.startsWith('//') ? 'https:' + value : '';
@@ -192,10 +193,11 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
     // Discard empty wrappers left behind by removed buttons, favicons and
     // loading indicators. Keep blank paragraphs and meaningful layout blocks.
     for(const el of Array.from(root.querySelectorAll('div,span')).reverse()){
-      if(!el.children.length && !el.textContent?.trim() && !el.hasAttribute('data-draftopus-layout'))el.remove();
+      if(!el.children.length && !el.textContent?.trim() && !el.hasAttribute('data-draftopus-layout') &&
+        el.getAttribute(sourceFlowAttribute)!=='spacer')el.remove();
     }
     finishPastedEditorialLayout(root);
-    if(root.querySelector('table,figure,aside,[data-draftopus-layout],h1,h2,h3,h4,h5,h6') ||
+    if(root.querySelector('table,figure,aside,dl,details,[data-draftopus-layout],['+sourceFlowAttribute+'],h1,h2,h3,h4,h5,h6') ||
       root.querySelectorAll('p').length > 1) {
       const container = doc.createElement('div');
       container.setAttribute(pastedDocumentAttribute,'');

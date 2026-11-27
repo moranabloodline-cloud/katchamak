@@ -143,4 +143,37 @@ assert.doesNotMatch(root.innerHTML,/data-draftopus-layout/);
 root.innerHTML='<div data-draftopus-paste><p>Ordinary notes</p>'+rentalChart(false).replaceAll('<div></div>','')+'</div>';
 formatPastedReports(root);
 assert.equal(chartWidths().length,0,'Ordinary repeated paragraphs stay as written');
+const webLayout='<style>.catalog{display:grid;grid-template-columns:minmax(0,1fr) 2fr;gap:12px}</style>'+
+  '<section class="catalog"><div style="grid-column:span 2;padding:8px;border:1px solid #444">Overview</div>'+
+  '<div style="display:flex;flex-direction:row-reverse;justify-content:space-between;column-gap:10px">'+
+  '<div style="flex:0 1 30%;max-width:126px;aspect-ratio:4 / 3;background:#556677;position:fixed">Left</div>'+
+  '<div style="display:flex;flex-direction:column;gap:5px"><p>Right <kbd>R</kbd></p><dl><dt>Harbour</dt><dd>Location</dd></dl></div></div>'+
+  '<details open><summary>Details</summary><p>More information</p></details></section>';
+root.innerHTML=preparePastedContent(webLayout,'','rich');
+const webGrid=root.querySelector('[data-draftopus-flow="grid"]');
+assert.equal(webGrid.style.getPropertyValue('--draftopus-paste-tracks'),'minmax(0px, 1fr) 2fr');
+assert.equal(webGrid.style.columnGap,'12px');
+assert.equal(webGrid.firstElementChild.style.gridColumn,'span 2');
+const webRow=webGrid.querySelector('[data-draftopus-flow="row"]');
+assert.equal(webRow.style.flexDirection,'row-reverse');
+assert.equal(webRow.firstElementChild.style.flexBasis,'30%');
+assert.equal(webRow.firstElementChild.style.maxWidth,'126px');
+assert.equal(webRow.firstElementChild.style.aspectRatio,'4 / 3');
+assert.equal(webRow.querySelector('[data-draftopus-flow="column"]').style.rowGap,'5px');
+assert.ok(webGrid.querySelector('details[open] summary') && webGrid.querySelector('dl dt'));
+assert.doesNotMatch(root.innerHTML,/position: fixed|class="catalog"|<style/);
+root.innerHTML=preparePastedContent(root.innerHTML,'','rich');
+assert.equal(root.querySelector('[data-draftopus-flow="grid"]').style.getPropertyValue('--draftopus-paste-tracks'),'minmax(0px, 1fr) 2fr');
+const copiedComponents='<div data-d-component="row" style="gap:calc(var(--spacing, 0.25rem) * 3)">'+
+  '<p data-d-component="text" data-d-size="sm">Label</p><div data-d-component="spacer"></div>'+
+  '<div style="width:37%;height:13px;background:rgb(67,135,101)"></div></div>';
+root.innerHTML=preparePastedContent(copiedComponents,'','rich');
+assert.equal(root.querySelector('[data-draftopus-flow="row"]').style.columnGap,'0.75rem');
+assert.ok(root.querySelector('[data-draftopus-flow="spacer"]'));
+assert.equal(root.querySelector('[data-draftopus-size]').style.getPropertyValue('--draftopus-paste-size'),'.9em');
+assert.equal(root.querySelector('[data-draftopus-layout="bar"]').style.width,'37%');
+const fromMarkdown=await prepareEditorClipboard({html:'',text:'# Imported heading\n\nA paragraph.',markdown:'',files:[]},'rich',[],plain);
+assert.match(fromMarkdown.html,/<h1>Imported heading<\/h1>/);
+const dashDialogue=await prepareEditorClipboard({html:'',text:'- One line of dialogue.',markdown:'',files:[]},'rich',[],plain);
+assert.equal(dashDialogue.html,'- One line of dialogue.');
 console.log('Paste formatting: empty lines, local typography, HTML/Word heading levels, original paragraph gaps, soft breaks, emphasis, links, tables, lists and whitespace passed.');
