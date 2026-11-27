@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
-import { ChevronLeft, EyeOff, LoaderCircle, Minimize2, Save, Trash2 } from "lucide-react";
-import { AutoLinkReview, requestLinkReview,useSaveReviewState } from "./AutoLinkReview";
+import { ChevronLeft, EyeOff, Minimize2, Trash2 } from "lucide-react";
+import { AutoLinkReview, requestLinkReview } from "./AutoLinkReview";
 import { inspectorOpen, inspectorWidth } from "@/lib/kachamak/inspector-tabs";
 import { resetZoomUnderPointer } from "@/lib/kachamak/workspace-zoom";
 import { useKachamak } from "@/lib/kachamak/store";
@@ -28,13 +28,12 @@ export function Workspace() {
   const novels = useKachamak((s) => s.novels);
   const activeNovelId = useKachamak((s) => s.activeNovelId);
   const activeTab = useKachamak((s) => s.activeTab);
-  const savePhase=useSaveReviewState(s=>s.phase);
   const setTab = useKachamak((s) => s.setTab);
   const [searchShortcut,setSearchShortcut]=useState(false);
   useEffect(()=>{
     const keyboard=(event:KeyboardEvent)=>{
       if(!(event.ctrlKey||event.metaKey))return;
-      if(event.key.toLowerCase()==='s'){event.preventDefault();requestLinkReview();}
+      if(event.key.toLowerCase()==='s'&&!event.altKey&&!event.shiftKey&&!event.isComposing){event.preventDefault();if(!event.repeat)requestLinkReview();}
       if(event.shiftKey && !event.altKey && event.key.toLowerCase()==='f' && !event.defaultPrevented
         && !document.querySelector('[role="dialog"],[role="alertdialog"]')){
         event.preventDefault();
@@ -112,11 +111,6 @@ export function Workspace() {
         <div role="group" aria-label="Workspace actions"
           className="workspace-actions ml-auto shrink-0 border-l border-white/10 bg-black/20 max-xl:max-w-[max(50%,11.5rem)]"
           style={{ width: rightPanelOpen ? `calc(var(--inspector-drag-width, ${rightPanelWidth}px) + 1px)` : 216 }}>
-          <button type="button" aria-label="Save" aria-busy={savePhase!=='idle'}
-            title={savePhase==='preparing'?'Preparing link review…':savePhase==='saving'?'Saving to your account…':'Save'}
-            onClick={requestLinkReview} className="workspace-action text-[#56c8b5]">
-            {savePhase==='idle'?<Save aria-hidden="true"/>:<LoaderCircle aria-hidden="true" className="animate-spin"/>}
-          </button>
           <button type="button" aria-label="Focus" title="Focus" disabled={trashOpen}
             onMouseDown={event=>event.preventDefault()} onClick={enterFocus} className="workspace-action text-sky-300">
             <EyeOff aria-hidden="true"/>

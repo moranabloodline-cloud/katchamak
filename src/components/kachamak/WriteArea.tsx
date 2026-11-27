@@ -7,6 +7,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  ChevronDown,
   ClipboardPaste,
   SpellCheck,
   Highlighter,
@@ -30,7 +31,7 @@ import {useWorkspaceHistory} from './useWorkspaceHistory';
 import {activeWritingEditor} from './WorkspaceNavigation';
 import {PageSurface,useNoteAppearance} from './PageSurface';
 import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-formatting';
-import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel} from '@/lib/kachamak/page-format';
+import {PAGE_FONTS,NOTE_FONT_SIZES} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import {EditorTableInsert} from './EditorTableTools';
@@ -42,6 +43,7 @@ import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 
 const FONTS = PAGE_FONTS;
+const FONT_POINTS = [...new Set([...NOTE_FONT_SIZES.map(px=>px*.75),8,10,11,14,16,20,22,24,26,28,36,48,72])].sort((a,b)=>a-b);
 const PASTE_MODES = [
   {mode:'rich',label:'Paste with Formatting'},
   {mode:'match',label:'Match Draftopus Style'},
@@ -103,6 +105,8 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
   const {font,size}=useNoteAppearance(node);
   const [hasSelection,setHasSelection]=useState(false);
   const [selectedTypography,setSelectedTypography]=useState<{font:string;size:number}|null>(null);
+  const [fontSizeDraft,setFontSizeDraft]=useState<string|null>(null);
+  const pointSize=Number(((selectedTypography?.size??size)*.75).toFixed(2));
 
   /* Tekući blok selekcije se osvežava na svaku promenu selekcije, da dropdown
      uvek pokazuje stil bloka u kome je kursor (podrazumevano „Normal“). */
@@ -122,6 +126,12 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
     return range&&!range.collapsed?ownedRange(range):null;
   };
   const marked=()=>editableRange(savedRange.current);
+  const setPointSize=(value:number)=>{
+    if(!applyEditorTypography(marked(),'fontSize',value+'pt'))return false;
+    setSelectedTypography(old=>({...old??{font,size},size:value*4/3}));
+    setFontSizeDraft(null);
+    return true;
+  };
   const cmd=(command:string)=>{
     const range=marked(),editor=editorForRange(range);
     if(!range||!editor)return;
@@ -191,23 +201,37 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
           </option>
         ))}
       </select>
-      <select
-        aria-label="Font size"
-        value={selectedTypography?.size??size}
-        onChange={(e) => {
-          const next = Number(e.target.value);
-          if (applyEditorTypography(marked(),'fontSize',next+'px')) {
-            setSelectedTypography(old=>({...old??{font,size},size:next}));
-          }
-        }}
-        className="h-7 rounded-md border border-white/10 bg-black/30 px-1.5 text-xs text-foreground"
-      >
-        {[...new Set([selectedTypography?.size??size,...NOTE_FONT_SIZES])].sort((a,b)=>a-b).map((s) => (
-          <option key={s} value={s}>
-            {noteSizeLabel(s)}
-          </option>
-        ))}
-      </select>
+      <div className={`flex h-7 items-stretch rounded-md border border-white/10 bg-black/30 text-xs text-foreground ${hasSelection?'':'opacity-50'}`}>
+        <input aria-label="Font size" title="Font size in points (Enter to apply)" inputMode="decimal"
+          value={fontSizeDraft??pointSize} maxLength={8}
+          onFocus={event=>event.currentTarget.select()}
+          onBlur={()=>setFontSizeDraft(null)}
+          onChange={event=>setFontSizeDraft(event.target.value)}
+          onKeyDown={event=>{
+            if(event.nativeEvent.isComposing)return;
+            if(event.key==='Escape'){event.stopPropagation();setFontSizeDraft(null);event.currentTarget.select();}
+            if(event.key!=='Enter')return;
+            event.preventDefault();
+            const value=event.currentTarget.value.trim().replace(',','.');
+            if(!/^\d+(?:\.\d+)?$/.test(value)||!setPointSize(Number(value)))event.currentTarget.select();
+          }}
+          className="w-11 rounded-l-md bg-transparent px-1.5 tabular-nums focus-visible:outline focus-visible:outline-ring"
+        />
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label="Font size options" disabled={!hasSelection}
+              className="grid w-5 place-items-center rounded-r-md border-l border-white/10 hover:bg-white/10">
+              <ChevronDown size={12} aria-hidden="true"/>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent data-editor-toolbar-popup aria-label="Font sizes in points" align="end"
+            onCloseAutoFocus={event=>{if(editorForRange(marked())===document.activeElement)event.preventDefault();}}
+            className="max-h-52 min-w-16 overflow-y-auto p-1 tabular-nums">
+            {FONT_POINTS.map(points=><DropdownMenuItem key={points} onSelect={()=>setPointSize(points)}
+              className={`py-1 text-xs ${points===pointSize?'bg-accent text-accent-foreground':''}`}>{points}</DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <LineSpacingMenu key={node?.id} disabled={!hasSelection} selection={marked} validate={editableRange}/>
       <span className="mx-1 h-5 w-px bg-white/10" />
       <ToolBtn title="Decrease indent" onClick={()=>applyEditorIndent(marked(),'outdent')}><IndentDecrease className="h-4 w-4"/></ToolBtn>

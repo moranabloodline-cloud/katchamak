@@ -52,7 +52,10 @@ export function applyEditorTypography(range:Range|null,property:'fontFamily'|'fo
   const editor=editorForRange(range);
   if(!editor||!range||range.collapsed||editor.getAttribute('contenteditable')!=='true')return false;
   if(property==='fontFamily'&&!PAGE_FONTS.includes(value))return false;
-  if(property==='fontSize'&&!NOTE_FONT_SIZES.some(size=>value===`${size}px`))return false;
+  if(property==='fontSize'){
+    const points=/^\d+(?:\.\d+)?pt$/.test(value)?parseFloat(value):NaN;
+    if(!(points>=1&&points<=400)&&!NOTE_FONT_SIZES.some(size=>value===`${size}px`))return false;
+  }
   if(property==='lineHeight')return applySelectionSpacing(range,{leading:Number(value)});
   const leaves:{node:Text;start:number;end:number}[]=[];
   const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);

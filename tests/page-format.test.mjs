@@ -37,6 +37,13 @@ assert.equal(editor.querySelectorAll('[data-editor-typography]').length,2);asser
 assert.equal(useKachamak.getState().editorSize,16,'Selection formatting does not change page defaults');
 await React.act(async()=>assert.equal(applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'),true));
 assert.equal(editor.innerHTML,original,'Undo restores the exact unformatted HTML');
+range=document.createRange();range.selectNodeContents(editor.querySelector('b'));
+assert.equal(applyEditorTypography(range,'fontSize','401pt'),false);
+await React.act(async()=>assert.equal(applyEditorTypography(range,'fontSize','26.5pt'),true));
+assert.equal(editor.querySelector('[data-editor-typography]').style.fontSize,'26.5pt');
+assert.equal(node().content,editor.innerHTML);
+await React.act(async()=>assert.equal(applyEditorHistory(dom.getSelection().getRangeAt(0),'undo'),true));
+assert.equal(editor.innerHTML,original);
 range=document.createRange();range.selectNodeContents(editor.querySelector('p'));range.collapse(true);
 assert.equal(applyEditorTypography(range,'fontSize','24px'),false,'No marked text means no page-wide change');
 for(const family of PAGE_FONTS){
@@ -115,7 +122,7 @@ assert.deepEqual(migrated.novels,oldProject);assert.equal(migrated.editorFont,'G
 assert.equal(validEditorAppearance({font:'Georgia',size:18,spacing:'2.0',page:{...DEFAULT_PAGE_FORMAT,indent:99}}),false);
 await React.act(async()=>root.render(React.createElement(Workspace)));
 const headerActions=()=>[...document.querySelectorAll('header [aria-label="Workspace actions"] button')];
-const expectedActions=['Save','Focus','Format','Trash','Account settings'];
+const expectedActions=['Focus','Format','Trash','Account settings'];
 assert.deepEqual(headerActions().map(button=>button.getAttribute('aria-label')),expectedActions);
 assert.ok(headerActions().every(button=>button.title));
 assert.ok(headerActions().slice(0,-1).every(button=>!button.textContent.trim()));
@@ -132,16 +139,16 @@ async function formatInfoWord(label,word,size){
     dom.getSelection().removeAllRanges();dom.getSelection().addRange(range);
     document.dispatchEvent(new Event('selectionchange'));
   });
-  const select=toolbar.querySelector('[aria-label="Font size"]');
-  assert.equal(select.matches(':disabled'),false,label+' selection activates the toolbar');
-  await React.act(async()=>select.focus());
+  const sizeInput=toolbar.querySelector('[aria-label="Font size"]');
+  assert.equal(sizeInput.matches(':disabled'),false,label+' selection activates the toolbar');
+  await React.act(async()=>sizeInput.focus());
   await React.act(async()=>{
-    select.value=String(size);
-    select.dispatchEvent(new Event('change',{bubbles:true}));
+    sizeInput.value=String(size*.75);
+    sizeInput.dispatchEvent(new dom.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
   });
   const formatted=field.querySelector('[data-editor-typography]');
   assert.equal(formatted?.textContent,word);
-  assert.equal(formatted.style.fontSize,size+'px');
+  assert.equal(formatted.style.fontSize,size*.75+'pt');
   return field.innerHTML;
 }
 for(const label of ['Timeline','Relationships','Canvas','Trash','Binder']){

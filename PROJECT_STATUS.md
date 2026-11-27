@@ -1,3 +1,5 @@
+> **2026-11-27 — Kraća traka za pisanje.** Ručno čuvanje ide preko Ctrl+S, a veličina fonta može da se unese u tačkama ili izabere iz liste.
+
 > **2026-11-27 — Zajedničko izdanje demo projekta.** Draftopus proverava verziju Morrigan’s Ocean pri otvaranju biblioteke. Popunjeni Canvas stiže u aktuelnoj kopiji, a ranija kopija sa izmenama ostaje u Archive.
 
 > **2026-11-27 — Čitljiviji Settings panel.** Podešavanja koriste ujednačenu sans-serif tipografiju, neutralne akcije i ravne redove sa tankim razdelnicima.
@@ -820,6 +822,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Uklonjeno je dugme Save iz zaglavlja. Ctrl+S koristi postojeći tok ručnog čuvanja. Editor nudi direktan unos i skrolujuću listu veličina fonta za označeni tekst.
 - **2026-11-27.** Instalacija demoa prati objavljenu verziju. Čuva ranije kopije i kolekcije, poštuje uklonjene i arhivirane projekte, a administracija može da proveri broj popunjenih Canvas stranica u objavljenom izdanju.
 - **2026-11-27.** Profil i izgled prikazani su u odvojenim redovima u centriranoj koloni, uz kompaktniju navigaciju desno. Obaveštenja koriste pristupačne prekidače.
 - **2026-11-27.** Prikaz profila je ograničen na 28 rem na širokom ekranu i prilagođava se užem panelu.

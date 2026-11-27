@@ -8,13 +8,11 @@ import {TABS} from '@/lib/kachamak/types';
 import {findNodeInNovel} from '@/lib/kachamak/utils';
 import {mergeReviewChoice,pendingLinkReview,prepareLinkReview} from '@/lib/kachamak/link-review';
 import {toast} from 'sonner';
-import {create} from 'zustand';
 import {BookText,Folder,Landmark,CalendarRange,Diamond} from 'lucide-react';
 import {iconForNote} from '@/lib/kachamak/icons';
 import {eventType} from '@/lib/kachamak/story-calendar';
 
 export const requestLinkReview=()=>{document.dispatchEvent(new Event('katchamak-save-review'));};
-export const useSaveReviewState=create<{phase:'idle'|'preparing'|'saving'}>(()=>({phase:'idle'}));
 const SAVE_TOAST='kachamak-manual-save';
 const afterPaint=()=>new Promise<void>(resolve=>{
   if(document.visibilityState==='hidden')setTimeout(resolve,0);
@@ -42,7 +40,6 @@ export function AutoLinkReview() {
       if(preparing.current||manualContext.current?.projectId===projectId&&manualContext.current?.noteId===noteId)return;
       const attempt=++manualAttempt.current;
       manualContext.current={projectId,noteId};preparing.current=attempt;
-      useSaveReviewState.setState({phase:'preparing'});
       toast.loading('Saving…',{id:SAVE_TOAST});
       const canReview=before.activeTab!=='trash'&&before.activeTab!=='gallery'&&!sessionRef.current&&!document.querySelector('[role=dialog]');
       let failed=false,found=false,reviewed=false,unavailable=0;
@@ -70,16 +67,15 @@ export function AutoLinkReview() {
           if(novel&&hit&&found){put({projectId:novel.id,noteId:hit.node.id,html:hit.node.content,title:hit.node.title,matches,unavailable});toast.dismiss(SAVE_TOAST);}
         }
         if(preparing.current===attempt)preparing.current=null;
-        if(!disposed&&attempt===manualAttempt.current)useSaveReviewState.setState({phase:'saving'});
         const outcome=await persisted;
         if(!outcome.ok)throw outcome.error;
         const latest=useKachamak.getState(),sameNote=latest.activeNovelId===projectId&&latest.selectedNodeId===noteId;
         if(!disposed&&attempt===manualAttempt.current&&!found)toast.success(unavailable?`Saved. Removed ${unavailable} unavailable links; their text is unchanged.`:reviewed&&sameNote?'Saved. No new note links to review.':'Saved to your account.',{id:SAVE_TOAST});
       }catch(error){if(!disposed&&attempt===manualAttempt.current)toast.error(error instanceof Error?error.message:String(error),{id:SAVE_TOAST});}
-      finally{if(preparing.current===attempt)preparing.current=null;if(!disposed&&attempt===manualAttempt.current){manualContext.current=null;useSaveReviewState.setState({phase:'idle'});}}
+      finally{if(preparing.current===attempt)preparing.current=null;if(!disposed&&attempt===manualAttempt.current)manualContext.current=null;}
     };
     document.addEventListener('katchamak-save-review',save);
-    return()=>{disposed=true;manualAttempt.current++;manualContext.current=null;preparing.current=null;useSaveReviewState.setState({phase:'idle'});toast.dismiss(SAVE_TOAST);document.removeEventListener('katchamak-save-review',save);};
+    return()=>{disposed=true;manualAttempt.current++;manualContext.current=null;preparing.current=null;toast.dismiss(SAVE_TOAST);document.removeEventListener('katchamak-save-review',save);};
   },[]);
   useEffect(()=>{if(session&&session.projectId!==activeProject)put(null);},[activeProject,session]);
   const match=session?.matches[0];
