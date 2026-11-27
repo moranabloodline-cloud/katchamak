@@ -23,6 +23,7 @@ import {formatEditorMedia} from '@/lib/kachamak/editor-media';
 import {formatPastedReports} from '@/lib/kachamak/paste-layout';
 import {captureTableCell,focusEditorRange,moveTableCaret,tableCellAt} from '@/lib/kachamak/editor-tables';
 import {EditorTableMenu,type EditorTableMenuRequest} from './EditorTableTools';
+import {bindTableResize} from '@/lib/kachamak/editor-table-resize';
 
 interface RichEditorProps {
   html: string;
@@ -236,6 +237,10 @@ export function RichEditor({
     editor.addEventListener('draftopus-paste',clipboard);
     return()=>{editor.removeEventListener('kachamak-history',command);editor.removeEventListener('beforeinput',before);editor.removeEventListener('draftopus-paste',clipboard);};
   },[onChange,noteId]);
+
+  useEffect(()=>{
+    if (ref.current) return bindTableResize(ref.current);
+  },[noteId]);
 
   return (
     <div className="relative flex-1 min-h-0">

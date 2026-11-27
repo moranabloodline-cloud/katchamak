@@ -69,7 +69,7 @@ function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,st
     n.removeAttribute('class');n.removeAttribute('data-block');
     // Convert editor marks before the publication preset replaces source CSS.
     preserveInlineEmphasis(n);
-    const tableStyle=n.matches('table,th,td')?[tableFormatting(n),pastedEditorialFormat(n,n.style.cssText).css].filter(Boolean).join(' '):'';
+    const tableStyle=n.matches('table,tr,th,td')?[tableFormatting(n),pastedEditorialFormat(n,n.style.cssText).css].filter(Boolean).join(' '):'';
     n.removeAttribute('style');
     if(tableStyle){
       n.setAttribute('style',tableStyle);

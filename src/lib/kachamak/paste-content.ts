@@ -160,7 +160,7 @@ export function preparePastedContent(html: string, text: string, mode: PasteMode
       if(progress){el.replaceWith(progress);continue;}
     }
     const editorial = mode === 'rich' ? pastedEditorialFormat(el as HTMLElement,declarations) : undefined;
-    const css = [formatting(el,declarations),el.matches('table,td,th') ? tableFormatting(el as HTMLElement) : '',editorial?.css].filter(Boolean).join(' ');
+    const css = [formatting(el,declarations),el.matches('table,tr,td,th') ? tableFormatting(el as HTMLElement) : '',editorial?.css].filter(Boolean).join(' ');
     if(el.getAttribute('role')==='separator' || el.getAttribute('data-d-component')==='divider'){
       const separator=doc.createElement('hr');
       if(css)separator.style.cssText=css;

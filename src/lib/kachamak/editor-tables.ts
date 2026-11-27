@@ -24,6 +24,7 @@ export type TableAction =
   | {type:'align'; horizontal:TableAlignment}
   | {type:'align'; vertical:CellVerticalAlignment}
   | {type:'fit'; fit:TableFit}
+  | {type:'resize'; axis:'column' | 'row'; delta:number; scale:number}
   | {type:'properties'; properties:TableProperties};
 
 type Cell = {element:HTMLTableCellElement; row:number; column:number; rows:number; columns:number};
@@ -112,7 +113,7 @@ export function insertEditorTable(target: TableInsertion, size: TableSize) {
   if (!validSize(size) || editorIdentity(editor) !== identity || editor.innerHTML !== html || !focusEditorRange(editor, range)) return false;
   const doc = editor.ownerDocument;
   const table = doc.createElement('table');
-  setTableProperties(table,{fit:'page',width:100,alignment:'left',borders:true});
+  setTableProperties(table,{fit:'contents',width:100,alignment:'left',borders:true});
   const body = table.createTBody();
   for (let i = 0; i < size.rows; i++) {
     const row = body.insertRow();
@@ -176,6 +177,37 @@ function readGrid(table: HTMLTableElement): Grid | undefined {
     }
   }
   if (columns) return {rows, columns, cells};
+}
+
+function resizeTable(table: HTMLTableElement, copy: HTMLTableElement, cell: HTMLTableCellElement,
+  {axis,delta,scale}: Extract<TableAction, {type:'resize'}>) {
+  const grid = readGrid(table);
+  const item = grid?.cells.find(rect => rect.element === cell);
+  if (!grid || !item || !Number.isFinite(delta) || !Number.isFinite(scale) || scale <= 0) return false;
+  const change = Math.round(delta / scale);
+  if (!change) return true;
+  if (axis === 'row') {
+    const index = item.row + item.rows - 1;
+    const height = grid.rows[index].getBoundingClientRect().height / scale;
+    copy.rows[index].style.height = Math.round(Math.max(16, Math.min(1600, height + change))) + 'px';
+    return true;
+  }
+
+  const column = item.column + item.columns - 1;
+  const widths = grid.cells.map(rect => ({...rect,width:rect.element.getBoundingClientRect().width / scale}));
+  const affected = widths.filter(rect => rect.column <= column && rect.column + rect.columns > column);
+  const minimum = Math.min(...affected.map(rect => rect.width - 24 * rect.columns));
+  const editor = table.closest('.kachamak-editor')!;
+  const room = (editor.getBoundingClientRect().width - table.getBoundingClientRect().width) / scale;
+  const adjustment = Math.max(-Math.max(0,minimum),Math.min(Math.max(0,room),change));
+  if (!Math.round(adjustment)) return true;
+  copy.style.width = 'auto';
+  copy.style.tableLayout = 'auto';
+  for (const rect of widths) {
+    const width = rect.width + (rect.column <= column && rect.column + rect.columns > column ? adjustment : 0);
+    copy.rows[rect.row].cells[rect.element.cellIndex].style.width = Math.round(Math.min(2400,width)) + 'px';
+  }
+  return true;
 }
 
 function renderGrid(grid: Grid) {
@@ -306,12 +338,17 @@ export function editEditorTable(target: TableCellTarget, action: TableAction) {
         if (block.style.textAlign && block.closest('td,th') === nextCell) block.style.textAlign = action.horizontal;
       }
     } else nextCell.style.verticalAlign = action.vertical;
-  } else if (action.type === 'properties') {
-    const {width} = action.properties;
+  } else if (action.type === 'properties' || action.type === 'fit') {
+    const previous = tableProperties(table);
+    const properties = action.type === 'fit' ? {...previous,fit:action.fit,width:100} : action.properties;
+    const {width} = properties;
     if (!Number.isFinite(width) || width < 1 || width > 100) return false;
-    setTableProperties(copy, action.properties);
-  } else if (action.type === 'fit') {
-    setTableProperties(copy, {...tableProperties(copy),fit:action.fit,width:100});
+    setTableProperties(copy, properties);
+    if (properties.fit === 'contents' && (action.type === 'fit' || previous.fit !== 'contents')) {
+      for (const row of Array.from(copy.rows)) for (const cell of Array.from(row.cells)) cell.style.removeProperty('width');
+    }
+  } else if (action.type === 'resize') {
+    if (!resizeTable(table,copy,cell,action)) return false;
   } else if (!remove) {
     const grid = readGrid(copy);
     const item = grid?.cells.find(rect => rect.element === nextCell);

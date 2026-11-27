@@ -1,3 +1,5 @@
+> **2026-11-27 — Dimenzije tabela u uređivaču.** Tabele se podrazumevano prilagođavaju sadržaju. Desna ivica ćelije podešava širinu kolone, a donja visinu reda.
+
 > **2026-11-27 — Providna pozadina lepljenih grafikona.** Pri lepljenju PNG kopije grafikona uklanja se bela podloga oko grafikona i u otvoru prstenastog grafikona.
 
 > **2026-11-27 — Vraćena obrada lepljenja iz verzije 510.** Slike i tabele se pri lepljenju ponovo obrađuju prema pravilima iz verzije 510.
@@ -808,6 +810,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Povlačenje ivice prikazuje vodič i upisuje dimenziju po otpuštanju. AutoFit to contents vraća kolone na prirodnu širinu teksta.
 - **2026-11-27.** PNG kopija sa oznakom Chart i neprekinutom belom pozadinom dobija providnost pri uvozu. Boje grafikona i izdvojeni beli detalji čuvaju se u slici u Gallery.
 - **2026-11-27.** Vraćena je verzija 510 nakon prijave da poslednja izmena lepljenja nije rešila prikaz slika i da se tabele više ne prikazuju.
 - **2026-11-27.** Formatirano lepljenje čuva dostupne boje i pozadine, familiju i težinu fonta, prored, razmake i stilove sadržane u clipboard HTML-u. Slike prenose odnos stranica, veličinu i položaj kadra. Podržane oznake teme i teksta sačuvane su za ponovno otvaranje. Match Draftopus Style i običan tekst ostaju dostupni u meniju lepljenja.

@@ -33,6 +33,26 @@ const edit = (editor, row, column, action) => {
 };
 const values = table => [...table.rows].map(row => [...row.cells].map(cell => cell.textContent));
 
+{
+  const note = editor('<table><tr><td colspan="2">Title</td></tr><tr><td>Scene</td><td>Act</td></tr></table>');
+  const table = note.querySelector('table');
+  note.getBoundingClientRect = () => ({width:400});
+  table.getBoundingClientRect = () => ({width:180});
+  table.rows[0].cells[0].getBoundingClientRect = () => ({width:180});
+  for (const cell of table.rows[1].cells) cell.getBoundingClientRect = () => ({width:90});
+  const wider = edit(note,1,0,{type:'resize',axis:'column',delta:40,scale:1});
+  assert.equal(wider.rows[0].cells[0].style.width,'220px');
+  assert.deepEqual([...wider.rows[1].cells].map(cell=>cell.style.width),['130px','90px']);
+  wider.rows[1].getBoundingClientRect = () => ({height:25});
+  const taller = edit(note,1,0,{type:'resize',axis:'row',delta:30,scale:1});
+  assert.equal(taller.rows[1].style.height,'55px');
+  const pasted = editor(preparePastedContent(taller.outerHTML,'','rich'));
+  assert.equal(pasted.querySelector('tr:last-child').style.height,'55px');
+  const fitted = edit(note,1,0,{type:'fit',fit:'contents'});
+  assert.equal(fitted.rows[1].cells[0].style.width,'');
+  assert.equal(fitted.rows[1].style.height,'55px');
+}
+
 // Insertion at a selection keeps the manuscript on both sides and records one edit.
 {
   const other = editor('<p>Other pane</p>');

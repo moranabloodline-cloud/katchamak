@@ -16,7 +16,7 @@ function widthPercentage(value: string) {
 export function tableProperties(table: HTMLTableElement): TableProperties {
   const {style} = table;
   return {
-    fit: style.width === 'auto' ? 'contents' : style.tableLayout === 'fixed' ? 'fixed' : 'page',
+    fit: style.tableLayout === 'fixed' ? 'fixed' : !style.width || style.width === 'auto' ? 'contents' : 'page',
     width: widthPercentage(style.width) ?? 100,
     alignment: style.marginLeft === 'auto' ? style.marginRight === 'auto' ? 'center' : 'right' : 'left',
     borders: table.getAttribute('data-editor-table-borderless') !== 'true',
@@ -44,8 +44,11 @@ export function tableFormatting(element: HTMLElement) {
       if (style[side] === '0px' || style[side] === 'auto') clean[side] = style[side];
     }
   } else if (element.matches('th,td')) {
+    if (/^\d+(?:\.\d+)?(?:px|%)$/.test(style.width) && parseFloat(style.width)<=2400) clean.width=style.width;
     if (tableAlignments.some(value => value === style.textAlign)) clean.textAlign = style.textAlign;
     if (cellVerticalAlignments.some(value => value === style.verticalAlign)) clean.verticalAlign = style.verticalAlign;
+  } else if (element.matches('tr') && /^\d+(?:\.\d+)?px$/.test(style.height) && parseFloat(style.height)<=1600) {
+    clean.height=style.height;
   }
   return clean.cssText;
 }
