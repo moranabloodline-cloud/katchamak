@@ -32,6 +32,7 @@ import {applyEditorQuote,clearEditorFormatting} from '@/lib/kachamak/editor-form
 import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel} from '@/lib/kachamak/page-format';
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
+import {EditorTableInsert} from './EditorTableTools';
 import {LineSpacingMenu} from './LineSpacingMenu';
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
@@ -127,9 +128,11 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
       if(focused?.matches('input,textarea,select')){savedRange.current=null;setHasSelection(false);setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');return;}
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
       const editor=editorForRange(range);
-      setHasSelection(!!editableRange(range));
-      if(editor&&ownedRange(range)){
-        savedRange.current=range!.cloneRange();setBlockStyle(selectionBlock(range));
+      const textRange=ownedRange(range);
+      savedRange.current=textRange?.cloneRange()??null;
+      setHasSelection(!!textRange&&!textRange.collapsed);
+      if(editor&&textRange){
+        setBlockStyle(selectionBlock(range));
         const element=range!.startContainer.nodeType===1?range!.startContainer as Element:range!.startContainer.parentElement;
         if(element){
           setQuoteActive(!!element.closest('blockquote'));
@@ -137,7 +140,7 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
           setSelectedTypography({font:css.fontFamily.split(',')[0].replace(/["']/g,'').trim()||font,size:Number.isFinite(pixels)?Number(pixels.toFixed(3)):size});
         }
       }
-      else {savedRange.current=null;setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');}
+      else {setQuoteActive(false);setSelectedTypography(null);setBlockStyle('normal');}
     };
     sync();
     document.addEventListener('selectionchange',sync);document.addEventListener('focusin',sync);document.addEventListener('input',sync);
@@ -266,6 +269,7 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
       >
         <LinkIcon className="h-4 w-4" />
       </ToolBtn>
+      <EditorTableInsert range={()=>ownedRange(savedRange.current)} owns={ownedRange} disabled={!selectedTypography}/>
       </div>
     </div>
   );

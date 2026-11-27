@@ -1,3 +1,5 @@
+> **2026-11-27 — Tabele u uređivaču.** Insert table nudi mrežu i unos dimenzija. Meni ćelije menja redove, kolone, podelu, poravnanje i svojstva tabele. Izmene ulaze u istoriju aktivnog polja.
+
 > **2026-11-27 — Jedinstvena paleta u Canvasu, Kanbanu i Publishu.** Story Board i preostale kontrole za boje koriste istu aplikacijsku paletu od deset nijansi kao beleške i Timeline. Već upisane boje ostaju u projektu.
 
 > **2026-11-27 — Canvas navigacija i planiranje.** Fit width uklapa širinu Canvasa i Story Boarda. Meni stranice menja njen redosled ili nivo. Story Board ima filter po liniji radnje i preglednije scene, a Mind Map dobija boje po granama i Fit branch.
@@ -791,6 +793,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-27.** HTML tabele dobijaju komandu Insert table, izbor dimenzija mišem ili tastaturom, Tab kroz ćelije i kontekstualni meni. Strukturne izmene uvažavaju postojeće raspone redova i kolona. Širina, poravnanje i ivice tabele sačuvani su u HTML prikazu i DOCX izvozu.
 
 - **2026-11-27.** Add/Edit plotline, Canvas kartice, selekcija i crtanje, Maps putanje i oblasti, Kanban oznake i Publish boje koriste zajedničku paletu. Publish nudi Reset to default za svaku boju stila.
 

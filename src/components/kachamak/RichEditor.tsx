@@ -17,6 +17,8 @@ import {applyBlockStyle,applyEditorHistory} from '@/lib/kachamak/editor-blocks';
 import {openProjectNote} from '@/lib/kachamak/note-navigation';
 import {trimWordSelection} from '@/lib/kachamak/editor-selection';
 import {wrapRootParagraphs} from '@/lib/kachamak/editor-paragraphs';
+import {captureTableCell,moveTableCaret,tableCellAt} from '@/lib/kachamak/editor-tables';
+import {EditorTableMenu,type EditorTableMenuRequest} from './EditorTableTools';
 
 interface RichEditorProps {
   html: string;
@@ -53,6 +55,17 @@ export function RichEditor({
   const pasting=useRef(false);
   const history=useRef(new EditorHistory());
   const [preview,setPreview]=useState<string|null>(null);
+  const [tableMenu,setTableMenu]=useState<EditorTableMenuRequest|null>(null);
+
+  function openTableMenu(editor:HTMLElement,node:Node|null,point?:{x:number;y:number}){
+    const cell=tableCellAt(editor,node);
+    if(!cell)return false;
+    const target=captureTableCell(editor,cell);
+    if(!target)return false;
+    const rect=cell.getBoundingClientRect();
+    setTableMenu({target,x:point?.x??rect.left,y:point?.y??rect.bottom});
+    return true;
+  }
 
   useEffect(() => {
     const el = ref.current;
@@ -116,8 +129,21 @@ export function RichEditor({
         aria-multiline="true"
         suppressContentEditableWarning
         onDoubleClick={event=>{if(!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)trimWordSelection(ref.current);}}
+        onContextMenu={event=>{
+          if(openTableMenu(event.currentTarget,event.target as Node,{x:event.clientX,y:event.clientY})){
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
         onKeyDown={event => {
           const key=event.key.toLowerCase();
+          if((key==='contextmenu'||key==='f10'&&event.shiftKey)&&
+            openTableMenu(event.currentTarget,window.getSelection()?.focusNode??null)){
+            event.preventDefault();event.stopPropagation();return;
+          }
+          if(key==='tab'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.nativeEvent.isComposing&&moveTableCaret(event.currentTarget,event.shiftKey)){
+            event.preventDefault();return;
+          }
           if(key==='enter'&&!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.nativeEvent.isComposing&&ref.current){
             history.current.before(ref.current);convertingDivider.current=true;
             try{if(insertTypedDivider(ref.current)){event.preventDefault();handleInput();return;}}finally{convertingDivider.current=false;}
@@ -170,6 +196,7 @@ export function RichEditor({
         data-placeholder={placeholder}
         className={`kachamak-editor outline-none ${className ?? ""}`}
       />
+      <EditorTableMenu request={tableMenu} close={()=>setTableMenu(null)}/>
       <NotePreview noteId={preview} onClose={()=>setPreview(null)} />
       {noteId && <LinkHighlights editorRef={ref} noteId={noteId} colorize={colorizeAnnotations} />}
     </div>

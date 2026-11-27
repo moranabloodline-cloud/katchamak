@@ -1,11 +1,13 @@
-import {AlignmentType,Bookmark,BorderStyle,Document,ExternalHyperlink,Footer,Header,HeadingLevel,ImageRun,InternalHyperlink,LevelFormat,Packer,PageNumber,Paragraph,SectionType,Table,TableCell,TableRow,TextRun,WidthType,type INumberingOptions,type IParagraphOptions,type IRunOptions,type ISectionOptions,type ParagraphChild} from 'docx';
+import {AlignmentType,Bookmark,BorderStyle,Document,ExternalHyperlink,Footer,Header,HeadingLevel,ImageRun,InternalHyperlink,LevelFormat,Packer,PageNumber,Paragraph,SectionType,Table,TableBorders,TableCell,TableLayoutType,TableRow,TextRun,VerticalAlignTable,WidthType,type INumberingOptions,type IParagraphOptions,type IRunOptions,type ISectionOptions,type ParagraphChild} from 'docx';
 import {type BookStyle,trims} from './book-style';
 import {imageBytes} from './publish-export';
 import type {Publication} from './publication';
+import {tableProperties} from './editor-table-format';
 
 const mm=(n:number)=>Math.round(n*1440/25.4);
 const headingLevels=[HeadingLevel.HEADING_1,HeadingLevel.HEADING_2,HeadingLevel.HEADING_3,HeadingLevel.HEADING_4,HeadingLevel.HEADING_5,HeadingLevel.HEADING_6];
 const alignment={left:AlignmentType.LEFT,right:AlignmentType.RIGHT,center:AlignmentType.CENTER,justify:AlignmentType.JUSTIFIED};
+const verticalAlignment={top:VerticalAlignTable.TOP,middle:VerticalAlignTable.CENTER,bottom:VerticalAlignTable.BOTTOM};
 export async function wordEdition(book:Publication,s:BookStyle){
   const [width,height]=trims[s.trim],space=s.size*20,ink=s.ink.slice(1),accent=s.accent.slice(1);
   const ids=new Map(book.sections.map((v,i)=>[v.id,'Section_'+i]));
@@ -87,18 +89,25 @@ export async function wordEdition(book:Publication,s:BookStyle){
       if(!(node instanceof HTMLElement)){if(node.textContent?.trim())result.push(new Paragraph({...opts,children:await inline(node)}));continue;}
       const tag=node.tagName,cls=node.className;
       if(tag==='TABLE'){
+        const table=node as HTMLTableElement, format=tableProperties(table);
         const rows:TableRow[]=[];
-        for(const tr of (node as HTMLTableElement).rows){
+        for(const tr of table.rows){
           const cells:TableCell[]=[];
           for(const td of tr.cells){
             const group=tr.parentElement as HTMLTableSectionElement;
             const remaining=group.rows.length-tr.sectionRowIndex;
-            const nested=await blocks(paragraphsIn(td));
-            cells.push(new TableCell({columnSpan:td.colSpan,rowSpan:Math.min(td.rowSpan||remaining,remaining),children:nested.length?nested:[new Paragraph('')]}));
+            const nested=await blocks(paragraphsIn(td),{alignment:alignment[td.style.textAlign as keyof typeof alignment]});
+            cells.push(new TableCell({columnSpan:td.colSpan,rowSpan:Math.min(td.rowSpan||remaining,remaining),
+              verticalAlign:verticalAlignment[td.style.verticalAlign as keyof typeof verticalAlignment],
+              children:nested.length?nested:[new Paragraph('')]}));
           }
           rows.push(new TableRow({tableHeader:tr.parentElement?.tagName==='THEAD',children:cells}));
         }
-        if(rows.length)result.push(new Table({width:{size:100,type:WidthType.PERCENTAGE},rows}));continue;
+        if(rows.length)result.push(new Table({
+          width:format.fit==='contents'?{size:0,type:WidthType.AUTO}:{size:format.width,type:WidthType.PERCENTAGE},
+          alignment:alignment[format.alignment],layout:format.fit==='fixed'?TableLayoutType.FIXED:TableLayoutType.AUTOFIT,
+          borders:format.borders?undefined:TableBorders.NONE,rows,
+        }));continue;
       }
       if(tag==='UL'||tag==='OL'){
         const ordered=tag==='OL', reversed=ordered&&node.hasAttribute('reversed');

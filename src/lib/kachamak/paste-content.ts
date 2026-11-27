@@ -1,6 +1,7 @@
 'use client';
 import DOMPurify from 'dompurify';
 import {repairListWrappers} from './editor-lists';
+import {tableFormatting} from './editor-table-format';
 // Only carry inline emphasis and significant whitespace. The destination
 // supplies the font, type scale, leading, alignment and page layout.
 function formatting(el:Element,css:string) {
@@ -110,7 +111,8 @@ export function preparePastedContent(html: string, text: string): string {
   }
   doc.querySelectorAll('script,style,link,meta,iframe,object,embed,svg,img').forEach(el=>el.remove());
   for(const el of doc.body.querySelectorAll('*')) {
-    const css = formatting(el,(inherited.get(el)||'')+';'+(el.getAttribute('style')||''));
+    const css = [formatting(el,(inherited.get(el)||'')+';'+(el.getAttribute('style')||'')),
+      el.matches('table,td,th') ? tableFormatting(el as HTMLElement) : ''].filter(Boolean).join(' ');
     // Word and accessible editors also mark headings without using an h tag.
     const level=el.getAttribute('role')==='heading'?el.getAttribute('aria-level'):
       el.matches('p')?Array.from(el.classList).join(' ').match(/\bMsoHeading([1-6])\b/i)?.[1]:null;
@@ -118,11 +120,11 @@ export function preparePastedContent(html: string, text: string): string {
       const heading=doc.createElement('h'+level);
       heading.append(...el.childNodes);el.replaceWith(heading);continue;
     }
-    for(const attr of Array.from(el.attributes)) if(!['data-katchamak-note','title','href','colspan','rowspan','start','reversed','type','value'].includes(attr.name))el.removeAttribute(attr.name);
+    for(const attr of Array.from(el.attributes)) if(!['data-katchamak-note','data-editor-table-borderless','title','href','colspan','rowspan','start','reversed','type','value'].includes(attr.name))el.removeAttribute(attr.name);
     if(css)el.setAttribute('style',css);
     if(el.matches('p,div')&&!el.children.length&&(el.textContent===''||el.textContent==='\u00a0'))el.replaceChildren(doc.createElement('br'));
   }
-  DOMPurify.sanitize(doc.body,{IN_PLACE:true,ALLOWED_TAGS:['body','p','div','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','thead','tbody','tfoot','tr','th','td','a','font','hr'],ALLOWED_ATTR:['data-katchamak-note','title','style','href','colspan','rowspan','start','reversed','type','value']});
+  DOMPurify.sanitize(doc.body,{IN_PLACE:true,ALLOWED_TAGS:['body','p','div','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','thead','tbody','tfoot','tr','th','td','a','font','hr'],ALLOWED_ATTR:['data-katchamak-note','data-editor-table-borderless','title','style','href','colspan','rowspan','start','reversed','type','value']});
   repairListWrappers(doc.body);
   return doc.body.innerHTML.trim()?doc.body.innerHTML:plainTextContent(text);
 }

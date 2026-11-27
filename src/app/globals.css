@@ -276,6 +276,18 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 /* Empty paragraphs pasted from writing tools retain their blank line. */
 .kachamak-editor p:empty, .kachamak-editor div:empty { min-height: 1em; }
 
+.kachamak-editor table { width: 100%; max-width: 100%; border-collapse: collapse; margin-block: .7em; }
+.kachamak-editor :is(td,th) {
+  min-width: 1.25em;
+  padding: .28em .45em;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.kachamak-editor th { font-weight: 650; }
+.kachamak-editor table[data-editor-table-borderless="true"] > :is(thead,tbody,tfoot) > tr > :is(td,th) { border-color: transparent; }
+.kachamak-editor :is(td,th) > :is(p,div) { text-align: inherit; margin-block: 0; text-indent: 0; }
+
 /* Note identities stay stable when titles change. */
 .kachamak-editor a[href^="#note/"] { color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }

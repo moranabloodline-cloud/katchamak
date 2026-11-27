@@ -146,8 +146,8 @@ assert.equal(JSON.stringify(book().sections.binder),original);
     '<ol start="7"><li>First route</li><li value="12"><p>Detour</p><ul><li>Nested path</li></ul><p>After the turn</p></li><li>Final route</li></ol>'+
     '<figure><p>First plate</p><figcaption>Caption below</figcaption></figure>'+
     '<figure><figcaption>Caption above</figcaption><p>Second plate</p></figure><p>Following text</p>'+
-    '<table><thead><tr><th>Route</th><th>Place</th><th>Record</th></tr></thead><tbody>'+
-    '<tr><td rowspan="2">Pair</td><td colspan="2">A <em>careful</em> record</td></tr><tr><td>East</td><td>West</td></tr></tbody></table>';
+    '<table data-editor-table-borderless="true" style="width:68%; table-layout:fixed; margin-left:auto; margin-right:auto"><thead><tr><th>Route</th><th>Place</th><th>Record</th></tr></thead><tbody>'+
+    '<tr><td rowspan="2">Pair</td><td colspan="2" style="text-align:right; vertical-align:bottom">A <em>careful</em> record</td></tr><tr><td>East</td><td>West</td></tr></tbody></table>';
   const passage={...book().sections.binder[0],content:html};
   const openingStyle={...style,initial:'Drop cap',smallCaps:true};
   const edition=publication({...book(),sections:{binder:[passage]}},openingStyle);
@@ -155,6 +155,10 @@ assert.equal(JSON.stringify(book().sections.binder),original);
   const preview=new JSDOM(rich.html).window.document;
   assert.equal(Array.from(preview.querySelectorAll('.lead'),span=>span.textContent).join(''),'“Žuti čamac prelazi prag');
   assert.equal(preview.querySelector('ol li[value]')?.value,12);
+  assert.equal(preview.querySelector('table')?.style.width,'68%');
+  assert.equal(preview.querySelector('table')?.style.display,'table');
+  assert.equal(preview.querySelector('table')?.getAttribute('data-editor-table-borderless'),'true');
+  assert.equal(preview.querySelector('td[colspan]')?.style.verticalAlign,'bottom');
   const pkg=unzipSync(new Uint8Array(await (await wordEdition(edition,openingStyle)).arrayBuffer()));
   const word=xml(strFromU8(pkg['word/document.xml'])),numbers=xml(strFromU8(pkg['word/numbering.xml']));
   const tags=(node,name)=>Array.from(node.getElementsByTagName('w:'+name));
@@ -166,6 +170,12 @@ assert.equal(JSON.stringify(book().sections.binder),original);
   assert(!keepsNext('Caption below'));assert(!keepsNext('Second plate'));assert(!keepsNext('Following text'));
   const cell=tags(word,'tc').find(c=>c.textContent==='A careful record');
   assert.equal(tags(cell,'p').length,1);assert.equal(tags(cell,'i').length,1);
+  assert.equal(tags(cell,'jc')[0]?.getAttribute('w:val'),'right');
+  assert.equal(tags(cell,'vAlign')[0]?.getAttribute('w:val'),'bottom');
+  const properties=tags(word,'tblPr')[0];
+  assert.equal(tags(properties,'jc')[0]?.getAttribute('w:val'),'center');
+  assert.equal(tags(properties,'tblLayout')[0]?.getAttribute('w:type'),'fixed');
+  assert.equal(tags(properties,'tblW')[0]?.getAttribute('w:w'),'3400');
   assert.deepEqual(tags(word,'vMerge').map(e=>e.getAttribute('w:val')),['restart','continue']);
   assert(tags(word,'gridSpan').some(e=>e.getAttribute('w:val')==='2'));
   assert(tags(word,'tblHeader').some(e=>e.getAttribute('w:val')!=='false'));

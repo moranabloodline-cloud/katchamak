@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
 import {fontStacks,glyphs,trims} from './book-style';
 import {projectImageSrc} from './project-image';
+import {tableFormatting} from './editor-table-format';
 import type {Novel,NoteNode} from './types';
 
 export type Proof = 'Manuscript'|'Title page'|'Chapter opening'|'Body text'|'Scene break'|'Special blocks'|'End matter'|SpecialPage;
@@ -60,13 +61,19 @@ function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,st
     }
     raw=template.innerHTML;
   }
-  el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','style','start','value','reversed','colspan','rowspan'],ALLOW_DATA_ATTR:false});
+  el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tfoot','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','data-editor-table-borderless','style','start','value','reversed','colspan','rowspan'],ALLOW_DATA_ATTR:false});
   for(const n of Array.from(el.querySelectorAll<HTMLElement>('*'))){
     const old=n.getAttribute('data-block')||n.className;
     n.removeAttribute('class');n.removeAttribute('data-block');
     // Convert editor marks before the publication preset replaces source CSS.
     preserveInlineEmphasis(n);
+    const tableStyle=n.matches('table,th,td')?tableFormatting(n):'';
     n.removeAttribute('style');
+    if(tableStyle){
+      n.setAttribute('style',tableStyle);
+      // Paged.js treats an inline style with implicit display as undisplayed.
+      n.style.display=n.tagName==='TABLE'?'table':'table-cell';
+    }
     if(n.tagName==='IMG'){
       const src=projectImageSrc(book.gallery,n.getAttribute('src')??'');
       if(src && /^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(src))n.setAttribute('src',src);
@@ -321,7 +328,11 @@ export function bookCss(s:BookStyle,medium:'print'|'screen'|'ebook'){
 article{display:block}p{margin:0 0 ${s.paragraphGap}em;text-indent:${s.indent}em;text-align:${s.align};hyphens:${s.hyphens?'auto':'manual'};orphans:2;widows:2}p:empty{min-height:1em}
 h1,h2,h3,h4,h5,h6{font-family:${fontStacks[s.headingFont]};color:${reader?'inherit':s.heading};line-height:1.16;break-after:avoid}
 h1{margin:.45em 0 .8em;font-size:${s.headingSize/s.size}em}img{max-width:100%;height:auto;max-height:${print?(h-s.top-s.bottom-8)+'mm':'65vh'};object-fit:contain}
-blockquote p,aside p,.letter p,.verse p,.aside p{text-align:inherit;text-indent:0}a{color:inherit}table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #aaa;padding:.3em}pre,.verse{white-space:pre-wrap;font-family:inherit}blockquote,aside,.letter,pre{margin:1em}
+blockquote p,aside p,.letter p,.verse p,.aside p{text-align:inherit;text-indent:0}a{color:inherit}
+table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #aaa;padding:.3em;vertical-align:top;overflow-wrap:anywhere}
+table[data-editor-table-borderless="true"] > :is(thead,tbody,tfoot) > tr > :is(td,th){border-color:transparent}
+:is(td,th) > :is(p,div){text-align:inherit;text-indent:0;margin-block:0}
+pre,.verse{white-space:pre-wrap;font-family:inherit}blockquote,aside,.letter,pre{margin:1em}
 .chapter-head{text-align:${s.chapterAlign};padding-top:${print?h*s.sink/100+'mm':s.sink/3+'em'};margin:0 0 ${s.chapterGap}em;break-inside:avoid;break-after:avoid}
 .chapter-head h1{margin:.3em 0 0}.chapter-art{max-height:5em;max-width:80%}.ornament,.scene,.number{color:${accent}}.number{font-size:.85em;letter-spacing:.12em}.scene{text-align:center;margin:${s.dividerGap}em 0;min-height:.35em;break-after:avoid}
 .opening{text-indent:${s.firstIndent?s.indent:0}em}.lead{font-variant:${s.smallCaps?'small-caps':'normal'}}
