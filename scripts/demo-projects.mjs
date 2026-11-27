@@ -63,10 +63,17 @@ export function prepareMorriganDemo(source,version=Date.now()) {
 export function cloneDemoNovel(template) {
   const ids=new Map([[template.id,crypto.randomUUID()]]);
   const visit=nodes=>nodes.forEach(n=>{ids.set(n.id,crypto.randomUUID());visit(n.children);});
-  demoSections.forEach(s=>visit(template.sections[s]||[]));
-  const remap=value=>typeof value==='string'?[...ids].reduce((text,[old,id])=>text.replaceAll(old,id),value):Array.isArray(value)?value.map(remap):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,remap(v)])):value;
+  for(const nodes of Object.values(template.sections))if(Array.isArray(nodes))visit(nodes);
+  const idPattern=new RegExp([...ids.keys()].sort((a,b)=>b.length-a.length).map(id=>id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');
+  const remap=value=>typeof value==='string'?(value.startsWith('data:')?value:value.replace(idPattern,id=>ids.get(id))):Array.isArray(value)?value.map(remap):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,remap(v)])):value;
   const novel=demoTimelineSection(remap(template));novel.createdAt=novel.updatedAt=Date.now();return novel;
 }
+async function readDemoTemplate(bucket,catalog) {
+  const object=await bucket.get(catalog.object_key);
+  if(!object)throw new Error('The demo could not be read.');
+  return JSON.parse(await object.text());
+}
+const populatedCanvasPages=novel=>[novel.homepageRemoved?undefined:novel.homepage,...(novel.homePages??[])].filter(page=>page?.blocks?.length||page?.storyBoard);
 async function copyDemoFiles(bucket,from,to) {
   let cursor;
   do {const page=await bucket.list({prefix:from,include:['customMetadata'],cursor});for(const file of page.objects){const object=await bucket.get(file.key);if(!object)throw new Error('A demo attachment could not be read.');await bucket.put(to+file.key.slice(from.length),await object.arrayBuffer(),{customMetadata:object.customMetadata,httpMetadata:{contentType:'application/octet-stream'}});}cursor=page.truncated?page.cursor:undefined;}while(cursor);
@@ -76,7 +83,14 @@ export async function demoLibraryApi({request,env,account,prefix,revision,readSn
   await q('CREATE TABLE IF NOT EXISTS demo_catalog (demo_key TEXT PRIMARY KEY,object_key TEXT NOT NULL,title TEXT NOT NULL,version INTEGER NOT NULL)').run();
   await q('CREATE TABLE IF NOT EXISTS account_demos (account_id TEXT NOT NULL,demo_key TEXT NOT NULL,project_id TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(account_id,demo_key))').run();
   const catalog=await q('SELECT * FROM demo_catalog WHERE demo_key = ?',MORRIGAN_DEMO_KEY).first();
-  if(path==='/api/library/demo'&&request.method==='GET')return json({available:!!catalog,title:catalog?.title,version:catalog?.version});
+  if(path==='/api/library/demo'&&request.method==='GET'){
+    const summary={available:!!catalog,title:catalog?.title,version:catalog?.version};
+    if(catalog&&account.role==='admin'&&new URL(request.url).searchParams.get('details')==='canvas'){
+      const template=await readDemoTemplate(env.BUCKET,catalog);
+      return json({...summary,canvasPageCount:populatedCanvasPages(template).length});
+    }
+    return json(summary);
+  }
   if(request.method!=='POST')return json({error:'Method not allowed.'},405);
   if(path==='/api/library/demo/publish') {
     if(account.role!=='admin')return json({error:'Administrator access required.'},403);
@@ -85,7 +99,7 @@ export async function demoLibraryApi({request,env,account,prefix,revision,readSn
     let body;try{body=JSON.parse(raw);}catch{return json({error:'Invalid JSON.'},400);}
     const snapshot=await readSnapshot(),source=snapshot.novels.find(n=>n.id===body.projectId);
     if(!source||(source.demo&&!source.demo.source)||!/morrigan/i.test(source.title))return json({error:'Choose the original Morrigan’s Ocean project from your library.'},400);
-    const version=Date.now(),{novel,chapterCount}=prepareMorriganDemo(source,version);
+    const version=Math.max(Date.now(),(catalog?.version??0)+1),{novel,chapterCount}=prepareMorriganDemo(source,version);
     const base=`shared-demos/${MORRIGAN_DEMO_KEY}/${crypto.randomUUID()}/`;
     await copyDemoFiles(env.BUCKET,prefix+'files/'+source.id+'/',base+'files/');
     await env.BUCKET.put(base+'project.json',JSON.stringify(novel),{httpMetadata:{contentType:'application/json'}});
@@ -96,27 +110,40 @@ export async function demoLibraryApi({request,env,account,prefix,revision,readSn
     await q('INSERT INTO demo_catalog (demo_key,object_key,title,version) VALUES (?,?,?,?) ON CONFLICT(demo_key) DO UPDATE SET object_key=excluded.object_key,title=excluded.title,version=excluded.version',MORRIGAN_DEMO_KEY,base+'project.json',novel.title,version).run();
     await q('INSERT INTO account_audit (id,actor,target,action,detail,created_at) VALUES (?,?,?,?,?,?)',crypto.randomUUID(),account.id,MORRIGAN_DEMO_KEY,'demo.publish',JSON.stringify({version,chapterCount}),Date.now()).run();
     await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO UPDATE SET project_id=excluded.project_id',account.id,MORRIGAN_DEMO_KEY,source.id,Date.now()).run();
-    return json({published:true,title:novel.title,chapterCount,version});
+    return json({published:true,title:novel.title,chapterCount,canvasPageCount:populatedCanvasPages(novel).length,version});
   }
   if(path!=='/api/library/demo/install')return json({error:'Not found.'},404);
   const snapshot=await readSnapshot();
   const result=()=>({revision,snapshot});
   if(!catalog)return json(result());
   const received=await q('SELECT project_id FROM account_demos WHERE account_id = ? AND demo_key = ?',account.id,MORRIGAN_DEMO_KEY).first();
-  const previous=received&&snapshot.novels.find(n=>n.id===received.project_id);
-  if(received&&(!previous||previous.demo?.source||previous.demo?.edition===2))return json(result());
-  const existing=snapshot.novels.find(n=>n.demo?.key===MORRIGAN_DEMO_KEY&&n.demo?.edition===2);
-  if(existing){await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO NOTHING',account.id,MORRIGAN_DEMO_KEY,existing.id,Date.now()).run();return json(result());}
-  const object=await env.BUCKET.get(catalog.object_key);if(!object)throw new Error('The demo could not be read.');
-  const template=JSON.parse(await object.text());
-  if(previous&&template.demo?.edition!==2)return json(result());
-  if(previous)previous.archived=true;
+  const copies=snapshot.novels.filter(n=>n.demo?.key===MORRIGAN_DEMO_KEY);
+  const previous=received?copies.find(n=>n.id===received.project_id):copies.find(n=>!n.archived);
+  // A removed demo stays removed. The publishing account works on its source.
+  if((received&&!previous)||copies.some(n=>n.demo.source))return json(result());
+  const assign=id=>q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO UPDATE SET project_id=excluded.project_id',account.id,MORRIGAN_DEMO_KEY,id,Date.now()).run();
+  const superseded=novel=>previous&&previous.id!==novel.id?{demoReplacement:{from:previous.id,to:novel.id}}:{};
+  if(previous&&previous.demo.version>=catalog.version){
+    if(!received)await assign(previous.id);
+    return json(result());
+  }
+  // Recover the assignment if a prior request saved the copy but lost its
+  // response or failed before updating account_demos.
+  const current=copies.find(n=>!n.archived&&n.demo.version>=catalog.version);
+  if(current){await assign(current.id);return json({...result(),...superseded(current)});}
+  if(previous?.archived)return json(result());
+  const template=await readDemoTemplate(env.BUCKET,catalog);
+  if(template.demo?.key!==MORRIGAN_DEMO_KEY||template.demo.version!==catalog.version)throw new Error('The catalog points to an invalid demo version.');
   const novel=cloneDemoNovel(template);
-  snapshot.novels.push(novel);
-  if(new TextEncoder().encode(JSON.stringify(snapshot)).length>20*1024*1024)return json({...result(),demoUnavailable:'The demo cannot fit within this library’s save limit. Your projects were preserved.'});
+  const updated={
+    ...snapshot,
+    novels:[...snapshot.novels.map(n=>n.id===previous?.id?{...n,archived:true}:n),novel],
+    collections:snapshot.collections.map(c=>previous&&c.projectIds.includes(previous.id)?{...c,projectIds:[...c.projectIds,novel.id]}:c),
+  };
+  if(new Blob([JSON.stringify(updated)]).size>20*1024*1024)return json({...result(),demoUnavailable:'The updated demo cannot fit within this library’s save limit.'});
   await copyDemoFiles(env.BUCKET,catalog.object_key.slice(0,-'project.json'.length)+'files/',prefix+'files/'+novel.id+'/');
-  const saved=await writeSnapshot(snapshot,revision);
+  const saved=await writeSnapshot(updated,revision);
   if(!saved)return json({error:'Another window saved newer changes. Retry opening the library.',conflict:true},409);
-  await q('INSERT INTO account_demos (account_id,demo_key,project_id,created_at) VALUES (?,?,?,?) ON CONFLICT(account_id,demo_key) DO UPDATE SET project_id=excluded.project_id',account.id,MORRIGAN_DEMO_KEY,novel.id,Date.now()).run();
-  return json({...saved,snapshot,installed:true,projectId:novel.id});
+  await assign(novel.id);
+  return json({...saved,snapshot:updated,installed:true,projectId:novel.id,...superseded(novel)});
 }

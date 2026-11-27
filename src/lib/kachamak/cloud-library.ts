@@ -3,6 +3,7 @@ import { migrateBookArtwork, migrateLibraryArtwork } from './migrate-gallery-ima
 import { readWorkspaceRoute, writeWorkspaceRoute } from './workspace-route';
 import {HOME_ROOT, homepageEntry} from './homepage';
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { useKachamak, isUsableBackup, normalizeNovelSections, exportNovelJson } from './store';
 import { validCloudLibrary } from './cloud-write-validation.mjs';
 import { createLibraryNotePatch, type LibraryNotePatch } from './cloud-note-patch.mjs';
@@ -286,7 +287,18 @@ function writeLibraryNotePatch(notePatch: LibraryNotePatch, writeId: string, bas
     body: JSON.stringify({ revision: baseRevision, writeId, notePatch, ...snapshotNavigation() }),
   });
 }
-function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=false) {
+type LibraryResponse = { revision: number; snapshot: Snapshot; demoReplacement?: {from:string;to:string}; demoUnavailable?: string };
+
+async function openLibraryWithDemo(): Promise<LibraryResponse> {
+  try {
+    return await api('/api/library/demo/install',{method:'POST'});
+  } catch (error) {
+    if (!(error instanceof LibraryConflictError || error instanceof TemporaryCloudError)) throw error;
+    return api('/api/library');
+  }
+}
+
+function apply(data: LibraryResponse,keepAppearance=false) {
   if (!Number.isSafeInteger(data.revision) || data.revision < 0 || !Array.isArray(data.snapshot?.novels) || !data.snapshot.novels.every(isUsableBackup) || !Array.isArray(data.snapshot.collections)) throw new Error('The saved library could not be read.');
   const serverBaseline = serializeLibrary(data.snapshot);
   data.snapshot.novels.forEach(normalizeNovelSections);
@@ -300,7 +312,9 @@ function apply(data: { revision: number; snapshot: Snapshot },keepAppearance=fal
   const navigation: Partial<Navigation> = {};
   if (!useWebLibrary.getState().ready && (route || data.snapshot.navigation)) {
     const saved = route?.navigation ?? data.snapshot.navigation!;
-    const novel = data.snapshot.novels.find(n => n.id === saved.activeNovelId);
+    const replacement = data.demoReplacement;
+    const projectId = replacement && saved.activeNovelId === replacement.from ? replacement.to : saved.activeNovelId;
+    const novel = data.snapshot.novels.find(n => n.id === projectId);
     const note = (id: string | null) => novel && typeof id === 'string' && Object.values(novel.sections).some(nodes => findNode(nodes, id)) ? id : null;
     navigation.activeNovelId = novel?.id ?? null;
     navigation.activeTab = ['binder','codex','planning','research','templates','prompts','timeline','family','finance','kanban','publish','maps','gallery','trash'].includes(saved.activeTab) ? saved.activeTab as TabKey : novel && typeof saved.activeTab === 'string' && saved.activeTab.startsWith('note:') && findNodeInNovel(novel,saved.activeTab.slice(5)) ? saved.activeTab as TabKey : 'binder';
@@ -368,7 +382,7 @@ export async function initializeWebLibrary() {
       useWebLibrary.setState({ready:true,busy:false,conflict:true,error:'Unsaved changes were kept after sign-in. Choose Retry save to save them, or export backups.'});
       return;
     }
-    const confirmed = await api('/api/library/demo/install',{method:'POST'});
+    const confirmed = await openLibraryWithDemo();
     if (!subscribed) {
       subscribed = true;
       const changed = () => {
@@ -394,6 +408,7 @@ export async function initializeWebLibrary() {
     setHistoryOwner(account.id);
     apply(confirmed);
     writeWorkspaceRoute();
+    if (confirmed.demoUnavailable) toast.info(confirmed.demoUnavailable);
     if (useLocalRecovery.getState().drafts.some(d => d.retryClone)) await loadLocalDrafts(confirmed);
   })().catch(error => { fail(error); throw error; }).finally(() => { initializing = null; });
   return initializing;
@@ -778,5 +793,9 @@ export async function publishDemoProject(projectId:string) {
   await saveWebLibrary();
   const before=snapshot(),data=await api('/api/library/demo/install',{method:'POST'});
   if(snapshot()===before)apply(data);
-  return result as {title:string;chapterCount:number;version:number};
+  return result as {title:string;chapterCount:number;canvasPageCount:number;version:number};
+}
+
+export async function publishedDemoStats() {
+  return api('/api/library/demo?details=canvas') as Promise<{available:boolean;title?:string;version?:number;canvasPageCount?:number}>;
 }
