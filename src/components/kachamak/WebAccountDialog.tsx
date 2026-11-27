@@ -2,6 +2,7 @@
 import {GalleryImagePicker} from './GalleryImagePicker';
 import {galleryAvatar} from '@/lib/kachamak/project-settings';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import {LockKeyhole, Pencil, Trash2, UserRound} from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {AdminDemoProject} from './AdminDemoProject';
 import {AdminLicenseList} from './AdminLicenseList';
@@ -96,14 +97,14 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
     onOpenChange(next);
   }}>
     <DialogTrigger asChild>{trigger}</DialogTrigger>
-    <DialogContent placement="right" aria-describedby={undefined} className="draftopus-settings flex max-w-[65rem] flex-col overflow-hidden border-border bg-background font-sans text-foreground sm:w-[min(94vw,65rem)] sm:rounded-l-xl">
-      <header className="flex min-h-[3.25rem] shrink-0 items-center gap-2.5 border-b border-border px-5 pr-14 sm:px-6">
-        <img src="/draftopus-logo.png" alt="" width={23} height={23} className="size-[23px] object-contain"/>
+    <DialogContent aria-describedby={undefined} className="draftopus-settings flex h-[min(36rem,calc(100dvh-2rem))] max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden rounded-xl border-border bg-background p-0 font-sans text-foreground shadow-2xl sm:max-w-[44rem]">
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-[var(--settings-header)] px-4 pr-12">
+        <img src="/draftopus-logo.png" alt="" width={19} height={19} className="size-[19px] object-contain"/>
         <DialogTitle className="text-sm">Settings</DialogTitle>
       </header>
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_14.5rem] md:grid-rows-[minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_clamp(12rem,34%,15rem)] sm:grid-rows-[minmax(0,1fr)]">
         <SettingsNavigation page={tab} onSelect={changePage} project={!!novel} admin={account?.role==='admin'} busy={locked}/>
-        <main ref={main} aria-label="Settings content" className="@container row-start-2 min-w-0 overflow-y-auto px-5 py-6 md:col-start-1 md:row-start-1 md:px-8 md:py-9">
+        <main ref={main} aria-label="Settings content" className="@container row-start-2 min-w-0 overflow-y-auto p-4 sm:col-start-1 sm:row-start-1">
           <div className="mx-auto max-w-[36rem] space-y-4">
             {error&&<p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">{error}</p>}
             {!account && projectSection==='hidden' && (error
@@ -113,27 +114,34 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
             {open && <ProjectSettings key={activeBook} open={open} onOpenChange={onOpenChange} section={projectSection} onBusyChange={setProjectBusy}/>}
             {account&&<>
               {tab==='profile'&&<section aria-labelledby="personal-details-title">
-                <form onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h2 id="personal-details-title" className={heading}>Personal details</h2>
-                    <button disabled={locked||(name.trim()===account.displayName&&avatar===account.avatar)} className={primary}>Save profile</button>
+                <h2 id="personal-details-title" className="text-base font-semibold">Personal details</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">Manage your profile and author identity.</p>
+                <form className="mt-3 rounded-xl border border-border bg-card/60 p-3 text-xs" onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
+                  <div className="flex items-center gap-1 border-b border-border pb-3">
+                    <GalleryImagePicker novel={novel} books={books} onPick={(_,item)=>void run(async()=>setAvatar(await galleryAvatar(item.image)))}>
+                      <button type="button" disabled={locked} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md text-left hover:bg-muted/70 disabled:opacity-50" aria-label="Choose avatar from Gallery">
+                        {avatar?<img src={avatar} alt="" className="size-10 shrink-0 rounded-full object-cover"/>:
+                          <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-muted"><UserRound size={17}/></span>}
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="text-sm font-semibold">Profile picture</span><span className="text-muted-foreground">Change your avatar</span></span>
+                        <Pencil aria-hidden="true" className="mx-2 size-3.5 shrink-0 text-muted-foreground"/>
+                      </button>
+                    </GalleryImagePicker>
+                    {avatar&&<button type="button" aria-label="Remove avatar" title="Remove avatar" className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" disabled={locked} onClick={()=>setAvatar('')}><Trash2 aria-hidden="true" size={14}/></button>}
                   </div>
-                  <div className="divide-y divide-border border-y border-border text-sm">
-                    <div className={row}>
-                      <div className="flex items-center gap-3">
-                        {avatar?<img src={avatar} alt="Your avatar" className="size-9 shrink-0 rounded-full object-cover"/>:
-                          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium">{(name||account.email).slice(0,2).toUpperCase()}</span>}
-                        <span>Avatar</span>
-                      </div>
-                      <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <GalleryImagePicker novel={novel} books={books} onPick={(_,item)=>void run(async()=>setAvatar(await galleryAvatar(item.image)))}>
-                          <button type="button" disabled={locked} className={button} aria-label="Choose avatar from Gallery">Choose avatar</button>
-                        </GalleryImagePicker>
-                        {avatar&&<button type="button" className="rounded-full px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" disabled={locked} onClick={()=>setAvatar('')}>Remove</button>}
-                      </div>
-                    </div>
-                    <label className={row}>Display / author name<Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="h-8 px-2.5 @md:w-[15rem]"/></label>
-                    <div className={row}><span>Sign-in email</span><span className="max-w-full select-text break-all text-xs text-muted-foreground">{account.email}</span></div>
+                  <div className="grid gap-3 py-3">
+                    <label className="grid gap-1.5 font-medium">Display / author name
+                      <Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="h-9 border-transparent bg-muted/70 px-2.5 text-sm shadow-none"/>
+                    </label>
+                    <label className="grid gap-1.5 font-medium">Sign-in email
+                      <span className="relative">
+                        <Input type="email" readOnly value={account.email} className="h-9 border-transparent bg-muted/70 px-2.5 pr-8 text-xs text-muted-foreground shadow-none"/>
+                        <LockKeyhole aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground"/>
+                      </span>
+                    </label>
+                  </div>
+                  <div className="flex justify-end border-t border-border pt-3">
+                    <button type="submit" disabled={locked||(name.trim()===account.displayName&&avatar===account.avatar)}
+                      className="rounded-md bg-[var(--settings-action)] px-2.5 py-1.5 font-semibold text-[var(--settings-action-text)] hover:brightness-110 disabled:opacity-60">Save changes</button>
                   </div>
                 </form>
               </section>}

@@ -8,6 +8,11 @@
   --input: #cfcfd1;
   --ring: #707075;
   --settings-index: #f6f6f5;
+  --settings-header: #f1f1ef;
+  --settings-accent: #815110;
+  --settings-selection: #f4e7d0;
+  --settings-action: #875716;
+  --settings-action-text: #fff;
   --primary: var(--foreground);
   --primary-foreground: var(--background);
 }
@@ -22,4 +27,9 @@ html[data-theme="dark"] .draftopus-settings {
   --input: #424245;
   --ring: #a8a8ac;
   --settings-index: #181819;
+  --settings-header: #202021;
+  --settings-accent: #f3bc65;
+  --settings-selection: #362a19;
+  --settings-action: #b77925;
+  --settings-action-text: #17120a;
 }
