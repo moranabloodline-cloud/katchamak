@@ -4,7 +4,8 @@ import { requestJson } from './request-json';
 import { create } from 'zustand';
 import { previewFolder } from './preview-folder';
 import { rememberedFolder, requestFolder, type FolderHandle } from './folder-access';
-import TurndownService from 'turndown';
+import {editorMarkdownConverter} from './manuscript-export';
+import {portableEditorHtml} from './project-image';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { useKachamak, exportNovelJson, isUsableBackup, normalizeNovelSections } from './store';
@@ -372,14 +373,14 @@ async function saveSnapshot() {
     const loc = await place(c.id, 'collection', c.name, c.parentId);
     await writeOwned(loc, '.collection.json', JSON.stringify({ id: c.id, name: c.name, createdAt: c.createdAt, updatedAt: c.updatedAt }, null, 2));
   }
-  const converter = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  const converter = editorMarkdownConverter({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
   for (const novel of novels) {
     const memberships = collections.filter(c => c.projectIds.includes(novel.id));
     if (memberships.length > 1) throw new Error('A project folder can belong to one collection. Move it to a single collection first.');
     const loc = await place(novel.id, 'project', novel.title, memberships[0]?.id ?? null);
     const webNotes: Record<string, NoteFile> = {};
     for (const section of SECTION_KEYS) visit(novel.sections[section]??[], node => {
-      webNotes[node.id] = { path: `Notes/${section}/${folderName(node.title, node.id)}.md`, markdown: converter.turndown(node.content) + '\n' };
+      webNotes[node.id] = { path: `Notes/${section}/${folderName(node.title, node.id)}.md`, markdown: converter.turndown(portableEditorHtml(node.content,novel.gallery)) + '\n' };
     });
     const prior = await readText(loc.handle, 'project.json');
     if (prior) await writeText(loc.handle, 'project.json.bak', prior);

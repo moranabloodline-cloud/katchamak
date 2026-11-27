@@ -2,8 +2,14 @@
 import DOMPurify from 'dompurify';
 import {repairListWrappers} from './editor-lists';
 import {tableFormatting} from './editor-table-format';
-// Only carry inline emphasis and significant whitespace. The destination
-// supplies the font, type scale, leading, alignment and page layout.
+import {finishPastedEditorialLayout, pastedEditorialFormat, pastedLayoutAttributes, pastedProgress, transferPastedColumnWidths} from './paste-layout';
+
+export type PasteMode = 'rich' | 'match' | 'plain';
+export const pasteMediaAttribute = 'data-draftopus-paste-media';
+export const pastedDocumentAttribute = 'data-draftopus-paste';
+type PrepareMedia = (element: Element) => Node | null;
+
+// Shared emphasis and whitespace rules for both formatted modes.
 function formatting(el:Element,css:string) {
   const declarations=css.replace(/^\s*;+/, '').trim();
   if(!declarations)return '';
@@ -22,7 +28,8 @@ function formatting(el:Element,css:string) {
   // existing page-spacing rule takes precedence for any chosen note gap.
   if(el.matches('p,div')&&!el.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,table,blockquote,hr,pre')){
     for(const edge of ['marginTop','marginBottom'] as const){
-      if(/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|pt|em|rem|mm|cm|in|pc|%)?$/.test(style[edge]))clean[edge]=style[edge];
+      if(/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|pt|em|rem|mm|cm|%)?$/.test(style[edge]) &&
+        Number.parseFloat(style[edge]) <= (/(?:em|cm)$/.test(style[edge]) ? 4 : 96))clean[edge]=style[edge];
     }
   }
   return clean.cssText;
@@ -44,7 +51,14 @@ function plainTextContent(text:string):string {
 // and write the current pixel size into the manuscript. Insert heading-bearing
 // fragments as blocks so their typography can continue to follow the tab.
 export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
-  if(!/<h[1-6](?:\s|>)/i.test(html))return false;
+  return /<h[1-6](?:\s|>)/i.test(html) && insertBlocks(editor,html);
+}
+
+export function insertPastedBlocks(editor:HTMLElement,html:string):boolean {
+  return /<(?:h[1-6]|table|figure|aside)(?:\s|>)| data-draftopus-layout=/i.test(html) && insertBlocks(editor,html);
+}
+
+function insertBlocks(editor:HTMLElement,html:string):boolean {
   const doc=editor.ownerDocument,selection=doc.getSelection();
   if(!selection?.rangeCount)return false;
   const range=selection.getRangeAt(0);
@@ -52,7 +66,7 @@ export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
 
   const scopeOf=(node:Node)=>{
     const element=node.nodeType===1?node as Element:node.parentElement;
-    const scope=element?.closest('li,td,th,blockquote');
+    const scope=element?.closest('li,td,th,blockquote,[data-draftopus-layout="card"]');
     return scope&&editor.contains(scope)?scope:editor;
   };
   const scope=scopeOf(range.startContainer);
@@ -90,7 +104,7 @@ export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
   replacement.deleteContents();
   replacement.insertNode(parts);
   // Keep subsequent typing in the last pasted paragraph.
-  if(last.nodeType===1 && (last as Element).matches('br,hr')){
+  if(last.nodeType===1 && (last as Element).matches('br,hr,figure,table,[data-draftopus-paste]')){
     range.setStartAfter(last);range.collapse(true);
   }else{
     range.selectNodeContents(last);
@@ -100,32 +114,96 @@ export function insertHeadingFragment(editor:HTMLElement,html:string):boolean {
   return true;
 }
 
-export function preparePastedContent(html: string, text: string): string {
-  if (!html) return plainTextContent(text);
-  const doc = new DOMParser().parseFromString(html,'text/html');
+const allowedAttributes = ['data-katchamak-note','data-editor-table-borderless','title','href','colspan','rowspan','start','reversed','type','value'];
+const allowedTags = ['div','p','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','caption','thead','tbody','tfoot','tr','th','td','a','font','hr','figure','figcaption','section','aside','article','mark'];
+
+function pasteLink(value: string) {
+  return /^(?:https?:\/\/|mailto:|#)/i.test(value) ? value : value.startsWith('//') ? 'https:' + value : '';
+}
+
+export function preparePastedContent(html: string, text: string, mode: PasteMode = 'match', prepareMedia?: PrepareMedia): string {
+  if (!html || mode === 'plain') return plainTextContent(text);
+  // A template does not request resources from pasted img, iframe or link tags.
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  const doc = template.content.ownerDocument;
+  const root = doc.createElement('div');
+  root.append(template.content);
   const inherited = new Map<Element,string>();
   // Office/Docs clipboard fragments often keep paragraph spacing in class rules.
-  for(const sheet of doc.querySelectorAll('style')) for(const rule of sheet.textContent?.matchAll(/([^{}]+)\{([^{}]*)\}/g) ?? []) {
-    if(rule[1].includes('@'))continue;
-    try { for(const el of doc.querySelectorAll(rule[1].trim())) inherited.set(el,(inherited.get(el)||'')+';'+rule[2]); } catch { /* Unsupported source selector. */ }
+  let rules = 0;
+  for(const sheet of Array.from(root.querySelectorAll('style')).slice(0,16)) {
+    for(const rule of sheet.textContent?.slice(0,128_000).matchAll(/([^{}]+)\{([^{}]*)\}/g) ?? []) {
+      if(++rules>256)break;
+      if(rule[1].length>200 || /[@:]/.test(rule[1]) || rule[2].length>4000)continue;
+      try { for(const el of root.querySelectorAll(rule[1].trim())) inherited.set(el,(inherited.get(el)||'')+';'+rule[2]); } catch { /* Unsupported source selector. */ }
+    }
   }
-  doc.querySelectorAll('script,style,link,meta,iframe,object,embed,svg,img').forEach(el=>el.remove());
-  for(const el of doc.body.querySelectorAll('*')) {
-    const css = [formatting(el,(inherited.get(el)||'')+';'+(el.getAttribute('style')||'')),
-      el.matches('table,td,th') ? tableFormatting(el as HTMLElement) : ''].filter(Boolean).join(' ');
+  root.querySelectorAll('script,style,link,meta,base,iframe,object,embed,button,input,textarea,select,noscript,[hidden],[aria-hidden="true"]').forEach(el=>el.remove());
+  if(mode === 'rich')transferPastedColumnWidths(root);
+  for(const el of root.querySelectorAll('*')) {
+    if(!root.contains(el))continue;
+    if(el.matches('img,svg')) {
+      const replacement = prepareMedia?.(el);
+      if(replacement)el.replaceWith(replacement);
+      else el.remove();
+      continue;
+    }
+    if(el.matches('canvas')) {
+      const label = el.getAttribute('aria-label')?.trim();
+      if(!el.textContent?.trim() && label)el.replaceWith(doc.createTextNode(label));
+      continue;
+    }
+    if(mode==='rich' && el.matches('meter,progress,[role="progressbar"]')){
+      const progress=pastedProgress(el);
+      if(progress){el.replaceWith(progress);continue;}
+    }
+    const declarations = (inherited.get(el)||'')+';'+(el.getAttribute('style')||'');
+    const editorial = mode === 'rich' ? pastedEditorialFormat(el as HTMLElement,declarations) : undefined;
+    const css = [formatting(el,declarations),el.matches('table,td,th') ? tableFormatting(el as HTMLElement) : '',editorial?.css].filter(Boolean).join(' ');
+    if(el.getAttribute('role')==='separator' || el.getAttribute('data-d-component')==='divider'){
+      el.replaceWith(doc.createElement('hr'));
+      continue;
+    }
     // Word and accessible editors also mark headings without using an h tag.
     const level=el.getAttribute('role')==='heading'?el.getAttribute('aria-level'):
       el.matches('p')?Array.from(el.classList).join(' ').match(/\bMsoHeading([1-6])\b/i)?.[1]:null;
+    let target = el;
     if(level&&/^[1-6]$/.test(level)&&!el.matches('h1,h2,h3,h4,h5,h6')){
-      const heading=doc.createElement('h'+level);
-      heading.append(...el.childNodes);el.replaceWith(heading);continue;
+      target=doc.createElement('h'+level);
+      target.append(...el.childNodes);
+      el.replaceWith(target);
     }
-    for(const attr of Array.from(el.attributes)) if(!['data-katchamak-note','data-editor-table-borderless','title','href','colspan','rowspan','start','reversed','type','value'].includes(attr.name))el.removeAttribute(attr.name);
-    if(css)el.setAttribute('style',css);
-    if(el.matches('p,div')&&!el.children.length&&(el.textContent===''||el.textContent==='\u00a0'))el.replaceChildren(doc.createElement('br'));
+    for(const attr of Array.from(target.attributes)) if(!allowedAttributes.includes(attr.name))target.removeAttribute(attr.name);
+    if(target.matches('a[href]')){
+      const href = pasteLink(target.getAttribute('href')!.trim());
+      if(href)target.setAttribute('href',href);
+      else target.removeAttribute('href');
+    }
+    if(css)target.setAttribute('style',css);
+    for(const [attr,value] of Object.entries(editorial?.attributes ?? {}))target.setAttribute(attr,value);
+    if(target.matches(mode==='rich'?'p':'p,div')&&!target.children.length&&(target.textContent===''||target.textContent==='\u00a0')&&
+      editorial?.attributes['data-draftopus-layout']!=='bar')target.replaceChildren(doc.createElement('br'));
   }
-  DOMPurify.sanitize(doc.body,{IN_PLACE:true,ALLOWED_TAGS:['body','p','div','span','br','b','strong','i','em','u','s','strike','sub','sup','h1','h2','h3','h4','h5','h6','blockquote','pre','code','ul','ol','li','table','thead','tbody','tfoot','tr','th','td','a','font','hr'],ALLOWED_ATTR:['data-katchamak-note','data-editor-table-borderless','title','style','href','colspan','rowspan','start','reversed','type','value']});
-  repairListWrappers(doc.body);
-  return doc.body.innerHTML.trim()?doc.body.innerHTML:plainTextContent(text);
+  DOMPurify.sanitize(root,{IN_PLACE:true,ALLOWED_TAGS:[...allowedTags,'img'],ALLOWED_ATTR:[
+    ...allowedAttributes,...pastedLayoutAttributes,'style',pasteMediaAttribute,
+  ],ALLOW_DATA_ATTR:false});
+  repairListWrappers(root);
+  if(mode === 'rich') {
+    // Discard empty wrappers left behind by removed buttons, favicons and
+    // loading indicators. Keep blank paragraphs and meaningful layout blocks.
+    for(const el of Array.from(root.querySelectorAll('div,span')).reverse()){
+      if(!el.children.length && !el.textContent?.trim() && !el.hasAttribute('data-draftopus-layout'))el.remove();
+    }
+    finishPastedEditorialLayout(root);
+    if(root.querySelector('table,figure,aside,[data-draftopus-layout],h1,h2,h3,h4,h5,h6') ||
+      root.querySelectorAll('p').length > 1) {
+      const container = doc.createElement('div');
+      container.setAttribute(pastedDocumentAttribute,'');
+      container.append(...root.childNodes);
+      root.append(container);
+    }
+  }
+  return root.innerHTML.trim() || plainTextContent(text);
 }
 

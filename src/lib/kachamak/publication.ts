@@ -3,8 +3,9 @@ import {manuscriptEntries,type ManuscriptEntry} from './publish-manuscript';
 import DOMPurify from 'dompurify';
 import type {BookStyle, BlockName, SpecialPage} from './book-style';
 import {fontStacks,glyphs,trims} from './book-style';
-import {projectImageSrc} from './project-image';
+import {portableEditorHtml,projectImageSrc} from './project-image';
 import {tableFormatting} from './editor-table-format';
+import {pastedEditorialFormat} from './paste-layout';
 import type {Novel,NoteNode} from './types';
 
 export type Proof = 'Manuscript'|'Title page'|'Chapter opening'|'Body text'|'Scene break'|'Special blocks'|'End matter'|SpecialPage;
@@ -53,7 +54,8 @@ function preserveInlineEmphasis(element: HTMLElement) {
 }
 function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,string>){
   const el=document.implementation.createHTMLDocument('').createElement('div');
-  if(raw.includes('gallery:')){
+  raw=portableEditorHtml(raw,book.gallery);
+  if(raw.includes('src="gallery:')){
     const template=document.createElement('template');
     template.innerHTML=raw;
     for(const img of template.content.querySelectorAll('img[src^="gallery:"]')){
@@ -61,13 +63,13 @@ function cleanBody(raw:string,book:Novel,sceneBreak:string,targets:Map<string,st
     }
     raw=template.innerHTML;
   }
-  el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','h1','h2','h3','h4','h5','h6','hr','img','a','table','thead','tbody','tfoot','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','class','data-block','data-editor-table-borderless','style','start','value','reversed','colspan','rowspan'],ALLOW_DATA_ATTR:false});
+  el.innerHTML=DOMPurify.sanitize(raw,{ALLOWED_TAGS:['p','div','span','br','strong','b','em','i','u','s','sup','sub','ul','ol','li','blockquote','pre','code','h1','h2','h3','h4','h5','h6','hr','img','a','table','caption','thead','tbody','tfoot','tr','th','td','figure','figcaption','section','aside'],ALLOWED_ATTR:['href','src','alt','width','height','class','data-block','data-editor-table-borderless','style','start','value','reversed','colspan','rowspan','scope'],ALLOW_DATA_ATTR:false});
   for(const n of Array.from(el.querySelectorAll<HTMLElement>('*'))){
     const old=n.getAttribute('data-block')||n.className;
     n.removeAttribute('class');n.removeAttribute('data-block');
     // Convert editor marks before the publication preset replaces source CSS.
     preserveInlineEmphasis(n);
-    const tableStyle=n.matches('table,th,td')?tableFormatting(n):'';
+    const tableStyle=n.matches('table,th,td')?[tableFormatting(n),pastedEditorialFormat(n,n.style.cssText).css].filter(Boolean).join(' '):'';
     n.removeAttribute('style');
     if(tableStyle){
       n.setAttribute('style',tableStyle);

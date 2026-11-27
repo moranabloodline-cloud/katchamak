@@ -7,6 +7,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  ClipboardPaste,
   SpellCheck,
   Highlighter,
   Italic,
@@ -33,12 +34,19 @@ import {PAGE_FONTS,NOTE_FONT_SIZES,noteSizeLabel} from '@/lib/kachamak/page-form
 import {PresetColourPicker} from "./PresetColourPicker";
 import { RichEditor } from "./RichEditor";
 import {EditorTableInsert} from './EditorTableTools';
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import type {EditorPasteRequest} from '@/lib/kachamak/editor-clipboard';
+import type {PasteMode} from '@/lib/kachamak/paste-content';
 import {LineSpacingMenu} from './LineSpacingMenu';
 import { useKachamak } from "@/lib/kachamak/store";
 import type { NoteNode, SectionKey } from "@/lib/kachamak/types";
 
 const FONTS = PAGE_FONTS;
-
+const PASTE_MODES = [
+  {mode:'rich',label:'Paste with Formatting'},
+  {mode:'match',label:'Match Draftopus Style'},
+  {mode:'plain',label:'Paste as Plain Text'},
+] satisfies {mode:PasteMode;label:string}[];
 
 /* Text Style (tačka 8, spec §8): dropdown ISpred font kontrola,
    podrazumevano „Normal“. formatBlock radi nad blokom u kome je kursor/
@@ -102,6 +110,7 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
   const [quoteActive,setQuoteActive]=useState(false);
   const savedRange=useRef<Range|null>(null);
   const colourRange=useRef<Range|null>(null);
+  const requestedPaste=useRef<EditorPasteRequest|null>(null);
   const [textColour,setTextColour]=useState(''),[highlightColour,setHighlightColour]=useState('');
   const ownedRange=(range:Range|null)=>{
     const editor=editorForRange(range);
@@ -270,6 +279,28 @@ export function EditorToolbar({node,inspectorId}: {node?: NoteNode | null; inspe
         <LinkIcon className="h-4 w-4" />
       </ToolBtn>
       <EditorTableInsert range={()=>ownedRange(savedRange.current)} owns={ownedRange} disabled={!selectedTypography}/>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button type="button" aria-label="Paste options" title="Paste options" disabled={!selectedTypography}
+            onMouseDown={event=>event.preventDefault()}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground disabled:opacity-40">
+            <ClipboardPaste className="size-4"/>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent data-editor-toolbar-popup="" align="end" onCloseAutoFocus={event=>{
+          const request=requestedPaste.current;
+          requestedPaste.current=null;
+          if(!request)return;
+          event.preventDefault();
+          const range=ownedRange(request.range),editor=editorForRange(range);
+          if(range&&editor)editor.dispatchEvent(new CustomEvent<EditorPasteRequest>('draftopus-paste',{detail:{mode:request.mode,range}}));
+        }}>
+          {PASTE_MODES.map(({mode,label})=><DropdownMenuItem key={mode} onSelect={()=>{
+            const range=ownedRange(savedRange.current);
+            if(range)requestedPaste.current={mode,range:range.cloneRange()};
+          }}>{label}</DropdownMenuItem>)}
+        </DropdownMenuContent>
+      </DropdownMenu>
       </div>
     </div>
   );
@@ -312,7 +343,7 @@ export function EditorPage({ node, section, continuous=false }: { node: NoteNode
               colorizeAnnotations={appearance.page.colorizeAnnotations}
               noteId={node.id}
               html={node.content}
-              onChange={(html) => updateNode(section, node.id, { content: html })}
+              onChange={(html, images) => updateNode(section, node.id, { content: html },images)}
               placeholder="Write here..."
               className={continuous ? "min-h-12 text-foreground" : "min-h-[50vh] text-foreground"}
             />

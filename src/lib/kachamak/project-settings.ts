@@ -67,6 +67,10 @@ export function encodeHomepageCutout(bitmap:ImageBitmap):string {
   return encodeProjectBitmap(bitmap,'image/png',{width:2400,height:1600},true);
 }
 
+export function encodePastedImage(bitmap: ImageBitmap, mime: string): string {
+  return encodeProjectBitmap(bitmap, mime === 'image/jpeg' ? mime : 'image/webp', {width:1280,height:960}, true);
+}
+
 function encodeProjectBitmap(bitmap:ImageBitmap,mime:string,bounds:{width:number;height:number},homepage:boolean):string {
   try{
     if(!bitmap.width||!bitmap.height)throw new Error('This image could not be read.');

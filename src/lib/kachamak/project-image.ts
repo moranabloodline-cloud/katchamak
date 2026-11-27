@@ -1,7 +1,7 @@
 import type {Novel, NoteNode} from './types';
 import type {GalleryEntry} from './gallery';
 
-type GalleryImage = Extract<GalleryEntry,{kind:'image'}>;
+export type GalleryImage = Extract<GalleryEntry,{kind:'image'}>;
 type GalleryImageRef = `gallery:${string}`;
 export const galleryImageRef = (id:string):GalleryImageRef => `gallery:${id}`;
 export const isGalleryImageRef = (value:unknown):value is GalleryImageRef => typeof value==='string' && value.startsWith('gallery:') && value.length>8;
@@ -28,6 +28,67 @@ export function availableProjectImage(gallery:GalleryEntry[]|undefined, value:st
   return !isGalleryImageRef(value) || !!galleryImage(gallery,value);
 }
 
+export const editorImageAttribute = 'data-draftopus-image';
+const editorImages = 'img['+editorImageAttribute+']';
+
+// Parse a fragment inertly, and only when the document has an inline gallery reference.
+function editorImageTemplate(html: string) {
+  if (!html.includes(editorImageAttribute+'=') || typeof document === 'undefined') return;
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  return template;
+}
+
+export function mapEditorImageRefs(html:string, map:(ref:string)=>string|undefined):string {
+  const template=editorImageTemplate(html);
+  if(!template)return html;
+  let changed=false;
+  for(const img of template.content.querySelectorAll(editorImages)){
+    const ref=img.getAttribute(editorImageAttribute);
+    if(!isGalleryImageRef(ref))continue;
+    const next=map(ref);
+    if(next && next!==ref){img.setAttribute(editorImageAttribute,next);changed=true;}
+  }
+  return changed?template.innerHTML:html;
+}
+
+export function paintEditorImages(root:ParentNode, gallery:GalleryEntry[]|undefined, source=(asset:GalleryImage)=>asset.image) {
+  for(const img of root.querySelectorAll<HTMLImageElement>(editorImages)){
+    const asset=galleryImage(gallery,img.getAttribute(editorImageAttribute)??undefined);
+    if(!asset){img.removeAttribute('src');continue;}
+    const url=source(asset);
+    if(img.getAttribute('src')!==url)img.setAttribute('src',url);
+  }
+}
+
+/** Keep stored HTML free of transient browser URLs and duplicate asset bytes. */
+export function storedEditorHtml(html:string) {
+  const template=editorImageTemplate(html);
+  if(!template)return html;
+  let changed=false;
+  for(const img of template.content.querySelectorAll(editorImages+'[src]')){
+    img.removeAttribute('src');
+    changed=true;
+  }
+  return changed?template.innerHTML:html;
+}
+
+export function portableEditorHtml(html:string,gallery:GalleryEntry[]|undefined) {
+  const template=editorImageTemplate(html);
+  if(!template)return html;
+  paintEditorImages(template.content,gallery);
+  return template.innerHTML;
+}
+
+function* editorImageRefs(html?:string) {
+  const template=html&&editorImageTemplate(html);
+  if(!template)return;
+  for(const img of template.content.querySelectorAll(editorImages)){
+    const ref=img.getAttribute(editorImageAttribute);
+    if(isGalleryImageRef(ref))yield ref;
+  }
+}
+
 // Older pasted/imported HTML can already contain self-contained images. Read it
 // in an inert template so inspecting a manuscript never loads an external URL.
 export function* embeddedNoteImages(note: NoteNode) {
@@ -48,10 +109,13 @@ export function* projectImageRefs(book:Novel, includeEmbedded = false) {
   if(isGalleryImageRef(book.cover?.image))yield book.cover.image;
   for(const page of [book.homepage,...(book.homePages??[])]) {
     for(const block of page?.blocks??[])if(isGalleryImageRef(block.image))yield block.image;
+    yield* editorImageRefs(page?.synopsis);
+    yield* editorImageRefs(page?.notes);
   }
   const stack:NoteNode[][]=[...Object.values(book.sections??{}),(book.trash??[]).map(item=>item.node)];
   while(stack.length) {
     for(const note of stack.pop()!) {
+      for(const html of [note.content,note.synopsis,note.notes])yield* editorImageRefs(html);
       if (includeEmbedded) for (const image of embeddedNoteImages(note)) {
         if (!embeddedRefs) embeddedRefs = new Map((book.gallery ?? []).flatMap(entry =>
           entry.kind === 'image' ? [[entry.image, galleryImageRef(entry.id)] as const] : []));

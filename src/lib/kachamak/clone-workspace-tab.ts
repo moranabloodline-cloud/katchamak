@@ -1,5 +1,5 @@
 import {findProjectMap} from './project-maps';
-import {galleryImage, galleryImageRef} from './project-image';
+import {galleryImage, galleryImageRef, mapEditorImageRefs} from './project-image';
 import { v5 as namedUuid } from 'uuid';
 import { TABS, type NoteNode, type Novel, type SectionKey, type TabKey } from './types';
 import { ancestorIds, CLOUD_NOTE_LEVELS, findNodeInNovel, forEachNode, uid } from './utils';
@@ -134,7 +134,7 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
     if (node.image) node.image=transferImage(node.image);
     if (node.event?.banner) node.event.banner=transferImage(node.event.banner);
     if (node.status) statuses.add(node.status);
-    const content = remapHtml(node.content ?? '', mapping, false);
+    const content = mapEditorImageRefs(remapHtml(node.content ?? '', mapping, false),transferImage);
     const linkChoices = node.linkChoices?.flatMap(choice => {
       const targetId = choice.targetId && mapping.get(choice.targetId)?.id;
       return targetId ? [{...choice, targetId}] : [];
@@ -145,8 +145,8 @@ export function cloneWorkspaceTab(source: Novel, sourceTab: TabKey, destination:
     return {
       ...node, id: mapping.get(original.id)!.id, createdAt: now, updatedAt: now,
       content: repaired.content, linkChoices: repaired.linkChoices,
-      synopsis: remapHtml(node.synopsis ?? '', mapping, true),
-      notes: remapHtml(node.notes ?? '', mapping, true),
+      synopsis: mapEditorImageRefs(remapHtml(node.synopsis ?? '', mapping, true),transferImage),
+      notes: mapEditorImageRefs(remapHtml(node.notes ?? '', mapping, true),transferImage),
       familyMembers: node.familyMembers?.flatMap(id => mapping.get(id)?.id ?? []),
       links: Array.isArray(node.links) ? node.links.flatMap(id => mapping.get(id)?.id ?? []) : undefined,
       children: original.children.map(child => copy(child, depth + 1)),

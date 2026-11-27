@@ -1,3 +1,5 @@
+> **2026-11-27 — Uvoz formatiranog sadržaja.** Ctrl+V čuva strukturu naslova, tabela, kartica, kolona i dostupnih vizuala. Paste options nudi tri režima, a Ctrl+Shift+V lepi običan tekst. Uvezene slike su u Gallery, a spoljni vizuali koji dozvoljavaju samo prikaz ostaju povezani sa izvorom.
+
 > **2026-11-27 — Tabele u uređivaču.** Insert table nudi mrežu i unos dimenzija. Meni ćelije menja redove, kolone, podelu, poravnanje i svojstva tabele. Izmene ulaze u istoriju aktivnog polja.
 
 > **2026-11-27 — Jedinstvena paleta u Canvasu, Kanbanu i Publishu.** Story Board i preostale kontrole za boje koriste istu aplikacijsku paletu od deset nijansi kao beleške i Timeline. Već upisane boje ostaju u projektu.
@@ -793,6 +795,8 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
   fajla (provereno nezavisnim testom — vidi Dnevnik).
 
 ## 7. Dnevnik izmena (najnovije prvo)
+
+- **2026-11-27.** Uređivač uvozi podržani HTML, Markdown i slike sa clipboarda. Raspored se prilagođava širini aktivnog panela. Izveštaj o Irskoj sačuvao je 30 tabela i 16 kartica posle ponovnog otvaranja. Lokalna istorija vraća lepljenje, a slike ostaju dostupne u Gallery. JSON prenosi bibliotečke slike uz projekat, Markdown i HTML izvoz čuvaju tabele i vizuale.
 
 - **2026-11-27.** HTML tabele dobijaju komandu Insert table, izbor dimenzija mišem ili tastaturom, Tab kroz ćelije i kontekstualni meni. Strukturne izmene uvažavaju postojeće raspone redova i kolona. Širina, poravnanje i ivice tabele sačuvani su u HTML prikazu i DOCX izvozu.
 

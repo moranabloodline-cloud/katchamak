@@ -22,6 +22,7 @@ import { finishTimelineAdd, usesTimelineDialog, useTimelineAddRequest } from "@/
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type {HomePageEntry} from '@/lib/kachamak/homepage';
+import type {GalleryImage} from '@/lib/kachamak/project-image';
 import { selectedInspectorTab, type InspectorTabAction } from "@/lib/kachamak/inspector-tabs";
 import { changeNoteInspectorTab, useNoteInspectorSettings } from "@/lib/kachamak/note-inspector-settings";
 import { INSPECTOR_TABS, type InspectorTabKey, type Novel, type NoteNode, type SectionKey } from "@/lib/kachamak/types";
@@ -147,9 +148,9 @@ export function RightPanel({
   const selectCanvasTab = useKachamak(s=>s.selectCanvasInspectorTab);
   const changeHomepage = useKachamak(s=>s.changeHomepage);
   const info = canvas?.page ?? node;
-  const writeInfo = (field:'synopsis'|'notes', html:string) => {
-    if(canvas)changeHomepage(novel.id,{type:'info',field,value:html},canvas.page.id);
-    else if(node)updateNode(section,node.id,{[field]:html});
+  const writeInfo = (field:'synopsis'|'notes', html:string, images?:GalleryImage[]) => {
+    if(canvas)changeHomepage(novel.id,{type:'info',field,value:html},canvas.page.id,false,images);
+    else if(node)updateNode(section,node.id,{[field]:html},images);
   };
   const activeTab = mapTools ? 'tools' : publishTools ? publishTools.tab : canvas ? novel.inspectorByTab?.homepage?.selected ?? 'info' : infoOnly ? 'info' : selectedInspectorTab(settings, workspace) ?? '';
   const setInspectorTabHidden = useKachamak(s => s.setInspectorTabHidden);
@@ -262,7 +263,7 @@ export function RightPanel({
               <div style={proseStyle} className="note-prose mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5">
                 <RichEditor
                   ariaLabel="Synopsis" html={info.synopsis??''}
-                  onChange={html=>writeInfo('synopsis',html)}
+                  onChange={(html,images)=>writeInfo('synopsis',html,images)}
                   placeholder="Write here..."
                 />
               </div>
@@ -281,7 +282,7 @@ export function RightPanel({
               <div style={proseStyle} className="note-prose mt-1 min-h-0 flex-1 overflow-y-auto kachamak-scroll rounded-lg border border-white/10 bg-black/20 p-2.5">
                 <RichEditor
                   ariaLabel="Notes" html={info.notes??''}
-                  onChange={html=>writeInfo('notes',html)}
+                  onChange={(html,images)=>writeInfo('notes',html,images)}
                   placeholder="Write here..."
                 />
               </div>

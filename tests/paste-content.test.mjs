@@ -47,4 +47,25 @@ editor.innerHTML='<p><br></p>';
 place(editor.firstChild,0);
 assert.ok(insertHeadingFragment(editor,'<h3>Only</h3>'));
 assert.equal(editor.innerHTML,'<h3>Only</h3>');
+const editorial='<style>.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}th{padding:6px}</style>'+
+  '<h1>Research</h1><p style="line-height:1.6;text-align:center;background:url(https://example.test/no)">Source text</p>'+
+  '<div class="grid"><div data-d-component="grid-item"><h2>Locations</h2></div><div><p>Photos</p></div></div>'+
+  '<aside><p>Keep the original figures.</p></aside><figure><figcaption>Coastline</figcaption></figure>'+
+  '<table><colgroup><col width="40%"><col width="60%"></colgroup><tr><th scope="col">Location</th><th>County</th></tr>'+
+  '<tr><td colspan="2">Bantry</td></tr></table><progress value="1" max="4" aria-label="Progress"></progress>';
+root.innerHTML=preparePastedContent(editorial,'','rich');
+assert.equal(root.querySelector('[data-draftopus-layout="grid"]').getAttribute('data-draftopus-columns'),'2');
+assert.equal(root.querySelector('[data-draftopus-layout="card"] h2').textContent,'Locations');
+assert.equal(root.querySelector('figcaption').textContent,'Coastline');
+assert.equal(root.querySelector('p').style.lineHeight,'1.6');
+assert.equal(root.querySelector('p').style.textAlign,'center');
+assert.equal(root.querySelector('th').style.width,'40%');
+assert.equal(root.querySelector('th').style.padding,'6px');
+assert.equal(root.querySelector('td').colSpan,2);
+assert.equal(root.querySelector('[data-draftopus-layout="bar"]').style.width,'25%');
+assert.doesNotMatch(root.innerHTML,/background|example\.test\/no|class="grid"/);
+root.innerHTML=preparePastedContent(editorial,'','match');
+assert.ok(root.querySelector('table')&&root.querySelector('h1'));
+assert.doesNotMatch(root.innerHTML,/data-draftopus-layout|text-align: center/);
+assert.equal(preparePastedContent(editorial,'<heading>','plain'),'&lt;heading&gt;');
 console.log('Paste formatting: empty lines, local typography, HTML/Word heading levels, original paragraph gaps, soft breaks, emphasis, links, tables, lists and whitespace passed.');

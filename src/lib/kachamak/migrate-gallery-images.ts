@@ -3,7 +3,7 @@ import { v5 as namedUuid } from 'uuid';
 import type { GalleryEntry } from './gallery';
 import type { Homepage } from './homepage';
 import type { NoteNode, Novel } from './types';
-import { embeddedNoteImages, galleryImageRef, isGalleryImageRef, validCoverImage } from './project-image';
+import { embeddedNoteImages, galleryImageRef, isGalleryImageRef, mapEditorImageRefs, validCoverImage } from './project-image';
 
 function mapChanged<T>(items: T[], transform: (item: T) => T): T[] {
   let result = items;
@@ -72,9 +72,13 @@ function normalizeArtwork(book: Novel): Novel {
     for (const embedded of embeddedNoteImages(note)) reference(embedded, note.title);
     const banner = reference(note.event?.banner, note.title);
     const children = note.children && mapChanged(note.children, noteArtwork);
-    if (note.image === image && note.event?.banner === banner && children === note.children) return note;
+    const content = note.content && mapEditorImageRefs(note.content,useExisting);
+    const synopsis = note.synopsis && mapEditorImageRefs(note.synopsis,useExisting);
+    const notes = note.notes && mapEditorImageRefs(note.notes,useExisting);
+    if (note.image === image && note.event?.banner === banner && children === note.children &&
+        content === note.content && synopsis === note.synopsis && notes === note.notes) return note;
     return { ...note, ...(image !== note.image && { image }),
-      ...(banner !== note.event?.banner && { event: { ...note.event!, banner } }), children };
+      ...(banner !== note.event?.banner && { event: { ...note.event!, banner } }), children, content, synopsis, notes };
   }
 
   function pageArtwork<T extends Homepage>(page: T, name: string): T {
@@ -82,7 +86,9 @@ function normalizeArtwork(book: Novel): Novel {
       const image = reference(block.image, block.title || name);
       return image === block.image ? block : { ...block, image };
     });
-    return blocks === page.blocks ? page : { ...page, blocks };
+    const synopsis=page.synopsis&&mapEditorImageRefs(page.synopsis,useExisting);
+    const notes=page.notes&&mapEditorImageRefs(page.notes,useExisting);
+    return blocks === page.blocks && synopsis === page.synopsis && notes === page.notes ? page : { ...page, blocks, synopsis, notes };
   }
 
   const coverImage = reference(book.cover?.image, book.title + ' — Cover');

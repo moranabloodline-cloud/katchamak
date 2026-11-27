@@ -288,10 +288,74 @@ html[data-theme="light"] [class*="hover:bg-white/"]:hover { background-color: #0
 .kachamak-editor table[data-editor-table-borderless="true"] > :is(thead,tbody,tfoot) > tr > :is(td,th) { border-color: transparent; }
 .kachamak-editor :is(td,th) > :is(p,div) { text-align: inherit; margin-block: 0; text-indent: 0; }
 
+/* Editorial content follows the width of its own pane. */
+.kachamak-editor [data-draftopus-paste] {
+  container-type: inline-size;
+  min-width: 0;
+  margin-block: .8em;
+  text-indent: 0;
+  overflow-wrap: anywhere;
+}
+.kachamak-editor [data-draftopus-paste] :is(p,div) { text-indent: 0; }
+.kachamak-editor [data-draftopus-paste] p { margin-block: 0 .75em; }
+.kachamak-editor [data-draftopus-paste] :is(h1,h2,h3,h4,h5,h6) { color: inherit; }
+.kachamak-editor [data-draftopus-paste] h1 { margin-block-start: .25em !important; }
+.kachamak-editor [data-draftopus-paste] :is(td,th) { padding: .45em .65em; }
+.kachamak-editor [data-draftopus-paste] th { background: color-mix(in srgb, currentColor 8%, transparent); }
+.kachamak-editor [data-draftopus-paste] :is(td,th) > :is(p,div) { margin-block: 0; }
+.kachamak-editor [data-draftopus-layout="grid"] {
+  display: grid;
+  grid-template-columns: repeat(var(--pasted-columns, 2), minmax(0, 1fr));
+  align-items: start;
+  gap: .85em;
+  margin-block: .8em 1em;
+}
+.kachamak-editor [data-draftopus-layout="grid"] > * { min-width: 0; }
+.kachamak-editor [data-draftopus-columns="3"] { --pasted-columns: 3; }
+.kachamak-editor [data-draftopus-columns="4"] { --pasted-columns: 4; }
+.kachamak-editor [data-draftopus-columns="5"] { --pasted-columns: 5; }
+.kachamak-editor [data-draftopus-columns="6"] { --pasted-columns: 6; }
+@container (width < 36rem) {
+  .kachamak-editor [data-draftopus-layout="grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (width < 23rem) {
+  .kachamak-editor [data-draftopus-layout="grid"] { grid-template-columns: minmax(0, 1fr); }
+}
+.kachamak-editor [data-draftopus-layout="card"],
+.kachamak-editor [data-draftopus-layout="callout"] {
+  padding: .8em 1em;
+  border: 1px solid var(--border);
+  border-radius: .55em;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+.kachamak-editor [data-draftopus-layout="card"] :is(p,h1,h2,h3,h4,h5,h6):last-child { margin-block-end: 0 !important; }
+.kachamak-editor [data-draftopus-layout="callout"] { margin-block: .9em; border-inline-start: 3px solid var(--editor-web-link); }
+.kachamak-editor [data-draftopus-layout="bar"] {
+  min-height: .55em;
+  border-radius: .3em;
+  background: var(--editor-web-link);
+}
+.kachamak-editor [data-draftopus-layout="table"] { max-width: 100%; overflow-x: auto; margin-block: .75em 1em; }
+.kachamak-editor [data-draftopus-layout="table"] > table { margin-block: 0; }
+.kachamak-editor [data-draftopus-paste] pre { overflow-x: auto; padding: .7em; white-space: pre; }
+.kachamak-editor [data-draftopus-paste] blockquote { border-inline-start: 3px solid var(--border); padding-inline-start: .9em; }
+.kachamak-editor :is([data-draftopus-layout="caption"],figcaption) {
+  display: block;
+  margin-block: .35em;
+  color: var(--muted-foreground);
+  font-size: .9em;
+}
+.kachamak-editor figure { max-width: 100%; margin: .85em 0; }
+.kachamak-editor img:is([data-draftopus-image],[data-draftopus-remote-image]) { max-width: 100%; height: auto; border-radius: .35em; vertical-align: middle; }
+.kachamak-editor img[data-draftopus-image][style*="float: left"] { margin-inline-end: .75em; margin-block-end: .5em; }
+.kachamak-editor img[data-draftopus-image][style*="float: right"] { margin-inline-start: .75em; margin-block-end: .5em; }
+.kachamak-editor [data-draftopus-image-link] { overflow-wrap: anywhere; }
+
 /* Note identities stay stable when titles change. */
 .kachamak-editor a[href^="#note/"] { color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 html[data-theme="light"] .kachamak-editor a[href^="#note/"] { color: #1d4ed8; }
 
+.kachamak-editor { --editor-web-link: #60a5fa; }
 .kachamak-editor a:is([href^="https://" i], [href^="http://" i], [href^="mailto:" i]) {
   color: var(--editor-web-link, #60a5fa);
   text-decoration: underline;
@@ -304,9 +368,10 @@ html[data-theme="light"] .kachamak-editor { --editor-web-link: #1d4ed8; }
    source sizes. Body formatting remains unchanged; levels scale with editor size. */
 .kachamak-editor :is(h1,h2,h3,h4,h5,h6) {
   font-family: inherit !important; font-weight: 700 !important;
-  line-height: var(--page-leading, 1.3) !important; margin-block: .75em .35em !important;
+  margin-block: .75em .35em !important;
   color: #f0883e; text-transform: none;
 }
+.kachamak-editor :is(h1,h2,h3,h4,h5,h6):not([data-editor-line-height]) { line-height: var(--page-leading, 1.3) !important; }
 .note-prose {
   /* At a 9pt body these steps read as 22, 18, 16, 14, 12, 11 and 10pt. */
   --note-step: calc(var(--note-body-size) / 9);

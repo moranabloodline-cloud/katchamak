@@ -13,8 +13,8 @@ export function ManuscriptExport({open,onOpenChange}:{open:boolean;onOpenChange:
   const notes=manuscriptNotes(novel);
   const included=notes.filter(n=>selected.has(n.node.id)).length;
   const download=(format:'html'|'md')=>{
-    const safe = {...novel, sections:{...novel.sections,binder:novel.sections.binder.map(function clean(node): typeof node {return {...node,content:DOMPurify.sanitize(node.content,{FORBID_TAGS:['style','script','iframe','object','embed']}),children:node.children.map(clean)};})}};
-    const text=format==='html'?'<!doctype html>\n'+DOMPurify.sanitize(manuscriptHtml(safe,selected),{WHOLE_DOCUMENT:true,ADD_TAGS:['style']}):manuscriptMarkdown(safe,selected);
+    const safe = {...novel, sections:{...novel.sections,binder:novel.sections.binder.map(function clean(node): typeof node {return {...node,content:DOMPurify.sanitize(node.content,{FORBID_TAGS:['style','script','iframe','object','embed'],ADD_ATTR:['referrerpolicy']}),children:node.children.map(clean)};})}};
+    const text=format==='html'?'<!doctype html>\n'+DOMPurify.sanitize(manuscriptHtml(safe,selected),{WHOLE_DOCUMENT:true,ADD_TAGS:['style'],ADD_ATTR:['referrerpolicy']}):manuscriptMarkdown(safe,selected);
     const blob=new Blob([text],{type:format==='html'?'text/html;charset=utf-8':'text/markdown;charset=utf-8'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(novel.title.replace(/[<>:"/\\|?*]/g,'_')||'Manuscript')+'.'+format;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);toast.success('Manuscript downloaded.');
   };

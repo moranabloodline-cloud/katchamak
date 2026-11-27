@@ -42,4 +42,11 @@ s.updateNode('binder',scene,{content:'<p>Old Gate</p>'});s.updateNode('binder',s
 s.openNoteTab(chapter);assert.equal(useKachamak.getState().activeTab,`note:${chapter}`);s.updateNode('binder',scene,{content:'<p>Final <em>manuscript</em>.</p>',synopsis:'PRIVATE SYNOPSIS',notes:'PRIVATE NOTES'});s.closeTab(`note:${chapter}`);assert.ok(node());assert.deepEqual(novel().openNoteTabs,[]);s.closeTab('research');assert.ok(novel().hiddenSections.includes('research'));s.showSection('research');assert.deepEqual(novel().hiddenSections,[]);s.closeTab('binder');assert.ok(!novel().hiddenSections.includes('binder'));
 s.setTimeline({compact:true,detail:'titles',rootId:chapter});const roundtrip=JSON.parse(JSON.stringify(novel()));assert.equal(roundtrip.timeline.rootId,chapter);assert.equal(roundtrip.sections.binder[0].children[0].content,node().content);
 const md=manuscriptMarkdown(novel());assert.match(md,/Final [_*]manuscript[_*]/);assert.ok(!md.includes('PRIVATE'));assert.ok(!md.includes('Character profile'));assert.ok(manuscriptHtml(novel(),true).includes('Character profile'));s.updateNode('binder',scene,{content:'<p onclick="bad()">Safe</p><script>alert(1)</script>'});assert.ok(!/onclick|<script/.test(manuscriptHtml(novel())));
-console.log('Codex links passed: aliases, Unicode boundaries, inline formatting, excluded anchors/code, ambiguity per occurrence, edits, renaming, trash/restore, incoming links, tab safety, timeline metadata, and clean manuscript exports.');
+const image={id:'coast',parentId:null,kind:'image',name:'Coastline',image:'data:image/png;base64,QUJD'};
+s.updateNode('binder',scene,{content:'<p>See below.</p><table><tr><td colspan="2">Legend</td></tr></table><figure><img data-draftopus-image="gallery:coast" alt="Map"><figcaption>Coastline</figcaption></figure>'},[image]);
+for(const exported of [manuscriptHtml(novel()),manuscriptMarkdown(novel())]){
+  assert.match(exported,/<td colspan="2">Legend/);
+  assert.match(exported,/<figcaption>Coastline/);
+  assert.match(exported,/src="data:image\/png;base64,QUJD"/);
+}
+console.log('Codex links and portable manuscript exports passed.');

@@ -260,7 +260,11 @@ export function runWorkspaceAction<T>(get:()=>Workspace,name:string,args:unknown
       }else if(before&&start){
         const changes:Delta[]=[];
         differences(before,capture(current),[],changes);
-        if(changes.length)append(changes,start,location(next));
+        // Imported artwork can be reused in other notes while this editor has
+        // an undo entry. Undo the text edit without removing those Gallery items.
+        const uploads=name==='updateNode'?args[3]:name==='changeHomepage'?args[4]:undefined;
+        const edits=Array.isArray(uploads)&&uploads.length?changes.filter(delta=>delta.path[0]!=='gallery'):changes;
+        if(edits.length)append(edits,start,location(next));
       }
     }
     return result;

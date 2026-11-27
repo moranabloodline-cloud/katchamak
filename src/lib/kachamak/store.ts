@@ -36,7 +36,7 @@ import {moveWorkspaceTabOrder,workspaceTabs,isWorkspaceTabHidden,revealWorkspace
 import {validDocumentTarget} from './document-target';
 import {familyDeletionImpact,validFamilyMembers,validFamilyRelationships} from './family-tree';
 import {relationshipKey,validKind} from './kinship';
-import {availableProjectImage, validProjectImage, galleryImageRef, projectImageRefs} from './project-image';
+import {availableProjectImage, validProjectImage, galleryImageRef, projectImageRefs, type GalleryImage} from './project-image';
 import { changeGallery, type GalleryChange } from './gallery';
 import {moveNoteBranches,reparentEntries,type TreePosition,type BranchSource} from './tree-move';
 import {inFixedRow,unifiedCanvas} from './canvas-layout';
@@ -162,7 +162,7 @@ interface KachamakState {
   renameHomePage: (projectId: string, pageId: string, title: string) => boolean;
 
   importCanvasLayout: (projectId:string,pageId:string,expected:Novel['homepage'],file:unknown) => boolean;
-  changeHomepage: (projectId:string,action:HomeChange,pageId?:string,unified?:boolean) => boolean;
+  changeHomepage: (projectId:string,action:HomeChange,pageId?:string,unified?:boolean,images?:GalleryImage[]) => boolean;
   updateNovelSettings: (id:string,patch:NovelSettingsPatch) => boolean;
   setDefaultAuthor: (a: string) => void;
 
@@ -178,7 +178,7 @@ interface KachamakState {
     title?: string,
     visibleRootBlocks?: DetailBlockKey[]
   ) => string | null;
-  updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>) => void;
+  updateNode: (section: SectionKey, id: string, patch: Partial<NoteNode>, images?:GalleryImage[]) => void;
   deleteNode: (section: SectionKey, id: string) => void;
   moveNode: (section: SectionKey, id: string, dir: "up" | "down") => void;
   moveTreeNotes: (bookId:string,section:SectionKey,sources:BranchSource[],parentId:string|null,position?:TreePosition)=>void;
@@ -804,14 +804,15 @@ export const useKachamak = create<KachamakState>()(
         set({novels:state.novels.map(n=>n===book?touch(migrateProjectMaps({...updated,gallery:result.gallery})):n)});
         return true;
       },
-      changeHomepage: (projectId, action, pageId = HOME_ROOT, unified=false) => {
+      changeHomepage: (projectId, action, pageId = HOME_ROOT, unified=false, images) => {
         const state = get(), novel = state.novels.find(n => n.id === projectId);
         if (!novel || state.activeNovelId !== projectId || (pageId===HOME_ROOT && novel.homepageRemoved)) return false;
         const current = pageId === HOME_ROOT ? novel.homepage ?? EMPTY_HOMEPAGE : novel.homePages?.find(p => p.id === pageId);
         const next = current && changeHomepage(unified?unifiedCanvas(current):current, action);
         if (!next || next.blocks.some(block=>!availableProjectImage(novel.gallery,block.image))) return false;
-        const updated = pageId === HOME_ROOT ? {...novel, homepage: next} :
-          {...novel, homePages: novel.homePages!.map(p => p.id === pageId ? {...p, ...next} : p)};
+        const gallery=images?.length?changeGallery(novel.gallery??[],{type:'add',entries:images}):novel.gallery;
+        const updated = pageId === HOME_ROOT ? {...novel, gallery, homepage: next} :
+          {...novel, gallery, homePages: novel.homePages!.map(p => p.id === pageId ? {...p, ...next} : p)};
         const book=next.blocks.some(block=>block.layout==='map'&&!block.mapId&&block.image)?migrateProjectMaps(updated):updated;
         set({novels: state.novels.map(n => n === novel ? touch(book) : n)});
         return true;
@@ -888,7 +889,7 @@ export const useKachamak = create<KachamakState>()(
         return created?.id ?? null;
       },
 
-      updateNode: (section, id, patch) => {
+      updateNode: (section, id, patch, images) => {
         const novel = get().novels.find((n) => n.id === get().activeNovelId);
         if (!novel) return;
         const roots = novel.sections[section];
@@ -907,6 +908,7 @@ export const useKachamak = create<KachamakState>()(
         if (!validNotePageSettings(patch.pageSettings) || !validNoteFontSize(patch.bodyFontSize) || !validHiddenDetailBlocks(patch.hiddenDetailBlocks)) return;
         if (!validHiddenDetailBlocks(patch.collapsedDetailBlocks)||!validDetailBlockOrder(patch.detailBlockOrder)) return;
         if (Object.entries(patch).every(([key,value]) => target[key as keyof NoteNode] === value)) return;
+        const gallery=images?.length?changeGallery(novel.gallery??[],{type:'add',entries:images}):novel.gallery;
         if(section==='codex' && (patch.title!==undefined || patch.aliases!==undefined)) preserveCodexLinks(novel);
         if(patch.content !== undefined && patch.linkChoices === undefined && target.linkChoices?.length) {
           patch = {...patch,linkChoices:rebaseChoices(contentText(target.content),contentText(patch.content),target.linkChoices)};
@@ -915,7 +917,7 @@ export const useKachamak = create<KachamakState>()(
         Object.assign(target, patch, { updatedAt: Date.now() });
         if(patch.content !== undefined) target.linkChoices=resolveChoices(target);
         set((s) => ({
-          novels: s.novels.map((x) => (x.id === novel.id ? touch({ ...x }) : x)),
+          novels: s.novels.map((x) => (x.id === novel.id ? touch(images?.length ? {...x,gallery} : {...x}) : x)),
         }));
       },
 
