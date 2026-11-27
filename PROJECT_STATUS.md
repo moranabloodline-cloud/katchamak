@@ -1,3 +1,5 @@
+> **2026-11-27 — Kompaktniji Personal details.** Profil koristi užu formu, manji naslov i avatar, uz kraće razmake između polja.
+
 > **2026-11-27 — Jedinstveni Settings.** Avatar u radnom prostoru i biblioteci otvara desni panel sa sekcijama Profile, Account, App, Data & Privacy i Integrations.
 
 > **2026-11-27 — Naslovi Timeline kartica.** Naslov je ponovo poravnat uz donju levu ivicu kartice, bez prateće ikonice.
@@ -814,6 +816,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Prikaz profila je ograničen na 28 rem na širokom ekranu i prilagođava se užem panelu.
 - **2026-11-27.** Podešavanja romana su pod App, skladište i rezervne kopije pod Data & Privacy, a postojeće veze pod Integrations. Pristup administraciji i Gmail vezi prati ulogu naloga.
 - **2026-11-27.** Timeline kartice prikazuju naslov u donjem levom uglu i koriste postojeća podešavanja za prikaz datuma i sinopsisa.
 - **2026-11-27.** Povlačenje ivice prikazuje vodič i upisuje dimenziju po otpuštanju. AutoFit to contents vraća kolone na prirodnu širinu teksta.

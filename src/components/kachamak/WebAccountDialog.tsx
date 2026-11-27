@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useAppearancePreferences } from '@/lib/kachamak/appearance-preferences';
 import packageInfo from '../../../package.json';
 import { requestJson } from '@/lib/kachamak/request-json';
+import {cn} from '@/lib/utils';
 import {useAccountPreferences} from '@/lib/kachamak/account-preferences';
 import {saveWebLibrary} from '@/lib/kachamak/cloud-library';
 import {AdminMailConnection} from './AdminMailConnection';
@@ -109,22 +110,24 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
             {projectSection!=='hidden'&&<h2 className="font-serif text-2xl">{tab==='project'?'Project settings':'Backups & export'}</h2>}
             {open && <ProjectSettings key={activeBook} open={open} onOpenChange={onOpenChange} section={projectSection} onBusyChange={setProjectBusy}/>}
             {account&&<>
-              {tab==='profile'&&<>
-                <h2 className="font-serif text-2xl">Personal details</h2>
-                <form className={surface} onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
+              {tab==='profile'&&<section className="max-w-md space-y-3" aria-labelledby="personal-details-title">
+                <h2 id="personal-details-title" className="text-base font-semibold">Personal details</h2>
+                <form className="space-y-3 rounded-xl border border-border bg-card p-3.5 sm:p-4" onSubmit={event=>{event.preventDefault();void saveSettings('profile');}}>
                   <div className="flex flex-wrap items-center gap-3">
-                    {avatar?<img src={avatar} alt="Your avatar" className="size-16 rounded-full object-cover"/>:
-                      <span aria-hidden="true" className="grid size-16 place-items-center rounded-full bg-amber-500/15 text-xl">{(name||account.email).slice(0,2).toUpperCase()}</span>}
-                    <GalleryImagePicker novel={novel} books={books} onPick={(_,item)=>void run(async()=>setAvatar(await galleryAvatar(item.image)))}>
-                      <button type="button" disabled={locked} className={button}>Choose avatar from Gallery</button>
-                    </GalleryImagePicker>
-                    {avatar&&<button type="button" className={button} disabled={locked} onClick={()=>setAvatar('')}>Remove</button>}
+                    {avatar?<img src={avatar} alt="Your avatar" className="size-11 shrink-0 rounded-full object-cover"/>:
+                      <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-amber-500/15 text-sm font-medium">{(name||account.email).slice(0,2).toUpperCase()}</span>}
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <GalleryImagePicker novel={novel} books={books} onPick={(_,item)=>void run(async()=>setAvatar(await galleryAvatar(item.image)))}>
+                        <button type="button" disabled={locked} className={cn(button,'h-8 rounded-md px-2.5 py-0 text-xs')} aria-label="Choose avatar from Gallery">Choose avatar</button>
+                      </GalleryImagePicker>
+                      {avatar&&<button type="button" className="h-8 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50" disabled={locked} onClick={()=>setAvatar('')}>Remove</button>}
+                    </div>
                   </div>
-                  <label className="block text-sm">Display / author name<Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="mt-2"/></label>
-                  <label className="block text-sm">Sign-in email<Input readOnly value={account.email} className="mt-2"/></label>
-                  <button disabled={locked} className={primary}>Save profile</button>
+                  <label className="block text-xs font-medium">Display / author name<Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="mt-1 h-8 px-2.5"/></label>
+                  <label className="block text-xs font-medium">Sign-in email<Input readOnly value={account.email} className="mt-1 h-8 px-2.5 text-muted-foreground"/></label>
+                  <button disabled={locked} className={cn(primary,'h-8 rounded-md px-3 py-0 text-xs')}>Save profile</button>
                 </form>
-              </>}
+              </section>}
               {tab==='appearance'&&<>
                 <h2 className="font-serif text-2xl">Appearance</h2>
                 <form className={surface} onSubmit={event=>{event.preventDefault();void saveSettings('appearance');}}>
