@@ -2,7 +2,7 @@
 import {GalleryImagePicker} from './GalleryImagePicker';
 import {galleryAvatar} from '@/lib/kachamak/project-settings';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import {LockKeyhole, Pencil, Trash2, UserRound} from 'lucide-react';
+import {ArrowUpRight, LockKeyhole, LogOut, Monitor, Pencil, Trash2, UserRound} from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {AdminDemoProject} from './AdminDemoProject';
 import {AdminLicenseList} from './AdminLicenseList';
@@ -34,6 +34,15 @@ const row = 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3';
 const selectClass = 'h-8 rounded-md border border-input bg-background px-2.5 text-xs';
 const appearanceKeys = ['lightTheme','smallInterface','largeInterface'] as const;
 const notificationKeys = ['tips','updates','changelog'] as const;
+const securityCard = 'rounded-xl border border-border bg-card/60 p-3 text-xs';
+const securityRow = 'flex flex-wrap items-center justify-between gap-2';
+
+function SecurityHelp({href,children}:{href:string;children:string}) {
+  return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1.5 font-medium hover:bg-muted">
+    {children}<ArrowUpRight aria-hidden="true" size={12}/><span className="sr-only"> (opens OpenAI Help in a new tab)</span>
+  </a>;
+}
+
 export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpenChange:(v:boolean)=>void;trigger:ReactElement}) {
   const [tab,setTab]=useState<SettingsPage>('profile'), [account,setAccount]=useState<Account|null>(null), [error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [projectBusy,setProjectBusy]=useState(false);
@@ -97,12 +106,12 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
     onOpenChange(next);
   }}>
     <DialogTrigger asChild>{trigger}</DialogTrigger>
-    <DialogContent placement="right" aria-describedby={undefined} className="draftopus-settings flex max-w-[65rem] flex-col overflow-hidden border-border bg-background font-sans text-foreground sm:w-[min(94vw,65rem)] sm:rounded-l-xl">
+    <DialogContent placement="right" aria-describedby={undefined} className="draftopus-settings flex max-w-[44rem] flex-col overflow-hidden border-border bg-background font-sans text-foreground sm:w-[min(94vw,44rem)] sm:rounded-l-xl">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-[var(--settings-header)] px-4 pr-12">
         <img src="/draftopus-logo.png" alt="" width={19} height={19} className="size-[19px] object-contain"/>
         <DialogTitle className="text-sm">Settings</DialogTitle>
       </header>
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_clamp(12rem,34%,15rem)] sm:grid-rows-[minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_13rem] sm:grid-rows-[minmax(0,1fr)]">
         <SettingsNavigation page={tab} onSelect={changePage} project={!!novel} admin={account?.role==='admin'} busy={locked}/>
         <main ref={main} aria-label="Settings content" className="@container row-start-2 min-w-0 overflow-y-auto p-4 sm:col-start-1 sm:row-start-1">
           <div className="mx-auto max-w-[36rem] space-y-4">
@@ -179,15 +188,59 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                   <p className="text-sm text-muted-foreground">{account.license.plan==='none'?'Contact the administrator to assign a license.':account.license.active?'Active':'Expired / inactive'}{account.license.expires_at?' · Until '+new Date(account.license.expires_at).toLocaleDateString():''}</p>
                 </div>
               </>}
-              {tab==='security'&&<>
-                <h2 className={heading}>Sign-in &amp; security</h2>
-                <div className={surface}>
-                  <h3 className="font-medium">ChatGPT sign-in</h3>
-                  <p className="break-words text-sm">{account.email}</p>
-                  <p className="text-sm text-muted-foreground">Manage your password, passkeys and sign-in methods in your ChatGPT account settings.</p>
-                  <button className={button} disabled={locked} onClick={()=>void run(async()=>{await saveWebLibrary();window.location.assign('/signout-with-chatgpt?return_to=%2F');})}>Sign out</button>
+              {tab==='security'&&<section aria-labelledby="signin-security-title" className="mx-auto max-w-[28rem] space-y-2.5">
+                <header>
+                  <h2 id="signin-security-title" className="text-base font-semibold">Sign-in &amp; security</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Draftopus uses your ChatGPT account to sign you in.</p>
+                </header>
+                <div className={securityCard}>
+                  <h3 className="mb-2.5 font-semibold">Account credentials</h3>
+                  <div className={securityRow}>
+                    <div className="min-w-0">
+                      <p className="font-medium">Email address</p>
+                      <p className="mt-0.5 break-words text-muted-foreground">{account.email}</p>
+                    </div>
+                    <SecurityHelp href="https://help.openai.com/en/articles/4936827-changing-your-openai-account-email-address">Change email guide</SecurityHelp>
+                  </div>
+                  <div className={securityRow+' mt-2.5 border-t border-border pt-2.5'}>
+                    <p className="font-medium">Password</p>
+                    <SecurityHelp href="https://help.openai.com/en/articles/4936828">Password guide</SecurityHelp>
+                  </div>
                 </div>
-              </>}
+                <div className={securityCard}>
+                  <h3 className="mb-2.5 font-semibold">Account security</h3>
+                  <div className={securityRow}>
+                    <div>
+                      <p className="font-medium">Multi-factor authentication</p>
+                      <p className="mt-0.5 text-muted-foreground">Set up a second step for ChatGPT sign-in.</p>
+                    </div>
+                    <SecurityHelp href="https://help.openai.com/en/articles/7967234-managing-multi-factor-authentication-mfa">Setup guide</SecurityHelp>
+                  </div>
+                </div>
+                <div className={securityCard}>
+                  <h3 className="mb-2.5 font-semibold">Active sessions</h3>
+                  <div className="flex items-center gap-2.5">
+                    <Monitor aria-hidden="true" className="size-4 shrink-0 text-muted-foreground"/>
+                    <div className="flex-1">
+                      <p className="font-medium">This browser</p>
+                      <p className="mt-0.5 text-muted-foreground">Signed in to Draftopus</p>
+                    </div>
+                    <span className="text-emerald-700 dark:text-emerald-400">Active</span>
+                  </div>
+                  <div className={securityRow+' mt-2.5 border-t border-border pt-2.5'}>
+                    <p className="font-medium">ChatGPT sessions</p>
+                    <SecurityHelp href="https://help.openai.com/en/articles/20001257-managing-active-sessions-in-chatgpt">Session guide</SecurityHelp>
+                  </div>
+                </div>
+                <div className={securityCard}>
+                  <h3 className="mb-2.5 font-semibold">Sign out</h3>
+                  <div className={securityRow}>
+                    <p className="text-muted-foreground">Save your work and end this session.</p>
+                    <button type="button" disabled={locked} className="inline-flex items-center gap-1.5 rounded-md border border-red-500/40 px-2 py-1.5 font-medium text-red-700 hover:bg-red-500/10 disabled:opacity-50 dark:text-red-300"
+                      onClick={()=>void run(async()=>{await saveWebLibrary();window.location.assign('/signout-with-chatgpt?return_to=%2F');})}><LogOut aria-hidden="true" size={12}/>Sign out</button>
+                  </div>
+                </div>
+              </section>}
               {tab==='notifications'&&<>
                 <h2 className={heading}>Notifications</h2>
                 <form className={surface} onSubmit={event=>{event.preventDefault();void saveSettings('notifications');}}>

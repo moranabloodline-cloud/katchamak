@@ -1,3 +1,5 @@
+> **2026-11-27 — Uži panel i Sign-in & security.** Bezbednosne opcije su grupisane u kartice, sa uputstvima za podešavanja ChatGPT naloga i akcijom odjave iz Draftopusa.
+
 > **2026-11-27 — Settings u desnom panelu.** Vraćen je bočni raspored uz kompaktnu karticu profila.
 
 > **2026-11-27 — Kompaktni Settings.** Podešavanja se otvaraju u centriranom prozoru sa navigacijom desno i profilom u zasebnoj kartici.
@@ -826,6 +828,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-27.** Smanjena je širina desnog panela Settings. Stranica Sign-in & security prikazuje prijavni email, vodiče za lozinku, MFA i sesije, kao i postojeću akciju odjave koja prethodno čuva biblioteku.
 - **2026-11-27.** Settings se ponovo otvara uz desnu ivicu. Kartica profila ima ograničenu širinu i vertikalno složena polja.
 - **2026-11-27.** Polja profila su složena vertikalno, sa ikonom za izbor avatara i zaključanim poljem za prijavni email. Na uskim ekranima navigacija koristi birač sekcije.
 - **2026-11-27.** Uklonjeno je dugme Save iz zaglavlja. Ctrl+S koristi postojeći tok ručnog čuvanja. Editor nudi direktan unos i skrolujuću listu veličina fonta za označeni tekst.
