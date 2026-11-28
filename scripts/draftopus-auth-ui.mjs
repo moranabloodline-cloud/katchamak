@@ -98,7 +98,7 @@ export function draftopusAuthPage({ mode, next, googleEnabled, providerOrigin, e
     <footer>
       <p>${newAccount ? `Already have an account? <a href="/auth/sign-in${query}">Sign in</a>`
         : `New to Draftopus? <a href="/auth/sign-up${query}">Create an account</a>`}</p>
-      <p><a href="https://draftopus.com/reader">Read the demo</a></p>
+      <p><a href="https://draftopus.com/reader">Read an excerpt</a></p>
     </footer>`, status, googleEnabled ? providerOrigin : undefined);
 }
 
@@ -117,6 +117,6 @@ export function draftopusAccountPage({ email, active, billingAvailable, existing
   return renderPage('Your Draftopus account', `<p class="muted">${escapeHtml(email)}</p>
     <dl class="membership" id="membership"><dt>Membership &amp; License</dt>
       <dd>${active ? 'Lifetime license active' : 'No active license'}</dd></dl>
-    <div class="actions">${action}<a class="action" href="https://draftopus.com/reader">Read the demo</a></div>
+    <div class="actions">${action}<a class="action" href="/demo">Read the demo</a></div>
     <footer><a href="/auth/logout">Sign out</a></footer>`);
 }
