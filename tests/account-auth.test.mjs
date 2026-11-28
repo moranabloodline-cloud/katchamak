@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { accountApi } from '../scripts/accounts-runtime.mjs';
+import { clerkAccountConfig, linkClerkAccount, registerClerkAccount } from '../scripts/clerk-accounts.mjs';
 import { traceApiRequest } from '../scripts/request-trace.mjs';
 globalThis.traceApiRequest=traceApiRequest;
 const sql = new Database(':memory:');
 for (const file of readdirSync('drizzle').filter(name => name.endsWith('.sql')).sort())
   for (const statement of readFileSync('drizzle/'+file,'utf8').split('--> statement-breakpoint')) if(statement.trim())sql.exec(statement);
-const DB={ prepare(query){let values=[];const obj={bind(...v){values=v;return obj;},async run(){return sql.query(query).run(...values);},async first(){return sql.query(query).get(...values);},async all(){return {results:sql.query(query).all(...values)};}};return obj;},async batch(statements){return Promise.all(statements.map(s=>s.run()));}};
+const DB={ prepare(query){let values=[];const obj={bind(...v){values=v;return obj;},async run(){const result=sql.query(query).run(...values);return {...result,meta:{changes:result.changes}};},async first(){return sql.query(query).get(...values);},async all(){return {results:sql.query(query).all(...values)};}};return obj;},async batch(statements){return Promise.all(statements.map(s=>s.run()));}};
 const env={DB,KATCHAMAK_ADMIN_EMAIL:'owner@test.local'};
 async function call(email,path='/api/account',method='GET',body){const headers={};if(email){headers['oai-authenticated-user-id']=email;headers['oai-authenticated-user-email']=email;}if(body){headers.Origin='https://test.local';headers['Content-Type']='application/json';}return accountApi(new Request('https://test.local'+path,{method,headers,body:body?JSON.stringify(body):undefined}),env);}
 assert.equal((await call(null)).status,401);
@@ -108,3 +109,50 @@ assert.equal((await membership('future@test.local')).status,'refunded');
 assert.throws(()=>insert.run('member@test.local','fixture-other','founder',42,'fixture-license-other'),'A refund does not reassign a Founder number');
 assert.equal((await (await call('owner@test.local')).json()).license.active,true);
 console.log('Account API: owner/member authorization, profile whitelist, preassigned lifetime, timed/revoked licenses, suspension, owner protection, CSRF and audit passed.');
+
+const origin = 'https://test.local';
+const issuer = 'https://fixture.clerk.accounts.dev';
+const clerkEnv = {
+  ...env,
+  DRAFTOPUS_CLERK_MODE: 'development',
+  CLERK_PUBLISHABLE_KEY: 'pk_test_' + btoa(issuer.slice('https://'.length) + '$'),
+  CLERK_SECRET_KEY: 'sk_test_fixture_only',
+  CLERK_ISSUER: issuer,
+};
+const clerkRequest = (path, cookie) => new Request(origin + path, {
+  method: 'POST', headers: { Origin: origin, ...(cookie ? { Cookie: cookie } : {}) }
+});
+const owner = { id: env.KATCHAMAK_ADMIN_EMAIL, email: env.KATCHAMAK_ADMIN_EMAIL };
+const signIn = (subject, email) => ({ issuer, subject, email, sessionId: 'fixture-session-' + subject, firstFactorMinutes: 1 });
+const count = table => sql.query('SELECT COUNT(*) AS count FROM ' + table).get().count;
+const licenseCountBefore = count('licenses');
+const purchasesBefore = count('membership_purchases');
+assert.equal(clerkAccountConfig(new Request(origin), env, origin), null, 'Existing deployments keep the current sign-in by default');
+assert.equal(clerkAccountConfig(new Request(origin), { ...clerkEnv, DRAFTOPUS_CLERK_MODE: 'production' }, origin), null);
+assert.equal(clerkAccountConfig(new Request(origin), clerkEnv, origin).issuer, issuer);
+const previousAccount = await (await call(owner.email)).json();
+const alternateSignIn = signIn('owner-clerk-subject', 'alternate-owner@test.local');
+const started = await linkClerkAccount(clerkRequest('/api/auth/link/start'), clerkEnv, origin, owner, alternateSignIn);
+assert.equal(started.status, 200);
+const cookie = started.headers.get('Set-Cookie').split(';')[0];
+const linked = await linkClerkAccount(clerkRequest('/api/auth/link/complete', cookie), clerkEnv, origin, owner, alternateSignIn);
+assert.equal(linked.status, 200);
+const linkedAccount = { ...(await linked.json()).account, provider: 'clerk' };
+assert.equal(linkedAccount.id, previousAccount.id);
+const ownerResponse = await accountApi(new Request(origin + '/api/account'), clerkEnv, undefined, linkedAccount);
+const ownerAccount = await ownerResponse.json();
+assert.equal(ownerAccount.role, 'admin');
+assert.deepEqual(ownerAccount.license, previousAccount.license);
+assert.equal((await accountApi(new Request(origin + '/api/admin/users'), clerkEnv, undefined, linkedAccount)).status, 200);
+
+const signup = clerkRequest('/api/auth/register');
+const created = await registerClerkAccount(signup, clerkEnv, origin, signIn('reader-clerk-subject', 'independent-reader@test.local'));
+assert.equal(created.status, 201);
+const reader = (await created.json()).account;
+assert.match(reader.id, /^[\da-f-]{36}$/);
+const readerAccount = await (await accountApi(new Request(origin + '/api/account'), clerkEnv, undefined, reader)).json();
+assert.equal(readerAccount.role, 'member');
+assert.deepEqual(readerAccount.license, { plan: 'none', active: false });
+assert.equal(count('licenses'), licenseCountBefore);
+assert.equal(count('membership_purchases'), purchasesBefore);
+console.log('Independent accounts: owner continuity and registration without purchase passed.');

@@ -53,20 +53,31 @@ export {applyLibraryNotePatch, validLibraryNotePatch} from "./src/lib/kachamak/c
     bundle: true, write: false, format: "iife", globalName: "projectValidation", platform: "neutral", target: "es2022",
   });
   const projectValidation = validation.outputFiles[0].text + "\nconst {validCloudLibrary, applyLibraryNotePatch, validLibraryNotePatch} = projectValidation;\n";
+  const clerkBundle = await bundle({
+    stdin: {
+      contents: `export {clerkAccountConfig, resolveClerkAccount, registerClerkAccount, linkClerkAccount} from "./scripts/clerk-accounts.mjs";
+export {clerkAccountPage} from "./scripts/clerk-accounts-ui.mjs";`,
+      resolveDir: process.cwd(),
+    },
+    bundle: true, write: false, format: "iife", globalName: "draftopusAccounts", platform: "browser", target: "es2022",
+  });
+  const clerk = clerkBundle.outputFiles[0].text + "\nconst {clerkAccountConfig, resolveClerkAccount, registerClerkAccount, linkClerkAccount, clerkAccountPage} = draftopusAccounts;\n";
   const oidc = await readFile("scripts/github-oidc.mjs", "utf8");
   const store = await readFile("scripts/release-store.mjs", "utf8");
   const automation = JSON.parse(await readFile(".openai/automation.json", "utf8"));
   const deployConfig = { repository: automation.repository, branch: automation.branch, origin: automation.origin, workflow: automation.workflow };
-  deployConfig.runtimeHash = createHash("sha256").update(requestTrace + accounts + membershipSchema + billingModule + demos + cloud + projectValidation + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
+  deployConfig.runtimeHash = createHash("sha256").update(requestTrace + accounts + membershipSchema + billingModule + demos + cloud + projectValidation + clerk + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
   const modules = projectValidation + requestTrace.replace(/^export /gm, "") + "\n" + demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^(?:import|export \{)[^\r\n]*(?:demo-projects|cloud-(?:write-validation|note-patch)|request-trace)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\nconst membershipMigration=" + JSON.stringify(membershipSchema) + ";\n" + accounts.replace(/^import[^\r\n]*(?:request-trace|0006_membership_purchases)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
   await mkdir("dist/server", { recursive: true });
   await mkdir("dist/.openai", { recursive: true });
   // Keep the previous build's extra immutable files out of the active build
   // fingerprint and GitHub manifest. They are available to open tabs only.
-  await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + fallback + modules.replace(/^import .*paddle-billing[^\r\n]*(?:\r?\n|$)/m, "") + "\n" + billingModule + "\n" + runtime);
+  await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + fallback + clerk + modules.replace(/^import .*paddle-billing[^\r\n]*(?:\r?\n|$)/m, "") + "\n" + billingModule + "\n" + runtime);
   const syntax = spawnSync(process.execPath, ["--check", "dist/server/index.js"], { stdio: "inherit" });
   if (syntax.status !== 0) throw new Error("Sites Worker syntax validation failed.");
   await cp(".openai/hosting.json", "dist/.openai/hosting.json");
+  await mkdir("dist/.openai/drizzle", { recursive: true });
+  await cp("drizzle/0012_clerk_account_links.sql", "dist/.openai/drizzle/0012_clerk_account_links.sql");
   await mkdir(".sites-runtime", { recursive: true });
   await writeFile(".sites-runtime/github-release.json", JSON.stringify({ version, buildId: build, runtimeHash: deployConfig.runtimeHash, assets: Object.entries(assets).map(([file, data]) => ({ path: file, data, hash: createHash("sha256").update(Buffer.from(data, "base64")).digest("hex") })) }));
   console.log(`Packaged GitHub application for Sites: ${Object.keys(assets).length} assets, build ${build.slice(0, 12)}`);

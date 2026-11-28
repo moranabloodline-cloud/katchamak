@@ -4,6 +4,12 @@ export class RequestTimeoutError extends Error {
 
 export class InvalidResponseError extends Error {}
 
+declare global {
+  interface Window {
+    draftopusClerkReady?: Promise<{ session?: { getToken(options?: { skipCache: boolean }): Promise<string | null> } | null } | null>;
+  }
+}
+
 // Fetch cannot report upload progress. A library snapshot can contain several MB of images.
 function transferSnapshot(path: string, init: RequestInit, body: string | Blob | null, signal: AbortSignal, onProgress: () => void): Promise<Response> {
   return new Promise((resolve, reject) => {
@@ -64,9 +70,29 @@ export async function requestJson(path: string, init: RequestInit = {}, timeoutM
       const route = path.split('?')[0];
       const snapshot = route === '/api/library' || route === '/api/library/demo/install';
       const body = init.body;
-      response = snapshot && typeof XMLHttpRequest !== 'undefined' && (body == null || typeof body === 'string' || body instanceof Blob)
-        ? await transferSnapshot(path, init, body ?? null, controller.signal, progress)
-        : await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init, signal: controller.signal });
+      const clerkReady = typeof window !== 'undefined' && route.startsWith('/api/') ? window.draftopusClerkReady : undefined;
+      const send = async (refreshToken = false) => {
+        let requestInit = init;
+        const clerk = clerkReady ? await clerkReady : null;
+        if (clerk?.session) {
+          const token = await clerk.session.getToken(refreshToken ? { skipCache: true } : undefined).catch(() => null);
+          if (token) {
+            const headers = new Headers(init.headers);
+            headers.set('Authorization', 'Bearer ' + token);
+            requestInit = { ...init, headers };
+          }
+        }
+        controller.signal.throwIfAborted();
+        if (snapshot && typeof XMLHttpRequest !== 'undefined' && (body == null || typeof body === 'string' || body instanceof Blob)) {
+          return transferSnapshot(path, requestInit, body ?? null, controller.signal, progress);
+        }
+        return fetch(path, { credentials: 'same-origin', cache: 'no-store', ...requestInit, signal: controller.signal });
+      };
+      response = await send();
+      if (clerkReady && response.status === 401 && /^(GET|HEAD)$/i.test(init.method ?? 'GET')) {
+        await response.body?.cancel();
+        response = await send(true);
+      }
       // HTTP error pages may be HTML; a successful non-JSON response must never acknowledge a save.
       const raw = await response.text();
       let data;

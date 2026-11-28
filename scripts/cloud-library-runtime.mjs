@@ -44,11 +44,11 @@ async function compressLibrarySnapshot(raw) {
 }
 
 // Included in the Sites Worker with accountApi; all keys are private to the authenticated account.
-export async function cloudLibraryApi(request, env, measure) {
+export async function cloudLibraryApi(request, env, measure, principal = null) {
   const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
   try {
     const url = new URL(request.url);
-    const gate = await accountApi(new Request(new URL('/api/account', url), { headers: request.headers }), env, measure);
+    const gate = await accountApi(new Request(new URL('/api/account', url), { headers: request.headers }), env, measure, principal);
     if (!gate.ok) return gate;
     if (!env.BUCKET) return json({ error: 'Cloud storage is unavailable.' }, 503);
     const account = await gate.json();

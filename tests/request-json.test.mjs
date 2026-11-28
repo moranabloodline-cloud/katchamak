@@ -97,3 +97,37 @@ try {
   if (originalXhr === undefined) delete globalThis.XMLHttpRequest;
   else globalThis.XMLHttpRequest = originalXhr;
 }
+
+const originalWindow = globalThis.window;
+try {
+  const sent = [];
+  const stageToken = async options => options?.skipCache ? 'renewed-session' : 'current-session';
+  globalThis.window = { draftopusClerkReady: Promise.resolve({ session: { getToken: stageToken } }) };
+  globalThis.fetch = async (path, init) => {
+    const headers = new Headers(init.headers);
+    sent.push({ path, authorization: headers.get('Authorization') });
+    return Response.json({}, { status: sent.length === 1 ? 401 : 200 });
+  };
+  assert.equal((await requestJson('/api/account')).response.status, 200);
+  assert.deepEqual(sent.map(call => call.authorization), ['Bearer current-session', 'Bearer renewed-session']);
+  await requestJson('https://example.test/api/account');
+  assert.equal(sent.at(-1).authorization, null, 'Clerk tokens only accompany same-origin API paths');
+
+  globalThis.XMLHttpRequest = SnapshotRequest;
+  const previousSends = sends;
+  const stageWrite = requestJson('/api/library', { method: 'POST', headers: { 'X-Katchamak-Account': 'same-owner' }, body: '{}' });
+  await delay(0);
+  assert.equal(current.headers.get('Authorization'), 'Bearer current-session');
+  assert.equal(current.headers.get('X-Katchamak-Account'), 'same-owner');
+  current.status = 401;
+  current.finish();
+  assert.equal((await stageWrite).response.status, 401);
+  assert.equal(sends, previousSends + 1, 'An expired token must not repeat a library write');
+  console.log('Clerk staging requests passed: renewal, same-origin scope and snapshot ownership.');
+} finally {
+  globalThis.fetch = original;
+  if (originalWindow === undefined) delete globalThis.window;
+  else globalThis.window = originalWindow;
+  if (originalXhr === undefined) delete globalThis.XMLHttpRequest;
+  else globalThis.XMLHttpRequest = originalXhr;
+}

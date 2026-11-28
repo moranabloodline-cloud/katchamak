@@ -2,9 +2,9 @@ import { measuredQuery, measuredBatch } from './request-trace.mjs';
 import membershipMigration from '../drizzle/0006_membership_purchases.sql' with { type: 'text' };
 import {paddleBilling, paddleConfig} from './paddle-billing.mjs';
 const accountJson = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
-export async function accountApi(request, env, measure) {
-  const url = new URL(request.url), id = request.headers.get('oai-authenticated-user-id');
-  const email = (request.headers.get('oai-authenticated-user-email') ?? '').trim().toLowerCase();
+export async function accountApi(request, env, measure, principal = null) {
+  const url = new URL(request.url), id = principal?.id ?? request.headers.get('oai-authenticated-user-id');
+  const email = (principal?.email ?? request.headers.get('oai-authenticated-user-email') ?? '').trim().toLowerCase();
   if (!id || !email) return accountJson({ error: 'Sign in required' }, 401);
   if (!env.DB) return accountJson({ error: 'Account storage is unavailable' }, 503);
   const admin = Boolean(env.KATCHAMAK_ADMIN_EMAIL && email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase());
@@ -41,7 +41,9 @@ export async function accountApi(request, env, measure) {
     return paddleBilling({request,env,q,account:id,active,admin,now,readMembershipPurchase,json:accountJson,body});
   }
   if (route === '/api/account' && method === 'GET') {
-    const account = { id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active } : { plan: 'none', active: false } };
+    const account = { id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active } : { plan: 'none', active: false },
+      ...(principal?.provider === 'clerk' ? { signOutUrl: '/auth/logout' } : {}),
+      ...(principal?.canLinkSignIn ? { canLinkSignIn: true } : {}) };
     if (url.searchParams.get('include') === 'membership') {
       // Existing grants are projected directly into the new model. A pending
       // invite stays attached to its original email until its first sign-in.

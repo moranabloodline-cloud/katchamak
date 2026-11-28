@@ -1,3 +1,7 @@
+> **2026-11-28 — Nezavisni Draftopus nalozi (razvojna grana).** Prijava preko Clerk-a i samostalna registracija pripremljene su uz postojeću Sites prijavu. Povezivanje zahteva prijavu na oba naloga i čuva postojeći Draftopus ID, dozvole, licencu i biblioteku. Registracija dodaje članski nalog bez kupovine. Cloud Storage prikazuje stanje automatskog čuvanja i nudi JSON kopiju otvorenog projekta. Binarni prilozi se preuzimaju u Project files.
+>
+> Aktivacija na glavnom sajtu zahteva Clerk produkcijsku instancu, domen koji Draftopus kontroliše, Google OAuth i odgovarajući Sites pristup bez obavezne ChatGPT prijave. D1 i R2 ostaju vezani za postojeće Draftopus ID-jeve. Dodatna šema povezuje identitete i ne zahteva prepisivanje postojećih redova. Posle verifikacije migracije može se uključiti produkcijski režim kroz tajne hostinga. Povratak vrši prethodna Sites verzija i prethodni režim pristupa. Zapisi o već povezanim identitetima treba da ostanu sačuvani radi nastavka migracije.
+
 > **2026-11-28 — Paddle naplata.** Checkout je dostupan kad se poveže odobren Paddle nalog. Founder broj se upisuje iz potvrđene uplate, a PDF račun preuzima se direktno od Paddlea.
 
 > **2026-11-28 — Membership & License.** Postojeće licence i dozvole čitaju se iz dosadašnjih zapisa. Kupovine imaju odvojenu evidenciju sa jedinstvenim Founder brojevima.

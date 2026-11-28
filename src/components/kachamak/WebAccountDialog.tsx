@@ -21,7 +21,7 @@ import {AdminMailConnection} from './AdminMailConnection';
 import {ProjectSettings} from './ProjectSettings';
 import {SettingsNavigation, type SettingsPage} from './SettingsNavigation';
 import {MembershipSettings} from './MembershipSettings';
-type Account = { id: string; email: string; role: 'admin'|'member'; displayName: string; avatar: string; preferences: Record<string,boolean> };
+type Account = { id: string; email: string; role: 'admin'|'member'; displayName: string; avatar: string; preferences: Record<string,boolean>; signOutUrl?: '/auth/logout'; canLinkSignIn?: boolean };
 type User = { id: string|null; email: string; display_name: string; role: string; status: string; plan: string|null; expires_at: number|null; source?: string };
 async function api(path: string, method = 'GET', body?: unknown) {
   const {response:r,data} = await requestJson(path, { method, headers: body ? { 'Content-Type':'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -41,6 +41,12 @@ const securityRow = 'flex flex-wrap items-center justify-between gap-2';
 function SecurityHelp({href,children}:{href:string;children:string}) {
   return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1.5 font-medium hover:bg-muted">
     {children}<ArrowUpRight aria-hidden="true" size={12}/><span className="sr-only"> (opens OpenAI Help in a new tab)</span>
+  </a>;
+}
+
+function ClerkSecurityLink() {
+  return <a href="/auth/profile" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1.5 font-medium hover:bg-muted">
+    Manage sign-in <ArrowUpRight aria-hidden="true" size={12}/><span className="sr-only"> (opens in a new tab)</span>
   </a>;
 }
 
@@ -94,6 +100,7 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
     toast.success('Settings saved.');
   });
   const locked=busy||projectBusy;
+  const clerkSignIn=account?.signOutUrl==='/auth/logout';
   const changePage=(page:SettingsPage)=>{
     if (locked || tab===page) return;
     setError('');
@@ -142,7 +149,7 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                     <label className="grid gap-1.5 font-medium">Display / author name
                       <Input value={name} maxLength={100} disabled={locked} onChange={e=>setName(e.target.value)} className="h-9 border-transparent bg-muted/70 px-2.5 text-sm shadow-none"/>
                     </label>
-                    <label className="grid gap-1.5 font-medium">Sign-in email
+                    <label className="grid gap-1.5 font-medium">{clerkSignIn ? 'Draftopus account email' : 'Sign-in email'}
                       <span className="relative">
                         <Input type="email" readOnly value={account.email} className="h-9 border-transparent bg-muted/70 px-2.5 pr-8 text-xs text-muted-foreground shadow-none"/>
                         <LockKeyhole aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground"/>
@@ -186,23 +193,28 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
               {tab==='security'&&<section aria-labelledby="signin-security-title" className="mx-auto max-w-[28rem] space-y-2.5">
                 <header>
                   <h2 id="signin-security-title" className="text-base font-semibold">Sign-in &amp; security</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Draftopus uses your ChatGPT account to sign you in.</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{clerkSignIn ? 'Your Draftopus sign-in is managed by Clerk.' : 'Draftopus uses your ChatGPT account to sign you in.'}</p>
                 </header>
+                {account.canLinkSignIn&&<div className={securityCard}>
+                  <h3 className="font-semibold">Additional sign-in</h3>
+                  <p className="py-1 text-muted-foreground">Link a new sign-in to keep using this account and all its projects.</p>
+                  <SecurityHelp href="/auth/legacy">Link a sign-in</SecurityHelp>
+                </div>}
                 <div className={securityCard}>
                   <h3 className="mb-2.5 font-semibold">Account credentials</h3>
                   <div className={securityRow}>
                     <div className="min-w-0">
-                      <p className="font-medium">Email address</p>
+                      <p className="font-medium">{clerkSignIn ? 'Draftopus account email' : 'Email address'}</p>
                       <p className="mt-0.5 break-words text-muted-foreground">{account.email}</p>
                     </div>
-                    <SecurityHelp href="https://help.openai.com/en/articles/4936827-changing-your-openai-account-email-address">Change email guide</SecurityHelp>
+                    {clerkSignIn ? <ClerkSecurityLink/> : <SecurityHelp href="https://help.openai.com/en/articles/4936827-changing-your-openai-account-email-address">Change email guide</SecurityHelp>}
                   </div>
-                  <div className={securityRow+' mt-2.5 border-t border-border pt-2.5'}>
+                  {!clerkSignIn&&<div className={securityRow+' mt-2.5 border-t border-border pt-2.5'}>
                     <p className="font-medium">Password</p>
                     <SecurityHelp href="https://help.openai.com/en/articles/4936828">Password guide</SecurityHelp>
-                  </div>
+                  </div>}
                 </div>
-                <div className={securityCard}>
+                {!clerkSignIn&&<div className={securityCard}>
                   <h3 className="mb-2.5 font-semibold">Account security</h3>
                   <div className={securityRow}>
                     <div>
@@ -211,7 +223,7 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                     </div>
                     <SecurityHelp href="https://help.openai.com/en/articles/7967234-managing-multi-factor-authentication-mfa">Setup guide</SecurityHelp>
                   </div>
-                </div>
+                </div>}
                 <div className={securityCard}>
                   <h3 className="mb-2.5 font-semibold">Active sessions</h3>
                   <div className="flex items-center gap-2.5">
@@ -222,17 +234,17 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                     </div>
                     <span className="text-emerald-700 dark:text-emerald-400">Active</span>
                   </div>
-                  <div className={securityRow+' mt-2.5 border-t border-border pt-2.5'}>
+                  {!clerkSignIn&&<div className={securityRow+' mt-2.5 border-t border-border pt-2.5'}>
                     <p className="font-medium">ChatGPT sessions</p>
                     <SecurityHelp href="https://help.openai.com/en/articles/20001257-managing-active-sessions-in-chatgpt">Session guide</SecurityHelp>
-                  </div>
+                  </div>}
                 </div>
                 <div className={securityCard}>
                   <h3 className="mb-2.5 font-semibold">Sign out</h3>
                   <div className={securityRow}>
                     <p className="text-muted-foreground">Save your work and end this session.</p>
                     <button type="button" disabled={locked} className="inline-flex items-center gap-1.5 rounded-md border border-red-500/40 px-2 py-1.5 font-medium text-red-700 hover:bg-red-500/10 disabled:opacity-50 dark:text-red-300"
-                      onClick={()=>void run(async()=>{await saveWebLibrary();window.location.assign('/signout-with-chatgpt?return_to=%2F');})}><LogOut aria-hidden="true" size={12}/>Sign out</button>
+                      onClick={()=>void run(async()=>{await saveWebLibrary();window.location.assign(account?.signOutUrl ?? '/signout-with-chatgpt?return_to=%2F');})}><LogOut aria-hidden="true" size={12}/>Sign out</button>
                   </div>
                 </div>
               </section>}
@@ -262,12 +274,13 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
               {tab==='integrations'&&<>
                 <h2 className={heading}>Connected services</h2>
                 <div className={surface}>
-                  <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-medium">ChatGPT</h3><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300">Connected</span></div>
-                  <p className="break-words text-sm text-muted-foreground">Sign-in is linked to {account.email}.</p>
+                  <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-medium">{clerkSignIn ? 'Clerk' : 'ChatGPT'}</h3><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300">Connected</span></div>
+                  <p className="break-words text-sm text-muted-foreground">This browser uses {clerkSignIn ? 'Clerk' : 'ChatGPT'} to sign in to Draftopus.</p>
                 </div>
                 {account.role==='admin'&&<AdminMailConnection/>}
               </>}
-  {tab==='admin'&&account.role==='admin'&&<>{process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP !== '1' && <AdminDemoProject onOpen={()=>onOpenChange(false)}/>}<h2 className={heading}>Users and licenses</h2><AdminLicenseList revision={licenseRevision} onEdit={license=>{setEmail(license.email);setPlan(license.plan);setExpiry(license.expires_at?new Date(license.expires_at-new Date(license.expires_at).getTimezoneOffset()*60000).toISOString().slice(0,10):'');setLicenseFeedback(null);licenseForm.current?.scrollIntoView({block:'start',behavior:'smooth'});}} onRevoked={()=>{void run(async()=>{await loadUsers();setEvents((await api('/api/admin/audit')).events);});}}/><h3 className="font-medium">Accounts and access</h3><form className="flex gap-2" onSubmit={e=>{e.preventDefault();void run(()=>loadUsers(0));}}><Input aria-label="Search users" placeholder="Search name or email" value={search} onChange={e=>setSearch(e.target.value)}/><button disabled={busy} className={button}>Search</button></form><div className="max-h-64 overflow-auto rounded border border-white/10">{users.map(u=><div key={u.id??u.email} className="flex flex-wrap items-center gap-2 border-b border-white/10 p-3 text-xs"><div className="min-w-0 flex-1"><p className="break-all">{u.email}</p><p className="text-stone-400">{u.role} · {u.id?u.status:u.status==='suspended'?'Suspended before sign-in':'Awaiting first sign-in'}{u.source==='sites'?' · Sites invitation':''} · {u.plan||'No license'}{u.expires_at?' · '+new Date(u.expires_at).toLocaleDateString():''}</p></div>{u.role!=='admin'&&<><button className={button} onClick={()=>{setEmail(u.email);setPlan(u.plan==='timed'?'timed':'lifetime');}}>License</button><button disabled={busy} className={button} onClick={()=>{if(window.confirm((u.status==='suspended'?'Restore':'Suspend')+' access for '+u.email+'?'))void run(async()=>{await api('/api/admin/status','POST',{email:u.email,status:u.status==='suspended'?'active':'suspended'});await loadUsers();toast.success('Access updated.');});}}>{u.status==='suspended'?'Restore':'Suspend'}</button></>}</div>)}{!users.length&&<p className="p-3 text-sm text-stone-400">No users or assigned licenses match.</p>}</div><div className="flex justify-between"><button className={button} disabled={busy||offset===0} onClick={()=>void run(()=>loadUsers(Math.max(0,offset-50)))}>Previous</button><button className={button} disabled={busy||!hasMore} onClick={()=>void run(()=>loadUsers(offset+50))}>Next</button></div><form ref={licenseForm} className="space-y-3 border-t border-border py-4" onSubmit={e=>{e.preventDefault();void run(async()=>{setLicenseFeedback(null);try{const result=await api('/api/admin/license','POST',{email:email.trim(),plan,expiresAt:plan==='timed'?new Date(expiry+'T23:59:59').getTime():undefined});const saved=result.license;const message=saved.plan==='none'?'License revoked for '+saved.email+'.':(saved.plan==='lifetime'?'Lifetime license saved for ':'Time-limited license saved for ')+saved.email+'.'+(!result.registered?' Ready for their first sign-in.':'');setLicenseFeedback({ok:true,message});setEmail(saved.email);setSearch(saved.email);setLicenseRevision(r=>r+1);toast.success(message);try{await loadUsers(0,saved.email);setEvents((await api('/api/admin/audit')).events);}catch{setLicenseFeedback({ok:true,message:message+' The list could not refresh. Search this email to check it.'});}}catch(error){setLicenseFeedback({ok:false,message:error instanceof Error?error.message:'License could not be saved.'});throw error;}});}}><h3>Assign or revoke a license</h3><p className="text-xs text-stone-400">You can assign a license before the user signs in for the first time. Use their ChatGPT sign-in email.</p><Input aria-label="License email" type="email" required placeholder="User email" maxLength={254} value={email} onChange={e=>{setEmail(e.target.value);setLicenseFeedback(null);}}/><select aria-label="License type" className="rounded border border-white/20 bg-background p-2 text-sm" value={plan} onChange={e=>{setPlan(e.target.value);setLicenseFeedback(null);}}><option value="lifetime">Lifetime</option><option value="timed">Time-limited</option><option value="none">Revoke license</option></select>{plan==='timed'&&<Input aria-label="Expiry date" type="date" required value={expiry} onChange={e=>{setExpiry(e.target.value);setLicenseFeedback(null);}}/>}<button disabled={busy} className={button}>{busy?'Saving…':'Apply license'}</button>{licenseFeedback&&<p role={licenseFeedback.ok?'status':'alert'} className={'rounded border p-3 text-sm '+(licenseFeedback.ok?'border-emerald-500/30 bg-emerald-500/10 text-emerald-200':'border-red-500/30 bg-red-950 text-red-200')}>{licenseFeedback.message}</p>}</form><details className="text-xs text-stone-400"><summary>Recent admin activity</summary>{events.map(e=><p key={e.id} className="mt-2 break-all">{new Date(e.created_at).toLocaleString()} · {e.action} · {e.target} · {e.detail}</p>)}</details></>}
+  {tab==='admin'&&account.role==='admin'&&<>{process.env.NEXT_PUBLIC_KATCHAMAK_DESKTOP !== '1' && <AdminDemoProject onOpen={()=>onOpenChange(false)}/>}<h2 className={heading}>Users and licenses</h2><AdminLicenseList revision={licenseRevision} onEdit={license=>{setEmail(license.email);setPlan(license.plan);setExpiry(license.expires_at?new Date(license.expires_at-new Date(license.expires_at).getTimezoneOffset()*60000).toISOString().slice(0,10):'');setLicenseFeedback(null);licenseForm.current?.scrollIntoView({block:'start',behavior:'smooth'});}} onRevoked={()=>{void run(async()=>{await loadUsers();setEvents((await api('/api/admin/audit')).events);});}}/>
+                <h3 className="font-medium">Accounts and access</h3><form className="flex gap-2" onSubmit={e=>{e.preventDefault();void run(()=>loadUsers(0));}}><Input aria-label="Search users" placeholder="Search name or email" value={search} onChange={e=>setSearch(e.target.value)}/><button disabled={busy} className={button}>Search</button></form><div className="max-h-64 overflow-auto rounded border border-white/10">{users.map(u=><div key={u.id??u.email} className="flex flex-wrap items-center gap-2 border-b border-white/10 p-3 text-xs"><div className="min-w-0 flex-1"><p className="break-all">{u.email}</p><p className="text-stone-400">{u.role} · {u.id?u.status:u.status==='suspended'?'Suspended before sign-in':'Awaiting first sign-in'}{u.source==='sites'?' · Sites invitation':''} · {u.plan||'No license'}{u.expires_at?' · '+new Date(u.expires_at).toLocaleDateString():''}</p></div>{u.role!=='admin'&&<><button className={button} onClick={()=>{setEmail(u.email);setPlan(u.plan==='timed'?'timed':'lifetime');}}>License</button><button disabled={busy} className={button} onClick={()=>{if(window.confirm((u.status==='suspended'?'Restore':'Suspend')+' access for '+u.email+'?'))void run(async()=>{await api('/api/admin/status','POST',{email:u.email,status:u.status==='suspended'?'active':'suspended'});await loadUsers();toast.success('Access updated.');});}}>{u.status==='suspended'?'Restore':'Suspend'}</button></>}</div>)}{!users.length&&<p className="p-3 text-sm text-stone-400">No users or assigned licenses match.</p>}</div><div className="flex justify-between"><button className={button} disabled={busy||offset===0} onClick={()=>void run(()=>loadUsers(Math.max(0,offset-50)))}>Previous</button><button className={button} disabled={busy||!hasMore} onClick={()=>void run(()=>loadUsers(offset+50))}>Next</button></div><form ref={licenseForm} className="space-y-3 border-t border-border py-4" onSubmit={e=>{e.preventDefault();void run(async()=>{setLicenseFeedback(null);try{const result=await api('/api/admin/license','POST',{email:email.trim(),plan,expiresAt:plan==='timed'?new Date(expiry+'T23:59:59').getTime():undefined});const saved=result.license;const message=saved.plan==='none'?'License revoked for '+saved.email+'.':(saved.plan==='lifetime'?'Lifetime license saved for ':'Time-limited license saved for ')+saved.email+'.'+(!result.registered?' Ready for their first sign-in.':'');setLicenseFeedback({ok:true,message});setEmail(saved.email);setSearch(saved.email);setLicenseRevision(r=>r+1);toast.success(message);try{await loadUsers(0,saved.email);setEvents((await api('/api/admin/audit')).events);}catch{setLicenseFeedback({ok:true,message:message+' The list could not refresh. Search this email to check it.'});}}catch(error){setLicenseFeedback({ok:false,message:error instanceof Error?error.message:'License could not be saved.'});throw error;}});}}><h3>Assign or revoke a license</h3><p className="text-xs text-stone-400">You can assign a license before the user signs in for the first time. Use their ChatGPT sign-in email.</p><Input aria-label="License email" type="email" required placeholder="User email" maxLength={254} value={email} onChange={e=>{setEmail(e.target.value);setLicenseFeedback(null);}}/><select aria-label="License type" className="rounded border border-white/20 bg-background p-2 text-sm" value={plan} onChange={e=>{setPlan(e.target.value);setLicenseFeedback(null);}}><option value="lifetime">Lifetime</option><option value="timed">Time-limited</option><option value="none">Revoke license</option></select>{plan==='timed'&&<Input aria-label="Expiry date" type="date" required value={expiry} onChange={e=>{setExpiry(e.target.value);setLicenseFeedback(null);}}/>}<button disabled={busy} className={button}>{busy?'Saving…':'Apply license'}</button>{licenseFeedback&&<p role={licenseFeedback.ok?'status':'alert'} className={'rounded border p-3 text-sm '+(licenseFeedback.ok?'border-emerald-500/30 bg-emerald-500/10 text-emerald-200':'border-red-500/30 bg-red-950 text-red-200')}>{licenseFeedback.message}</p>}</form><details className="text-xs text-stone-400"><summary>Recent admin activity</summary>{events.map(e=><p key={e.id} className="mt-2 break-all">{new Date(e.created_at).toLocaleString()} · {e.action} · {e.target} · {e.detail}</p>)}</details></>}
             </>}
           </div>
         </main>

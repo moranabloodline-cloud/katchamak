@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { initializeWebLibrary, useWebLibrary, saveWebLibrary, reloadWebLibrary, refreshWebLibrary, projectAttachments, addProjectAttachment, attachmentUrl } from '@/lib/kachamak/cloud-library';
-import { useKachamak } from '@/lib/kachamak/store';
+import { exportNovelJson, useKachamak } from '@/lib/kachamak/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { DraftopusLoading } from './DraftopusLoading';
@@ -28,7 +28,7 @@ export function WebLibraryStorage({ children }: { children: ReactNode }) {
       <p role="alert" className="break-words text-sm text-stone-300">{state.error}</p>
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void initializeWebLibrary().catch(() => {})} className="rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-black hover:bg-amber-300">Retry</button>
-        <a href="/signin-with-chatgpt?return_to=%2F" target="_top" className="rounded-md px-3 py-2 text-sm text-stone-200 hover:bg-white/10">Sign in</a>
+        <a href={typeof window !== 'undefined' && window.draftopusClerkReady ? '/auth/clerk?resume=1' : '/signin-with-chatgpt?return_to=%2F'} target="_top" className="rounded-md px-3 py-2 text-sm text-stone-200 hover:bg-white/10">Sign in</a>
       </div>
       {hasRecoveryIssue && <details className="text-sm">
         <summary className="cursor-pointer text-amber-200">Local draft options</summary>
@@ -50,11 +50,19 @@ export function WebLibraryStorage({ children }: { children: ReactNode }) {
   </>;
 }
 export function CloudStorageControls() {
-  const email = useWebLibrary(s => s.email), active = useKachamak(s => s.activeNovelId);
+  const email = useWebLibrary(s => s.email);
+  const active = useKachamak(s => s.novels.find(novel => novel.id === s.activeNovelId)?.id ?? null);
   return <StorageActions key={JSON.stringify([email, active])} email={email} active={active} />;
 }
 
 function StorageActions({ email, active }: { email: string; active: string | null }) {
+  const syncStatus = useWebLibrary(state => {
+    if (!state.ready) return 'Opening your cloud library…';
+    if (state.retrying) return 'Retrying cloud save…';
+    if (state.error) return 'Cloud save needs attention';
+    if (state.busy || state.pending) return 'Saving to your account…';
+    return 'Saved to your account';
+  });
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<Awaited<ReturnType<typeof projectAttachments>>>([]);
   const [action, setAction] = useState('');
@@ -73,15 +81,37 @@ function StorageActions({ email, active }: { email: string; active: string | nul
   };
   const busy = action !== '';
   const buttonClass = 'rounded-full border border-border bg-card px-3 py-1.5 hover:bg-muted disabled:opacity-50';
+  const downloadBackup = () => {
+    const { novels, activeNovelId } = useKachamak.getState();
+    const project = active === activeNovelId && novels.find(novel => novel.id === active);
+    if (!project || !useWebLibrary.getState().ready) return;
+    exportNovelJson(project);
+    toast.success('Project backup downloaded.');
+  };
   return <>
-    <p className="break-words text-sm text-muted-foreground">Signed in as {email}</p>
-    <p className="text-sm">Your collections, projects, notes and attachments are saved privately to this account. Preview and browser use the same library.</p>
-    <div className="flex flex-wrap gap-2 text-xs">
-      <button disabled={busy} className={buttonClass} onClick={() => void run('Saving…', async () => { await saveWebLibrary(); toast.success('Saved to your account.'); })}>Save now</button>
-      <button disabled={busy} className={buttonClass} onClick={() => void run('Reloading library…', async () => { await saveWebLibrary(); await reloadWebLibrary(); toast.success('Cloud library reloaded.'); })}>Reload library</button>
-      {active && <button disabled={busy} className={buttonClass} onClick={() => void run('Opening project files…', async () => { await saveWebLibrary(); setFiles(await projectAttachments(active)); setOpen(true); })}>Project files</button>}
-    </div>
-    {!open && <p role="status" className={action ? 'text-xs text-muted-foreground' : 'sr-only'}>{action}</p>}
+    <section className="space-y-2.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="text-sm font-semibold">Automatic cloud saving</h3>
+        <p role="status" className="text-xs text-muted-foreground">{!open && action ? action : syncStatus}</p>
+      </div>
+      <p className="text-sm text-muted-foreground">Your private library is saved to your Draftopus account. Sign in on another device to open the same projects and files.</p>
+      <p className="break-words text-xs text-muted-foreground">Signed in as {email}</p>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <button type="button" disabled={busy} className={buttonClass} onClick={() => void run('Saving…', async () => { await saveWebLibrary(); toast.success('Saved to your account.'); })}>Save now</button>
+        <button type="button" disabled={busy} className={buttonClass} onClick={() => void run('Reloading library…', async () => { await saveWebLibrary(); await reloadWebLibrary(); toast.success('Cloud library reloaded.'); })}>Reload library</button>
+      </div>
+    </section>
+    <section className="space-y-2.5 border-t border-border pt-3">
+      <h3 className="text-sm font-semibold">Keep a copy on this device</h3>
+      <p className="text-sm text-muted-foreground">{active
+        ? 'Download a JSON backup of this project. Uploaded attachments are available separately under Project files.'
+        : 'Open a project to download a JSON backup or its uploaded attachments.'}</p>
+      {active && <div className="flex flex-wrap gap-2 text-xs">
+        <button type="button" disabled={busy} className={buttonClass} onClick={downloadBackup}>Download project backup</button>
+        <button type="button" disabled={busy} className={buttonClass} onClick={() => void run('Opening project files…', async () => { await saveWebLibrary(); setFiles(await projectAttachments(active)); setOpen(true); })}>Project files</button>
+      </div>}
+      <p className="text-xs text-muted-foreground">Opening and syncing the library requires internet access. This browser can retain unsaved edits temporarily for recovery.</p>
+    </section>
     <Dialog open={open} onOpenChange={(next) => { if (!busy || next) setOpen(next); }}>
       <DialogContent className="border-white/10 bg-[#1b1b1b]" aria-busy={busy}>
         <DialogHeader><DialogTitle>Project files</DialogTitle></DialogHeader>
