@@ -26,6 +26,13 @@ bun run build
 
 `typecheck` proverava aplikaciju; samostalni primeri iz `examples/` i tuđe veštine iz `skills/` nisu deo aplikacije. GitHub Actions izvršava ove provere i proveru izgrađenog paketa.
 
+## Paddle naplata na Sites
+
+- U verifikovanom Paddle Billing nalogu podesi odobrenu adresu za checkout. Podrazumevana payment link adresa za Draftopus je ista instalacija sa putanjom `/checkout`.
+- Kreiraj dve aktivne jednokratne cene u EUR. Za Founder koristi 14,99, a za Standard 24,99. Na Sites postavi `PADDLE_FOUNDER_PRICE_ID`, `PADDLE_STANDARD_PRICE_ID`, `PADDLE_CLIENT_TOKEN` (live) i tajnu `PADDLE_API_KEY` sa dozvolama `price.read`, `transaction.read` i `transaction.write`. Ključeve ne upisuj u repozitorijum.
+- `PADDLE_BILLING_ENABLED=1` uključuje prodaju za naloge sa pristupom privatnoj aplikaciji koji nemaju aktivnu licencu. Proveri checkout i račune u odvojenom okruženju pre uključivanja žive prodaje. Lokalni test `bun tests/paddle-billing.test.mjs` koristi simulirani odgovor Paddle API-ja.
+- Checkout i Membership proveravaju uplate preko Paddle API-ja. Privatni Sites ulaz zahteva prijavu, pa Paddle webhook nije spojen. Ako korisnik zatvori checkout, provera se nastavlja kada se vrati. Napušteni Founder checkout se oslobađa samo posle potvrđenog otkaza kod Paddlea. PDF račun je dostupan kupcu u Membership & License.
+
 ## Automatski tok: GitHub → sajt i pregled
 
 Nikola je 11.11.2026. zatražio i odobrio automatsko usaglašavanje aplikacije. GitHub `main` je autoritativni izvor. Svaki push na `main`, uključujući promenu drugog saradnika, pokreće `.github/workflows/build.yml`: testove, proveru tipova, build, proveru paketa, automatsku objavu i proveru stvarno objavljene verzije. Neuspeh zadržava prethodnu objavu.

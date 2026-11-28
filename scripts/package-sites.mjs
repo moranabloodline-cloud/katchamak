@@ -38,6 +38,9 @@ export async function packageSite(manifest) {
   const requestTrace = await readFile("scripts/request-trace.mjs", "utf8");
   const accounts = await readFile("scripts/accounts-runtime.mjs", "utf8");
   const membershipSchema = await readFile("drizzle/0006_membership_purchases.sql", "utf8");
+  const checkoutSchema = await readFile("drizzle/0007_paddle_checkouts.sql", "utf8");
+  const billing = await readFile("scripts/paddle-billing.mjs", "utf8");
+  const billingModule = "const checkoutMigration=" + JSON.stringify(checkoutSchema) + ";\n" + billing.replace(/^import .*drizzle\/0007_paddle_checkouts[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
   const demos = await readFile("scripts/demo-projects.mjs", "utf8");
   const cloud = await readFile("scripts/cloud-library-runtime.mjs", "utf8");
   // Bundle the shared cloud write logic without pulling in the client store.
@@ -54,13 +57,13 @@ export {applyLibraryNotePatch, validLibraryNotePatch} from "./src/lib/kachamak/c
   const store = await readFile("scripts/release-store.mjs", "utf8");
   const automation = JSON.parse(await readFile(".openai/automation.json", "utf8"));
   const deployConfig = { repository: automation.repository, branch: automation.branch, origin: automation.origin, workflow: automation.workflow };
-  deployConfig.runtimeHash = createHash("sha256").update(requestTrace + accounts + membershipSchema + demos + cloud + projectValidation + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
+  deployConfig.runtimeHash = createHash("sha256").update(requestTrace + accounts + membershipSchema + billingModule + demos + cloud + projectValidation + oidc + store + runtime + JSON.stringify(deployConfig) + JSON.stringify(manifest)).digest("hex");
   const modules = projectValidation + requestTrace.replace(/^export /gm, "") + "\n" + demos.replace(/^export /gm, "") + "\n" + cloud.replace(/^(?:import|export \{)[^\r\n]*(?:demo-projects|cloud-(?:write-validation|note-patch)|request-trace)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\nconst membershipMigration=" + JSON.stringify(membershipSchema) + ";\n" + accounts.replace(/^import[^\r\n]*(?:request-trace|0006_membership_purchases)[^\r\n]*(?:\r?\n|$)/gm, "").replace(/^export /gm, "") + "\n" + oidc.replace(/^export /gm, "") + "\n" + store.replace(/^import[^\r\n]*github-oidc[^\r\n]*(?:\r?\n|$)/m, "").replace(/^export /gm, "");
   await mkdir("dist/server", { recursive: true });
   await mkdir("dist/.openai", { recursive: true });
   // Keep the previous build's extra immutable files out of the active build
   // fingerprint and GitHub manifest. They are available to open tabs only.
-  await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + fallback + modules + "\n" + runtime);
+  await writeFile("dist/server/index.js", "const ASSETS=" + JSON.stringify(assets) + ";\nconst APP_BUILD=" + JSON.stringify(build) + ";\nconst SOURCE_VERSION=" + JSON.stringify(version) + ";\nconst DEPLOY_CONFIG=" + JSON.stringify(deployConfig) + ";\n" + fallback + modules.replace(/^import .*paddle-billing[^\r\n]*(?:\r?\n|$)/m, "") + "\n" + billingModule + "\n" + runtime);
   const syntax = spawnSync(process.execPath, ["--check", "dist/server/index.js"], { stdio: "inherit" });
   if (syntax.status !== 0) throw new Error("Sites Worker syntax validation failed.");
   await cp(".openai/hosting.json", "dist/.openai/hosting.json");

@@ -1,3 +1,5 @@
+> **2026-11-28 — Paddle naplata.** Checkout je dostupan kad se poveže odobren Paddle nalog. Founder broj se upisuje iz potvrđene uplate, a PDF račun preuzima se direktno od Paddlea.
+
 > **2026-11-28 — Membership & License.** Postojeće licence i dozvole čitaju se iz dosadašnjih zapisa. Kupovine imaju odvojenu evidenciju sa jedinstvenim Founder brojevima.
 
 > **2026-11-27 — Uži panel i Sign-in & security.** Bezbednosne opcije su grupisane u kartice, sa uputstvima za podešavanja ChatGPT naloga i akcijom odjave iz Draftopusa.
@@ -830,6 +832,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-28.** Paddle proizvodi imaju jednokratne cene od 14,99 EUR i 24,99 EUR. Serverske rezervacije ograničavaju Founder na 500 plaćenih izdanja. Potvrde i računi koriste Paddle API. Postojeće ručne licence ostaju van toka naplate.
 - **2026-11-28.** Membership prikazuje ručno dodeljen, administratorski i kupljen pristup prema potvrđenim zapisima. Aditivna migracija čuva postojeće naloge i licence, sa ograničenjem od 500 jedinstvenih Founder brojeva. Checkout i računi za kupovinu još nisu povezani.
 - **2026-11-27.** Smanjena je širina desnog panela Settings. Stranica Sign-in & security prikazuje prijavni email, vodiče za lozinku, MFA i sesije, kao i postojeću akciju odjave koja prethodno čuva biblioteku.
 - **2026-11-27.** Settings se ponovo otvara uz desnu ivicu. Kartica profila ima ograničenu širinu i vertikalno složena polja.

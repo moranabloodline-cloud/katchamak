@@ -1,5 +1,6 @@
 import { measuredQuery, measuredBatch } from './request-trace.mjs';
 import membershipMigration from '../drizzle/0006_membership_purchases.sql' with { type: 'text' };
+import {paddleBilling, paddleConfig} from './paddle-billing.mjs';
 const accountJson = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
 export async function accountApi(request, env, measure) {
   const url = new URL(request.url), id = request.headers.get('oai-authenticated-user-id');
@@ -25,32 +26,40 @@ export async function accountApi(request, env, measure) {
   if (method !== 'GET') { try { const text = await request.text(); if (text.length > 220000) return accountJson({ error: 'Request too large' }, 413); body = JSON.parse(text); } catch { return accountJson({ error: 'Invalid JSON' }, 400); } }
   const audit = (target, action, detail) => q('INSERT INTO account_audit (id,actor,target,action,detail,created_at) VALUES (?,?,?,?,?,?)', crypto.randomUUID(), id, target, action, JSON.stringify(detail), now);
   if (route.startsWith('/api/admin/gmail/')) return gmailConnection(request, env, {q,id,body,audit});
+  const license = user.license_plan === null ? null : {plan:user.license_plan,expires_at:user.license_expires_at,updated_at:user.license_updated_at};
+  const active = !!license && license.plan !== 'none' && (license.expires_at === null || license.expires_at > now);
+  const readMembershipPurchase = async () => {
+    const readPurchase = () => q('SELECT * FROM membership_purchases WHERE account_id=?',id).first();
+    try { return await readPurchase(); }
+    catch (error) {
+      if (!/no such table:\s*(?:main\.)?membership_purchases\b/i.test(String(error))) throw error;
+      await q(membershipMigration).run();
+      return readPurchase();
+    }
+  };
+  if (route === '/api/account/billing') {
+    return paddleBilling({request,env,q,account:id,active,admin,now,readMembershipPurchase,json:accountJson,body});
+  }
   if (route === '/api/account' && method === 'GET') {
-    const license = user.license_plan === null ? null : {plan:user.license_plan,expires_at:user.license_expires_at,updated_at:user.license_updated_at};
-    const active = !!license && license.plan !== 'none' && (license.expires_at === null || license.expires_at > now);
     const account = { id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active } : { plan: 'none', active: false } };
     if (url.searchParams.get('include') === 'membership') {
       // Existing grants are projected directly into the new model. A pending
       // invite stays attached to its original email until its first sign-in.
-      const readPurchase = () => q('SELECT edition, founder_number, status, purchased_at, amount_minor, currency, license_id FROM membership_purchases WHERE account_id=?',id).first();
-      let purchase;
-      try { purchase = await readPurchase(); }
-      catch (error) {
-        if (!/no such table:\s*(?:main\.)?membership_purchases\b/i.test(String(error))) throw error;
-        await q(membershipMigration).run();
-        purchase = await readPurchase();
-      }
+      const purchase = await readMembershipPurchase();
+      const billingAvailable=!!paddleConfig(env);
       const state = license?.plan === 'none' ? 'revoked' : active ? 'active' : license ? 'expired' : 'none';
-      const membership = purchase && (purchase.status === 'refunded' || license?.plan === 'lifetime')
+      const paddlePurchase = purchase?.payment_ref.startsWith('paddle:');
+      const membership = purchase && (paddlePurchase || purchase.status === 'refunded' || license?.plan === 'lifetime')
         ? {
-          edition: purchase.edition, status: purchase.status === 'refunded' ? 'refunded' : state,
-          plan: 'lifetime', expiresAt: license?.expires_at ?? null, founderNumber: purchase.founder_number,
+          edition: purchase.edition, status: purchase.status === 'refunded' ? 'refunded' : paddlePurchase ? 'active' : state,
+          plan: 'lifetime', expiresAt: paddlePurchase ? null : license?.expires_at ?? null, founderNumber: purchase.founder_number,
           purchase: { date: purchase.purchased_at, amountMinor: purchase.amount_minor, currency: purchase.currency, licenseId: purchase.license_id },
+          ...(paddlePurchase&&env.PADDLE_API_KEY?{invoiceAvailable:true}:{}),
         }
         : admin
           ? { edition: 'administrator', status: 'active', plan: 'lifetime', expiresAt: null }
           : { edition: license ? 'manual' : 'none', status: state, plan: license?.plan ?? 'none', expiresAt: license?.expires_at ?? null };
-      return accountJson({ membership });
+      return accountJson({ membership, billingAvailable });
     }
     return accountJson(account);
   }

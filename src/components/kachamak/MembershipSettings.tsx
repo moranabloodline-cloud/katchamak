@@ -10,6 +10,7 @@ type Membership = {
   plan: 'lifetime' | 'timed' | 'none';
   expiresAt: number | null;
   founderNumber?: number | null;
+  invoiceAvailable?: boolean;
   purchase?: {date:number; amountMinor:number; currency:string; licenseId:string|null};
 };
 
@@ -21,13 +22,26 @@ export function MembershipSettings() {
   const [record,setRecord]=useState<Membership|null>(null);
   const [error,setError]=useState(false);
   const [attempt,setAttempt]=useState(0);
+  const [billingAvailable,setBillingAvailable]=useState(false);
   useEffect(()=>{
     const controller=new AbortController();
-    void requestJson('/api/account?include=membership',{signal:controller.signal}).then(({response,data})=>{
+    async function load(){
+      const {response,data}=await requestJson('/api/account?include=membership',{signal:controller.signal});
       if(controller.signal.aborted)return;
       if(!response.ok||!data.membership)throw new Error();
       setRecord(data.membership);
-    }).catch(()=>{if(!controller.signal.aborted)setError(true);});
+      setBillingAvailable(data.billingAvailable===true);
+      if(!data.billingAvailable||data.membership.purchase||data.membership.status==='active')return;
+      // Resume confirmations when a buyer returns after closing checkout.
+      const confirmation=await requestJson('/api/account/billing',{
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'verify'}), signal:controller.signal,
+      });
+      if(confirmation.response.ok&&confirmation.data.state==='complete'&&!controller.signal.aborted){
+        const updated=await requestJson('/api/account?include=membership',{signal:controller.signal});
+        if(updated.response.ok&&updated.data.membership&&!controller.signal.aborted)setRecord(updated.data.membership);
+      }
+    }
+    void load().catch(()=>{if(!controller.signal.aborted)setError(true);});
     return ()=>controller.abort();
   },[attempt]);
 
@@ -36,7 +50,15 @@ export function MembershipSettings() {
       <h2 id="membership-title" className="text-base font-semibold">Membership &amp; License</h2>
       <p className="mt-0.5 text-xs text-muted-foreground">Manage your Draftopus membership and license information.</p>
     </header>
-    {record ? <MembershipCards record={record}/> : error ? <div className={card}>
+    {record ? <>
+      <MembershipCards record={record}/>
+      {billingAvailable&&!record.purchase&&['none','expired','revoked'].includes(record.status)&&
+        <a href="/checkout" target="_blank" rel="noopener noreferrer" className="inline-flex rounded-md bg-[var(--settings-action)] px-3 py-2 text-xs font-semibold text-[var(--settings-action-text)]">View lifetime license</a>}
+      {record.invoiceAvailable&&<div className={card}>
+        <h3 className="mb-2 font-semibold">Purchase information</h3>
+        <a target="_blank" rel="noopener noreferrer" className="underline underline-offset-2" href="/api/account/billing?action=invoice">Download Paddle invoice (PDF)</a>
+      </div>}
+    </> : error ? <div className={card}>
       <p role="alert">Could not load your membership information.</p>
       <button type="button" className="mt-2 rounded-md border border-border bg-muted px-2.5 py-1.5 hover:bg-card" onClick={()=>{setError(false);setAttempt(n=>n+1);}}>Retry</button>
     </div> : <p role="status" className={card}>Loading membership…</p>}
