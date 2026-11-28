@@ -832,6 +832,7 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+- **2026-11-28.** Direktni linkovi `/?settings=account` i `/?settings=membership` otvaraju postojeća podešavanja nakon učitavanja prijavljene biblioteke. Lokalna React provera potvrđuje oba prikaza, očuvanje adrese projekta i redovno otvaranje profila iz aplikacije.
 - **2026-11-28.** Paddle proizvodi imaju jednokratne cene od 14,99 EUR i 24,99 EUR. Serverske rezervacije ograničavaju Founder na 500 plaćenih izdanja. Potvrde i računi koriste Paddle API. Postojeće ručne licence ostaju van toka naplate.
 - **2026-11-28.** Membership prikazuje ručno dodeljen, administratorski i kupljen pristup prema potvrđenim zapisima. Aditivna migracija čuva postojeće naloge i licence, sa ograničenjem od 500 jedinstvenih Founder brojeva. Checkout i računi za kupovinu još nisu povezani.
 - **2026-11-27.** Smanjena je širina desnog panela Settings. Stranica Sign-in & security prikazuje prijavni email, vodiče za lozinku, MFA i sesije, kao i postojeću akciju odjave koja prethodno čuva biblioteku.
