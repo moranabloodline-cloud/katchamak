@@ -832,6 +832,12 @@ Tačke 1–8 završene (tačka 8 urađena i testirana 11.11. — detalji u Dnevn
 
 ## 7. Dnevnik izmena (najnovije prvo)
 
+### 2026-11-28 — Draftopus nalozi, demo i doživotna licenca
+
+Pripremljeni su nezavisna registracija mejlom ili Google nalogom, prikaz objavljenog Binder, Codex, Timeline i Canvas sadržaja bez uređivanja i doživotna licenca od 20 € plus porez. Identiteti se povezuju sa zasebnim Draftopus ID-em. Kupovina otključava pisanje tek posle serverske potvrde. Objavljeni D1 i R2 ostaju glavni izvori biblioteka i licenci.
+
+Za objavu treba podesiti slanje verifikacionih mejlova, Google OAuth i tačne povratne adrese u projektu Draftopus Auth. Produkcijski Sites koristi `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `DRAFTOPUS_AUTH_ENABLED`, `DRAFTOPUS_GOOGLE_ENABLED` i postojeće adrese pozvanih u tajni `DRAFTOPUS_LEGACY_EMAILS`. Naplata se uključuje uz odobren Paddle domen, produkcijske ključeve i `PADDLE_LIFETIME_PRODUCT_ID`. Prvo proveriti registraciju, demo i pristup postojećih korisnika, pa objaviti nove ulazne linkove.
+
 - **2026-11-28.** Paddle proizvodi imaju jednokratne cene od 14,99 EUR i 24,99 EUR. Serverske rezervacije ograničavaju Founder na 500 plaćenih izdanja. Potvrde i računi koriste Paddle API. Postojeće ručne licence ostaju van toka naplate.
 - **2026-11-28.** Membership prikazuje ručno dodeljen, administratorski i kupljen pristup prema potvrđenim zapisima. Aditivna migracija čuva postojeće naloge i licence, sa ograničenjem od 500 jedinstvenih Founder brojeva. Checkout i računi za kupovinu još nisu povezani.
 - **2026-11-27.** Smanjena je širina desnog panela Settings. Stranica Sign-in & security prikazuje prijavni email, vodiče za lozinku, MFA i sesije, kao i postojeću akciju odjave koja prethodno čuva biblioteku.

@@ -26,7 +26,7 @@ const sections: {label: string; pages: SettingsEntry[]}[] = [
     {id:'backups', label:'Backups & export', icon:Archive, project:true, search:'manuscript import JSON download'},
   ]},
   {label:'Integrations', pages:[
-    {id:'integrations', label:'Connected services', icon:Plug, search:'ChatGPT Gmail'},
+    {id:'integrations', label:'Connected services', icon:Plug, search:'email integrations'},
   ]},
 ];
 

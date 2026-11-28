@@ -28,7 +28,7 @@ export function WebLibraryStorage({ children }: { children: ReactNode }) {
       <p role="alert" className="break-words text-sm text-stone-300">{state.error}</p>
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void initializeWebLibrary().catch(() => {})} className="rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-black hover:bg-amber-300">Retry</button>
-        <a href="/signin-with-chatgpt?return_to=%2F" target="_top" className="rounded-md px-3 py-2 text-sm text-stone-200 hover:bg-white/10">Sign in</a>
+        <a href="/" target="_top" className="rounded-md px-3 py-2 text-sm text-stone-200 hover:bg-white/10">Sign in</a>
       </div>
       {hasRecoveryIssue && <details className="text-sm">
         <summary className="cursor-pointer text-amber-200">Local draft options</summary>

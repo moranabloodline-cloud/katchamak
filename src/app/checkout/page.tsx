@@ -3,14 +3,14 @@
 import {useCallback, useEffect, useState} from 'react';
 import {requestJson} from '@/lib/kachamak/request-json';
 
-type Edition = 'founder'|'standard';
+type Edition = 'founder'|'standard'|'lifetime';
 type Checkout =
   | {state:'offer'; edition:Edition; amountMinor:number}
   | {state:'pending'; edition:Edition; transactionId:string; clientToken:string}
   | {state:'unavailable'|'ineligible'|'complete'|'reserved'|'settling'|'preparing'|'canceled'|'available'};
 type PaddleClient = {
   Initialize: (options:{token:string;eventCallback:(event:{name:string})=>void})=>void;
-  Checkout: {open: (options:{transactionId:string;settings:{allowLogout:false}})=>void};
+  Checkout: {open: (options:{transactionId:string;settings:{allowLogout:false;showAddDiscounts?:false}})=>void};
 };
 
 let paddleScript:Promise<PaddleClient>|undefined;
@@ -33,7 +33,7 @@ function loadPaddle() {
   return paddleScript;
 }
 
-const editionName=(edition:Edition)=>edition==='founder'?"Founder's Edition":'Standard Edition';
+const editionName=(edition:Edition)=>edition==='lifetime'?'Lifetime access':edition==='founder'?"Founder's Edition":'Standard Edition';
 const button='rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50';
 const descriptions:Record<Exclude<Checkout['state'],'offer'|'pending'>,string> = {
   unavailable:'Purchases are currently unavailable.',
@@ -93,7 +93,10 @@ export default function CheckoutPage() {
       sdk.Initialize({token:state.clientToken,eventCallback:event=>{if(event.name==='checkout.completed')paymentCompleted?.();}});
       paddleInitialized=true;
     }
-    sdk.Checkout.open({transactionId:state.transactionId,settings:{allowLogout:false}});
+    sdk.Checkout.open({
+      transactionId:state.transactionId,
+      settings:{allowLogout:false,...(state.edition==='lifetime'?{showAddDiscounts:false as const}:{})},
+    });
   }
 
   return <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 bg-[#131314] p-5 font-sans text-stone-100">
@@ -106,7 +109,9 @@ export default function CheckoutPage() {
       {!checkout&&<p role="status">{busy?'Loading checkout…':'Checkout is unavailable.'}</p>}
       {checkout?.state==='offer'&&<>
         <h2 className="font-semibold">{editionName(checkout.edition)}</h2>
-        <p className="text-lg font-semibold">{new Intl.NumberFormat(undefined,{style:'currency',currency:'EUR'}).format(checkout.amountMinor/100)}</p>
+        <p className="text-lg font-semibold">{new Intl.NumberFormat(undefined,{style:'currency',currency:'EUR'}).format(checkout.amountMinor/100)}
+          {checkout.edition==='lifetime'&&<span className="ml-1 text-sm font-normal text-stone-300">+ applicable tax</span>}
+        </p>
         <p className="text-sm text-stone-300">One-time purchase. Paddle shows your total before payment.</p>
         <button className={button} disabled={busy} onClick={()=>void run(async()=>{
           const next=await query('start',checkout.edition);setCheckout(next);

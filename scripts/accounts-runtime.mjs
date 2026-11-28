@@ -2,9 +2,10 @@ import { measuredQuery, measuredBatch } from './request-trace.mjs';
 import membershipMigration from '../drizzle/0006_membership_purchases.sql' with { type: 'text' };
 import {paddleBilling, paddleConfig} from './paddle-billing.mjs';
 const accountJson = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
-export async function accountApi(request, env, measure) {
-  const url = new URL(request.url), id = request.headers.get('oai-authenticated-user-id');
-  const email = (request.headers.get('oai-authenticated-user-email') ?? '').trim().toLowerCase();
+export async function accountApi(request, env, measure, principal) {
+  const url = new URL(request.url);
+  const id = principal === undefined ? request.headers.get('oai-authenticated-user-id') : principal?.id;
+  const email = ((principal === undefined ? request.headers.get('oai-authenticated-user-email') : principal?.email) ?? '').trim().toLowerCase();
   if (!id || !email) return accountJson({ error: 'Sign in required' }, 401);
   if (!env.DB) return accountJson({ error: 'Account storage is unavailable' }, 503);
   const admin = Boolean(env.KATCHAMAK_ADMIN_EMAIL && email === env.KATCHAMAK_ADMIN_EMAIL.trim().toLowerCase());
@@ -41,11 +42,14 @@ export async function accountApi(request, env, measure) {
     return paddleBilling({request,env,q,account:id,active,admin,now,readMembershipPurchase,json:accountJson,body});
   }
   if (route === '/api/account' && method === 'GET') {
-    const account = { id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active } : { plan: 'none', active: false } };
+    const identityPurchase = principal?.independent ? await readMembershipPurchase() : undefined;
+    const paidLifetime = identityPurchase?.status === 'paid' && /^paddle:txn_[a-z0-9]+$/i.test(identityPurchase.payment_ref) && Boolean(identityPurchase.license_id);
+    const effectiveLicense = admin || paidLifetime ? { plan: 'lifetime', active: true } : license ? { ...license, active } : { plan: 'none', active: false };
+    const account = { id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: effectiveLicense, ...(principal?.independent ? { signOutUrl: '/auth/logout' } : {}) };
     if (url.searchParams.get('include') === 'membership') {
       // Existing grants are projected directly into the new model. A pending
       // invite stays attached to its original email until its first sign-in.
-      const purchase = await readMembershipPurchase();
+      const purchase = identityPurchase === undefined ? await readMembershipPurchase() : identityPurchase;
       const billingAvailable=!!paddleConfig(env);
       const state = license?.plan === 'none' ? 'revoked' : active ? 'active' : license ? 'expired' : 'none';
       const paddlePurchase = purchase?.payment_ref.startsWith('paddle:');
@@ -123,7 +127,7 @@ export async function accountApi(request, env, measure) {
     const link=url.origin+'/#library';
     let sent;
     try{
-      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'katchamak-access-'+body.requestId},body:JSON.stringify({from:env.KATCHAMAK_MAIL_FROM,to:[target],subject:'Your Draftopus access link',text:'Your Draftopus license is ready.\n\nOpen your private library: '+link+'\n\nSign in with the ChatGPT account for '+target+'. Your projects are private to your account. This link does not sign anyone in or share any manuscript.'}),signal:AbortSignal.timeout(15000)});
+      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'katchamak-access-'+body.requestId},body:JSON.stringify({from:env.KATCHAMAK_MAIL_FROM,to:[target],subject:'Your Draftopus access link',text:'Your Draftopus license is ready.\n\nOpen your private library: '+link+'\n\nSign in to Draftopus with '+target+'. Your projects are private to your account. This link does not sign anyone in or share any manuscript.'}),signal:AbortSignal.timeout(15000)});
       sent=await response.json();if(!response.ok||typeof sent.id!=='string')return accountJson({error:'The email provider did not accept the message. Check your Resend key and verified sender address.'},502);
     }catch{return accountJson({error:'Could not confirm email sending. Retry this same request to avoid sending a duplicate.'},502);}
     await audit(target,'access-link',{providerId:sent.id}).run();
@@ -200,7 +204,7 @@ async function gmailAccessLink(env,{q,audit,target,body,link}){
     if(previous?.email===target&&previous.status==='sent')return accountJson({ok:true,email:target,providerId:previous.provider_id,link});
     return accountJson({error:'This send request is still pending or its result is uncertain. Check Sent in Gmail before sending again.'},409);
   }
-  const message=['From: Draftopus <'+connection.email+'>','To: '+target,'Subject: Your Draftopus access link','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','','Your Draftopus license is ready.','','Open Draftopus: '+link,'','Sign in with the ChatGPT account for '+target+'. Your projects are private to your account.'].join('\r\n');
+  const message=['From: Draftopus <'+connection.email+'>','To: '+target,'Subject: Your Draftopus access link','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','','Your Draftopus license is ready.','','Open Draftopus: '+link,'','Sign in to Draftopus with '+target+'. Your projects are private to your account.'].join('\r\n');
   let sent;
   try{
     const response=await gmailFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:gmailBase64(new TextEncoder().encode(message))})});

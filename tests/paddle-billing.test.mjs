@@ -21,6 +21,7 @@ const call=(email,path='/api/account/billing',body)=>{
 const action=(email,action,edition)=>call(email,undefined,{action,edition});
 const profile=async email=>(await (await call(email,'/api/account?include=membership')).json()).membership;
 const transactions=new Map();
+const lifetimeProduct='pro_'+'s'.repeat(26);
 let nextId=0;
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,options)=>{
@@ -30,7 +31,12 @@ globalThis.fetch=async(url,options)=>{
   if(path.startsWith('/prices/'))return Response.json({data:price(path.split('/').at(-1))});
   if(path==='/transactions'){
     const body=JSON.parse(options.body),id='txn_'+String(++nextId).padStart(26,'0');
-    const tx={...body,id,status:'draft',items:[{price:price(body.items[0].price_id),quantity:1}],details:{totals:{grand_total:'1689',currency_code:'EUR'}},payments:[]};
+    const item=body.items[0];
+    const customPrice=item.price;
+    const total=customPrice?{subtotal:'2000',tax:'400',discount:'0',grand_total:'2400',currency_code:'EUR'}:
+      {grand_total:'1689',currency_code:'EUR'};
+    const tx={...body,id,status:'draft',items:[{price:customPrice?{...customPrice,id:'pri_'+'s'.repeat(26),type:'custom'}:price(item.price_id),quantity:1}],
+      details:{totals:total},payments:[]};
     transactions.set(id,tx);return Response.json({data:tx});
   }
   const id=path.split('/')[2],tx=transactions.get(id);
@@ -90,6 +96,31 @@ try{
   const abandoned=await (await action('abandoned@test.local','start','standard')).json();
   assert.equal((await (await action('abandoned@test.local','cancel')).json()).state,'canceled');
   assert.ok(!sql.query('SELECT 1 FROM membership_purchases WHERE payment_ref=?').get('paddle:'+abandoned.transactionId));
+  env.PADDLE_LIFETIME_PRODUCT_ID=lifetimeProduct;
+  const lifetimeBuyer='lifetime@test.local';
+  assert.deepEqual(await (await call(lifetimeBuyer)).json(),{state:'offer',edition:'lifetime',amountMinor:2000});
+  assert.equal((await action(lifetimeBuyer,'start','founder')).status,400);
+  const lifetimeCheckout=await (await action(lifetimeBuyer,'start','lifetime')).json();
+  assert.equal(lifetimeCheckout.edition,'lifetime');
+  assert.equal(lifetimeCheckout.state,'pending');
+  const lifetimeTransaction=transactions.get(lifetimeCheckout.transactionId);
+  assert.equal(lifetimeTransaction.items[0].price.product_id,lifetimeProduct);
+  assert.equal(lifetimeTransaction.items[0].price.type,'custom');
+  assert.equal(lifetimeTransaction.items[0].price.tax_mode,'external');
+  assert.equal(lifetimeTransaction.items[0].price.billing_cycle,null);
+  assert.deepEqual(lifetimeTransaction.items[0].price.unit_price,{amount:'2000',currency_code:'EUR'});
+  assert.deepEqual(lifetimeTransaction.items[0].price.quantity,{minimum:1,maximum:1});
+  assert.equal((await profile(lifetimeBuyer)).status,'none');
+  markPaid(lifetimeCheckout.transactionId);
+  await Promise.all([action(lifetimeBuyer,'verify'),action(lifetimeBuyer,'verify')]);
+  const lifetimeMembership=await profile(lifetimeBuyer);
+  assert.equal(lifetimeMembership.status,'active');
+  assert.equal(lifetimeMembership.founderNumber,null);
+  assert.equal(lifetimeMembership.purchase.amountMinor,2400);
+  assert.equal(sql.query('SELECT COUNT(*) AS count FROM membership_purchases WHERE account_id=?').get(lifetimeBuyer).count,1);
+  assert.equal((await profile(winner)).founderNumber,500);
+  env.PADDLE_LIFETIME_PRODUCT_ID='invalid';
+  assert.equal((await (await call('after-launch@test.local')).json()).state,'unavailable');
   assert.deepEqual(sql.query('SELECT * FROM licenses').all(),before);
   env.PADDLE_BILLING_ENABLED='0';
   assert.equal((await (await call(winner)).json()).state,'unavailable');
@@ -97,4 +128,4 @@ try{
   assert.equal((await call(winner,'/api/account/billing?action=invoice')).status,303,'Turning off checkout preserves invoice access');
   assert.equal((await profile(manual)).edition,'manual');
 } finally {globalThis.fetch=originalFetch;}
-console.log('Paddle billing passed: last Founder race, confirmed payment, transition to Standard, receipt ownership, cancellation, and existing grants.');
+console.log('Paddle billing passed: €20 plus tax, prior Founder/Standard checkout, confirmed payments, receipt ownership, cancellation, and existing grants.');

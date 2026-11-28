@@ -61,6 +61,8 @@
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@reactuses/core": "^6.0.5",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.2",
     "@tanstack/react-table": "^8.21.3",
     "@tauri-apps/api": "^2",
     "class-variance-authority": "^0.7.1",
