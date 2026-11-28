@@ -92,7 +92,10 @@ export async function sendDraftopusAuthEmail(request, env, config) {
   const unavailable = () => hookResponse(503, 'Verification email is temporarily unavailable.', { 'Retry-After': '2' });
   if (typeof secret !== 'string' || !/^(?:v1,)?whsec_[A-Za-z0-9+/]{32,128}={0,2}$/.test(secret) ||
       typeof apiKey !== 'string' || !apiKey || typeof sender !== 'string' || !sender ||
-      !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.providerOrigin)) return unavailable();
+      !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.providerOrigin)) {
+    console.warn('Draftopus verification email configuration is incomplete.');
+    return unavailable();
+  }
 
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(3800)]);
   let event;
@@ -123,9 +126,18 @@ export async function sendDraftopusAuthEmail(request, env, config) {
       redirect: 'manual',
       signal,
     });
-    if (response.body) void response.body.cancel().catch(() => {});
-    return response.ok ? hookResponse(200) : unavailable();
+    if (response.ok) {
+      if (response.body) void response.body.cancel().catch(() => {});
+      return hookResponse(200);
+    }
+    const failure = await response.json().catch(() => null);
+    const providerReason = ['validation_error', 'invalid_api_key', 'restricted_api_key', 'missing_api_key',
+      'monthly_quota_exceeded', 'daily_quota_exceeded', 'rate_limit_exceeded'].includes(failure?.name)
+      ? failure.name : 'unclassified';
+    console.warn('Draftopus verification email rejected by Resend.', response.status, providerReason);
+    return unavailable();
   } catch {
+    console.warn('Draftopus verification email request to Resend failed.');
     return unavailable();
   }
 }
