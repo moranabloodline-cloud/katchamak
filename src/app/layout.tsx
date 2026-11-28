@@ -22,6 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/draftopus-manifest.json" crossOrigin="use-credentials" />
+      </head>
       <body
         className="antialiased bg-background text-foreground"
       >
