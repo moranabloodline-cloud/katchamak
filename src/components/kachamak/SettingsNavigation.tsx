@@ -12,7 +12,7 @@ const sections: {label: string; pages: SettingsEntry[]}[] = [
   ]},
   {label:'Account', pages:[
     {id:'security', label:'Sign-in & security', icon:Fingerprint, search:'password email sign out'},
-    {id:'membership', label:'Membership', icon:Ticket, search:'license plan'},
+    {id:'membership', label:'Membership & License', icon:Ticket, search:'license plan founder standard'},
     {id:'admin', label:'Administration', icon:ShieldCheck, admin:true, search:'licenses users access demo'},
   ]},
   {label:'App', pages:[

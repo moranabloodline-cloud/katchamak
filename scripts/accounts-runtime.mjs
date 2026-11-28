@@ -1,4 +1,5 @@
 import { measuredQuery, measuredBatch } from './request-trace.mjs';
+import membershipMigration from '../drizzle/0006_membership_purchases.sql' with { type: 'text' };
 const accountJson = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });
 export async function accountApi(request, env, measure) {
   const url = new URL(request.url), id = request.headers.get('oai-authenticated-user-id');
@@ -26,7 +27,32 @@ export async function accountApi(request, env, measure) {
   if (route.startsWith('/api/admin/gmail/')) return gmailConnection(request, env, {q,id,body,audit});
   if (route === '/api/account' && method === 'GET') {
     const license = user.license_plan === null ? null : {plan:user.license_plan,expires_at:user.license_expires_at,updated_at:user.license_updated_at};
-    return accountJson({ id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active: license.plan !== 'none' && (license.expires_at === null || license.expires_at > now) } : { plan: 'none', active: false } });
+    const active = !!license && license.plan !== 'none' && (license.expires_at === null || license.expires_at > now);
+    const account = { id, email, role: admin ? 'admin' : 'member', displayName: user.display_name, avatar: user.avatar, preferences: JSON.parse(user.preferences), librarySaveEncoding: 'gzip', libraryNotePatch: 1, license: admin ? { plan: 'lifetime', active: true } : license ? { ...license, active } : { plan: 'none', active: false } };
+    if (url.searchParams.get('include') === 'membership') {
+      // Existing grants are projected directly into the new model. A pending
+      // invite stays attached to its original email until its first sign-in.
+      const readPurchase = () => q('SELECT edition, founder_number, status, purchased_at, amount_minor, currency, license_id FROM membership_purchases WHERE account_id=?',id).first();
+      let purchase;
+      try { purchase = await readPurchase(); }
+      catch (error) {
+        if (!/no such table:\s*(?:main\.)?membership_purchases\b/i.test(String(error))) throw error;
+        await q(membershipMigration).run();
+        purchase = await readPurchase();
+      }
+      const state = license?.plan === 'none' ? 'revoked' : active ? 'active' : license ? 'expired' : 'none';
+      const membership = purchase && (purchase.status === 'refunded' || license?.plan === 'lifetime')
+        ? {
+          edition: purchase.edition, status: purchase.status === 'refunded' ? 'refunded' : state,
+          plan: 'lifetime', expiresAt: license?.expires_at ?? null, founderNumber: purchase.founder_number,
+          purchase: { date: purchase.purchased_at, amountMinor: purchase.amount_minor, currency: purchase.currency, licenseId: purchase.license_id },
+        }
+        : admin
+          ? { edition: 'administrator', status: 'active', plan: 'lifetime', expiresAt: null }
+          : { edition: license ? 'manual' : 'none', status: state, plan: license?.plan ?? 'none', expiresAt: license?.expires_at ?? null };
+      return accountJson({ membership });
+    }
+    return accountJson(account);
   }
   if (route === '/api/account' && method === 'PATCH') {
     if (Object.keys(body).some(k => !['displayName','avatar','preferences'].includes(k))) return accountJson({ error: 'Profile fields only' }, 400);

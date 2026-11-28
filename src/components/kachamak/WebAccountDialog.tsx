@@ -20,7 +20,8 @@ import {saveWebLibrary} from '@/lib/kachamak/cloud-library';
 import {AdminMailConnection} from './AdminMailConnection';
 import {ProjectSettings} from './ProjectSettings';
 import {SettingsNavigation, type SettingsPage} from './SettingsNavigation';
-type Account = { id: string; email: string; role: 'admin'|'member'; displayName: string; avatar: string; preferences: Record<string,boolean>; license: { plan: string; active: boolean; expires_at?: number } };
+import {MembershipSettings} from './MembershipSettings';
+type Account = { id: string; email: string; role: 'admin'|'member'; displayName: string; avatar: string; preferences: Record<string,boolean> };
 type User = { id: string|null; email: string; display_name: string; role: string; status: string; plan: string|null; expires_at: number|null; source?: string };
 async function api(path: string, method = 'GET', body?: unknown) {
   const {response:r,data} = await requestJson(path, { method, headers: body ? { 'Content-Type':'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -181,13 +182,7 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
                   })}>Check for updates</button>
                 </div>
               </>}
-              {tab==='membership'&&<>
-                <h2 className={heading}>Membership</h2>
-                <div className={surface}>
-                  <h3 className="font-medium">{account.license.plan==='lifetime'?'Lifetime':account.license.plan==='timed'?'Time-limited access':'No license assigned'}</h3>
-                  <p className="text-sm text-muted-foreground">{account.license.plan==='none'?'Contact the administrator to assign a license.':account.license.active?'Active':'Expired / inactive'}{account.license.expires_at?' · Until '+new Date(account.license.expires_at).toLocaleDateString():''}</p>
-                </div>
-              </>}
+              {tab==='membership'&&<MembershipSettings key={account.id}/>}
               {tab==='security'&&<section aria-labelledby="signin-security-title" className="mx-auto max-w-[28rem] space-y-2.5">
                 <header>
                   <h2 id="signin-security-title" className="text-base font-semibold">Sign-in &amp; security</h2>
