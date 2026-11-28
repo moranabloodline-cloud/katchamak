@@ -1,3 +1,5 @@
+> **Draftopus registracija.** Kandidat za objavu koristi Supabase za prijavu mejlom i Google nalogom. Potvrda mejla koristi potpisani Supabase zahtev i postojeća Resend podešavanja. Pregled demoa je odvojen od radnog prostora koji zahteva aktivnu licencu. Javna dostupnost čeka proveru slanja mejla i podešavanja provajdera.
+
 > **2026-11-28 — Paddle naplata.** Checkout je dostupan kad se poveže odobren Paddle nalog. Founder broj se upisuje iz potvrđene uplate, a PDF račun preuzima se direktno od Paddlea.
 
 > **2026-11-28 — Membership & License.** Postojeće licence i dozvole čitaju se iz dosadašnjih zapisa. Kupovine imaju odvojenu evidenciju sa jedinstvenim Founder brojevima.

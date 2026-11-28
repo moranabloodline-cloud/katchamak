@@ -1,4 +1,5 @@
 import {draftopusAuthConfig, openDraftopusAuth, handleDraftopusAuth} from "./draftopus-auth-session.mjs";
+import {sendDraftopusAuthEmail} from "./draftopus-auth-email.mjs";
 import {draftopusAccountPage} from "./draftopus-auth-ui.mjs";
 import {legacyDraftopusEmails, legacyDraftopusAccount, independentDraftopusAccount} from "./draftopus-identities.mjs";
 import {readOnlyDemo} from "./read-only-demo.mjs";
@@ -25,6 +26,9 @@ export default {
     const publicProtocol = ["/mcp", "/api/app-version", "/app-version.json"].includes(url.pathname);
     const legacyEmails = legacyDraftopusEmails(env);
     const config = legacyEmails?.size && env.DB ? draftopusAuthConfig(request, env) : null;
+    if (url.pathname === "/auth/email-hook") {
+      return config ? sendDraftopusAuthEmail(request, env, config) : new Response("Not found", { status: 404, headers: privateHeaders });
+    }
     const publicAsset = (request.method === "GET" || request.method === "HEAD") &&
       (url.pathname.startsWith("/_next/static/") || url.pathname === "/draftopus-logo.png");
     const session = config && !publicProtocol && !publicAsset ? openDraftopusAuth(request, config) : null;

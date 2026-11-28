@@ -35,7 +35,7 @@ export async function packageSite(manifest) {
     ? "Object.assign(ASSETS," + JSON.stringify(fallbackAssets) + ");\n"
     : "";
   const runtime = (await readFile("scripts/sites-runtime.mjs", "utf8"))
-    .replace(/^import .*from "\.\/(?:draftopus-auth-session|draftopus-auth-ui|draftopus-identities|read-only-demo)\.mjs";\r?\n/gm, "");
+    .replace(/^import .*from "\.\/(?:draftopus-auth-session|draftopus-auth-email|draftopus-auth-ui|draftopus-identities|read-only-demo)\.mjs";\r?\n/gm, "");
   const requestTrace = await readFile("scripts/request-trace.mjs", "utf8");
   const accounts = await readFile("scripts/accounts-runtime.mjs", "utf8");
   const membershipSchema = await readFile("drizzle/0006_membership_purchases.sql", "utf8");
@@ -57,6 +57,7 @@ export {applyLibraryNotePatch, validLibraryNotePatch} from "./src/lib/kachamak/c
   const accountsBundle = await bundle({
     stdin: {
       contents: `export {draftopusAuthConfig, openDraftopusAuth, handleDraftopusAuth} from "./scripts/draftopus-auth-session.mjs";
+export {sendDraftopusAuthEmail} from "./scripts/draftopus-auth-email.mjs";
 export {draftopusAccountPage} from "./scripts/draftopus-auth-ui.mjs";
 export {legacyDraftopusEmails, legacyDraftopusAccount, independentDraftopusAccount} from "./scripts/draftopus-identities.mjs";
 export {readOnlyDemo} from "./scripts/read-only-demo.mjs";`,
@@ -64,7 +65,7 @@ export {readOnlyDemo} from "./scripts/read-only-demo.mjs";`,
     },
     bundle: true, write: false, format: "iife", globalName: "draftopusAccounts", platform: "browser", target: "es2022",
   });
-  const independentAccounts = accountsBundle.outputFiles[0].text + "\nconst {draftopusAuthConfig, openDraftopusAuth, handleDraftopusAuth, draftopusAccountPage, legacyDraftopusEmails, legacyDraftopusAccount, independentDraftopusAccount, readOnlyDemo} = draftopusAccounts;\n";
+  const independentAccounts = accountsBundle.outputFiles[0].text + "\nconst {draftopusAuthConfig, openDraftopusAuth, handleDraftopusAuth, sendDraftopusAuthEmail, draftopusAccountPage, legacyDraftopusEmails, legacyDraftopusAccount, independentDraftopusAccount, readOnlyDemo} = draftopusAccounts;\n";
   const oidc = await readFile("scripts/github-oidc.mjs", "utf8");
   const store = await readFile("scripts/release-store.mjs", "utf8");
   const automation = JSON.parse(await readFile(".openai/automation.json", "utf8"));
