@@ -60,6 +60,22 @@ export function WebAccountDialog({open,onOpenChange,trigger}:{open:boolean;onOpe
   const novel=books.find(book=>book.id===activeBook);
   const setAuthor=useKachamak(s=>s.setDefaultAuthor);
   const run=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');try{await fn();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get('settings');
+    if (requested !== 'account' && requested !== 'membership') return;
+    const page = requested === 'account' ? 'profile' : 'membership';
+
+    if (!open || tab !== page) {
+      setTab(page);
+      if (!open) onOpenChange(true);
+      return;
+    }
+
+    // Consume the entry link after the authenticated shell has opened the dialog.
+    url.searchParams.delete('settings');
+    window.history.replaceState(window.history.state, '', url);
+  }, [open, onOpenChange, tab]);
   useEffect(()=>{
     if (!open) return;
     let current = true;
