@@ -120,7 +120,7 @@ export async function sendDraftopusAuthEmail(request, env, config) {
         'Idempotency-Key': 'draftopus-auth-signup/' + id,
       },
       body: JSON.stringify({ from: sender, ...email }),
-      redirect: 'error',
+      redirect: 'manual',
       signal,
     });
     if (response.body) void response.body.cancel().catch(() => {});

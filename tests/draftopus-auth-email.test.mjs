@@ -48,7 +48,7 @@ test('signed signup generates an idempotent email with a pinned verification lin
   const [[url, request], [, retryRequest]] = mockedFetch.mock.calls.map(call => call.arguments);
   assert.equal(url, 'https://api.resend.com/emails');
   assert.equal(request.method, 'POST');
-  assert.equal(request.redirect, 'error');
+  assert.equal(request.redirect, 'manual');
   assert.equal(request.headers['Idempotency-Key'], 'draftopus-auth-signup/' + id);
   assert.equal(request.headers['Idempotency-Key'], retryRequest.headers['Idempotency-Key']);
   assert.equal(request.body, retryRequest.body);
