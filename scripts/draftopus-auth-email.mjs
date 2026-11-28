@@ -90,10 +90,12 @@ export async function sendDraftopusAuthEmail(request, env, config) {
   const apiKey = env?.RESEND_API_KEY;
   const sender = env?.KATCHAMAK_MAIL_FROM;
   const unavailable = () => hookResponse(503, 'Verification email is temporarily unavailable.', { 'Retry-After': '2' });
-  if (typeof secret !== 'string' || !/^(?:v1,)?whsec_[A-Za-z0-9+/]{32,128}={0,2}$/.test(secret) ||
-      typeof apiKey !== 'string' || !apiKey || typeof sender !== 'string' || !sender ||
-      !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.providerOrigin)) {
-    console.warn('Draftopus verification email configuration is incomplete.');
+  const hasSigningSecret = typeof secret === 'string' && /^(?:v1,)?whsec_[A-Za-z0-9+/]{32,128}={0,2}$/.test(secret);
+  const hasProviderKey = typeof apiKey === 'string' && Boolean(apiKey);
+  const hasSender = typeof sender === 'string' && Boolean(sender);
+  const hasProviderOrigin = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.providerOrigin);
+  if (!hasSigningSecret || !hasProviderKey || !hasSender || !hasProviderOrigin) {
+    console.warn('Draftopus verification email configuration is incomplete.', { hasSigningSecret, hasProviderKey, hasSender, hasProviderOrigin });
     return unavailable();
   }
 
